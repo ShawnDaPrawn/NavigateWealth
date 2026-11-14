@@ -391,7 +391,7 @@ export function PublicationsModule() {
   // A failed status check is an error, never "not set up".
   if (initLoadError) {
     return (
-      <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <div className="ds-page">
         <PageHeader
           title="Publications"
           description="Articles, content pipeline, subscribers and website content."
@@ -407,7 +407,7 @@ export function PublicationsModule() {
 
   if (isInitialized === false) {
     return (
-      <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <div className="ds-page">
         <PageHeader
           title="Publications"
           description="Articles, content pipeline, subscribers and website content."
@@ -421,7 +421,7 @@ export function PublicationsModule() {
 
   if (showEditor) {
     return (
-      <div className="p-6 lg:p-8">
+      <div className="ds-page">
         <ArticleEditor
           key={
             selectedArticle?.id ||
@@ -441,7 +441,7 @@ export function PublicationsModule() {
 
   if (showAIGenerator) {
     return (
-      <div className="p-6 lg:p-8">
+      <div className="ds-page">
         <AIArticleGenerator
           isOpen
           onClose={handleBackFromAI}
@@ -455,7 +455,7 @@ export function PublicationsModule() {
   // ── Main module shell ────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="ds-page">
       {!subPage && (
         <PageHeader
           title="Publications"

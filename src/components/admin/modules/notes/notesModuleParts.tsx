@@ -110,7 +110,7 @@ export function EmptyState({
           title="No notes yet"
           action={
             <DsButton size="sm" variant="primary" onClick={onNewNote}>
-              New note
+              Create first note
             </DsButton>
           }
         >

@@ -377,7 +377,8 @@ describe('useDashboardKPIs — Tasks figure', () => {
     const tasks = result.current.kpis[2];
     expect(tasks.title).toBe('Tasks');
     expect(tasks.value).toBe(203);
-    expect(tasks.subtitle).toBe('open · 27 completed');
+    expect(tasks.subtitle).toBe('27 completed');
+    expect(tasks.valueSuffix).toBe('open');
     expect(tasks.hideChange).toBe(true);
   });
 });

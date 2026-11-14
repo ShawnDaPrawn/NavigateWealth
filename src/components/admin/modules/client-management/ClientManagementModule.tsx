@@ -436,7 +436,7 @@ export function ClientManagementModule() {
   // A client is open: show its page instead of the list.
   if (drawerOpen && selectedClient) {
     return (
-      <div className="p-6 lg:p-8">
+      <div className="ds-page">
         <Suspense fallback={<LazyFallback />}>
           <ClientDrawer
             key={`${selectedClient.id}:${drawerFnaFocus?.nonce ?? 0}`}
@@ -471,7 +471,7 @@ export function ClientManagementModule() {
       });
     };
     return (
-      <div className="flex flex-col gap-4 p-6 lg:p-8">
+      <div className="ds-page">
         <Crumbs
           trail={[
             { label: 'Personal clients', onClick: () => setMissingClientId(null) },
@@ -503,7 +503,7 @@ export function ClientManagementModule() {
   // Create / edit group is a page of its own.
   if (clientType === 'groups' && openGroupId) {
     return (
-      <div className="p-6 lg:p-8">
+      <div className="ds-page">
         <Suspense fallback={<LazyFallback />}>
           <GroupEditorRoute groupId={openGroupId} onClose={closeGroup} />
         </Suspense>
@@ -514,7 +514,7 @@ export function ClientManagementModule() {
   // Add client is a page of its own.
   if (addView && canCreate) {
     return (
-      <div className="p-6 lg:p-8">
+      <div className="ds-page">
         <Crumbs
           trail={[
             { label: 'Personal clients', onClick: () => setAddView('') },
@@ -534,7 +534,7 @@ export function ClientManagementModule() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="ds-page">
       <Crumbs trail={[{ label: TAB_LABELS[clientType] }]} />
       <PageHeader
         title="Client Management"

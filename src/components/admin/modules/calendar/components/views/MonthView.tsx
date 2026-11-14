@@ -129,7 +129,7 @@ export function MonthView({
 }
 
 /** The board's four colours: e event, t task due, b birthday, r policy renewal. */
-export function eventKind(event: CalendarEvent): 'e' | 't' | 'b' | 'r' {
+function eventKind(event: CalendarEvent): 'e' | 't' | 'b' | 'r' {
   if (event.id.startsWith('task-')) return 't';
   if (event.event_type === 'birthday') return 'b';
   if (event.event_type === 'renewal') return 'r';

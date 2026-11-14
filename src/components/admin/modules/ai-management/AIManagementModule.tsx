@@ -67,7 +67,7 @@ export function AIManagementModule() {
 
   return (
     <div className="min-h-screen pb-10">
-      <div className="mx-auto max-w-[1800px] space-y-6 p-6 lg:p-8">
+      <div className="ds-page">
         {!entryPageOpen && (
           <PageHeader
             title="AI Management"

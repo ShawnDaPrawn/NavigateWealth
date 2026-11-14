@@ -223,7 +223,7 @@ export function IssuesModule() {
   // An open issue is a page of its own.
   if (selectedIssue) {
     return (
-      <div className="mx-auto max-w-[1200px] p-6 lg:p-8">
+      <div className="ds-page">
         <IssueDetailSheet
           issue={selectedIssue}
           onClose={() => setSelectedFingerprint(null)}
@@ -236,7 +236,7 @@ export function IssuesModule() {
 
   return (
     <div className="min-h-screen bg-gray-50/30 pb-10">
-      <div className="mx-auto max-w-[1800px] space-y-6 p-6 lg:p-8">
+      <div className="ds-page">
         <PageHeader
           title="Issue Manager"
           description={

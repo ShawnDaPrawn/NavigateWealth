@@ -48,8 +48,8 @@ describe('ACCOUNT_STATUS_CONFIG', () => {
   });
 
   it('active has green badge, closed has red badge', () => {
-    expect(ACCOUNT_STATUS_CONFIG.active.badgeClass).toContain('green');
-    expect(ACCOUNT_STATUS_CONFIG.closed.badgeClass).toContain('red');
+    expect(ACCOUNT_STATUS_CONFIG.active.badgeClass).toBe('ds-pill ok');
+    expect(ACCOUNT_STATUS_CONFIG.closed.badgeClass).toBe('ds-pill bad');
   });
 
   it('every status has label, badgeClass, and dotClass', () => {

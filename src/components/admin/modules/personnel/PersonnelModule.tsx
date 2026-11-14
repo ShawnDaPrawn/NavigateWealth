@@ -381,7 +381,7 @@ export function PersonnelModule() {
   // A staff member is open: their page replaces the list.
   if (drawerOpen && selectedPersonnel) {
     return (
-      <div className="mx-auto max-w-[1200px] p-6 lg:p-8">
+      <div className="ds-page">
         <PersonnelDrawer
           key={selectedPersonnel.id}
           open
@@ -405,7 +405,7 @@ export function PersonnelModule() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
+    <div className="ds-page">
       <PageHeader
         title="Personnel"
         description="Manage staff access, compliance and commission structures."

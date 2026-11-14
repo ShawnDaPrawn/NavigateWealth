@@ -17,14 +17,14 @@ export function SocialMediaModule() {
 
   if (!can('marketing')) {
     return (
-      <div className="p-6 lg:p-8">
+      <div className="ds-page">
         <NoAccess what="Social & Marketing" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="ds-page">
       <SocialMediaTab />
     </div>
   );

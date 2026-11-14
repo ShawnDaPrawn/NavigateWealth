@@ -746,6 +746,82 @@
     }
   }
 
+
+  /* ---------- wizard steps (.steps) ---------- */
+  .ds-steps {
+    display: flex;
+    gap: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .ds-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13.5px;
+    color: var(--nw-text-3);
+    font-weight: 500;
+  }
+  .ds-step .n {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    border: 2px solid var(--nw-line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12.5px;
+    font-weight: 600;
+    background: #fff;
+  }
+  .ds-step.done .n {
+    background: var(--nw-violet);
+    border-color: var(--nw-violet);
+    color: #fff;
+  }
+  .ds-step.on {
+    color: var(--nw-ink);
+  }
+  .ds-step.on .n {
+    border-color: var(--nw-violet);
+    color: var(--nw-violet);
+  }
+  .ds-step-line {
+    width: 64px;
+    height: 2px;
+    background: var(--nw-line);
+    margin: 0 12px;
+  }
+  .ds-step-line.done {
+    background: var(--nw-violet);
+  }
+  .ds-sticky-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 14px 20px;
+    background: #fff;
+    border: 1px solid var(--nw-line);
+    border-radius: 12px;
+  }
+  .ds-sticky-foot .grow {
+    flex: 1;
+  }
+  @media (max-width: 639px) {
+    .ds-step-line {
+      width: 16px;
+      margin: 0 6px;
+    }
+    .ds-step .label {
+      display: none;
+    }
+    .ds-step.on .label {
+      display: inline;
+    }
+  }
+
   /* ---------- phone ---------- */
   @media (max-width: 639px) {
     .ds-page {
@@ -823,4 +899,29 @@
 }
 .nw-admin [data-slot='table-body'] [data-slot='table-row'] {
   border-color: var(--nw-line-2);
+}
+
+/*
+ * Admin cards built from the shared Card component take the board's card
+ * look (.card / .card-h): 12px corners, a hairline border, no shadow, 15px
+ * titles. Unlayered so it wins over the component's own utility classes.
+ */
+.nw-admin [data-slot='card'] {
+  border-radius: 12px;
+  border-color: var(--nw-line);
+  box-shadow: none;
+}
+.nw-admin [data-slot='card']:hover {
+  box-shadow: none;
+}
+.nw-admin [data-slot='card-title'] {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-admin [data-slot='card-description'] {
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--nw-text-3);
 }

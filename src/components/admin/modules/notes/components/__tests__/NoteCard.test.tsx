@@ -65,7 +65,7 @@ describe('NoteCard', () => {
     expect(screen.getByText(/note content/i)).toBeDefined();
   });
 
-  it('renders tags', () => {
+  it('shows the linked client and date, not tags, as on the board', () => {
     render(
       <NoteCard
         note={mockNote}
@@ -77,7 +77,8 @@ describe('NoteCard', () => {
         viewMode="grid"
       />,
     );
-    expect(screen.getByText('finance')).toBeDefined();
+    expect(screen.queryByText('finance')).toBeNull();
+    expect(screen.getByText(new RegExp(`^${mockNote.clientName ?? 'No client'} · `))).toBeDefined();
   });
 
   it('calls onOpen when card content is clicked', () => {
@@ -191,7 +192,7 @@ describe('NoteCard', () => {
         viewMode="grid"
       />,
     );
-    const text = screen.getByText(/A+\.\.\./);
+    const text = screen.getByText(/A+…/);
     expect(text).toBeDefined();
   });
 });

@@ -38,7 +38,7 @@ export function RecipientsPage({ signers, onSave, onClose }: RecipientsPageProps
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-4 p-6 lg:p-8">
+    <div className="ds-page">
       <button
         type="button"
         onClick={() => void finish()}

@@ -232,3 +232,56 @@ export function DsState({
 export function DsMeta({ className, ...rest }: HTMLAttributes<HTMLSpanElement>) {
   return <span className={cn('ds-meta', className)} {...rest} />;
 }
+
+/** .steps — a numbered wizard progress row. Steps before the current one are done. */
+export function DsSteps({
+  steps,
+  current,
+  onStepClick,
+  className,
+}: {
+  steps: ReadonlyArray<string>;
+  /** 0-based index of the step in progress. */
+  current: number;
+  /** Lets a finished step be revisited. */
+  onStepClick?: (index: number) => void;
+  className?: string;
+}) {
+  return (
+    <ol className={cn('ds-steps', className)} aria-label="Progress">
+      {steps.map((label, i) => {
+        const done = i < current;
+        const on = i === current;
+        const body = (
+          <>
+            <span className="n">{done ? '✓' : i + 1}</span>
+            <span className="label">{label}</span>
+          </>
+        );
+        return (
+          <li key={label} className="contents">
+            {i > 0 && (
+              <span className={cn('ds-step-line', i <= current && 'done')} aria-hidden="true" />
+            )}
+            {done && onStepClick ? (
+              <button
+                type="button"
+                className={cn('ds-step', 'done')}
+                onClick={() => onStepClick(i)}
+              >
+                {body}
+              </button>
+            ) : (
+              <span
+                className={cn('ds-step', done && 'done', on && 'on')}
+                aria-current={on ? 'step' : undefined}
+              >
+                {body}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}

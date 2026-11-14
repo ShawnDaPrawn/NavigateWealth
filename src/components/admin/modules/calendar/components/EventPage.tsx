@@ -589,7 +589,7 @@ export function EventPage({
     ) : null;
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-4 p-6 lg:p-8">
+    <div className="ds-page">
       <BackLink label="Back to calendar" onClick={onClose} />
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

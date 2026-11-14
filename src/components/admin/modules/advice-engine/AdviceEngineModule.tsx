@@ -72,7 +72,7 @@ export function AdviceEngineModule() {
   );
 
   return (
-    <div className="space-y-6 p-6 lg:p-8">
+    <div className="ds-page">
       <PageHeader
         title="Advice Engine"
         description="AI-powered advisory tools for client consultation and compliant record keeping."

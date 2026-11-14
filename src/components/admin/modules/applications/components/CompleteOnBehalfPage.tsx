@@ -107,7 +107,7 @@ export function CompleteOnBehalfPage({
     'Client';
 
   return (
-    <div className="mx-auto flex max-w-[1100px] flex-col gap-4 p-6 lg:p-8">
+    <div className="ds-page">
       <BackLink label={`Back to ${backLabel.toLowerCase()}`} onClick={onClose} />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>

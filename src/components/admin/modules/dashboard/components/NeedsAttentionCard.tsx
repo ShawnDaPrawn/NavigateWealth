@@ -90,7 +90,7 @@ export function NeedsAttentionCard({
             </span>
             <span className="k">{tile.label(tile.count)}</span>
             <span className="m">
-              {tile.failed ? "Couldn't load" : tile.caption} → {tile.destination}
+              <span>{tile.failed ? "Couldn't load" : tile.caption}</span> → {tile.destination}
             </span>
           </button>
         ))}

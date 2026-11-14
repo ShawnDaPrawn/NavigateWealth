@@ -12,7 +12,7 @@ import { PageHeader, SoonBadge } from '../../layout/page';
  */
 export function ComplianceModule() {
   return (
-    <div className="mx-auto w-full max-w-[1800px] space-y-6 p-6 lg:p-8">
+    <div className="ds-page">
       <PageHeader
         title="Compliance"
         description={

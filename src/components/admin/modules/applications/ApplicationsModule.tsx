@@ -493,7 +493,7 @@ export function ApplicationsModule() {
 
   if (!isAdmin) {
     return (
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-6 p-6 lg:p-8">
+      <div className="ds-page">
         <PageHeader
           title="Applications"
           description="Review, approve and manage client applications."
@@ -553,7 +553,7 @@ export function ApplicationsModule() {
   }
 
   return (
-    <div className="mx-auto flex max-w-[1600px] flex-col gap-5 p-6 lg:p-8">
+    <div className="ds-page">
       <PageHeader
         title="Applications"
         description="Review, approve and manage client applications."

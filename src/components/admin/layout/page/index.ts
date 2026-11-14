@@ -34,5 +34,6 @@ export {
   DsSegmented,
   DsState,
   DsMeta,
+  DsSteps,
   type DsTone,
 } from './ds';
