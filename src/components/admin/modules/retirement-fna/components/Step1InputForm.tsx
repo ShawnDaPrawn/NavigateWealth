@@ -177,7 +177,7 @@ export function Step1InputForm({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="w-full">
             <TabsTrigger value="profile">
               <CalendarDays className="h-4 w-4 mr-2" />
               Client Profile

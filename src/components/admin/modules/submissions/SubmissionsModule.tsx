@@ -120,7 +120,7 @@ function KanbanColumn({
   const config = COLUMN_STATUS_CONFIG[columnId];
 
   return (
-    <div className="flex-1 min-w-[350px] h-full flex flex-col rounded-xl bg-gray-100/50 border border-gray-200">
+    <div className="flex h-full min-w-[calc(100vw-4.5rem)] flex-1 snap-start flex-col rounded-xl border border-gray-200 bg-gray-100/50 sm:min-w-[350px]">
       {/* Column Header — matches TaskColumn */}
       <div className="p-3 rounded-t-xl border-b bg-white flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2">
@@ -489,7 +489,7 @@ export function SubmissionsModule() {
         {!isLoading && submissions.length > 0 && (
           <div className="h-[calc(100vh-380px)] min-h-[500px] overflow-hidden">
             <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="flex gap-6 h-full overflow-x-auto pb-4 px-1">
+              <div className="flex h-full snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-4 sm:snap-none sm:gap-6">
                 {BOARD_COLUMNS.map((col) => (
                   <KanbanColumn
                     key={col.id}
@@ -520,7 +520,7 @@ export function SubmissionsModule() {
               <Send className="h-4 w-4" />
               Invite a Client
             </Button>
-            <div className="flex items-center gap-4 text-xs text-gray-400">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 px-4 text-xs text-gray-400">
               <span className="flex items-center gap-1.5">
                 <MessageSquare className="h-3.5 w-3.5" /> Quotes
               </span>
@@ -546,7 +546,7 @@ export function SubmissionsModule() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="flex-1 min-w-[350px] rounded-xl bg-gray-100/50 border border-gray-200 animate-pulse"
+                className="flex-1 min-w-[calc(100vw-4.5rem)] sm:min-w-[350px] rounded-xl bg-gray-100/50 border border-gray-200 animate-pulse"
               >
                 <div className="p-3 bg-white rounded-t-xl border-b">
                   <div className="h-4 bg-gray-200 rounded w-20" />

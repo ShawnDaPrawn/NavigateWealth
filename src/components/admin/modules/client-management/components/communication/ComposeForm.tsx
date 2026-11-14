@@ -157,7 +157,7 @@ export function ComposeForm({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-wrap gap-x-4 gap-y-2">
         <div className="space-y-1">
           <CardTitle>Send Communication</CardTitle>
           <CardDescription>
@@ -204,7 +204,7 @@ export function ComposeForm({
         </div>
 
         {/* Category and Priority */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select value={category} onValueChange={setCategory}>

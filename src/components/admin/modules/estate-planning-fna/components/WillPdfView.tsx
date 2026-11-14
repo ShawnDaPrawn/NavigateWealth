@@ -505,7 +505,7 @@ export function WillPdfView({ open, onClose, willId, clientName }: WillPdfViewPr
               {displayClientName} {displayDate ? `- Created ${displayDate}` : ''}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handlePrint} disabled={!data}>
               <Printer className="h-4 w-4 mr-2" />
               Print / Save PDF

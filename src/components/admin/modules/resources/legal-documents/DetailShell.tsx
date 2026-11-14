@@ -150,7 +150,7 @@ export function DetailShell({ detail }: { detail: LegalDocumentDetailResponse })
           onValueChange={(value) => setActiveTab(value as 'draft' | 'published' | 'history')}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="w-full">
             <TabsTrigger value="draft" className="gap-2">
               <FileClock className="h-4 w-4" />
               Draft
@@ -170,7 +170,7 @@ export function DetailShell({ detail }: { detail: LegalDocumentDetailResponse })
           </TabsContent>
 
           <TabsContent value="published" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Live website source</CardTitle>

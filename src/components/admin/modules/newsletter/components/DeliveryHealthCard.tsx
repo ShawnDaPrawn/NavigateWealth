@@ -45,7 +45,7 @@ export function DeliveryHealthCard({
       <CardHeader className={cn('pb-3', !open && 'pb-4')}>
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-3 text-left"
+          className="flex w-full flex-col items-start gap-2 text-left sm:flex-row sm:items-center sm:justify-between sm:gap-3"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
         >
@@ -55,7 +55,7 @@ export function DeliveryHealthCard({
             description="Runs every 2 minutes, whether or not anyone is signed in"
             className="flex-1"
           />
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-2 text-xs text-muted-foreground sm:shrink-0">
             <span
               className={cn('h-2 w-2 rounded-full', attention ? 'bg-amber-500' : 'bg-emerald-500')}
               aria-hidden

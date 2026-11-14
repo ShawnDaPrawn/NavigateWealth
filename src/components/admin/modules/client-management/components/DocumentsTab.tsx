@@ -339,7 +339,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-medium">Document Management</h3>
           <p className="text-sm text-muted-foreground">

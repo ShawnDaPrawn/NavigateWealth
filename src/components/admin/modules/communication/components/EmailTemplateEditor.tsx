@@ -227,7 +227,7 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
             Back to transactional emails
           </button>
         </div>
-        <div className="flex items-end justify-between border-b pb-6 mt-2">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-end sm:justify-between border-b pb-6 mt-2">
           <div>
             <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink">
               {template.name}
@@ -262,7 +262,7 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-280px)]">
         <div className="flex flex-col h-full overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="w-full">
               <TabsTrigger value="edit">Edit Content</TabsTrigger>
               <TabsTrigger value="settings">Settings & Meta</TabsTrigger>
             </TabsList>
@@ -309,7 +309,7 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
 
               <Card>
                 <CardContent className="pt-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Button Label</Label>
                       <Input

@@ -3,6 +3,7 @@
  * Comprehensive policy management with 8 financial planning categories
  */
 
+import { ScrollRow } from '../../ui/scroll-row';
 import { useState } from 'react';
 import {
   Shield,
@@ -55,7 +56,7 @@ export function PolicyDetailsSection({ selectedClient, fnaFocus }: PolicyDetails
           Uses white background with purple borders for active state
           See: /components/admin/TAB_DESIGN_STANDARDS.md */}
       <div className="pb-4 border-b border-gray-200">
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <ScrollRow className="gap-2 p-0.5">
           {policySubtabs.map((subtab) => {
             const Icon = subtab.icon;
             return (
@@ -73,7 +74,7 @@ export function PolicyDetailsSection({ selectedClient, fnaFocus }: PolicyDetails
               </button>
             );
           })}
-        </div>
+        </ScrollRow>
       </div>
 
       {/* Overview Tab Content */}

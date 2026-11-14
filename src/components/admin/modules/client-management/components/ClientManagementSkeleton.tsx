@@ -19,7 +19,7 @@ import { Skeleton } from '../../../../ui/skeleton';
 function StatCardSkeleton() {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-wrap gap-x-4 gap-y-2">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-7 w-7 rounded-md" />
       </CardHeader>
@@ -73,7 +73,7 @@ export function ClientManagementSkeleton() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCardSkeleton />
         <StatCardSkeleton />
         <StatCardSkeleton />

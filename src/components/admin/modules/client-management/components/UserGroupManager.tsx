@@ -156,7 +156,7 @@ export function UserGroupManager({ open, onOpenChange }: UserGroupManagerProps) 
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Group Name</Label>
                   <Input
@@ -273,7 +273,7 @@ export function UserGroupManager({ open, onOpenChange }: UserGroupManagerProps) 
               <CardTitle className="text-lg">Bulk Group Assignment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Select User Group</Label>
                   <Select>

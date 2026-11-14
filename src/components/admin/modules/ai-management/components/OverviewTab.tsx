@@ -324,7 +324,7 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
 
       {/* ── Assistants ───────────────────────────────────────────────── */}
       <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex items-start justify-between gap-4">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between p-5 border-b border-gray-100 sm:gap-4">
           <div>
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-gray-500" />

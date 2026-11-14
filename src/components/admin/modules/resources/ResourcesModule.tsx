@@ -493,7 +493,7 @@ export function ResourcesModule() {
         {/* ============================================================ */}
         <TabsContent value="forms" className="space-y-6">
           {/* Header Row: title + primary actions */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold">Form Management & Pre-filling</h2>
               <p className="text-sm text-muted-foreground mt-0.5">
@@ -569,7 +569,7 @@ export function ResourcesModule() {
           />
           {/* Selection action bar */}
           {isSelectMode && selectedFormIds.size > 0 && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg">
               <Badge className="bg-primary text-white">{selectedFormIds.size} selected</Badge>
               <Button size="sm" variant="outline" onClick={toggleSelectAll}>
                 {selectedFormIds.size === filteredForms.length ? 'Deselect All' : 'Select All'}

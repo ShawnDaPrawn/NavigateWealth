@@ -278,7 +278,7 @@ export function CategoriesManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Article Categories</h2>
           <p className="text-sm text-gray-500">Manage article categories and their display order</p>

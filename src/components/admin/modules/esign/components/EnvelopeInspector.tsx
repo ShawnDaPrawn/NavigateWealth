@@ -654,7 +654,7 @@ export function EnvelopeInspector({
                                           : '',
                                 )}
                               >
-                                <div className="flex items-start justify-between gap-2">
+                                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-2">
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <h4 className="font-medium text-sm">{signer.name}</h4>

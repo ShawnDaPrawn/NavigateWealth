@@ -52,7 +52,7 @@ export function FNACard({ fna, config, onEdit, onDelete, onPublish, onView }: FN
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {/* View Details Button */}
             {onView && (
               <Button variant="default" size="sm" onClick={onView}>

@@ -239,7 +239,7 @@ export function NewsletterSubscribers() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold">Newsletter Subscribers</h3>
           <p className="text-sm text-muted-foreground">
@@ -247,7 +247,7 @@ export function NewsletterSubscribers() {
             POPIA compliance.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => refetch()}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
             Refresh
@@ -289,7 +289,7 @@ export function NewsletterSubscribers() {
 
       {/* Stat Cards */}
       {isLoading ? (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
               <CardContent className="pt-4 pb-4">
@@ -305,7 +305,7 @@ export function NewsletterSubscribers() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {(
             [
               {

@@ -190,7 +190,7 @@ export function PartnersTab() {
       {/* Partners Management */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Partner Advertisers</CardTitle>
               <CardDescription>
@@ -235,10 +235,10 @@ export function PartnersTab() {
                 key={partner.id}
                 className="border border-gray-200 rounded-lg p-5 hover:border-purple-200 hover:shadow-sm transition-all"
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                   <div className="flex-1 space-y-3">
                     {/* Header */}
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold text-gray-900">{partner.name}</h3>

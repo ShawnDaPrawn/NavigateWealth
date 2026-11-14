@@ -40,7 +40,7 @@ export function ApiKeyWarning({ status }: ApiKeyWarningProps) {
       {/* Compliance Badge */}
       <Badge
         variant="outline"
-        className="border-orange-200 bg-orange-50 text-orange-700 w-full justify-start py-2"
+        className="h-auto w-full justify-start whitespace-normal border-orange-200 bg-orange-50 py-2 text-left text-orange-700"
       >
         <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
         <span className="text-xs">

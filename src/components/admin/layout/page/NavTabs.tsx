@@ -1,6 +1,7 @@
 import * as React from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { cn } from '../../../ui/utils';
+import { useTabStrip } from '../../../ui/use-tab-strip';
 
 /**
  * Level 1 navigation inside a module: underline tabs (design system: Tabs).
@@ -10,12 +11,11 @@ export function NavTabsList({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List>) {
+  const stripRef = useTabStrip<HTMLDivElement>();
   return (
     <TabsPrimitive.List
-      className={cn(
-        'flex w-full items-end gap-1 overflow-x-auto border-b border-nw-line',
-        className,
-      )}
+      ref={stripRef}
+      className={cn('tab-strip flex w-full items-end gap-1 border-b border-nw-line', className)}
       {...props}
     />
   );
@@ -49,16 +49,20 @@ export function NavTabsTrigger({
 
 /**
  * Level 2 navigation inside a tab: a segmented control that only takes the
- * width of its items (design system: SegmentedControl).
+ * width of its items (design system: SegmentedControl). When the items are
+ * wider than the screen the control scrolls sideways rather than wrapping
+ * into a ragged second row.
  */
 export function SegmentedList({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List>) {
+  const stripRef = useTabStrip<HTMLDivElement>();
   return (
     <TabsPrimitive.List
+      ref={stripRef}
       className={cn(
-        'inline-flex w-fit max-w-full flex-wrap items-center gap-0.5 self-start rounded-[10px] bg-gray-100 p-1',
+        'tab-strip inline-flex w-fit max-w-full items-center gap-0.5 self-start rounded-[10px] bg-gray-100 p-1',
         className,
       )}
       {...props}
@@ -73,7 +77,7 @@ export function SegmentedTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        'inline-flex h-8 items-center rounded-lg px-3 text-[13px] font-medium whitespace-nowrap text-nw-text-2 transition-colors',
+        'inline-flex h-8 shrink-0 items-center rounded-lg px-3 text-[13px] font-medium whitespace-nowrap text-nw-text-2 transition-colors',
         'hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
         'data-[state=active]:bg-white data-[state=active]:text-nw-ink data-[state=active]:shadow-sm',
         className,

@@ -82,7 +82,7 @@ export function TaskColumn({
   const config = STATUS_CONFIG[status];
 
   return (
-    <div className="flex-1 min-w-[350px] h-full flex flex-col rounded-xl bg-gray-100/50 border border-gray-200">
+    <div className="flex h-full min-w-[calc(100vw-4.5rem)] flex-1 snap-start flex-col rounded-xl border border-gray-200 bg-gray-100/50 sm:min-w-[350px]">
       {/* Column Header */}
       <div className="p-3 rounded-t-xl border-b bg-white flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2">

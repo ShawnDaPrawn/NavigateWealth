@@ -58,7 +58,7 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
       {/* ========================================================================
           MIDDLE SECTION — System Activity + Quick Actions
           ======================================================================== */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <SystemActivityCard onModuleChange={onModuleChange} />
         <QuickActionsCard onModuleChange={onModuleChange} />
       </div>
@@ -66,7 +66,7 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
       {/* ========================================================================
           TASKS + RECENT NOTES
           ======================================================================== */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TasksWidget onModuleChange={onModuleChange} onViewTask={onViewTask} maxTasks={5} />
         <RecentNotesWidget onModuleChange={onModuleChange} maxNotes={5} />
       </div>
@@ -74,7 +74,7 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
       {/* ========================================================================
           BOTTOM SECTION — Publications (left) | Newsletter (right)
           ======================================================================== */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <PublicationsCard onModuleChange={onModuleChange} maxArticles={5} />
         </div>

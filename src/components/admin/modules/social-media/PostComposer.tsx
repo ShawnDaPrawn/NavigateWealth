@@ -380,7 +380,7 @@ export function PostComposer({
                 Preview
               </Button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={!canSubmit} onClick={() => submit('queue')}>
                 Add to queue
               </Button>

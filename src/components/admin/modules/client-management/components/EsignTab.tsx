@@ -672,7 +672,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
   return (
     <div className="space-y-6">
       {/* Header with Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold leading-none">E-Signature Documents</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -686,7 +686,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       </div>
 
       {/* Statistics Cards (SS8.3 stat card standards) */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         {(Object.keys(STAT_CONFIG) as Array<keyof typeof STAT_CONFIG>).map((key) => {
           const cfg = STAT_CONFIG[key];
           const Icon = cfg.icon;

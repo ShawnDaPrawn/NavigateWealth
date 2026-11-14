@@ -178,7 +178,7 @@ export function UniversalKeyManager() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="client-keys" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 h-12">
+        <TabsList className="w-full h-12">
           <TabsTrigger value="client-keys" className="flex items-center gap-2 text-base">
             <UserCircle className="h-4 w-4" />
             Client Keys
@@ -205,7 +205,7 @@ export function UniversalKeyManager() {
         <TabsContent value="client-keys">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Client Profile Keys</CardTitle>
                   <CardDescription className="mt-1">
@@ -241,7 +241,7 @@ export function UniversalKeyManager() {
         <TabsContent value="product-keys">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Individual Product Keys</CardTitle>
                   <CardDescription className="mt-1">
@@ -277,7 +277,7 @@ export function UniversalKeyManager() {
         <TabsContent value="calculated-keys">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>Calculated Total Keys</CardTitle>
                   <CardDescription className="mt-1">
@@ -329,7 +329,7 @@ export function UniversalKeyManager() {
         <TabsContent value="fna-recommendations">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <CardTitle>FNA Recommendations</CardTitle>
                   <CardDescription className="mt-1">

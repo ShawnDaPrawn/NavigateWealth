@@ -32,7 +32,7 @@ export function TabCompliance({ selectedPersonnel, onUpload }: TabComplianceProp
 
         <div className="space-y-4">
           <h4 className="font-medium text-sm">Required Qualifications</h4>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center justify-between border p-3 rounded">
               <span className="text-sm">RE5 Certificate</span>
               <Checkbox checked={selectedPersonnel.qualifications?.re5} />

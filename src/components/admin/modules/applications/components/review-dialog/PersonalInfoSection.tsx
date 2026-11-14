@@ -17,7 +17,7 @@ export function PersonalInfoSection({
     <ReviewSection icon={User} title="Personal Information">
       {isEditing ? (
         <div className="space-y-3">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <EditSelect
               label="Title"
               value={fv('title')}
@@ -42,7 +42,7 @@ export function PersonalInfoSection({
               placeholder="Last name"
             />
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <EditField
               label="Preferred Name"
               value={fv('preferredName')}

@@ -277,7 +277,7 @@ export const InsightsTab = memo(function InsightsTab({
         {/* Articles Grid */}
         {paginatedArticles.length > 0 ? (
           <div className="contents">
-            <div id="articles-grid" className="grid md:grid-cols-2 gap-6">
+            <div id="articles-grid" className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {paginatedArticles.map((article, index) => (
                 <Card
                   key={article.id || `${article.title}-${startIdx + index}`}

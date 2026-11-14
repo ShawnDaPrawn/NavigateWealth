@@ -439,7 +439,7 @@ export function PolicyDocumentUpload({
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+              <div className="flex flex-wrap items-center gap-1 flex-shrink-0 ml-2">
                 <Button
                   variant="ghost"
                   size="sm"

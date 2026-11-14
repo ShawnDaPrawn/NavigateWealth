@@ -337,7 +337,7 @@ export function LinktreeTab() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div
             className="flex items-center justify-center h-10 w-10 rounded-lg"
@@ -354,7 +354,7 @@ export function LinktreeTab() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={openSettings} className="gap-1.5">
             <Settings className="h-3.5 w-3.5" />
             Settings
@@ -398,7 +398,7 @@ export function LinktreeTab() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-3">

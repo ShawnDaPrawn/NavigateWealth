@@ -134,7 +134,7 @@ export function DocumentUploadStep({ value, onChange, disabled = false }: Docume
     // One column on a laptop, two from `xl` up: the documents are the tall
     // half and the settings the short one, so side by side fills an admin
     // screen instead of leaving the form in a narrow ribbon down the middle.
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:items-start">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:items-start">
       <EsignWizardSection
         icon={Upload}
         title="Documents"

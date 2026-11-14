@@ -220,7 +220,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
     return (
       <div className="space-y-6">
         <div className="rounded-lg border bg-muted/20 p-4">
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div>
               <p className="text-xs text-muted-foreground">Compilation</p>
               <p className="truncate text-sm font-medium">{compilation.id}</p>
@@ -316,7 +316,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <Label className="font-medium">Client:</Label>
               <p className="text-sm">{clientName}</p>
@@ -372,7 +372,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
                     I acknowledge that I have read and understood this Record of Advice and the
                     recommendations contained herein.
                   </p>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <Label>Client Signature:</Label>
                       <div className="border-b border-dashed border-muted-foreground mt-2 h-8" />

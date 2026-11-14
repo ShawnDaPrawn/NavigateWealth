@@ -14,7 +14,7 @@ interface DocumentStatsCardsProps {
  *  above the DocumentsTab filter bar. */
 export function DocumentStatsCards({ totalPacks, filteredDocuments }: DocumentStatsCardsProps) {
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">

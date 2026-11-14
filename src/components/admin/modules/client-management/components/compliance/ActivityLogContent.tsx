@@ -234,7 +234,7 @@ export function ActivityLogContent({
   return (
     <div className="contents">
       <Card className="flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between flex-shrink-0">
+        <CardHeader className="flex flex-row items-center justify-between flex-shrink-0 flex-wrap gap-x-4 gap-y-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <History className="h-5 w-5" />
             Compliance Reports

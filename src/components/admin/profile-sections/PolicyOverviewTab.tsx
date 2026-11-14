@@ -119,7 +119,7 @@ export function PolicyOverviewTab({
   return (
     <div className={isEmbedded ? 'space-y-4' : 'space-y-8 animate-in fade-in duration-500'}>
       {!isEmbedded && (
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Financial Portfolio Overview</h2>
             <p className="text-gray-600">

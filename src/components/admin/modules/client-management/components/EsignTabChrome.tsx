@@ -41,7 +41,7 @@ export function EsignTabSkeleton() {
         <Skeleton className="h-9 w-36 rounded-md" />
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         {(Object.keys(STAT_CONFIG) as Array<keyof typeof STAT_CONFIG>).map((key) => {
           const cfg = STAT_CONFIG[key];
           return (

@@ -136,7 +136,7 @@ export const PdfTemplateViewer = ({
 
           <div className="flex items-center gap-4">
             {/* Zoom Controls */}
-            <div className="flex items-center gap-2 bg-gray-100 rounded-md p-1">
+            <div className="flex flex-wrap items-center gap-2 bg-gray-100 rounded-md p-1">
               <button
                 onClick={handleZoomOut}
                 className="p-1.5 hover:bg-white rounded-sm text-gray-700 transition-colors"

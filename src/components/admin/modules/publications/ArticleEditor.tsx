@@ -629,7 +629,7 @@ export function ArticleEditor({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             onClick={() => setActiveTab(activeTab === 'preview' ? 'editor' : 'preview')}
@@ -708,7 +708,7 @@ export function ArticleEditor({
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <button
             onClick={() => setActiveTab('editor')}
             className={cn(

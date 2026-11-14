@@ -176,7 +176,7 @@ export function Step3ManualAdjustment({
     return (
       <Card key={type}>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-lg">{title}</CardTitle>
               {hasOverride && (

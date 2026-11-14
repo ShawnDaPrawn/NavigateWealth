@@ -121,7 +121,7 @@ export function DocumentEditor({
           {draft.documentSections.map((section, index) => (
             <div
               key={`${section.id}-${index}`}
-              className="grid gap-3 rounded-md border p-3 md:grid-cols-[120px_1fr_1fr_auto_auto]"
+              className="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-[120px_1fr_1fr_auto_auto]"
             >
               <NumberInputField
                 value={section.order}

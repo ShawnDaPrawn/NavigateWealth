@@ -233,7 +233,7 @@ export function RoAModuleContractManager() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
         <Card>
           <CardContent className="h-96 animate-pulse bg-muted/30" />
         </Card>
@@ -269,7 +269,7 @@ export function RoAModuleContractManager() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">Contracts</div>
@@ -298,7 +298,7 @@ export function RoAModuleContractManager() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
         <Card className="h-fit">
           <CardHeader className="space-y-4 pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -444,7 +444,7 @@ export function RoAModuleContractManager() {
 
         {draft ? (
           <Tabs defaultValue="basic" className="space-y-4">
-            <TabsList className="grid grid-cols-3 lg:grid-cols-7">
+            <TabsList className="w-full">
               <TabsTrigger value="basic">Basic</TabsTrigger>
               {isConversationContract(draft) ? (
                 <TabsTrigger value="conversation">Conversation</TabsTrigger>

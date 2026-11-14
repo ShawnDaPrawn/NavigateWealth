@@ -23,7 +23,7 @@ export function NotesSkeleton() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-white rounded-lg border p-4 flex items-center gap-3">
             <Skeleton className="h-10 w-10 rounded-lg" />

@@ -145,7 +145,7 @@ export function PublicationsTab() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-3xl grid-cols-3">
+        <TabsList className="w-full max-w-3xl">
           <TabsTrigger value="articles" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Articles

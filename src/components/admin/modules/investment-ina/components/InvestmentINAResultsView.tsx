@@ -70,7 +70,7 @@ export function InvestmentINAResultsView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl">Investment Needs Analysis Results</h2>
           <p className="text-muted-foreground">
@@ -291,7 +291,7 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2">
               {getStatusIcon(goal.goalStatus)}

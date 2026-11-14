@@ -367,7 +367,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-medium tracking-tight">Security Management</h3>
@@ -411,7 +411,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
             A compact view of access, authentication, and sign-in details for this client.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-lg border bg-muted/20 p-4">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -591,7 +591,7 @@ export function SecurityTab({ selectedClient }: SecurityTabProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-lg border bg-muted/20 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Latest event

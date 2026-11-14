@@ -335,7 +335,7 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
@@ -445,7 +445,7 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
           {currentModule.input && (
             <div className="rounded-lg border bg-muted/20 p-4">
               <h4 className="font-medium">Module Data Contract</h4>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Gathering Methods</p>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -590,7 +590,7 @@ export function RoAStepModuleDetails({ draft, onUpdate, modules }: RoAStepModule
                     {normalizedOutput.normalizedKey}
                   </span>
                 </p>
-                <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                   {currentModule.output.fields.map((field) => (
                     <div key={field.key} className="rounded-md bg-background p-2 text-sm">
                       <p className="text-xs text-muted-foreground">{field.label}</p>

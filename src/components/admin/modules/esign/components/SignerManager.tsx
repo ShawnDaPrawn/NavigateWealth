@@ -234,7 +234,7 @@ export function SignerManager({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="font-semibold text-lg">Signers</h3>
           <p className="text-sm text-muted-foreground">Add people who need to sign this document</p>
@@ -280,7 +280,7 @@ export function SignerManager({
                 {isEditing ? (
                   // EDITING MODE
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor={`signer-name-${index}`}>Name *</Label>
                         <Input
@@ -302,7 +302,7 @@ export function SignerManager({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor={`signer-role-${index}`}>Role (Optional)</Label>
                         <Input
@@ -472,7 +472,7 @@ export function SignerManager({
           <CardContent className="p-4">
             <h4 className="font-medium mb-4">Add New Signer</h4>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-signer-name">Name *</Label>
                   <Input
@@ -508,7 +508,7 @@ export function SignerManager({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="new-signer-role">Role (Optional)</Label>
                   <Input

@@ -215,7 +215,7 @@ export function RiskAssessmentPanel({
         {/* Templates Card */}
         <Card>
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <div className="bg-purple-100 p-1.5 rounded-md">
                   <ClipboardList className="h-4 w-4 text-purple-600" />

@@ -53,7 +53,7 @@ export function DependantsForm() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Dependants</CardTitle>
               <CardDescription>Add all financial dependants</CardDescription>
@@ -83,7 +83,7 @@ export function DependantsForm() {
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <FormField
                     control={form.control}
                     name={`dependants.${index}.relationship`}

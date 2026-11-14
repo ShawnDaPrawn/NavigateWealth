@@ -472,7 +472,7 @@ export function EnvelopeDetailsDialog({
           {/* ==================== TABS ==================== */}
           <div className="px-6 pb-6 pt-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="w-full">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="signers">Signers ({envelope.signers?.length || 0})</TabsTrigger>
                 <TabsTrigger value="activity">Activity</TabsTrigger>

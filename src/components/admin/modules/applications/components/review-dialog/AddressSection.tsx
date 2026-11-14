@@ -16,7 +16,7 @@ export function AddressSection({ isEditing, fv, updateField, data }: SectionProp
     <ReviewSection icon={MapPin} title="Residential Address">
       {isEditing ? (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <EditField
               label="Address Line 1"
               value={fv('residentialAddressLine1')}
@@ -30,7 +30,7 @@ export function AddressSection({ isEditing, fv, updateField, data }: SectionProp
               placeholder="Apartment, suite, etc."
             />
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <EditField
               label="Suburb"
               value={fv('residentialSuburb')}
@@ -53,7 +53,7 @@ export function AddressSection({ isEditing, fv, updateField, data }: SectionProp
               onChange={(v) => updateField('residentialPostalCode', v)}
             />
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
             <EditField
               label="Country"
               value={fv('residentialCountry')}

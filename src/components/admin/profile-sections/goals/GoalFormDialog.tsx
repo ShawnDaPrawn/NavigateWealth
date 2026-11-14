@@ -361,7 +361,7 @@ export function GoalFormDialog({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="w-full">
             <TabsTrigger value="details">Goal Details</TabsTrigger>
             <TabsTrigger value="financials">Inputs & Assumptions</TabsTrigger>
             <TabsTrigger value="linking">Link Investments</TabsTrigger>
@@ -512,7 +512,7 @@ export function GoalFormDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 border-t pt-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 border-t pt-4">
               <div>
                 <Label htmlFor="growth" className="text-xs">
                   Exp. Net Growth (%)

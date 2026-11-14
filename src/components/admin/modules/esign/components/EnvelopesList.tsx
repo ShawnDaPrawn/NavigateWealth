@@ -36,6 +36,7 @@ import {
 } from '../../../../ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import { Calendar } from '../../../../ui/calendar';
+import { useIsMobile } from '../../../../ui/use-mobile';
 import { useEnvelopes } from '../hooks/useEnvelopes';
 import { useEnvelopeActions } from '../hooks/useEnvelopeActions';
 import { StatusBadge } from './StatusBadge';
@@ -70,6 +71,7 @@ export function EnvelopesList({
 }: EnvelopesListProps) {
   const { envelopes, loading, error, refetch } = useEnvelopes({ autoLoad: true, refreshTrigger });
   const { voidEnvelope, voiding, deleteEnvelope, deleting } = useEnvelopeActions();
+  const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -263,9 +265,9 @@ export function EnvelopesList({
 
       {/* ==================== FILTERS ==================== */}
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="relative flex-1 max-w-sm">
+        <div className="flex items-start justify-between gap-2 sm:items-center sm:gap-4">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <div className="relative w-full sm:w-auto sm:max-w-sm sm:flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search envelopes..."
@@ -309,14 +311,14 @@ export function EnvelopesList({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     id="date"
                     variant={'outline'}
                     className={cn(
-                      'w-[260px] justify-start text-left font-normal',
+                      'w-full justify-start text-left font-normal sm:w-[260px]',
                       !dateRange && 'text-muted-foreground',
                     )}
                   >
@@ -342,7 +344,7 @@ export function EnvelopesList({
                     defaultMonth={dateRange?.from}
                     selected={dateRange}
                     onSelect={setDateRange}
-                    numberOfMonths={2}
+                    numberOfMonths={isMobile ? 1 : 2}
                   />
                 </PopoverContent>
               </Popover>
@@ -398,7 +400,7 @@ export function EnvelopesList({
             {filteredEnvelopes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
-                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <div className="sticky left-0 w-[calc(100vw-5rem)] sm:static sm:w-auto flex flex-col items-center justify-center text-muted-foreground">
                     <FileText className="h-8 w-8 mb-2 opacity-20" />
                     <p>No envelopes found</p>
                     {envelopes.length === 0 && (

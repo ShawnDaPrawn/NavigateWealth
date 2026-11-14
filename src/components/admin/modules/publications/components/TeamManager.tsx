@@ -262,7 +262,7 @@ export function TeamManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold">Team Members</h3>
           <p className="text-sm text-muted-foreground">
@@ -420,7 +420,7 @@ export function TeamManager() {
                 </span>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   <Button
                     size="sm"
                     variant="ghost"
@@ -476,7 +476,7 @@ export function TeamManager() {
 
           <div className="space-y-4 py-2">
             {/* Name & Title */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="tm-name">
                   Name <span className="text-red-500">*</span>
@@ -584,7 +584,7 @@ export function TeamManager() {
             </div>
 
             {/* LinkedIn & Email */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="tm-linkedin">LinkedIn URL</Label>
                 <Input
@@ -606,7 +606,7 @@ export function TeamManager() {
             </div>
 
             {/* Sort order & Active */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="tm-sort">Display Order</Label>
                 <NumberInputField

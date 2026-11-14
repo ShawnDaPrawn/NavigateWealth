@@ -548,7 +548,7 @@ export function IntegrationsTab() {
   ).length;
 
   return (
-    <div className="flex h-[calc(100vh-200px)] min-h-[800px] gap-6">
+    <div className="flex flex-col gap-6 lg:h-[calc(100vh-200px)] lg:min-h-[800px] lg:flex-row">
       {/* Left Panel: Connections */}
       <ProviderConnectionList
         providers={providers}
@@ -575,7 +575,7 @@ export function IntegrationsTab() {
       />
 
       {/* Right Panel: Details & Actions */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden rounded-lg border bg-white shadow-sm">
+      <div className="flex h-[calc(100dvh-8rem)] min-h-[560px] flex-1 flex-col overflow-hidden rounded-lg border bg-white shadow-sm lg:h-full lg:min-h-0">
         {selectedProvider ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
             <IntegrationHeader

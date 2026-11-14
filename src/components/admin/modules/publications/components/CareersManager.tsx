@@ -305,7 +305,7 @@ export function CareersManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold">Career Listings</h3>
           <p className="text-sm text-muted-foreground">
@@ -444,7 +444,7 @@ export function CareersManager() {
                   </span>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-1">
                     <Button
                       size="sm"
                       variant="ghost"
@@ -514,7 +514,7 @@ export function CareersManager() {
             </div>
 
             {/* Category & Type */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="jl-category">
                   Category <span className="text-red-500">*</span>
@@ -550,7 +550,7 @@ export function CareersManager() {
             </div>
 
             {/* Location & Closing Date */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="jl-location">Location</Label>
                 <Input
@@ -678,7 +678,7 @@ export function CareersManager() {
             </div>
 
             {/* Sort order & Active */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="jl-sort">Display Order</Label>
                 <NumberInputField

@@ -32,14 +32,14 @@ export function IntegrationHeader({ provider, selectedCategoryId, stats, onCateg
   const automationCategoryIds = getPortalAutomationCategoryOptions(provider.categoryIds);
 
   return (
-    <div className="p-6 border-b bg-white z-10">
-      <div className="flex justify-between items-start gap-6 mb-6">
+    <div className="z-10 border-b bg-white p-4 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-6 sm:gap-6">
         <div className="min-w-0">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{provider.name} Integration</h2>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">{provider.name} Integration</h2>
           <p className="text-gray-500">Review proposed {provider.name} policy updates, and configure how they are collected</p>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <div className="w-[250px]">
+        <div className="flex w-full items-center gap-3 sm:w-auto sm:shrink-0">
+          <div className="w-full sm:w-[250px]">
             <Select value={selectedCategoryId} onValueChange={onCategoryChange} disabled={automationCategoryIds.length === 0}>
               <SelectTrigger className="h-9 bg-white border-gray-300">
                 <SelectValue placeholder={automationCategoryIds.length === 0 ? 'No automation category' : 'Select product...'} />

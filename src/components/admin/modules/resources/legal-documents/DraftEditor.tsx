@@ -364,7 +364,7 @@ export function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse })
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
@@ -385,7 +385,7 @@ export function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse })
                 </Collapsible>
               </div>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
+            <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="legal-version-number">Version number</Label>
                 <Input
@@ -420,7 +420,7 @@ export function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse })
                 />
               </div>
               <Collapsible open={showSetup} onOpenChange={setShowSetup} className="md:col-span-2">
-                <CollapsibleContent className="grid gap-4 md:grid-cols-2">
+                <CollapsibleContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>PDF page size</Label>
                     <Select
@@ -461,7 +461,7 @@ export function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse })
             onValueChange={(value) => setEditorTab(value as 'editor' | 'source')}
             className="space-y-4"
           >
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="w-full">
               <TabsTrigger value="editor" className="gap-2">
                 <BookOpenText className="h-4 w-4" />
                 Visual editor
@@ -500,7 +500,7 @@ export function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse })
             <TabsContent value="source">
               <Card>
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <CardTitle className="text-base">HTML/source</CardTitle>
                       <CardDescription>

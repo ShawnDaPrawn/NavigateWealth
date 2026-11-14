@@ -106,7 +106,7 @@ export function EmploymentSection({
             <div className="contents">
               <Separator />
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="text-sm font-medium text-gray-900">Client's Employers</h4>
                     <p className="text-xs text-gray-500 mt-0.5">

@@ -322,7 +322,7 @@ export function DraftRoAInterface() {
       {/* Progress Header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
@@ -347,9 +347,9 @@ export function DraftRoAInterface() {
           <div className="space-y-4">
             {/* Progress Bar */}
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>{currentStepData.description}</span>
-                <span>{Math.round(progress)}% complete</span>
+              <div className="flex justify-between gap-3 text-sm">
+                <span className="min-w-0">{currentStepData.description}</span>
+                <span className="shrink-0">{Math.round(progress)}% complete</span>
               </div>
               <Progress value={progress} className="w-full" />
             </div>
@@ -381,7 +381,7 @@ export function DraftRoAInterface() {
                   </div>
                   {index < STEPS.length - 1 && (
                     <div
-                      className={`h-px w-8 mx-4 ${index < currentStep ? 'bg-primary' : 'bg-muted'}`}
+                      className={`mx-1.5 h-px w-4 sm:mx-4 sm:w-8 ${index < currentStep ? 'bg-primary' : 'bg-muted'}`}
                     />
                   )}
                 </div>
@@ -393,7 +393,7 @@ export function DraftRoAInterface() {
 
       {/* Step Content */}
       <Card>
-        <CardContent className="p-6">{renderStepContent()}</CardContent>
+        <CardContent className="p-4 sm:p-6">{renderStepContent()}</CardContent>
       </Card>
 
       {/* Navigation */}

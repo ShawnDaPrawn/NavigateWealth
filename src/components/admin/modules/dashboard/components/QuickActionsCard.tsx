@@ -100,11 +100,11 @@ export function QuickActionsCard({ onModuleChange, customActions }: QuickActions
               <Button
                 key={action.id}
                 variant={action.variant || 'outline'}
-                className="h-auto py-4 justify-start space-x-3"
+                className="h-auto min-w-0 justify-start space-x-3 py-4 text-left whitespace-normal"
                 onClick={() => handleAction(action)}
               >
-                <Icon className="h-5 w-5" />
-                <span className="font-medium">{action.label}</span>
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className="min-w-0 font-medium leading-tight">{action.label}</span>
                 {action.badgeCount ? (
                   <span className="ml-auto bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
                     {action.badgeCount}

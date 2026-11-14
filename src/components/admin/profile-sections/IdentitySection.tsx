@@ -261,7 +261,7 @@ export function IdentitySection({
       {/* Header Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#6d28d9] to-[#5b21b6] flex items-center justify-center">
                 <Shield className="h-6 w-6 text-white" />
