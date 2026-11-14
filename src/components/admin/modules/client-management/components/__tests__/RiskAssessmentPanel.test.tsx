@@ -66,14 +66,37 @@ describe('RiskAssessmentPanel', () => {
     setupApi([template]);
     renderPanel();
     expect(await screen.findByText('AML Screening')).toBeTruthy();
-    expect(screen.getByText('Risk assessments')).toBeTruthy();
+    expect(screen.getByText('Assessment templates')).toBeTruthy();
+    expect(screen.getByText('Never')).toBeTruthy();
     expect(screen.getByRole('button', { name: /start/i })).toBeTruthy();
+  });
+
+  it("shows each template's last result and opens it", async () => {
+    setupApi(
+      [template],
+      [
+        {
+          id: 'r1',
+          assessmentId: template.id,
+          assessmentName: 'AML Screening',
+          submittedAt: '2026-11-03T09:00:00Z',
+          matterId: null,
+          naturalPersonId: null,
+          screeningOutcome: 'Low',
+          bulkScreeningResponse: null,
+        },
+      ],
+    );
+    renderPanel();
+    expect(await screen.findAllByText('Low')).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'View result' })[0]);
+    expect(await screen.findByText('Assessment results')).toBeTruthy();
   });
 
   it('shows an empty state when there are no templates', async () => {
     setupApi([]);
     renderPanel();
-    expect(await screen.findByText(/no assessment templates available/i)).toBeTruthy();
+    expect(await screen.findByText(/no assessment templates yet/i)).toBeTruthy();
   });
 
   it('disables Start when the client has no identification (KYC gate)', async () => {

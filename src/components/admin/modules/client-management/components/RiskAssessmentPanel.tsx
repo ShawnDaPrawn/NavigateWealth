@@ -1,23 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
+import { Card, CardContent } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
-import {
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  Loader2,
-  ClipboardList,
-  ChevronDown,
-  ChevronUp,
-  BarChart3,
-  Play,
-  ArrowLeft,
-  FileText,
-  Clock,
-  ListChecks,
-  Info,
-} from 'lucide-react';
+import { RefreshCw, CheckCircle, Loader2, ArrowLeft, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../../../utils/api';
 
@@ -28,6 +13,9 @@ import {
   type FormField,
 } from './riskAssessment/riskAssessmentModel';
 import { getOutcomeBadge } from './riskAssessment/riskAssessmentPresentation';
+import { PanelCard, StatusPill } from './compliance/ComplianceShared';
+import { outcomeTone } from './compliance/complianceTypes';
+import { ErrorState, Notice } from '../../../layout/page';
 import { FormFieldRenderer } from './riskAssessment/FormFieldRenderer';
 import { ScreeningResultsDetail } from './riskAssessment/ScreeningResultsDetail';
 
@@ -71,7 +59,6 @@ export function RiskAssessmentPanel({
   // History
   const [history, setHistory] = useState<AssessmentResult[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [expandedResultId, setExpandedResultId] = useState<string | null>(null);
 
   // Active result after submission
   const [activeResult, setActiveResult] = useState<AssessmentResult | null>(null);
@@ -210,222 +197,183 @@ export function RiskAssessmentPanel({
   // ─── Render: Template List ───────────────────────────────────────────────
 
   if (view === 'list') {
+    // The latest completed run of each template, for the templates table.
+    const latestByTemplate = new Map<number, AssessmentResult>();
+    for (const r of history) {
+      const prev = latestByTemplate.get(r.assessmentId);
+      if (!prev || new Date(r.submittedAt) > new Date(prev.submittedAt)) {
+        latestByTemplate.set(r.assessmentId, r);
+      }
+    }
+    const viewResult = (r: AssessmentResult) => {
+      setActiveResult(r);
+      setActiveTemplate(templates.find((t) => t.id === r.assessmentId) ?? null);
+      setView('result');
+    };
+    const formatDay = (iso: string) =>
+      new Date(iso).toLocaleDateString('en-ZA', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+
     return (
       <div className="space-y-4">
-        {/* Templates Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="bg-purple-100 p-1.5 rounded-md">
-                  <ClipboardList className="h-4 w-4 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">Risk assessments</CardTitle>
-                  <CardDescription className="text-xs">
-                    Select a due diligence assessment to run against this client
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchTemplates}
-                disabled={templatesLoading}
-                className="h-8"
-              >
-                <RefreshCw
-                  className={`h-3.5 w-3.5 mr-1 ${templatesLoading ? 'animate-spin' : ''}`}
-                />
-                Refresh
-              </Button>
+        {/* Design CM-K-Risk: the templates as a table with the last result of each. */}
+        <PanelCard
+          title="Assessment templates"
+          aside={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void fetchTemplates();
+                void fetchHistory();
+              }}
+              disabled={templatesLoading || historyLoading}
+            >
+              Refresh
+            </Button>
+          }
+        >
+          {templatesLoading && templates.length === 0 ? (
+            <div className="flex items-center justify-center py-8 text-sm text-nw-text-3">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
+              Loading templates…
             </div>
-          </CardHeader>
-          <CardContent>
-            {templatesLoading && templates.length === 0 ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
-                <span className="ml-2 text-sm text-muted-foreground">
-                  Loading templates from Honeycomb...
-                </span>
-              </div>
-            ) : templatesError ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-red-800">
-                    Failed to load assessment templates
-                  </p>
-                  <p className="text-xs text-red-600 mt-1">{templatesError}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 h-7 text-xs"
-                    onClick={fetchTemplates}
-                  >
-                    <RefreshCw className="h-3 w-3 mr-1" /> Retry
-                  </Button>
-                </div>
-              </div>
-            ) : templates.length === 0 ? (
-              <div className="text-center py-10 border border-dashed rounded-lg">
-                <ClipboardList className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm text-muted-foreground">
-                  No assessment templates available from Honeycomb.
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Templates are configured in the Beeswax platform and pulled automatically.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {templates.map((tpl) => {
-                  const fieldCount = parseFormJson(tpl.formJson).filter(
-                    (f) => f.type !== 'section',
-                  ).length;
-                  return (
-                    <div
-                      key={tpl.id}
-                      className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50/30 transition-all group"
-                    >
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <div className="bg-purple-100 p-2 rounded-lg flex-shrink-0 mt-0.5">
-                          <FileText className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-900">
-                            {tpl.assessmentName}
-                          </p>
-                          {tpl.assessmentDescription && (
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                              {tpl.assessmentDescription}
-                            </p>
-                          )}
-                          <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-gray-50">
-                              {tpl.matterType}
-                            </Badge>
-                            {tpl.version && (
-                              <span className="text-[10px] text-gray-400">v{tpl.version}</span>
+          ) : templatesError ? (
+            <ErrorState
+              title="Couldn't load the assessment templates"
+              description="Something went wrong while loading. Nothing has changed."
+              details={templatesError}
+              onRetry={() => void fetchTemplates()}
+            />
+          ) : templates.length === 0 ? (
+            <p className="py-2 text-sm text-nw-text-3">
+              No assessment templates yet. Templates are configured in the Beeswax platform and
+              pulled automatically.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {!hasIdentification && (
+                <Notice kind="attention" title="No ID or passport number on file.">
+                  Add one to the client&apos;s profile before running an assessment.
+                </Notice>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-nw-bg text-left text-xs font-medium text-nw-text-3">
+                      <th scope="col" className="px-3 py-2.5">
+                        Template
+                      </th>
+                      <th scope="col" className="px-3 py-2.5">
+                        Last completed
+                      </th>
+                      <th scope="col" className="px-3 py-2.5">
+                        Result
+                      </th>
+                      <th scope="col" className="px-3 py-2.5">
+                        <span className="sr-only">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {templates.map((tpl) => {
+                      const latest = latestByTemplate.get(tpl.id);
+                      return (
+                        <tr key={tpl.id} className="border-t border-nw-line">
+                          <td className="px-3 py-3">
+                            <p className="text-nw-ink">{tpl.assessmentName}</p>
+                            {tpl.assessmentDescription && (
+                              <p className="mt-0.5 line-clamp-1 text-xs text-nw-text-3">
+                                {tpl.assessmentDescription}
+                              </p>
                             )}
-                            {fieldCount > 0 && (
-                              <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
-                                <ListChecks className="h-3 w-3" />
-                                {fieldCount} questions
-                              </span>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap text-nw-ink">
+                            {latest ? formatDay(latest.submittedAt) : 'Never'}
+                          </td>
+                          <td className="px-3 py-3">
+                            {latest ? (
+                              <OutcomePill outcome={latest.screeningOutcome} />
+                            ) : (
+                              <span className="text-nw-text-3">—</span>
                             )}
-                            <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
-                              <Clock className="h-3 w-3" />
-                              {new Date(tpl.updated_at || tpl.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="bg-purple-600 hover:bg-purple-700 ml-3 flex-shrink-0"
-                        disabled={!hasIdentification}
-                        onClick={() => startAssessment(tpl)}
-                      >
-                        <Play className="h-3.5 w-3.5 mr-1" />
-                        Start
-                      </Button>
-                    </div>
-                  );
-                })}
-                {!hasIdentification && (
-                  <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                    Client must have a valid SA ID number or passport to run assessments.
-                  </div>
-                )}
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center justify-end gap-2">
+                              {latest && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => viewResult(latest)}
+                                >
+                                  View result
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!hasIdentification}
+                                onClick={() => startAssessment(tpl)}
+                              >
+                                Start
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* History Card */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-gray-500" />
-                Assessment History
-                {history.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {history.length}
-                  </Badge>
-                )}
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchHistory}
-                disabled={historyLoading}
-                className="h-8"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 mr-1 ${historyLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            {historyLoading && history.length === 0 ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
-              </div>
-            ) : history.length === 0 ? (
-              <div className="text-center py-8 border border-dashed rounded-lg">
-                <BarChart3 className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm text-muted-foreground">
-                  No assessments have been completed for this client yet.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {history.map((result) => (
-                  <div key={result.id} className="border rounded-lg overflow-hidden">
-                    <button
-                      onClick={() =>
-                        setExpandedResultId(expandedResultId === result.id ? null : result.id)
-                      }
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="bg-purple-100 p-1.5 rounded-md flex-shrink-0">
-                          <ClipboardList className="h-4 w-4 text-purple-600" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {result.assessmentName}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(result.submittedAt).toLocaleString()}
-                            {result.matterId && (
-                              <span className="ml-2 font-mono text-[10px] bg-gray-100 px-1 rounded">
-                                Matter: {result.matterId.substring(0, 8)}...
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {getOutcomeBadge(result.screeningOutcome)}
-                        {expandedResultId === result.id ? (
-                          <ChevronUp className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-gray-400" />
-                        )}
-                      </div>
-                    </button>
+          )}
+        </PanelCard>
 
-                    {expandedResultId === result.id && <ScreeningResultsDetail result={result} />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {history.length > 0 && (
+          <PanelCard title="History">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-nw-bg text-left text-xs font-medium text-nw-text-3">
+                    <th scope="col" className="px-3 py-2.5">
+                      Date
+                    </th>
+                    <th scope="col" className="px-3 py-2.5">
+                      Assessment
+                    </th>
+                    <th scope="col" className="px-3 py-2.5">
+                      Result
+                    </th>
+                    <th scope="col" className="px-3 py-2.5">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((r) => (
+                    <tr key={r.id} className="border-t border-nw-line">
+                      <td className="px-3 py-3 whitespace-nowrap text-nw-ink">
+                        {formatDay(r.submittedAt)}
+                      </td>
+                      <td className="px-3 py-3 text-nw-ink">{r.assessmentName}</td>
+                      <td className="px-3 py-3">
+                        <OutcomePill outcome={r.screeningOutcome} />
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <Button variant="ghost" size="sm" onClick={() => viewResult(r)}>
+                          View result
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PanelCard>
+        )}
       </div>
     );
   }
@@ -580,4 +528,9 @@ export function RiskAssessmentPanel({
 
   // Fallback
   return null;
+}
+
+/** A screening outcome as a pill: "● Low". */
+function OutcomePill({ outcome }: { outcome: string | null }) {
+  return <StatusPill tone={outcomeTone(outcome)}>{outcome || 'Pending'}</StatusPill>;
 }
