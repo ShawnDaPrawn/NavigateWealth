@@ -19,7 +19,6 @@ import {
   RotateCw,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useState } from 'react';
 import type { Task, TaskStatus } from '../types';
 import { PRIORITY_LABELS, PRIORITY_COLORS } from '../constants';
 import { useUpdateTask, useDeleteTask, useDuplicateTask } from '../hooks';
@@ -31,16 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../../ui/alert-dialog';
+import { useConfirm } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 
 // ============================================================================
@@ -77,7 +67,7 @@ export function TaskCard({
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const duplicateTask = useDuplicateTask();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
   const descriptionPreview = getTaskDescriptionPreview(task);
   const issueManagerTask = isIssueManagerTask(task);
 
@@ -96,22 +86,29 @@ export function TaskCard({
     });
   };
 
-  const handleArchive = (e?: React.MouseEvent) => {
+  const handleArchive = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    const ok = await confirm({
+      title: 'Archive task',
+      description: 'Are you sure you want to archive this task?',
+      confirmLabel: 'Archive',
+    });
+    if (!ok) return;
     updateTask.mutate({
       id: task.id,
       status: 'archived',
     });
   };
 
-  const handleDelete = (e?: React.MouseEvent) => {
+  const handleDelete = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setShowDeleteDialog(true);
-  };
-
-  const confirmDelete = () => {
-    deleteTask.mutate(task.id);
-    setShowDeleteDialog(false);
+    const ok = await confirm({
+      title: 'Delete task',
+      description: 'Are you sure you want to delete this task? This action cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) deleteTask.mutate(task.id);
   };
 
   const handleDuplicate = (e?: React.MouseEvent) => {
@@ -200,7 +197,8 @@ export function TaskCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0 -mr-2 text-gray-400 hover:text-gray-600 no-drag opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label={`More actions for ${task.title}`}
+                      className="h-6 w-6 p-0 -mr-2 text-gray-400 hover:text-gray-600 no-drag opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 transition-opacity"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
@@ -218,13 +216,15 @@ export function TaskCard({
                       <DropdownMenuItem onClick={handleDuplicate}>Duplicate</DropdownMenuItem>
                     )}
                     {canEdit && (
-                      <DropdownMenuItem onClick={handleArchive}>Archive</DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => void handleArchive(e)}>
+                        Archive
+                      </DropdownMenuItem>
                     )}
                     {canDelete && (
                       <div className="contents">
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={handleDelete}
+                          onClick={(e) => void handleDelete(e)}
                           className="text-red-600 focus:text-red-700 focus:bg-red-50"
                         >
                           Delete
@@ -332,22 +332,7 @@ export function TaskCard({
         )}
       </Draggable>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Task</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this task? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {confirmDialog}
     </div>
   );
 }

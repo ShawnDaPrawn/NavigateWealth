@@ -11,6 +11,7 @@ import {
 } from '../../../../ui/select';
 import { Checkbox } from '../../../../ui/checkbox';
 import { Badge } from '../../../../ui/badge';
+import { FormErrorBanner } from '../../../layout/page';
 import { toast } from 'sonner';
 import {
   Loader2,
@@ -21,7 +22,6 @@ import {
   ShieldCheck,
   Info,
   CheckCircle2,
-  AlertCircle,
   Sparkles,
   Users,
 } from 'lucide-react';
@@ -111,6 +111,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
 
   // --- helpers ---
   const formDataRef = useRef(formData);
+  const formRef = useRef<HTMLDivElement>(null);
   formDataRef.current = formData;
 
   const runValidation = useCallback(
@@ -248,13 +249,24 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
    * the address belongs to another household member, which makes the server
    * derive a unique sign-in alias instead of rejecting the duplicate.
    */
+  // Moves focus to the first field with a problem (design system: Form errors).
+  const focusFirstError = () =>
+    window.setTimeout(() => {
+      const first = formRef.current?.querySelector<HTMLElement>(
+        '.border-red-400, [aria-invalid="true"]',
+      );
+      first?.focus();
+    }, 0);
+
   const handleSubmit = async (shareMailbox = false) => {
     if (!validateAll()) {
       toast.error('Please fix the highlighted errors before submitting');
+      focusFirstError();
       return;
     }
     if (!consentConfirmed) {
       toast.error('Please confirm you have obtained consent from this client');
+      focusFirstError();
       return;
     }
 
@@ -373,7 +385,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
     `${selectBase} ${showError(field) ? selectError : ''}`;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" ref={formRef}>
       {/* Completion indicator */}
       <div className="flex items-center gap-3 px-1">
         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -387,12 +399,19 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
         </span>
       </div>
 
+      {submitAttempted && (
+        <FormErrorBanner
+          count={activeErrorCount + (consentConfirmed ? 0 : 1)}
+          action="add the client"
+        />
+      )}
+
       {/* ================================================================ */}
       {/* PERSONAL INFORMATION                                             */}
       {/* ================================================================ */}
       <FormSection
         icon={User}
-        title="Personal Information"
+        title="Personal information"
         description="Legal name as it appears on official documents"
         badge={
           formData.firstName &&
@@ -428,7 +447,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               </Select>
             </div>
             <div>
-              <FieldLabel required>First Name</FieldLabel>
+              <FieldLabel required>First name</FieldLabel>
               <Input
                 className={inputCls('firstName')}
                 value={formData.firstName}
@@ -439,7 +458,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <FieldError message={showError('firstName')} />
             </div>
             <div>
-              <FieldLabel>Middle Name</FieldLabel>
+              <FieldLabel>Middle name</FieldLabel>
               <Input
                 className={inputCls('middleName')}
                 value={formData.middleName}
@@ -449,7 +468,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <FieldError message={showError('middleName')} />
             </div>
             <div>
-              <FieldLabel required>Last Name</FieldLabel>
+              <FieldLabel required>Last name</FieldLabel>
               <Input
                 className={inputCls('lastName')}
                 value={formData.lastName}
@@ -464,7 +483,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
           {/* Row 2: DOB, Gender, Nationality */}
           <div className="grid grid-cols-4 gap-3">
             <div>
-              <FieldLabel>Date of Birth</FieldLabel>
+              <FieldLabel>Date of birth</FieldLabel>
               <Input
                 className={inputCls('dateOfBirth')}
                 type="date"
@@ -518,7 +537,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
           {/* Row 3: ID Type, ID Number, Tax Number */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <FieldLabel>ID Type</FieldLabel>
+              <FieldLabel>ID type</FieldLabel>
               <Select
                 value={formData.idType}
                 onValueChange={(v) => {
@@ -545,7 +564,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               </Select>
             </div>
             <div>
-              <FieldLabel>ID / Passport Number</FieldLabel>
+              <FieldLabel>ID / passport number</FieldLabel>
               <Input
                 className={inputCls('idNumber')}
                 value={formData.idNumber}
@@ -562,7 +581,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <FieldError message={showError('idNumber')} />
             </div>
             <div>
-              <FieldLabel>Tax Number</FieldLabel>
+              <FieldLabel>Tax number</FieldLabel>
               <Input
                 className={inputCls('taxNumber')}
                 value={formData.taxNumber}
@@ -577,7 +596,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
           {/* Row 4: Marital Status, Regime */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <FieldLabel>Marital Status</FieldLabel>
+              <FieldLabel>Marital status</FieldLabel>
               <Select
                 value={formData.maritalStatus}
                 onValueChange={(v) => {
@@ -602,7 +621,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
             </div>
             {showSpouseFields && (
               <div className="col-span-2">
-                <FieldLabel required>Marital Regime</FieldLabel>
+                <FieldLabel required>Marital regime</FieldLabel>
                 <Select
                   value={formData.maritalRegime}
                   onValueChange={(v) => {
@@ -633,7 +652,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       {/* ================================================================ */}
       <FormSection
         icon={MapPin}
-        title="Contact Details"
+        title="Contact details"
         description="Primary email and phone are used for account creation"
         badge={
           formData.emailAddress &&
@@ -653,7 +672,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <FieldLabel required>Email Address</FieldLabel>
+              <FieldLabel required>Email address</FieldLabel>
               <Input
                 className={inputCls('emailAddress')}
                 type="email"
@@ -665,7 +684,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <FieldError message={showError('emailAddress')} />
             </div>
             <div>
-              <FieldLabel required>Cellphone Number</FieldLabel>
+              <FieldLabel required>Cellphone number</FieldLabel>
               <Input
                 className={inputCls('cellphoneNumber')}
                 value={formData.cellphoneNumber}
@@ -676,9 +695,103 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <FieldError message={showError('cellphoneNumber')} />
             </div>
           </div>
+          {/* Email already in use: answered in place, under the email field. */}
+          {emailConflict && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-4">
+              <div className="flex items-start gap-3">
+                <div className="h-8 w-8 shrink-0 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-blue-700" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900">
+                      {emailConflict.email} is already a sign-in address
+                    </p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-blue-800">
+                      {emailConflict.holderName
+                        ? `It belongs to ${emailConflict.holderName}. `
+                        : 'Another client already signs in with it. '}
+                      If this is the same person, cancel — they are already onboarded. If a
+                      household shares one inbox (a minor on a parent&apos;s address, a spouse
+                      without their own), keep both records: one of them signs in with a unique
+                      alias, and mail for both still goes to {emailConflict.email}.{' '}
+                      {emailConflict.holderIsStaff
+                        ? 'It is held by a staff account, which cannot be moved — the new client takes the alias.'
+                        : 'Choose whichever of them actually owns the mailbox — that person keeps the plain address.'}
+                    </p>
+                  </div>
+
+                  <div className="max-w-xs">
+                    <FieldLabel>Relationship to the mailbox owner</FieldLabel>
+                    <Input
+                      id="relationshipToOwner"
+                      value={relationshipToOwner}
+                      onChange={(e) => setRelationshipToOwner(e.target.value)}
+                      placeholder="e.g. Daughter (minor)"
+                      className={inputBase}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <Button
+                      onClick={() => handleSubmit(true)}
+                      disabled={isSubmitting}
+                      className="bg-blue-700 hover:bg-blue-800"
+                      size="sm"
+                    >
+                      {isSubmitting ? (
+                        <div className="contents">
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Working...
+                        </div>
+                      ) : (
+                        <div className="contents">
+                          <Users className="mr-2 h-4 w-4" />
+                          {emailConflict.holderName
+                            ? `${emailConflict.holderName} owns it`
+                            : 'The existing client owns it'}
+                        </div>
+                      )}
+                    </Button>
+                    {emailConflict.holderId && (
+                      <Button
+                        onClick={handleReleaseFromHolder}
+                        disabled={isSubmitting}
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-300 text-blue-800 hover:bg-blue-100"
+                      >
+                        {formData.firstName || 'This client'} owns it
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={isSubmitting}
+                      onClick={() => setEmailConflict(null)}
+                    >
+                      Use a different email
+                    </Button>
+                  </div>
+
+                  <p className="text-[11px] leading-relaxed text-blue-700/80">
+                    {emailConflict.holderName || 'The existing client'} owns it →{' '}
+                    {formData.firstName || 'the new client'} gets the alias.{' '}
+                    {emailConflict.holderId && (
+                      <>
+                        {formData.firstName || 'The new client'} owns it →{' '}
+                        {emailConflict.holderName || 'the existing client'} moves to an alias and
+                        the plain address is freed.
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <FieldLabel>Alternative Email</FieldLabel>
+              <FieldLabel>Alternative email</FieldLabel>
               <Input
                 className={inputCls('alternativeEmail')}
                 type="email"
@@ -689,7 +802,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               <FieldError message={showError('alternativeEmail')} />
             </div>
             <div>
-              <FieldLabel>WhatsApp Number</FieldLabel>
+              <FieldLabel>WhatsApp number</FieldLabel>
               <Input
                 className={inputCls('whatsappNumber')}
                 value={formData.whatsappNumber}
@@ -704,7 +817,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <FieldLabel>Address Line 1</FieldLabel>
+              <FieldLabel>Address line 1</FieldLabel>
               <Input
                 className={inputBase}
                 value={formData.residentialAddressLine1}
@@ -713,7 +826,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               />
             </div>
             <div>
-              <FieldLabel>Address Line 2</FieldLabel>
+              <FieldLabel>Address line 2</FieldLabel>
               <Input
                 className={inputBase}
                 value={formData.residentialAddressLine2}
@@ -750,7 +863,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
               </Select>
             </div>
             <div>
-              <FieldLabel>Postal Code</FieldLabel>
+              <FieldLabel>Postal code</FieldLabel>
               <Input
                 className={inputCls('residentialPostalCode')}
                 value={formData.residentialPostalCode}
@@ -777,7 +890,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       <FormSection icon={Briefcase} title="Employment" description="Current employment details">
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <FieldLabel>Employment Status</FieldLabel>
+            <FieldLabel>Employment status</FieldLabel>
             <Select
               value={formData.employmentStatus}
               onValueChange={(v) => update('employmentStatus', v)}
@@ -795,7 +908,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
             </Select>
           </div>
           <div>
-            <FieldLabel>Job Title</FieldLabel>
+            <FieldLabel>Job title</FieldLabel>
             <Input
               className={inputBase}
               value={formData.jobTitle}
@@ -804,7 +917,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
             />
           </div>
           <div>
-            <FieldLabel>Employer Name</FieldLabel>
+            <FieldLabel>Employer name</FieldLabel>
             <Input
               className={inputBase}
               value={formData.employerName}
@@ -819,11 +932,11 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       {/* ================================================================ */}
       <FormSection
         icon={Target}
-        title="Services & Goals"
+        title="Services & goals"
         description="Financial planning objectives"
       >
         <div>
-          <FieldLabel>Financial Goals</FieldLabel>
+          <FieldLabel>Financial goals</FieldLabel>
           <Input
             className={inputBase}
             value={formData.financialGoals}
@@ -856,7 +969,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
           <h3
             className={`text-[13px] font-semibold ${submitAttempted && !consentConfirmed ? 'text-red-900' : 'text-amber-900'}`}
           >
-            POPIA Consent Confirmation
+            POPIA consent
           </h3>
           {submitAttempted && !consentConfirmed && (
             <Badge variant="destructive" className="text-[10px] ml-auto">
@@ -897,116 +1010,13 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       </div>
 
       {/* ================================================================ */}
-      {/* SHARED MAILBOX PROMPT                                            */}
-      {/* ================================================================ */}
-      {emailConflict && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50/60 p-4">
-          <div className="flex items-start gap-3">
-            <div className="h-8 w-8 shrink-0 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Users className="h-4 w-4 text-blue-700" />
-            </div>
-            <div className="flex-1 min-w-0 space-y-3">
-              <div>
-                <p className="text-sm font-semibold text-blue-900">
-                  {emailConflict.email} is already a sign-in address
-                </p>
-                <p className="mt-1 text-[13px] leading-relaxed text-blue-800">
-                  {emailConflict.holderName
-                    ? `It belongs to ${emailConflict.holderName}. `
-                    : 'Another client already signs in with it. '}
-                  If this is the same person, cancel — they are already onboarded. If a household
-                  shares one inbox (a minor on a parent&apos;s address, a spouse without their own),
-                  keep both records: one of them signs in with a unique alias, and mail for both
-                  still goes to {emailConflict.email}.{' '}
-                  {emailConflict.holderIsStaff
-                    ? 'It is held by a staff account, which cannot be moved — the new client takes the alias.'
-                    : 'Choose whichever of them actually owns the mailbox — that person keeps the plain address.'}
-                </p>
-              </div>
-
-              <div className="max-w-xs">
-                <FieldLabel>Relationship to the mailbox owner</FieldLabel>
-                <Input
-                  id="relationshipToOwner"
-                  value={relationshipToOwner}
-                  onChange={(e) => setRelationshipToOwner(e.target.value)}
-                  placeholder="e.g. Daughter (minor)"
-                  className={inputBase}
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <Button
-                  onClick={() => handleSubmit(true)}
-                  disabled={isSubmitting}
-                  className="bg-blue-700 hover:bg-blue-800"
-                  size="sm"
-                >
-                  {isSubmitting ? (
-                    <div className="contents">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Working...
-                    </div>
-                  ) : (
-                    <div className="contents">
-                      <Users className="mr-2 h-4 w-4" />
-                      {emailConflict.holderName
-                        ? `${emailConflict.holderName} owns it`
-                        : 'The existing client owns it'}
-                    </div>
-                  )}
-                </Button>
-                {emailConflict.holderId && (
-                  <Button
-                    onClick={handleReleaseFromHolder}
-                    disabled={isSubmitting}
-                    variant="outline"
-                    size="sm"
-                    className="border-blue-300 text-blue-800 hover:bg-blue-100"
-                  >
-                    {formData.firstName || 'This client'} owns it
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={isSubmitting}
-                  onClick={() => setEmailConflict(null)}
-                >
-                  Use a different email
-                </Button>
-              </div>
-
-              <p className="text-[11px] leading-relaxed text-blue-700/80">
-                {emailConflict.holderName || 'The existing client'} owns it →{' '}
-                {formData.firstName || 'the new client'} gets the alias.{' '}
-                {emailConflict.holderId && (
-                  <>
-                    {formData.firstName || 'The new client'} owns it →{' '}
-                    {emailConflict.holderName || 'the existing client'} moves to an alias and the
-                    plain address is freed.
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================================================================ */}
       {/* ACTIONS                                                          */}
       {/* ================================================================ */}
       <div className="flex items-center justify-between pt-2 pb-1">
         <div className="flex items-center gap-3">
-          <p className="text-[11px] text-gray-400">
-            <span className="text-red-500">*</span> Required fields
+          <p className="text-xs text-nw-text-3">
+            Fields marked <span className="text-red-500">*</span> are required
           </p>
-          {submitAttempted && activeErrorCount > 0 && (
-            <Badge variant="destructive" className="text-[10px] font-medium">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              {activeErrorCount} validation error{activeErrorCount !== 1 ? 's' : ''}
-            </Badge>
-          )}
         </div>
         <div className="flex items-center gap-2.5">
           <Button variant="outline" onClick={onClose} disabled={isSubmitting} className="px-5">
@@ -1025,7 +1035,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
             ) : (
               <div className="contents">
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                Add Client
+                Create client
               </div>
             )}
           </Button>

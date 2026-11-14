@@ -28,9 +28,7 @@ import {
   useSocialAutomationSettings,
   useSocialBatch,
   useSocialBatches,
-  useSocialPlaybooks,
   useUpdateSocialAsset,
-  useUpdateSocialPlaybook,
   useUpdateSocialSettings,
 } from '../hooks/useSocialAssets';
 import type { SocialChannel, SocialJobName } from './assetsTypes';
@@ -46,7 +44,6 @@ import {
 } from './assetsModel';
 import { AssetCard } from './AssetCard';
 import { AutomationStrip } from './AutomationStrip';
-import { AutomationSettingsDialog } from './AutomationSettingsDialog';
 
 const CHANNEL_ICON: Record<SocialChannel, typeof Linkedin> = {
   linkedin: Linkedin,
@@ -54,16 +51,18 @@ const CHANNEL_ICON: Record<SocialChannel, typeof Linkedin> = {
   x: Twitter,
 };
 
-export function WeeklyPipelineTab() {
+interface WeeklyPipelineTabProps {
+  /** Opens "Automation settings & playbooks" as a page of its own. */
+  onOpenSettings?: () => void;
+}
+
+export function WeeklyPipelineTab({ onOpenSettings }: WeeklyPipelineTabProps = {}) {
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
 
   const batchesQuery = useSocialBatches(16);
   const settingsQuery = useSocialAutomationSettings();
-  const playbooksQuery = useSocialPlaybooks(settingsOpen);
   const updateSettings = useUpdateSocialSettings();
-  const updatePlaybook = useUpdateSocialPlaybook();
   const updateAsset = useUpdateSocialAsset();
   const runJob = useRunSocialJob();
 
@@ -96,7 +95,7 @@ export function WeeklyPipelineTab() {
         toggling={updateSettings.isPending}
         runningJob={runningJob}
         onToggleEnabled={(enabled) => updateSettings.mutate({ enabled })}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => onOpenSettings?.()}
         onRunJob={(job) => runJob.mutate(job)}
       />
 
@@ -248,16 +247,6 @@ export function WeeklyPipelineTab() {
           )}
         </>
       )}
-
-      <AutomationSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        playbooks={playbooksQuery.data ?? []}
-        saving={updateSettings.isPending || updatePlaybook.isPending}
-        onSaveSettings={(patch) => updateSettings.mutateAsync(patch)}
-        onSavePlaybook={(id, patch) => updatePlaybook.mutateAsync({ id, patch })}
-      />
     </div>
   );
 }

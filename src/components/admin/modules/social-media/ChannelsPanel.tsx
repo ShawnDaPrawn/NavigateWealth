@@ -8,7 +8,7 @@
  * stays available underneath.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle,
@@ -26,6 +26,8 @@ import { Button } from '../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Skeleton } from '../../../ui/skeleton';
 import { LinkedInConnector } from './components/LinkedInConnector';
+import { PartnersPanel } from './partners/PartnersPanel';
+import { SocialAnalyticsPanel } from './analytics/SocialAnalyticsPanel';
 import { useBufferStatus, useSocialProfiles } from './hooks/useSocialProfiles';
 import type { SocialPlatform, SocialProfile } from './types';
 
@@ -108,6 +110,7 @@ function ChannelCard({ profile }: { profile: SocialProfile }) {
 }
 
 export function ChannelsPanel() {
+  const analyticsRef = useRef<HTMLElement>(null);
   const status = useBufferStatus();
   const { profiles, loading, error } = useSocialProfiles({
     fetchOnMount: status.data?.configured !== false,
@@ -213,6 +216,15 @@ export function ChannelsPanel() {
           </div>
         )}
       </div>
+
+      {/* SM 32: partner advertisers (own backend) and Buffer analytics. */}
+      <PartnersPanel
+        onViewAnalytics={() => {
+          analyticsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          analyticsRef.current?.focus({ preventScroll: true });
+        }}
+      />
+      <SocialAnalyticsPanel ref={analyticsRef} />
     </div>
   );
 }

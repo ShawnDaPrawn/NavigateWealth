@@ -41,11 +41,11 @@ import {
   BarChart3,
   Maximize2,
   Shield,
-  AlertTriangle,
 } from 'lucide-react';
 import { useSocialMediaAI } from '../hooks/useSocialMediaAI';
 import type { SocialAIPlatform, ImageStyle, GeneratedImage, GenerateImageInput } from '../types';
 import { BRAND } from '../constants';
+import { ErrorState } from '../../../layout/page';
 
 // ============================================================================
 // Constants
@@ -242,16 +242,10 @@ export function AIImageGenerator({ onUseImage }: AIImageGeneratorProps) {
 
   if (!isConfigured) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <AlertTriangle className="h-12 w-12 text-amber-500 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">AI Service Not Configured</h3>
-          <p className="text-muted-foreground max-w-md">
-            The OpenAI API key is not configured. Please contact your administrator to enable AI
-            image generation.
-          </p>
-        </CardContent>
-      </Card>
+      <ErrorState
+        title="AI content generation is not set up"
+        description="The OpenAI API key is not configured. Ask an administrator to add it to enable AI content generation."
+      />
     );
   }
 

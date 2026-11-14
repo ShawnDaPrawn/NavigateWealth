@@ -53,6 +53,7 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/social-media-ai', () => import('./social/social-media-ai-routes.ts'));
   lazy(app, '/social-assets', () => import('./social/social-assets-routes.ts'));
   lazy(app, '/social-library', () => import('./social/social-channel-assets-routes.ts'));
+  lazy(app, '/social-partners', () => import('./social/social-partners-routes.ts'));
   lazy(app, '/calendar', () => import('./calendar-routes.ts'));
   lazy(app, '/advice-engine', () => import('./advice-engine/advice-engine-routes.ts'));
   lazy(app, '/applications', () => import('./client-applications-routes.ts'));

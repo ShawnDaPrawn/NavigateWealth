@@ -41,7 +41,7 @@ export const moduleConfig: Record<AdminModule, ModuleConfigItem> = {
   newsletter: { label: 'Newsletters', icon: Newspaper },
   marketing: { label: 'Social & Marketing', icon: Share2 },
   reporting: { label: 'Reporting', icon: BarChart3 },
-  calendar: { label: 'Calendar & Reminders', icon: Calendar },
+  calendar: { label: 'Calendar', icon: Calendar },
   issues: { label: 'Issue Manager', icon: ShieldAlert },
   'ai-management': { label: 'AI Management', icon: Bot },
   locked: { label: 'Locked', icon: Lock },
@@ -108,6 +108,10 @@ export const operationsModules: AdminModule[] = [
   'calendar',
   'issues',
 ];
+
+// Modules whose counter is a backlog (open items), not new arrivals: shown
+// grey, never amber (design system: sidebar counts).
+export const backlogCounterModules: AdminModule[] = ['tasks'];
 
 // Modules whose counters are status indicators and should remain visible at zero.
 export const alwaysShowCounterModules: AdminModule[] = ['issues'];

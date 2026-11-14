@@ -14,6 +14,7 @@ import { getErrMsg } from './shared-logger-utils.ts';
 import type { KvApplication } from './applications-types.ts';
 import { InviteClientSchema, ResendInviteSchema } from './applications-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
+import { parseDashboardPeriod } from './dashboard-period.ts';
 
 const adminApp = new Hono();
 const log = createModuleLogger('admin-applications');
@@ -382,7 +383,10 @@ adminApp.post('/applications/:applicationId/decline', async (c) => {
 // GET /stats
 adminApp.get('/stats', async (c) => {
   try {
-    const stats = await AdminApplicationsService.getStats();
+    // ?period=month|30d|year picks the dashboard's "new applications" window.
+    const period = parseDashboardPeriod(c.req.query('period'));
+    if (!period) return c.json({ error: 'period must be month, 30d or year' }, 400);
+    const stats = await AdminApplicationsService.getStats(period);
     return c.json({ stats });
   } catch (error) {
     log.error('GET /stats error', error);

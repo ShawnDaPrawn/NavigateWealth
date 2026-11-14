@@ -6,8 +6,9 @@
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
-import { Plus, Loader2, FileBarChart, EyeOff, History, Target } from 'lucide-react';
+import { Plus, Loader2, FileBarChart, EyeOff, History, Target, Calculator } from 'lucide-react';
 import { PolicyFormDialog } from './PolicyFormDialog';
+import { ErrorState, usePageTakeover } from '../layout/page';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -24,7 +25,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../ui/dialog';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { useFNAManagement } from '../modules/fna';
 import { useInvalidateFnaBatchStatus } from '@/shared/fna-intake/hooks/useFnaBatchStatus';
@@ -219,6 +226,7 @@ export function PolicyCategoryTab({
     }
   }, [categoryId]);
 
+  const [policiesError, setPoliciesError] = useState<string | null>(null);
   const loadPolicies = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -226,9 +234,11 @@ export function PolicyCategoryTab({
         `/integrations/policies?clientId=${clientId}&categoryId=${categoryId}&includeArchived=${showArchived}`,
       );
       setPolicies(data.policies || []);
+      setPoliciesError(null);
     } catch (err) {
       console.error('Error loading policies:', err);
-      toast.error('Failed to load policies');
+      // An error state in place of the table, not "No policies added".
+      setPoliciesError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -269,6 +279,25 @@ export function PolicyCategoryTab({
   const handleAddPolicy = () => {
     setEditingPolicy(null);
     setIsFormOpen(true);
+  };
+
+  // Assumptions (design: category header): project a policy's maturity value.
+  // The tool lives on the policy form, so the button opens that policy's form
+  // with the tool open — after asking which policy when there are several.
+  const supportsAssumptions =
+    categorySubtabId === 'retirement' || categorySubtabId === 'investments';
+  const activePolicies = showArchived ? [] : policies.filter((p) => !p.archived);
+  const [assumptionsPickerOpen, setAssumptionsPickerOpen] = useState(false);
+  const [openAssumptions, setOpenAssumptions] = useState(false);
+  const openPolicyAssumptions = (policy: PolicyRecord) => {
+    setAssumptionsPickerOpen(false);
+    setEditingPolicy(policy);
+    setOpenAssumptions(true);
+    setIsFormOpen(true);
+  };
+  const handleAssumptions = () => {
+    if (activePolicies.length === 1) openPolicyAssumptions(activePolicies[0]);
+    else setAssumptionsPickerOpen(true);
   };
 
   const handleEditPolicy = (policy: Record<string, unknown>) => {
@@ -411,6 +440,21 @@ export function PolicyCategoryTab({
       refreshingPolicyId,
     });
 
+  // FNA wizards, the FNA report and the will wizards are pages of their own:
+  // while one is open it takes the place of the category's content.
+  const fnaPageOpen =
+    (hasFNA && !!fnaConfig && fnaManagement.wizardOpen) ||
+    (hasFNA && !!fnaConfig && !!selectedHistoricalFnaId && viewFNADialogOpen) ||
+    (categorySubtabId === 'estate-planning' &&
+      (willDraftingWizardOpen || livingWillDraftingWizardOpen));
+  // These pages take the whole client page (no client header, tabs or rails);
+  // the AI will builder does too. The add / edit policy page only hides the rail.
+  usePageTakeover(
+    fnaPageOpen || (categorySubtabId === 'estate-planning' && willChatInterfaceOpen),
+    'page',
+  );
+  usePageTakeover(isFormOpen, 'section');
+
   return (
     <div className="space-y-4">
       <Suspense
@@ -420,8 +464,30 @@ export function PolicyCategoryTab({
           </div>
         }
       >
-        {/* Show Will Management View for Estate Planning */}
-        {categorySubtabId === 'estate-planning' && willChatInterfaceOpen ? (
+        {/* Add / edit policy is a page in place of the category */}
+        {isFormOpen ? (
+          <PolicyFormDialog
+            isOpen
+            onClose={() => {
+              setIsFormOpen(false);
+              setEditingPolicy(null);
+              setOpenAssumptions(false);
+            }}
+            openAssumptions={openAssumptions}
+            categorySubtabId={categorySubtabId}
+            categoryName={categoryName}
+            clientId={clientId}
+            editingPolicy={
+              editingPolicy as unknown as React.ComponentProps<
+                typeof PolicyFormDialog
+              >['editingPolicy']
+            }
+            onSave={() => {
+              loadPolicies();
+            }}
+          />
+        ) : fnaPageOpen ? null /* Show Will Management View for Estate Planning */ : categorySubtabId ===
+            'estate-planning' && willChatInterfaceOpen ? (
           <WillChatInterface
             clientId={clientId}
             clientName={clientDisplayName || categoryName}
@@ -488,6 +554,22 @@ export function PolicyCategoryTab({
                 <p className="text-sm text-gray-600">{description}</p>
               </div>
               <div className="flex gap-2">
+                {supportsAssumptions && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAssumptions}
+                    disabled={activePolicies.length === 0}
+                    title={
+                      activePolicies.length === 0
+                        ? 'Add a policy first; assumptions project a policy’s value.'
+                        : 'Project a policy’s maturity value from growth and escalation assumptions'
+                    }
+                  >
+                    <Calculator className="h-4 w-4 mr-2" />
+                    Assumptions
+                  </Button>
+                )}
                 {categorySubtabId === 'investments' && (
                   <Button
                     variant="outline"
@@ -502,13 +584,13 @@ export function PolicyCategoryTab({
                 {categorySubtabId === 'estate-planning' && (
                   <Button variant="outline" size="sm" onClick={() => setShowWillManagement(true)}>
                     <FileBarChart className="h-4 w-4 mr-2" />
-                    Will Management
+                    Will management
                   </Button>
                 )}
                 {hasFNA && (
                   <Button variant="outline" size="sm" onClick={() => setShowFNAManagement(true)}>
                     <FileBarChart className="h-4 w-4 mr-2" />
-                    FNA
+                    All FNAs
                   </Button>
                 )}
                 <Button
@@ -524,18 +606,18 @@ export function PolicyCategoryTab({
                   {showArchived ? (
                     <div className="contents">
                       <EyeOff className="h-4 w-4 mr-2" />
-                      Hide History
+                      Hide history
                     </div>
                   ) : (
                     <div className="contents">
                       <History className="h-4 w-4 mr-2" />
-                      Show History
+                      History
                     </div>
                   )}
                 </Button>
                 <Button size="sm" onClick={handleAddPolicy}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Policy
+                  Add policy
                 </Button>
               </div>
             </div>
@@ -543,7 +625,14 @@ export function PolicyCategoryTab({
             {/* Policies List */}
             {/* Goal Dashboard moved to Dialog */}
 
-            {isLoading ? (
+            {policiesError && !isLoading ? (
+              <ErrorState
+                title="Couldn't load policies"
+                description={`This client's ${categoryName.toLowerCase()} policies could not be loaded.`}
+                onRetry={() => void loadPolicies()}
+                details={policiesError}
+              />
+            ) : isLoading ? (
               <Card>
                 <CardContent className="py-12 flex items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-[#6d28d9]" />
@@ -553,13 +642,14 @@ export function PolicyCategoryTab({
               <Card>
                 <CardContent className="py-12 text-center">
                   <Icon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Policies Added</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No policies added</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Start by adding your first {categoryName.toLowerCase()} policy
+                    Add the client&apos;s {categoryName.toLowerCase()} policies to track cover,
+                    values and premiums.
                   </p>
                   <Button onClick={handleAddPolicy}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Policy
+                    Add policy
                   </Button>
                 </CardContent>
               </Card>
@@ -570,7 +660,7 @@ export function PolicyCategoryTab({
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">
-                      {showArchived ? 'Archived Policies' : 'Active Policies'} ({policies.length})
+                      {showArchived ? 'Archived policies' : 'Active policies'} ({policies.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>{renderPolicyTables()}</CardContent>
@@ -621,6 +711,36 @@ export function PolicyCategoryTab({
         )}
       </Suspense>
 
+      {/* Assumptions: which policy to project */}
+      <Dialog open={assumptionsPickerOpen} onOpenChange={setAssumptionsPickerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assumptions</DialogTitle>
+            <DialogDescription>
+              Choose the policy whose maturity value you want to project.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="divide-y divide-gray-100 rounded-lg border">
+            {activePolicies.map((policy, i) => (
+              <li key={policy.id}>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+                  onClick={() => openPolicyAssumptions(policy)}
+                >
+                  <span className="font-medium text-nw-ink">
+                    {String(policy.providerName ?? `Policy ${i + 1}`)}
+                  </span>
+                  {typeof policy.categoryId === 'string' && (
+                    <span className="ml-2 text-xs text-nw-text-3">{policy.categoryId}</span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+
       {/* Goal Dashboard Dialog */}
       <Dialog open={isGoalDashboardOpen} onOpenChange={setIsGoalDashboardOpen}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-50">
@@ -646,24 +766,6 @@ export function PolicyCategoryTab({
           </Suspense>
         </DialogContent>
       </Dialog>
-
-      {/* Policy Form Dialog */}
-      <PolicyFormDialog
-        isOpen={isFormOpen}
-        onClose={() => {
-          setIsFormOpen(false);
-          setEditingPolicy(null);
-        }}
-        categorySubtabId={categorySubtabId}
-        categoryName={categoryName}
-        clientId={clientId}
-        editingPolicy={
-          editingPolicy as unknown as React.ComponentProps<typeof PolicyFormDialog>['editingPolicy']
-        }
-        onSave={() => {
-          loadPolicies();
-        }}
-      />
 
       {/* Archive Policy Dialog */}
       <ArchivePolicyDialog
@@ -787,6 +889,12 @@ export function PolicyCategoryTab({
           ResultsView={fnaConfig.ResultsView}
           loadFn={(fnaId) => fnaConfig.getById(fnaId, clientId)}
           deleteFn={(fnaId) => fnaConfig.deleteFNA(fnaId, clientId)}
+          unpublishFn={(fnaId) => fnaConfig.unpublishFNA(fnaId, clientId)}
+          onUnpublished={() => {
+            setRefreshFNAManagementTrigger((prev) => prev + 1);
+            fnaManagement.loadFNA();
+          }}
+          backLabel={fnaListTitle}
           onDeleted={() => {
             // Refresh the FNA management view
             setRefreshFNAManagementTrigger((prev) => prev + 1);
@@ -807,7 +915,7 @@ export function PolicyCategoryTab({
               setResumeDraftWillId(undefined);
             }}
             clientId={clientId}
-            clientName={categoryName}
+            clientName={clientDisplayName || categoryName}
             willType="last_will"
             existingWillId={resumeDraftWillType === 'last_will' ? resumeDraftWillId : undefined}
             onComplete={() => {
@@ -829,7 +937,7 @@ export function PolicyCategoryTab({
               setResumeDraftWillId(undefined);
             }}
             clientId={clientId}
-            clientName={categoryName}
+            clientName={clientDisplayName || categoryName}
             willType="living_will"
             existingWillId={resumeDraftWillType === 'living_will' ? resumeDraftWillId : undefined}
             onComplete={() => {

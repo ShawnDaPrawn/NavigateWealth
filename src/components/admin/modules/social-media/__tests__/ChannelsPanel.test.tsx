@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 const state = vi.hoisted(() => ({
   status: {
@@ -21,6 +21,22 @@ vi.mock('../hooks/useSocialProfiles', () => ({
     error: state.error,
   }),
 }));
+vi.mock('../partners/PartnersPanel', () => ({
+  PartnersPanel: (props: { onViewAnalytics?: () => void }) => (
+    <div>
+      Partners panel
+      <button onClick={props.onViewAnalytics}>View analytics</button>
+    </div>
+  ),
+}));
+vi.mock('../analytics/SocialAnalyticsPanel', async () => {
+  const { forwardRef } = await import('react');
+  return {
+    SocialAnalyticsPanel: forwardRef<HTMLElement>(function Panel(_p, ref) {
+      return <section ref={ref}>Social analytics panel</section>;
+    }),
+  };
+});
 vi.mock('../components/LinkedInConnector', () => ({
   LinkedInConnector: () => <div>LinkedIn personal card</div>,
 }));
@@ -67,6 +83,16 @@ describe('ChannelsPanel', () => {
     expect(screen.getByText('2 queue slots per week · Africa/Johannesburg')).toBeDefined();
     expect(screen.getByText(/Not connected in Buffer/)).toBeDefined();
     expect(screen.getByText('X')).toBeDefined();
+  });
+
+  it('shows partner advertisers and social analytics, and View analytics jumps to them', () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    render(<ChannelsPanel />);
+    expect(screen.getByText('Partners panel')).toBeDefined();
+    expect(screen.getByText('Social analytics panel')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'View analytics' }));
+    expect(scroll).toHaveBeenCalled();
   });
 
   it('explains an unconfigured Buffer key', () => {

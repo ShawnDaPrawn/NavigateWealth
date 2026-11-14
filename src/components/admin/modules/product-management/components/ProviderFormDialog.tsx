@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
+import { FormErrorBanner } from '../../../layout/page';
 import { ImageWithFallback } from '../../../../shared/ImageWithFallback';
 import {
   PRODUCT_CATEGORIES,
@@ -34,6 +35,8 @@ interface ProviderFormDialogProps {
   onSave: (data: SaveProviderRequest) => Promise<void>;
   isSaving: boolean;
   title?: string;
+  /** Editing only: "Delete…" in the footer hands over to the delete confirmation. */
+  onDelete?: () => void;
 }
 
 export function ProviderFormDialog({ 
@@ -42,8 +45,10 @@ export function ProviderFormDialog({
   initialData, 
   onSave, 
   isSaving,
-  title
+  title,
+  onDelete,
 }: ProviderFormDialogProps) {
+  const [nameError, setNameError] = useState<string | null>(null);
   const [formData, setFormData] = useState<SaveProviderRequest>({
     name: '',
     description: '',
@@ -56,11 +61,13 @@ export function ProviderFormDialog({
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const automationCategories = PRODUCT_CATEGORIES.filter((category) => isPortalAutomationCategory(category.id));
   const unsupportedCategoryIds = formData.categoryIds.filter((categoryId) => !isPortalAutomationCategory(categoryId));
 
   useEffect(() => {
     if (isOpen) {
+      setNameError(null);
       if (initialData) {
         setFormData({
             name: initialData.name,
@@ -120,7 +127,11 @@ export function ProviderFormDialog({
   };
 
   const handleSubmit = async () => {
-      if (!formData.name.trim()) return;
+      if (!formData.name.trim()) {
+        setNameError('Enter the provider name');
+        nameInputRef.current?.focus();
+        return;
+      }
       await onSave({
         ...formData,
         categoryIds: formData.categoryIds.filter(isPortalAutomationCategory),
@@ -131,16 +142,20 @@ export function ProviderFormDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{title || (initialData ? 'Edit Provider' : 'Add New Provider')}</DialogTitle>
+          <DialogTitle>{title || (initialData ? 'Edit provider' : 'Add provider')}</DialogTitle>
           <DialogDescription>
             Enter the details of the financial product provider and select the categories they offer.
           </DialogDescription>
         </DialogHeader>
         
+        <FormErrorBanner
+          count={nameError ? 1 : 0}
+          action={initialData ? 'save the provider' : 'add the provider'}
+        />
         <div className="grid gap-6 py-4">
           <div className="flex items-start gap-6">
             <div className="flex-shrink-0">
-              <Label className="mb-2 block">Provider Logo</Label>
+              <Label className="mb-2 block">Logo</Label>
               <div 
                 onClick={triggerFileInput}
                 className="group relative w-32 h-16 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors"
@@ -192,13 +207,25 @@ export function ProviderFormDialog({
 
             <div className="flex-1 space-y-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Provider Name</Label>
+                <Label htmlFor="name">Provider name</Label>
                 <Input
+                  ref={nameInputRef}
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    if (nameError) setNameError(null);
+                  }}
                   placeholder="e.g. Discovery"
+                  aria-invalid={!!nameError}
+                  aria-describedby={nameError ? 'provider-name-error' : undefined}
+                  className={nameError ? 'border-red-500' : undefined}
                 />
+                {nameError && (
+                  <p id="provider-name-error" className="text-xs text-red-600">
+                    {nameError}
+                  </p>
+                )}
               </div>
               
               <div className="grid gap-2">
@@ -215,7 +242,7 @@ export function ProviderFormDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label>Product Categories</Label>
+            <Label>Product categories</Label>
             {unsupportedCategoryIds.length > 0 && (
               <p className="text-xs text-amber-700">
                 {unsupportedCategoryIds.map(getProductCategoryLabel).join(', ')} {unsupportedCategoryIds.length === 1 ? 'is a group' : 'are groups'} and will be removed from provider automation. Select the specific subcategory instead.
@@ -241,11 +268,24 @@ export function ProviderFormDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
+          {initialData && onDelete ? (
+            <Button
+              variant="ghost"
+              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={onDelete}
+            >
+              Delete…
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700" disabled={isSaving}>
-            {isSaving ? 'Saving...' : (initialData ? 'Save Changes' : 'Add Provider')}
+            {isSaving ? 'Saving...' : (initialData ? 'Save changes' : 'Add provider')}
           </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

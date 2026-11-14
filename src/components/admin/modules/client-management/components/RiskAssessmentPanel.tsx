@@ -221,7 +221,7 @@ export function RiskAssessmentPanel({
                   <ClipboardList className="h-4 w-4 text-purple-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-base font-semibold">Risk Assessments</CardTitle>
+                  <CardTitle className="text-base font-semibold">Risk assessments</CardTitle>
                   <CardDescription className="text-xs">
                     Select a due diligence assessment to run against this client
                   </CardDescription>
@@ -526,7 +526,7 @@ export function RiskAssessmentPanel({
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-gray-900 truncate">Assessment Results</h3>
+            <h3 className="text-base font-semibold text-gray-900 truncate">Assessment results</h3>
             <p className="text-xs text-muted-foreground">
               {activeResult.assessmentName} — Submitted{' '}
               {new Date(activeResult.submittedAt).toLocaleString()}

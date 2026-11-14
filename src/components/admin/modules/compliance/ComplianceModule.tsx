@@ -1,7 +1,6 @@
 import { Link } from 'react-router';
-import { Badge } from '../../../ui/badge';
 import { Button } from '../../../ui/button';
-import { PageHeader } from '../../layout/page';
+import { PageHeader, SoonBadge } from '../../layout/page';
 
 /**
  * Compliance module — cleared for a rebuild from scratch.
@@ -19,9 +18,7 @@ export function ComplianceModule() {
         description={
           <span className="inline-flex items-center gap-2">
             Practice-wide compliance.
-            <Badge variant="secondary" className="px-1.5 py-0 text-[11px] font-medium">
-              Soon
-            </Badge>
+            <SoonBadge />
           </span>
         }
       />

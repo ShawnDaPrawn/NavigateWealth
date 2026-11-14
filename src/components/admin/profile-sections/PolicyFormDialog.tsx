@@ -1,18 +1,10 @@
 /**
- * DYNAMIC POLICY FORM DIALOG
+ * DYNAMIC POLICY FORM (a page inside Policy details, despite the file name)
  * Integrates with Product Configuration for table structure
  * and Provider Configuration for provider selection
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import {
   AlertCircle,
@@ -41,6 +33,7 @@ import {
   type Provider,
   type ProductField,
 } from './policyFormModel';
+import { useClientSubCrumbs } from '../layout/page';
 import { renderPolicyFieldInput } from './policyFieldInputs';
 
 interface PolicyFormDialogProps {
@@ -56,6 +49,8 @@ interface PolicyFormDialogProps {
     [key: string]: unknown;
   };
   onSave: () => void;
+  /** Open the assumptions tool when the form opens (the category's Assumptions button). */
+  openAssumptions?: boolean;
 }
 
 export function PolicyFormDialog({
@@ -66,6 +61,7 @@ export function PolicyFormDialog({
   clientId,
   editingPolicy,
   onSave,
+  openAssumptions = false,
 }: PolicyFormDialogProps) {
   const queryClient = useQueryClient();
   const [step, setStep] = useState<'subcategory' | 'provider' | 'details'>('provider');
@@ -428,6 +424,17 @@ export function PolicyFormDialog({
     onClose();
   };
 
+  // Breadcrumb: Policy details / <category> / Add policy (back to the category on close).
+  useClientSubCrumbs(
+    isOpen
+      ? [
+          { label: categoryName, onClick: handleClose },
+          { label: editingPolicy ? 'Edit policy' : 'Add policy' },
+        ]
+      : [],
+    [{ label: categoryName }],
+  );
+
   const renderFieldInput = (field: ProductField) =>
     renderPolicyFieldInput({
       field,
@@ -437,24 +444,104 @@ export function PolicyFormDialog({
       handleFieldChange,
       recalcMaturityValues,
       tableStructure,
+      openAssumptions,
     });
 
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {editingPolicy ? 'Edit Policy' : 'Add Policy'} - {categoryName}
-          </DialogTitle>
-          <DialogDescription>
-            {step === 'subcategory'
-              ? 'Select the retirement phase'
-              : step === 'provider'
-                ? 'Select a provider from your configured providers'
-                : 'Enter the policy details based on your product structure'}
-          </DialogDescription>
-        </DialogHeader>
+  if (!isOpen) return null;
 
+  // Add / edit policy is a page of its own inside Policy details (design:
+  // CM 7, "Policy form as a full page, same steps").
+  const hasSubcategoryStep = editingPolicy
+    ? step === 'subcategory'
+    : ['retirement_planning', 'investments', 'employee_benefits'].includes(initialCategoryId);
+  const subcategoryLabel =
+    initialCategoryId === 'retirement_planning' ? 'Retirement phase' : 'Product type';
+  const steps: { id: typeof step; label: string }[] = [
+    ...(hasSubcategoryStep ? [{ id: 'subcategory' as const, label: subcategoryLabel }] : []),
+    { id: 'provider', label: 'Provider' },
+    { id: 'details', label: 'Policy details' },
+  ];
+  const currentIndex = steps.findIndex((x) => x.id === step);
+  const title = `${editingPolicy ? 'Edit policy' : 'Add policy'} — ${categoryName}`;
+  const description =
+    step === 'subcategory'
+      ? initialCategoryId === 'retirement_planning'
+        ? 'Select the retirement phase'
+        : 'Select the product type'
+      : step === 'provider'
+        ? 'Select a provider from your configured providers'
+        : 'Enter the policy details based on your product structure';
+  const saveLabel =
+    editingPolicy && hasUnsavedEdits && supportsMaturityProjection
+      ? 'Recalculate & update policy'
+      : editingPolicy
+        ? 'Update policy'
+        : 'Save policy';
+
+  return (
+    <div className="flex flex-col gap-5" data-testid="policy-form-page">
+      <button
+        type="button"
+        onClick={handleClose}
+        className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+      >
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        {categoryName}
+      </button>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-[22px] font-semibold leading-tight tracking-tight text-nw-ink">
+            {title}
+          </h2>
+          <p className="mt-1 text-sm text-nw-text-3">{description}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {step === 'details' && !editingPolicy && (
+            <Button variant="outline" onClick={() => setStep('provider')} disabled={isSaving}>
+              Back
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleClose} disabled={isSaving}>
+            Cancel
+          </Button>
+          {step === 'details' && tableStructure.length > 0 && (
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              {isSaving ? 'Saving…' : saveLabel}
+            </Button>
+          )}
+        </div>
+      </header>
+
+      <ol className="flex flex-wrap items-center gap-3" aria-label="Steps">
+        {steps.map((x, i) => {
+          const done = i < currentIndex;
+          const current = i === currentIndex;
+          return (
+            <li key={x.id} className="flex items-center gap-3 text-sm">
+              {i > 0 && <span className="h-px w-8 bg-nw-line" aria-hidden="true" />}
+              <span className="flex items-center gap-2" aria-current={current ? 'step' : undefined}>
+                <span
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                    done
+                      ? 'bg-nw-violet text-white'
+                      : current
+                        ? 'border-2 border-nw-violet text-nw-violet-600'
+                        : 'border border-nw-line text-nw-text-3'
+                  }`}
+                >
+                  {done ? '✓' : i + 1}
+                </span>
+                <span className={current ? 'font-medium text-nw-ink' : 'text-nw-text-2'}>
+                  {x.label}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <section className="rounded-xl border border-nw-line bg-white p-5">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-[#6d28d9]" />
@@ -723,31 +810,7 @@ export function PolicyFormDialog({
             )}
           </div>
         )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isSaving}>
-            Cancel
-          </Button>
-          {step === 'details' && tableStructure.length > 0 && (
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? (
-                <div className="contents">
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </div>
-              ) : (
-                <span>
-                  {editingPolicy && hasUnsavedEdits && supportsMaturityProjection
-                    ? 'Recalculate & Update Policy'
-                    : editingPolicy
-                      ? 'Update Policy'
-                      : 'Save Policy'}
-                </span>
-              )}
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </section>
+    </div>
   );
 }

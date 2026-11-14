@@ -13,8 +13,6 @@ import {
   ArrowRight,
   Bot,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   Send,
   Upload,
@@ -104,109 +102,85 @@ export function RoAStepModuleConversation({
   const useFormFallback = !isConversationModule(currentModule);
 
   return (
-    <div className="space-y-6">
-      {/* Module stepper (mirrors RoAStepModuleDetails) */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                {currentModule.title}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Module {currentModuleIndex + 1} of {draft.selectedModules.length}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {moduleIsComplete(currentModuleId) && (
-                <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Complete
-                </Badge>
+    <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+      {/* Module rail */}
+      <nav aria-label="Modules" className="flex flex-col gap-1">
+        <p className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-nw-text-3">
+          Modules
+        </p>
+        {draft.selectedModules.map((moduleId, index) => {
+          const railModule = modules?.find((item) => item.id === moduleId);
+          const isComplete = moduleIsComplete(moduleId);
+          const isCurrent = index === currentModuleIndex;
+          return (
+            <button
+              key={moduleId}
+              type="button"
+              aria-current={isCurrent ? 'true' : undefined}
+              onClick={() => setCurrentModuleIndex(index)}
+              className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                isCurrent
+                  ? 'bg-nw-violet/10 font-medium text-nw-ink'
+                  : 'text-nw-text-2 hover:bg-gray-50'
+              }`}
+            >
+              <span className="min-w-0 truncate">{railModule?.title ?? moduleId}</span>
+              {isComplete && (
+                <CheckCircle className="h-4 w-4 shrink-0 text-green-600" aria-label="Complete" />
               )}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentModuleIndex((index) => Math.max(0, index - 1))}
-              disabled={currentModuleIndex === 0}
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Previous Module
-            </Button>
+            </button>
+          );
+        })}
+      </nav>
 
-            <div className="flex gap-2">
-              {draft.selectedModules.map((moduleId, index) => {
-                const isComplete = moduleIsComplete(moduleId);
-                return (
-                  <Button
-                    key={moduleId}
-                    variant={index === currentModuleIndex ? 'default' : 'outline'}
-                    size="sm"
-                    className="relative"
-                    onClick={() => setCurrentModuleIndex(index)}
-                  >
-                    {index + 1}
-                    {isComplete && (
-                      <CheckCircle className="h-3 w-3 absolute -top-1 -right-1 text-green-600" />
-                    )}
-                  </Button>
-                );
-              })}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setCurrentModuleIndex((index) =>
-                  Math.min(draft.selectedModules.length - 1, index + 1),
-                )
-              }
-              disabled={currentModuleIndex === draft.selectedModules.length - 1}
-            >
-              Next Module
-              <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
+      <div className="min-w-0 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-base font-semibold text-nw-ink">{currentModule.title}</h3>
+            <p className="text-sm text-nw-text-3">
+              {useFormFallback ? 'Form' : 'AI conversation'} · Module {currentModuleIndex + 1} of{' '}
+              {draft.selectedModules.length}
+            </p>
           </div>
-        </CardContent>
-      </Card>
-
-      {useFormFallback ? (
-        // Legacy form-mode module: reuse the existing form details UI for this module.
-        <div className="space-y-3">
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
-            This module is configured for form-based capture. Complete the form below.
-          </div>
-          <RoAStepModuleDetails
-            draft={{ ...draft, selectedModules: [currentModuleId] }}
-            onUpdate={onUpdate}
-            modules={modules}
-          />
+          {moduleIsComplete(currentModuleId) && (
+            <Badge variant="default" className="border-green-200 bg-green-100 text-green-700">
+              <CheckCircle className="mr-1 h-3 w-3" aria-hidden="true" />
+              Complete
+            </Badge>
+          )}
         </div>
-      ) : (
-        <ModuleConversationPanel
-          key={currentModuleId}
-          draftId={draft.id}
-          moduleId={currentModuleId}
-          module={currentModule}
-          onProceed={goToNextIncompleteModule}
-          onStatusChange={(nextStatus) => {
-            if (conversationStatus[currentModuleId] === nextStatus) return;
-            onUpdate({
-              moduleConversationStatus: {
-                ...conversationStatus,
-                [currentModuleId]: nextStatus,
-              },
-            });
-          }}
-        />
-      )}
+
+        {useFormFallback ? (
+          // Legacy form-mode module: reuse the existing form details UI for this module.
+          <div className="space-y-3">
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+              This module is configured for form-based capture. Complete the form below.
+            </div>
+            <RoAStepModuleDetails
+              draft={{ ...draft, selectedModules: [currentModuleId] }}
+              onUpdate={onUpdate}
+              modules={modules}
+            />
+          </div>
+        ) : (
+          <ModuleConversationPanel
+            key={currentModuleId}
+            draftId={draft.id}
+            moduleId={currentModuleId}
+            module={currentModule}
+            onProceed={goToNextIncompleteModule}
+            onStatusChange={(nextStatus) => {
+              if (conversationStatus[currentModuleId] === nextStatus) return;
+              onUpdate({
+                moduleConversationStatus: {
+                  ...conversationStatus,
+                  [currentModuleId]: nextStatus,
+                },
+              });
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }

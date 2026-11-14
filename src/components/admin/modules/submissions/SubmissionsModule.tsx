@@ -19,48 +19,43 @@
  * §8.3 - Status colours follow platform vocabulary.
  */
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
 import { Button } from '../../../ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../ui/alert-dialog';
-import {
-  MessageSquare,
-  FileText,
-  Calculator,
-  Search,
-  RefreshCw,
-  Inbox,
-  Calendar,
-  Mail,
-  AlertCircle,
-  Filter,
-  Send,
-} from 'lucide-react';
+import { Input } from '../../../ui/input';
+import { Skeleton } from '../../../ui/skeleton';
+import { Inbox, RefreshCw, Search, Send } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 import { toast } from 'sonner';
 import { useSubmissions } from './hooks/useSubmissions';
 import { submissionsApi } from './api';
 import { SubmissionCard } from './components/SubmissionCard';
-import { SubmissionDetailModal } from './components/SubmissionDetailModal';
+import { SubmissionPage } from './components/SubmissionPage';
 import { ArchivedSubmissionsView } from './components/ArchivedSubmissionsView';
 import { SubmissionInviteModal } from './components/SubmissionInviteModal';
 import { BOARD_COLUMNS, SUBMISSION_STATUS_CONFIG, SUBMISSION_TYPE_CONFIG } from './constants';
-import type { Submission, SubmissionStatus, SubmissionType, SubmissionsFilters } from './types';
+import type { Submission, SubmissionStatus, SubmissionType } from './types';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 import { Tabs } from '../../../ui/tabs';
-import { PageHeader, StatCard, NavTabsList, NavTabsTrigger, useUrlState } from '../../layout/page';
+import {
+  ErrorState,
+  NavTabsList,
+  NavTabsTrigger,
+  PageHeader,
+  useBreadcrumbTrail,
+  useConfirm,
+  useRecordInUrl,
+  useUrlState,
+} from '../../layout/page';
+import { ClearFiltersButton, FilterChip, FilterStatCard } from '../../layout/page/FilterControls';
 
 const SUBMISSION_TABS = ['board', 'archived'] as const;
+/** The board's status filter: a stat card sets it ("Active" = every column). */
+const STATUS_FILTERS = ['all', 'new', 'pending', 'completed'] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+const SUBMISSION_TYPES = Object.keys(SUBMISSION_TYPE_CONFIG) as SubmissionType[];
+const TYPE_FILTERS = ['all', ...SUBMISSION_TYPES] as const;
 
 // ── Status config for columns — matches TaskColumn pattern ────────────────────
 
@@ -111,11 +106,13 @@ function KanbanColumn({
   submissions,
   onView,
   onStatusChange,
+  onDelete,
 }: {
   columnId: SubmissionStatus;
   submissions: Submission[];
   onView: (s: Submission) => void;
   onStatusChange: (id: string, status: SubmissionStatus) => void;
+  onDelete: (s: Submission) => void;
 }) {
   const config = COLUMN_STATUS_CONFIG[columnId];
 
@@ -145,9 +142,8 @@ function KanbanColumn({
             )}
           >
             {submissions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-32 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-lg m-1">
-                <p className="font-medium">No submissions</p>
-                <p className="text-xs mt-1">Drag cards here</p>
+              <div className="m-1 flex h-32 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 px-4 text-center text-sm text-nw-text-3">
+                Drop a card here while you work on it.
               </div>
             ) : (
               submissions.map((s, index) => (
@@ -157,6 +153,7 @@ function KanbanColumn({
                   index={index}
                   onView={onView}
                   onStatusChange={onStatusChange}
+                  onDelete={onDelete}
                 />
               ))
             )}
@@ -172,51 +169,77 @@ function KanbanColumn({
 
 export function SubmissionsModule() {
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'submissions-module-search' });
-  const [searchParams] = useSearchParams();
+  const { confirm, confirmDialog } = useConfirm();
 
-  // ── Deep Link Support ──
-  const initialType = searchParams.get('type') as SubmissionType | null;
-  const deepLinkId = searchParams.get('id');
-  const [filters, setFilters] = useState<SubmissionsFilters>(
-    initialType ? { type: initialType } : {},
+  // Board / Archived, the type filter and the status filter live in the
+  // address (?tab=archived, ?type=quote, ?status=new); so does an open
+  // submission (?id=<id>, which the old ?type=&id= links still use).
+  const [tab, setTab] = useUrlState('tab', 'board', SUBMISSION_TABS);
+  const [typeFilter, setTypeFilter] = useUrlState<(typeof TYPE_FILTERS)[number]>(
+    'type',
+    'all',
+    TYPE_FILTERS,
   );
+  const [statusFilter, setStatusFilter] = useUrlState<StatusFilter>(
+    'status',
+    'all',
+    STATUS_FILTERS,
+  );
+  const [, setSearchParams] = useSearchParams();
+  const showArchived = tab === 'archived';
   const [search, setSearch] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [deepLinkProcessed, setDeepLinkProcessed] = useState(false);
-  // Board and Archived are tabs kept in the address (?tab=archived).
-  const [tab, setTab] = useUrlState('tab', 'board', SUBMISSION_TABS);
-  const showArchived = tab === 'archived';
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   const { submissions, isLoading, error, updateSubmission, deleteSubmission, refetch } =
-    useSubmissions(filters.type ? { type: filters.type } : undefined);
+    useSubmissions(typeFilter !== 'all' ? { type: typeFilter } : undefined);
 
-  // ── Deep Link: auto-open detail drawer for ?id= param ──
-  useEffect(() => {
-    if (!deepLinkId || deepLinkProcessed) return;
-
-    const found = submissions.find((s) => s.id === deepLinkId);
-    if (found) {
-      setSelectedSubmission(found);
-      setDeepLinkProcessed(true);
-      return;
-    }
-
-    if (!isLoading && submissions.length >= 0) {
-      submissionsApi
-        .getById(deepLinkId)
-        .then((sub) => {
-          if (sub) setSelectedSubmission(sub);
-        })
-        .catch((err) => {
-          console.error('Failed to load deep-linked submission:', err);
-        })
-        .finally(() => {
-          setDeepLinkProcessed(true);
-        });
-    }
-  }, [deepLinkId, submissions, isLoading, deepLinkProcessed]);
+  // ── The open submission in the address ──
+  // A link may name a submission outside the current list (another type, or
+  // not loaded yet): fetch it by id; an unknown id is dropped with a message.
+  const [fetchingId, setFetchingId] = useState<string | null>(null);
+  const missingIds = useRef(new Map<string, string>());
+  useRecordInUrl('id', selectedSubmission?.id ?? null, {
+    ready: !isLoading && fetchingId === null,
+    openFromUrl: (id) => {
+      const found = submissions.find((s) => s.id === id);
+      if (found) {
+        setSelectedSubmission(found);
+        return 'opened';
+      }
+      if (isLoading) return 'waiting';
+      if (missingIds.current.has(id)) {
+        const reason = missingIds.current.get(id);
+        missingIds.current.delete(id);
+        if (reason) {
+          toast.error("Couldn't open the submission", { description: reason });
+        } else {
+          toast.error('Submission not found', {
+            description: 'It may have been deleted. You are back on the board.',
+          });
+        }
+        return 'missing';
+      }
+      if (fetchingId !== id) {
+        setFetchingId(id);
+        submissionsApi
+          .getById(id)
+          .then((sub) => {
+            if (sub) setSelectedSubmission(sub);
+            else missingIds.current.set(id, '');
+          })
+          .catch((err) => {
+            console.error('Failed to load deep-linked submission:', err);
+            // A 404 is "not found"; anything else is a failure to load.
+            const message = err instanceof Error ? err.message : String(err);
+            missingIds.current.set(id, /not found|404/i.test(message) ? '' : message);
+          })
+          .finally(() => setFetchingId(null));
+      }
+      return 'waiting';
+    },
+    closeFromUrl: () => setSelectedSubmission(null),
+  });
 
   // Client-side search filter
   const filteredSubmissions = useMemo(() => {
@@ -231,19 +254,19 @@ export function SubmissionsModule() {
     );
   }, [submissions, search]);
 
-  // Group submissions by status for the kanban columns
-  const byStatus = useMemo(() => {
+  const groupByStatus = (list: Submission[]) => {
     const map: Record<SubmissionStatus, Submission[]> = {
       new: [],
       pending: [],
       completed: [],
       archived: [],
     };
-    for (const s of filteredSubmissions) {
-      map[s.status]?.push(s);
-    }
+    for (const s of list) map[s.status]?.push(s);
     return map;
-  }, [filteredSubmissions]);
+  };
+  // Columns follow the search; the figures and tab counts do not.
+  const byStatus = useMemo(() => groupByStatus(filteredSubmissions), [filteredSubmissions]);
+  const counts = useMemo(() => groupByStatus(submissions), [submissions]);
 
   // ── Handlers ──
 
@@ -252,15 +275,13 @@ export function SubmissionsModule() {
       const result = await updateSubmission(id, { status });
       if (result.success) {
         toast.success(`Moved to ${SUBMISSION_STATUS_CONFIG[status].label}`);
-        // Keep detail drawer in sync
-        if (selectedSubmission?.id === id) {
-          setSelectedSubmission((prev) => (prev ? { ...prev, status } : null));
-        }
+        // Keep the open page in sync
+        setSelectedSubmission((prev) => (prev && prev.id === id ? { ...prev, status } : prev));
       } else {
         toast.error('Failed to update status');
       }
     },
-    [updateSubmission, selectedSubmission],
+    [updateSubmission],
   );
 
   const handleNotesChange = useCallback(
@@ -270,23 +291,12 @@ export function SubmissionsModule() {
     [updateSubmission],
   );
 
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!deleteTarget) return;
-    const result = await deleteSubmission(deleteTarget);
-    if (result.success) {
-      toast.success('Submission deleted');
-      if (selectedSubmission?.id === deleteTarget) setSelectedSubmission(null);
-    } else {
-      toast.error('Failed to delete submission');
-    }
-    setDeleteTarget(null);
-  }, [deleteTarget, deleteSubmission, selectedSubmission]);
-
-  const handleDeleteFromArchive = useCallback(
-    async (id: string) => {
+  const deleteNow = useCallback(
+    async (id: string, message = 'Submission deleted') => {
       const result = await deleteSubmission(id);
       if (result.success) {
-        toast.success('Submission permanently deleted');
+        toast.success(message);
+        setSelectedSubmission((prev) => (prev?.id === id ? null : prev));
       } else {
         toast.error('Failed to delete submission');
       }
@@ -294,312 +304,272 @@ export function SubmissionsModule() {
     [deleteSubmission],
   );
 
+  // From a board card: ask first.
+  const handleDeleteFromBoard = useCallback(
+    async (submission: Submission) => {
+      const ok = await confirm({
+        title: 'Delete submission?',
+        description: 'This permanently deletes the submission. This action cannot be undone.',
+        confirmLabel: 'Delete',
+        destructive: true,
+      });
+      if (ok) await deleteNow(submission.id);
+    },
+    [confirm, deleteNow],
+  );
+
   // ── Drag & Drop Handler ──
   const handleDragEnd = useCallback(
     async (result: DropResult) => {
       const { destination, source, draggableId } = result;
-
-      // Dropped outside a valid target
       if (!destination) return;
-
-      // Dropped in same place
       if (destination.droppableId === source.droppableId && destination.index === source.index) {
         return;
       }
-
-      // Status changed via drag
       if (destination.droppableId !== source.droppableId) {
-        const newStatus = destination.droppableId as SubmissionStatus;
-        await handleStatusChange(draggableId, newStatus);
+        await handleStatusChange(draggableId, destination.droppableId as SubmissionStatus);
       }
     },
     [handleStatusChange],
   );
 
-  // ── Render: Error ──
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-        <div className="text-center max-w-md mx-auto p-8 bg-red-50 rounded-xl border border-red-100">
-          <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
-          <h3 className="text-red-900 font-semibold mb-2">Unable to load submissions</h3>
-          <p className="text-sm text-red-600 mb-6">{error}</p>
-          <Button onClick={() => refetch()} variant="destructive">
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const activeCount = byStatus.new.length + byStatus.pending.length + byStatus.completed.length;
-
-  // Header, figures and tabs, shared by the board and the archive.
-  const pageChrome = (
-    <>
-      <PageHeader
-        title="Submissions"
-        description="Incoming quotes, consultations, contact enquiries, client sign-ups and more."
-        actions={
-          <>
-            <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
-              <RefreshCw
-                className={cn('h-4 w-4', isLoading && 'animate-spin')}
-                aria-hidden="true"
-              />
-              Refresh
-            </Button>
-            <Button onClick={() => setShowInviteModal(true)}>
-              <Send className="h-4 w-4" aria-hidden="true" />
-              Invite
-            </Button>
-          </>
-        }
-      />
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Active" value={activeCount} meta="On the board" />
-        <StatCard
-          label="New"
-          value={byStatus.new.length}
-          meta="Needs attention"
-          tone={byStatus.new.length > 0 ? 'attention' : 'default'}
-        />
-        <StatCard label="Pending" value={byStatus.pending.length} meta="Being reviewed" />
-        <StatCard label="Completed" value={byStatus.completed.length} meta="Fully resolved" />
-      </div>
-
-      <Tabs value={tab} onValueChange={(v) => setTab(v as (typeof SUBMISSION_TABS)[number])}>
-        <NavTabsList aria-label="Submissions">
-          <NavTabsTrigger value="board">Board</NavTabsTrigger>
-          <NavTabsTrigger value="archived" count={byStatus.archived.length}>
-            Archived
-          </NavTabsTrigger>
-        </NavTabsList>
-      </Tabs>
-
-      {/* The header's Invite action works from the board and the archive. */}
-      <SubmissionInviteModal open={showInviteModal} onClose={() => setShowInviteModal(false)} />
-    </>
+  const inviteDialog = (
+    <SubmissionInviteModal open={showInviteModal} onClose={() => setShowInviteModal(false)} />
   );
 
-  // ── Render: Archived View ──
+  // Top-bar breadcrumb: Work / Submissions / Board (/ the submitter).
+  const listLabel = (selectedSubmission ? selectedSubmission.status === 'archived' : showArchived)
+    ? 'Archived'
+    : 'Board';
+  useBreadcrumbTrail(
+    selectedSubmission
+      ? [
+          { label: listLabel, onClick: () => setSelectedSubmission(null) },
+          { label: selectedSubmission.submitterName || 'Submission' },
+        ]
+      : [{ label: listLabel }],
+  );
 
-  if (showArchived) {
+  // ── Render: an open submission is a page ──
+  if (selectedSubmission) {
+    const current = submissions.find((s) => s.id === selectedSubmission.id) ?? selectedSubmission;
     return (
-      <div className="min-h-screen bg-gray-50/30 pb-10">
-        <div className="mx-auto flex max-w-[1800px] flex-col gap-6 p-6 lg:p-8">
-          {pageChrome}
-          <ArchivedSubmissionsView
-            submissions={byStatus.archived}
-            onView={setSelectedSubmission}
-            onStatusChange={handleStatusChange}
-            onDelete={handleDeleteFromArchive}
-          />
-
-          {/* Detail Modal — also accessible from archive view */}
-          <SubmissionDetailModal
-            submission={selectedSubmission}
-            open={!!selectedSubmission}
-            onClose={() => setSelectedSubmission(null)}
-            onStatusChange={handleStatusChange}
-            onNotesChange={handleNotesChange}
-            onDelete={(id) => {
-              setSelectedSubmission(null);
-              setDeleteTarget(id);
-            }}
-          />
-
-          {/* Delete Confirmation */}
-          <AlertDialog
-            open={!!deleteTarget}
-            onOpenChange={(open) => {
-              if (!open) setDeleteTarget(null);
-            }}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Submission?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete the submission. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteConfirm}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
+      <SubmissionPage
+        key={current.id}
+        submission={current}
+        onClose={() => setSelectedSubmission(null)}
+        backLabel={current.status === 'archived' ? 'archived submissions' : 'board'}
+        onStatusChange={handleStatusChange}
+        onNotesChange={handleNotesChange}
+        onDelete={(id) => deleteNow(id)}
+      />
     );
   }
 
-  // ── Render: Main Board ──
+  const activeCount = counts.new.length + counts.pending.length + counts.completed.length;
+  const visibleColumns = BOARD_COLUMNS.filter(
+    (col) => statusFilter === 'all' || col.id === statusFilter,
+  );
+  const toggleStatus = (next: StatusFilter) => {
+    setStatusFilter(statusFilter === next && next !== 'all' ? 'all' : next);
+  };
+  const filtersActive = typeFilter !== 'all' || statusFilter !== 'all' || search.trim() !== '';
+  const clearAllFilters = () => {
+    setSearch('');
+    // One address change for both filters.
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete('type');
+        next.delete('status');
+        return next;
+      },
+      { replace: true },
+    );
+  };
+  const isEmpty = !isLoading && !error && submissions.length === 0 && typeFilter === 'all';
 
   return (
     <div className="min-h-screen bg-gray-50/30 pb-10">
-      <div className="mx-auto flex max-w-[1800px] flex-col gap-6 p-6 lg:p-8">
-        {pageChrome}
-
-        {/* Filters Bar — matches TaskManagementModule structure */}
-        <div className="bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-2 max-w-3xl">
-          <div className="flex-1 relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              {...searchInputGuard}
-              placeholder="Search by name, email, or submission ID…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-gray-400"
-            />
-          </div>
-          <div className="w-px h-6 bg-gray-200 hidden md:block" />
-          <div className="w-full md:w-auto relative">
-            <select
-              value={filters.type || 'all'}
-              onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  type: e.target.value === 'all' ? undefined : (e.target.value as SubmissionType),
-                })
-              }
-              className="w-full md:w-[180px] pl-3 pr-8 py-2 text-sm bg-gray-50 hover:bg-gray-100 border-none rounded-lg focus:outline-none focus:ring-0 cursor-pointer font-medium text-gray-700 appearance-none"
-            >
-              <option value="all">All Types</option>
-              <option value="quote">{SUBMISSION_TYPE_CONFIG.quote.label}</option>
-              <option value="will_draft">{SUBMISSION_TYPE_CONFIG.will_draft.label}</option>
-              <option value="tax_planning">{SUBMISSION_TYPE_CONFIG.tax_planning.label}</option>
-              <option value="consultation">{SUBMISSION_TYPE_CONFIG.consultation.label}</option>
-              <option value="contact">{SUBMISSION_TYPE_CONFIG.contact.label}</option>
-              <option value="client_signup">{SUBMISSION_TYPE_CONFIG.client_signup.label}</option>
-              <option value="change_request">{SUBMISSION_TYPE_CONFIG.change_request.label}</option>
-            </select>
-            <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Kanban Board — 3 columns with drag-and-drop */}
-        {!isLoading && submissions.length > 0 && (
-          <div className="h-[calc(100vh-380px)] min-h-[500px] overflow-hidden">
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="flex gap-6 h-full overflow-x-auto pb-4 px-1">
-                {BOARD_COLUMNS.map((col) => (
-                  <KanbanColumn
-                    key={col.id}
-                    columnId={col.id}
-                    submissions={byStatus[col.id]}
-                    onView={setSelectedSubmission}
-                    onStatusChange={handleStatusChange}
+      <div className="mx-auto flex max-w-[1800px] flex-col gap-5 p-6 lg:p-8">
+        <PageHeader
+          title="Submissions"
+          description="Quotes, consultations, contact enquiries, client signups and change requests."
+          actions={
+            <>
+              {!showArchived && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => void refetch()}
+                  disabled={isLoading}
+                  aria-label="Refresh"
+                  title="Refresh"
+                >
+                  <RefreshCw
+                    className={cn('h-4 w-4', isLoading && 'animate-spin')}
+                    aria-hidden="true"
                   />
-                ))}
-              </div>
-            </DragDropContext>
-          </div>
-        )}
-
-        {/* Placeholder when empty and not loading */}
-        {!isLoading && submissions.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 rounded-xl bg-white">
-            <Inbox className="h-12 w-12 text-gray-300 mb-4" />
-            <h3 className="text-base font-medium text-gray-600 mb-1">No submissions yet</h3>
-            <p className="text-sm text-gray-400 max-w-sm mb-6">
-              Submissions from website forms will appear here automatically, or invite a client to
-              get started.
-            </p>
-            <Button
-              onClick={() => setShowInviteModal(true)}
-              className="gap-2 bg-purple-600 hover:bg-purple-700 text-white mb-6"
-            >
-              <Send className="h-4 w-4" />
-              Invite a Client
-            </Button>
-            <div className="flex items-center gap-4 text-xs text-gray-400">
-              <span className="flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5" /> Quotes
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" /> Consultations
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Mail className="h-3.5 w-3.5" /> Contact
-              </span>
-              <span className="flex items-center gap-1.5">
-                <FileText className="h-3.5 w-3.5" /> Will Drafts
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Calculator className="h-3.5 w-3.5" /> Tax Planning
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Loading skeleton */}
-        {isLoading && (
-          <div className="flex gap-6 h-[500px]">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex-1 min-w-[350px] rounded-xl bg-gray-100/50 border border-gray-200 animate-pulse"
-              >
-                <div className="p-3 bg-white rounded-t-xl border-b">
-                  <div className="h-4 bg-gray-200 rounded w-20" />
-                </div>
-                <div className="p-3 space-y-3">
-                  {[1, 2].map((j) => (
-                    <div key={j} className="h-32 bg-white rounded-lg border border-gray-200" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Detail Modal */}
-        <SubmissionDetailModal
-          submission={selectedSubmission}
-          open={!!selectedSubmission}
-          onClose={() => setSelectedSubmission(null)}
-          onStatusChange={handleStatusChange}
-          onNotesChange={handleNotesChange}
-          onDelete={(id) => {
-            setSelectedSubmission(null);
-            setDeleteTarget(id);
-          }}
+                </Button>
+              )}
+              <Button onClick={() => setShowInviteModal(true)}>
+                <Send className="h-4 w-4" aria-hidden="true" />
+                Invite a client
+              </Button>
+            </>
+          }
         />
 
-        {/* Delete Confirmation */}
-        <AlertDialog
-          open={!!deleteTarget}
-          onOpenChange={(open) => {
-            if (!open) setDeleteTarget(null);
-          }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Submission?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete the submission. This action cannot be undone. Consider
-                archiving instead to retain a record.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteConfirm}
-                className="bg-red-600 hover:bg-red-700 text-white"
+        <Tabs value={tab} onValueChange={(v) => setTab(v as (typeof SUBMISSION_TABS)[number])}>
+          <NavTabsList aria-label="Submissions views">
+            <NavTabsTrigger value="board" count={isLoading || error ? undefined : activeCount}>
+              Board
+            </NavTabsTrigger>
+            <NavTabsTrigger
+              value="archived"
+              count={isLoading || error ? undefined : counts.archived.length}
+            >
+              Archived
+            </NavTabsTrigger>
+          </NavTabsList>
+        </Tabs>
+
+        {isLoading ? (
+          <div role="status" aria-label="Loading submissions" className="space-y-5">
+            <span className="sr-only">Loading submissions…</span>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-[92px] rounded-xl" />
+              ))}
+            </div>
+            <div className="flex h-[420px] gap-6">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="min-w-[300px] flex-1 rounded-xl" />
+              ))}
+            </div>
+          </div>
+        ) : error ? (
+          <ErrorState
+            title="Unable to load submissions"
+            description="Something went wrong while loading submissions. Nothing you entered was lost."
+            onRetry={() => void refetch()}
+            details={error}
+          />
+        ) : isEmpty ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-nw-line bg-white px-6 py-16 text-center">
+            <Inbox className="mb-4 h-10 w-10 text-gray-300" aria-hidden="true" />
+            <h3 className="text-base font-semibold text-nw-ink">No submissions yet</h3>
+            <p className="mt-1 mb-5 max-w-sm text-sm text-nw-text-3">
+              Website form submissions appear here as they arrive.
+            </p>
+            <Button onClick={() => setShowInviteModal(true)}>Send a form link</Button>
+          </div>
+        ) : showArchived ? (
+          <ArchivedSubmissionsView
+            submissions={counts.archived}
+            onView={setSelectedSubmission}
+            onStatusChange={handleStatusChange}
+            onDelete={(id) => void deleteNow(id, 'Submission permanently deleted')}
+          />
+        ) : (
+          <>
+            <div
+              role="group"
+              aria-label="Filter submissions by status"
+              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+            >
+              <FilterStatCard
+                label="Active"
+                value={activeCount}
+                meta="On the board"
+                active={statusFilter === 'all'}
+                onClick={() => toggleStatus('all')}
+              />
+              <FilterStatCard
+                label="New"
+                value={counts.new.length}
+                meta="Needs attention"
+                tone={counts.new.length > 0 ? 'attention' : 'default'}
+                active={statusFilter === 'new'}
+                onClick={() => toggleStatus('new')}
+              />
+              <FilterStatCard
+                label="Pending"
+                value={counts.pending.length}
+                meta="Being reviewed"
+                active={statusFilter === 'pending'}
+                onClick={() => toggleStatus('pending')}
+              />
+              <FilterStatCard
+                label="Completed"
+                value={counts.completed.length}
+                meta="Fully resolved"
+                active={statusFilter === 'completed'}
+                onClick={() => toggleStatus('completed')}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="relative w-full sm:max-w-md">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+                  aria-hidden="true"
+                />
+                <Input
+                  {...searchInputGuard}
+                  aria-label="Search submissions"
+                  placeholder="Search name, email or submission ID…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="bg-white pl-9"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <FilterChip
+                  label="Type"
+                  value={typeFilter}
+                  allValue="all"
+                  onChange={setTypeFilter}
+                  options={SUBMISSION_TYPES.map((t) => ({
+                    value: t,
+                    label: SUBMISSION_TYPE_CONFIG[t].label,
+                  }))}
+                />
+                {filtersActive && <ClearFiltersButton onClick={clearAllFilters} />}
+              </div>
+            </div>
+
+            {filtersActive && visibleColumns.every((col) => byStatus[col.id].length === 0) && (
+              <div
+                role="status"
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-nw-line bg-white px-4 py-3 text-sm text-nw-text-2"
               >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <span className="flex-1">No submissions match your filters.</span>
+                <ClearFiltersButton onClick={clearAllFilters} />
+              </div>
+            )}
+
+            <div className="h-[calc(100vh-380px)] min-h-[500px] overflow-hidden">
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <div className="flex h-full gap-6 overflow-x-auto px-1 pb-4">
+                  {visibleColumns.map((col) => (
+                    <KanbanColumn
+                      key={col.id}
+                      columnId={col.id}
+                      submissions={byStatus[col.id]}
+                      onView={setSelectedSubmission}
+                      onStatusChange={handleStatusChange}
+                      onDelete={(sub) => void handleDeleteFromBoard(sub)}
+                    />
+                  ))}
+                </div>
+              </DragDropContext>
+            </div>
+          </>
+        )}
+
+        {inviteDialog}
+        {confirmDialog}
       </div>
     </div>
   );

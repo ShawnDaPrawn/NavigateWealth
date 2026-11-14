@@ -8,7 +8,7 @@ import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { Input } from '../../../ui/input';
+
 import { Label } from '../../../ui/label';
 import {
   Dialog,
@@ -25,11 +25,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../ui/dropdown-menu';
-import { Alert, AlertDescription, AlertTitle } from '../../../ui/alert';
+
 import {
   PenTool,
   Printer,
-  AlertTriangle,
   Scale,
   Loader2,
   MoreHorizontal,
@@ -52,7 +51,9 @@ import { useCurrentUserPermissions } from '../personnel';
 // Phase 1 — Form status config
 import { FormsFilterBar } from './components/FormsFilterBar';
 import { FormsList } from './components/FormsList';
-import { PageHeader, NavTabsList, NavTabsTrigger } from '../../layout/page';
+import { PageHeader, NavTabsList, NavTabsTrigger, ErrorState, useConfirm } from '../../layout/page';
+import { BackLink } from './components/BackLink';
+import { BreadcrumbTrail } from './components/BreadcrumbTrail';
 
 // ---------------------------------------------------------------------------
 // Heavy sub-components — lazy-loaded to reduce initial chunk size.
@@ -78,14 +79,8 @@ const ClientPicker = React.lazy(() =>
 const UniversalKeyManager = React.lazy(() =>
   import('./UniversalKeyManager').then((m) => ({ default: m.UniversalKeyManager })),
 );
-const FormTemplateTool = React.lazy(() =>
-  import('./tools/FormTemplateTool').then((m) => ({ default: m.FormTemplateTool })),
-);
-const ZipEncryptTool = React.lazy(() =>
-  import('./tools/ZipEncryptTool').then((m) => ({ default: m.ZipEncryptTool })),
-);
-const PdfDecryptTool = React.lazy(() =>
-  import('./tools/PdfDecryptTool').then((m) => ({ default: m.PdfDecryptTool })),
+const ToolsTab = React.lazy(() =>
+  import('./tools/ToolsTab').then((m) => ({ default: m.ToolsTab })),
 );
 const CorporateIdentityTab = React.lazy(() =>
   import('./components/CorporateIdentityTab').then((m) => ({ default: m.CorporateIdentityTab })),
@@ -133,6 +128,18 @@ export function ResourcesModule() {
           } else {
             next.set('resourcesTab', value);
           }
+          // Pages opened inside a tab (a tool, a calculator, a legal document)
+          // belong to that tab; leaving the tab closes them.
+          for (const key of [
+            'tool',
+            'calculator',
+            'legalDoc',
+            'legalView',
+            'keys',
+            'brandSection',
+          ]) {
+            next.delete(key);
+          }
           return next;
         },
         { replace: true },
@@ -141,7 +148,9 @@ export function ResourcesModule() {
     [setSearchParams],
   );
   const {
+    forms,
     filteredForms,
+    error: formsError,
     categories,
     clientTypes,
     loading,
@@ -159,9 +168,29 @@ export function ResourcesModule() {
   const canEdit = canDo('resources', 'edit');
 
   // ---- UI State ----
-  const [isBuilderMode, setIsBuilderMode] = useState(false);
-  const [builderMode, setBuilderMode] = useState<'form' | 'letter'>('form');
-  const [formToEdit, setFormToEdit] = useState<FormDefinition | null>(null);
+  // The form builder is a page of its own, in the address:
+  // ?build=form (new form), ?build=letter (compose letter) or ?build=<form id>.
+  const buildParam = searchParams.get('build');
+  const formToEdit =
+    buildParam && buildParam !== 'form' && buildParam !== 'letter'
+      ? (forms.find((f) => f.id === buildParam) ?? null)
+      : null;
+  const isBuilderMode =
+    buildParam === 'form' || buildParam === 'letter' || (!!buildParam && !!formToEdit);
+  const builderMode: 'form' | 'letter' =
+    buildParam === 'letter' || formToEdit?.category === 'Letters' ? 'letter' : 'form';
+  const builderNotFound = !!buildParam && !isBuilderMode && !loading && !formsError;
+  const setBuildParam = useCallback(
+    (value: string | null) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (value) next.set('build', value);
+        else next.delete('build');
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
   const [seedingLegal, setSeedingLegal] = useState(false);
 
   // ---- Preview & Pre-fill State ----
@@ -175,10 +204,8 @@ export function ResourcesModule() {
   const [selectedFormIds, setSelectedFormIds] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
 
-  // ---- Delete Modal State ----
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [formToDelete, setFormToDelete] = useState<FormDefinition | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  // ---- Delete confirmation ----
+  const { confirm, confirmDialog } = useConfirm();
 
   // ============================================================================
   // HANDLERS
@@ -266,27 +293,24 @@ export function ResourcesModule() {
   }, []);
 
   /** Handle form edit */
-  const handleEdit = useCallback((form: FormDefinition) => {
-    setFormToEdit(form);
-    setBuilderMode(form.category === 'Letters' ? 'letter' : 'form');
-    setIsBuilderMode(true);
-  }, []);
+  const handleEdit = useCallback(
+    (form: FormDefinition) => {
+      setBuildParam(form.id);
+    },
+    [setBuildParam],
+  );
 
-  /** Handle form delete (open confirmation) */
-  const handleDelete = useCallback((form: FormDefinition) => {
-    setFormToDelete(form);
-    setDeleteModalOpen(true);
-    setDeleteConfirmation('');
-  }, []);
-
-  /** Confirm delete */
-  const confirmDelete = async () => {
-    if (!formToDelete || deleteConfirmation !== formToDelete.name) return;
+  /** Handle form delete (confirm first) */
+  const handleDelete = async (form: FormDefinition) => {
+    const ok = await confirm({
+      title: 'Delete form template',
+      description: `This permanently deletes the “${form.name}” template. This action cannot be undone.`,
+      confirmLabel: 'Delete template',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
-      await deleteResource(formToDelete.id);
-      setDeleteModalOpen(false);
-      setFormToDelete(null);
-      setDeleteConfirmation('');
+      await deleteResource(form.id);
     } catch (error: unknown) {
       console.error('[ResourcesModule] Delete error:', error);
       toast.error('Delete failed', {
@@ -380,16 +404,56 @@ export function ResourcesModule() {
   // BUILDER MODE
   // ============================================================================
 
+  if (builderNotFound) {
+    return (
+      <div className="space-y-4 p-6">
+        <BreadcrumbTrail
+          trail={[
+            { label: 'Forms & documents', onClick: () => setBuildParam(null) },
+            { label: 'Not found' },
+          ]}
+        />
+        <BackLink label="Back to Resources" onClick={() => setBuildParam(null)} />
+        <ErrorState
+          title="Form template not found"
+          description="It may have been deleted, or the link is out of date."
+        />
+      </div>
+    );
+  }
+
+  if (buildParam && !isBuilderMode && formsError) {
+    return (
+      <div className="space-y-4 p-6">
+        <BackLink label="Back to Resources" onClick={() => setBuildParam(null)} />
+        <ErrorState
+          title="Unable to open the form template"
+          onRetry={() => void refresh()}
+          details={formsError}
+        />
+      </div>
+    );
+  }
+
   if (isBuilderMode) {
     return (
       <Suspense fallback={<LazyFallback />}>
+        <BreadcrumbTrail
+          trail={[
+            { label: 'Forms & documents', onClick: () => setBuildParam(null) },
+            {
+              label:
+                formToEdit?.name ??
+                (builderMode === 'letter' ? 'Compose letter' : 'Build new form'),
+            },
+          ]}
+        />
         <FormBuilder
+          key={buildParam ?? 'builder'}
           initialData={(formToEdit ?? undefined) as unknown as Record<string, unknown> | undefined}
           mode={builderMode}
           onBack={() => {
-            setIsBuilderMode(false);
-            setFormToEdit(null);
-            setBuilderMode('form');
+            setBuildParam(null);
             refresh();
           }}
           onSave={() => {
@@ -474,7 +538,7 @@ export function ResourcesModule() {
 
       <PageHeader
         title="Resources"
-        description="Forms, pre-filling with client data, and practice tools."
+        description="Forms, legal documents, tools, calculators, data keys and corporate identity."
       />
 
       {/* Main Tabs */}
@@ -492,37 +556,29 @@ export function ResourcesModule() {
         {/* FORMS TAB */}
         {/* ============================================================ */}
         <TabsContent value="forms" className="space-y-6">
+          <BreadcrumbTrail trail={[{ label: 'Forms & documents' }]} />
           {/* Header Row: title + primary actions */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Form Management & Pre-filling</h2>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Preview, pre-fill with client data, or build new form templates
+              <h2 className="text-lg font-semibold text-nw-ink">Form management & pre-filling</h2>
+              <p className="mt-0.5 text-sm text-nw-text-3">
+                Build forms and letters, then pre-fill them with a client&apos;s details.
               </p>
             </div>
             <div className="flex items-center gap-2">
               {/* Primary actions */}
               {canCreate && (
                 <div className="contents">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setBuilderMode('letter');
-                      setIsBuilderMode(true);
-                    }}
-                  >
+                  <Button variant="outline" onClick={() => setBuildParam('letter')}>
                     <Mail className="h-4 w-4 mr-2" />
-                    Compose Letter
+                    Compose letter
                   </Button>
                   <Button
                     className="bg-primary hover:bg-primary/90"
-                    onClick={() => {
-                      setBuilderMode('form');
-                      setIsBuilderMode(true);
-                    }}
+                    onClick={() => setBuildParam('form')}
                   >
                     <PenTool className="h-4 w-4 mr-2" />
-                    Build New Form
+                    Build new form
                   </Button>
                 </div>
               )}
@@ -530,14 +586,14 @@ export function ResourcesModule() {
               {/* Secondary actions menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
+                  <Button variant="outline" size="icon" aria-label="More actions">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuItem onClick={openDemo}>
                     <Printer className="h-4 w-4 mr-2" />
-                    View Demo Template
+                    View demo template
                   </DropdownMenuItem>
                   {canCreate && (
                     <div className="contents">
@@ -548,7 +604,7 @@ export function ResourcesModule() {
                         ) : (
                           <Scale className="h-4 w-4 mr-2" />
                         )}
-                        {seedingLegal ? 'Seeding...' : 'Seed Legal Documents'}
+                        {seedingLegal ? 'Seeding...' : 'Seed legal documents'}
                       </DropdownMenuItem>
                     </div>
                   )}
@@ -572,12 +628,12 @@ export function ResourcesModule() {
             <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg">
               <Badge className="bg-primary text-white">{selectedFormIds.size} selected</Badge>
               <Button size="sm" variant="outline" onClick={toggleSelectAll}>
-                {selectedFormIds.size === filteredForms.length ? 'Deselect All' : 'Select All'}
+                {selectedFormIds.size === filteredForms.length ? 'Deselect all' : 'Select all'}
               </Button>
               <div className="flex-1" />
               <Button size="sm" onClick={handlePrefillSelected}>
                 <Users className="h-4 w-4 mr-1.5" />
-                Pre-fill with Client Data
+                Pre-fill selected
               </Button>
               <Button
                 size="sm"
@@ -592,26 +648,34 @@ export function ResourcesModule() {
             </div>
           )}
 
-          {/* Forms List */}
-          <FormsList
-            filteredForms={filteredForms}
-            loading={loading}
-            filters={filters}
-            updateFilters={updateFilters}
-            isSelectMode={isSelectMode}
-            selectedFormIds={selectedFormIds}
-            toggleFormSelection={toggleFormSelection}
-            canCreate={canCreate}
-            canEdit={canEdit}
-            canDelete={canDelete}
-            categoryCounts={categoryCounts}
-            handleQuickPreview={handleQuickPreview}
-            handlePrefill={handlePrefill}
-            handleEdit={handleEdit}
-            handleDelete={handleDelete}
-            duplicateResource={duplicateResource}
-            updateResource={updateResource}
-          />
+          {/* Forms List — a failed load is an error, not "No forms available" */}
+          {formsError ? (
+            <ErrorState
+              title="Unable to load forms"
+              onRetry={() => void refresh()}
+              details={formsError}
+            />
+          ) : (
+            <FormsList
+              filteredForms={filteredForms}
+              loading={loading}
+              filters={filters}
+              updateFilters={updateFilters}
+              isSelectMode={isSelectMode}
+              selectedFormIds={selectedFormIds}
+              toggleFormSelection={toggleFormSelection}
+              canCreate={canCreate}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              categoryCounts={categoryCounts}
+              handleQuickPreview={handleQuickPreview}
+              handlePrefill={handlePrefill}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
+              duplicateResource={duplicateResource}
+              updateResource={updateResource}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="legal-docs">
@@ -623,11 +687,7 @@ export function ResourcesModule() {
         {/* Tools Tab */}
         <TabsContent value="tools">
           <Suspense fallback={<LazyFallback />}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <FormTemplateTool selectedClientId={formTemplatesClientId} />
-              <ZipEncryptTool />
-              <PdfDecryptTool />
-            </div>
+            <ToolsTab formTemplatesClientId={formTemplatesClientId} />
           </Suspense>
         </TabsContent>
 
@@ -661,7 +721,7 @@ export function ResourcesModule() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              Pre-fill with Client Data
+              Pre-fill with client data
             </DialogTitle>
             <DialogDescription>
               Select a client to populate form fields with their information.
@@ -678,7 +738,7 @@ export function ResourcesModule() {
             {/* Selected forms summary */}
             <div>
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
-                Forms to Pre-fill ({previewingForms.length})
+                Forms to pre-fill ({previewingForms.length})
               </Label>
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {previewingForms.map((f) => (
@@ -699,7 +759,7 @@ export function ResourcesModule() {
             {/* Client search */}
             <div>
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
-                Select Client
+                Client
               </Label>
               <Suspense fallback={<LazyFallback />}>
                 <ClientPicker selectedClient={prefillClient} onSelect={setPrefillClient} />
@@ -718,68 +778,17 @@ export function ResourcesModule() {
                 handleConfirmPrefill();
               }}
             >
-              Preview Empty
+              Preview empty
             </Button>
             <Button onClick={handleConfirmPrefill} disabled={!prefillClient}>
               <Users className="h-4 w-4 mr-2" />
-              Pre-fill & Preview
+              Pre-fill
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ============================================================ */}
-      {/* DELETE CONFIRMATION MODAL */}
-      {/* ============================================================ */}
-      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              Delete Form Template
-            </DialogTitle>
-            <DialogDescription>
-              This action cannot be undone. This will permanently delete the
-              <span className="font-semibold text-foreground"> "{formToDelete?.name}" </span>
-              template.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Warning</AlertTitle>
-              <AlertDescription>
-                Please type <span className="font-bold select-all">{formToDelete?.name}</span> below
-                to confirm deletion.
-              </AlertDescription>
-            </Alert>
-
-            <div className="space-y-2">
-              <Label>Confirmation</Label>
-              <Input
-                value={deleteConfirmation}
-                onChange={(e) => setDeleteConfirmation(e.target.value)}
-                placeholder="Type the form name to confirm"
-                className="font-mono"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleteConfirmation !== formToDelete?.name}
-            >
-              Delete Template
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {confirmDialog}
     </div>
   );
 }

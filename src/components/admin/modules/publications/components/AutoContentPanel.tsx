@@ -50,6 +50,8 @@ import type {
 import { toast } from 'sonner';
 import { ContentSourcesManager } from './ContentSourcesManager';
 import { Switch } from '../../../../ui/switch';
+import { Skeleton } from '../../../../ui/skeleton';
+import { ErrorState } from '../../../layout/page';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -127,17 +129,23 @@ export function AutoContentPanel({ onArticlesGenerated }: AutoContentPanelProps)
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
   // Load configs
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setLoadError(null);
       try {
         const data = await PublicationsAPI.AutoContent.getConfigs();
         if (!cancelled) setConfigs(data);
       } catch (err) {
         console.error('Failed to load auto-content configs:', err);
-        toast.error('Failed to load pipeline configurations');
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : 'Failed to load pipelines');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -146,7 +154,7 @@ export function AutoContentPanel({ onArticlesGenerated }: AutoContentPanelProps)
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   // Load history when expanding
   const loadHistory = useCallback(async (id: PipelineId) => {
@@ -303,10 +311,26 @@ export function AutoContentPanel({ onArticlesGenerated }: AutoContentPanelProps)
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 gap-3">
-        <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-        <span className="text-sm text-gray-500">Loading content pipelines...</span>
+      <div
+        aria-busy="true"
+        aria-label="Loading content pipelines"
+        className="space-y-3"
+        data-testid="pipelines-loading"
+      >
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+        ))}
       </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load content pipelines"
+        onRetry={() => setReloadKey((k) => k + 1)}
+        details={loadError}
+      />
     );
   }
 

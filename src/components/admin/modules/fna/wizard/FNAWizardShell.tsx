@@ -1,22 +1,19 @@
 /**
  * FNAWizardShell — the one frame every FNA / INA wizard renders in.
  *
- * Owns everything that must look and behave the same across the six wizards:
- * the dialog size, the "<FNA> — <client>" header, the four-step stepper, the
- * scrolling content area and the publishing overlay. A wizard supplies only
+ * Owns everything that must look and behave the same across the six wizards.
+ * The wizard is a full page (not a pop-up): "‹ <category>" back link, the FNA
+ * name as the page title with "<client> · Draft" under it, the four-step
+ * progress, the step body and the publishing overlay. It also extends the
+ * top-bar breadcrumb with "<FNA> / <step>". A wizard supplies only
  * the body of its current step, which ends with <FNAStepNavigation />.
  */
 
 import React, { useEffect, useRef } from 'react';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, Loader2 } from 'lucide-react';
 import { Card } from '../../../../ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+import { PageHeader } from '../../../layout/page';
+import { useAppendBreadcrumb } from '../../../layout/page';
 import {
   FNA_WIZARD_TITLES,
   type FNAWizardFlowStep,
@@ -35,6 +32,12 @@ interface FNAWizardShellProps {
   loading?: boolean;
   loadingMessage?: string;
   isPublishing?: boolean;
+  /** "‹ <back>" text; defaults to the policy category the wizard belongs to. */
+  backLabel?: string;
+  /** Shown after the client name under the title ("Elsa van Wyk · Draft"). */
+  statusLabel?: string;
+  /** Page-header actions (e.g. Save progress). */
+  headerActions?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -88,6 +91,16 @@ export function FNAWizardStepper({
   );
 }
 
+/** Where "‹ Back" goes from each wizard: the policy category it was opened from. */
+const FNA_BACK_LABELS: Record<FNAWizardType, string> = {
+  risk: 'Risk planning',
+  medical: 'Medical aid',
+  retirement: 'Retirement planning',
+  tax: 'Tax planning',
+  investment: 'Investments',
+  estate: 'Estate planning',
+};
+
 export function FNAWizardShell({
   open,
   onClose,
@@ -98,77 +111,82 @@ export function FNAWizardShell({
   loading = false,
   loadingMessage = 'Loading client data…',
   isPublishing = false,
+  backLabel,
+  statusLabel = 'Draft',
+  headerActions,
   children,
 }: FNAWizardShellProps) {
   const title = FNA_WIZARD_TITLES[fnaType];
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
   const current = steps[currentStep - 1];
+  const back = backLabel ?? FNA_BACK_LABELS[fnaType];
+
+  useAppendBreadcrumb([{ label: title }, ...(current ? [{ label: current.title }] : [])], open);
 
   // Every step starts at the top, whichever wizard it belongs to.
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    if (typeof el.scrollTo === 'function') el.scrollTo({ top: 0 });
-    else el.scrollTop = 0;
+    const el = topRef.current;
+    if (!el || typeof el.scrollIntoView !== 'function') return;
+    el.scrollIntoView({ block: 'start' });
   }, [currentStep]);
 
+  if (!open) return null;
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        // A publish in flight must finish; closing mid-way would orphan it.
-        if (!next && !isPublishing) onClose();
-      }}
+    <div
+      ref={topRef}
+      className="relative flex flex-col gap-5"
+      aria-busy={isPublishing || undefined}
     >
-      <DialogContent className="!max-w-[1600px] w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-8">
-          <DialogHeader className="mb-6">
-            <DialogTitle className="text-xl font-semibold">
-              {title}
-              {clientName ? ` — ${clientName}` : ''}
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              Step {currentStep} of {steps.length}: {current?.title}
-            </DialogDescription>
-          </DialogHeader>
+      <button
+        type="button"
+        onClick={() => {
+          // A publish in flight must finish; leaving mid-way would orphan it.
+          if (!isPublishing) onClose();
+        }}
+        disabled={isPublishing}
+        className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 disabled:opacity-50"
+      >
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        {back}
+      </button>
 
-          <div className="space-y-6">
-            <FNAWizardStepper steps={steps} currentStep={currentStep} />
+      <PageHeader
+        title={title}
+        description={[clientName, statusLabel].filter(Boolean).join(' · ')}
+        actions={headerActions}
+      />
 
-            <div className="min-h-[500px]">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
-                  <p className="text-sm">{loadingMessage}</p>
-                </div>
-              ) : (
-                children
-              )}
-            </div>
+      <FNAWizardStepper steps={steps} currentStep={currentStep} />
+
+      <div className="min-h-[500px] rounded-xl border border-nw-line bg-white p-6">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+            <p className="text-sm">{loadingMessage}</p>
           </div>
-
-          <div className="sr-only" aria-live="polite" aria-atomic="true">
-            Step {currentStep} of {steps.length}: {current?.title}
-          </div>
-        </div>
-
-        {isPublishing && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-[100] flex items-center justify-center">
-            <Card className="p-6 max-w-sm shadow-lg border-2">
-              <div className="text-center space-y-4" role="status">
-                <Loader2
-                  className="h-12 w-12 animate-spin text-primary mx-auto"
-                  aria-hidden="true"
-                />
-                <p className="font-medium text-base">Publishing {title}…</p>
-                <p className="text-sm text-muted-foreground">
-                  Please wait while the analysis is saved to the client record.
-                </p>
-              </div>
-            </Card>
-          </div>
+        ) : (
+          children
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        Step {currentStep} of {steps.length}: {current?.title}
+      </div>
+
+      {isPublishing && (
+        <div className="absolute inset-0 z-[100] flex items-start justify-center bg-background/80 pt-40 backdrop-blur-sm">
+          <Card className="max-w-sm border-2 p-6 shadow-lg">
+            <div className="space-y-4 text-center" role="status">
+              <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" aria-hidden="true" />
+              <p className="text-base font-medium">Publishing {title}…</p>
+              <p className="text-sm text-muted-foreground">
+                Please wait while the analysis is saved to the client record.
+              </p>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
   );
 }

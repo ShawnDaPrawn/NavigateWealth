@@ -12,8 +12,14 @@ import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
-import { SegmentedList, SegmentedTrigger, useRecordInUrl, useUrlState } from '../../../layout/page';
-import { ComingSoonBadge } from '../components/ComingSoonBadge';
+import {
+  SegmentedList,
+  SegmentedTrigger,
+  SoonBadge,
+  useRecordInUrl,
+  useUrlState,
+} from '../../../layout/page';
+import { Breadcrumb } from '../breadcrumb';
 import { RefundManagerPanel } from './components/RefundManagerPanel';
 import { RefundClustersPanel } from './RefundClustersPanel';
 import { ClusterDetailView } from './components/ClusterDetailView';
@@ -64,26 +70,33 @@ export function AccountsPanel() {
   }
 
   return (
-    <Tabs
-      value={section}
-      onValueChange={(value) => setSection(value as AccountsSection)}
-      className="gap-4"
-    >
-      <SegmentedList aria-label="Accounts section">
-        <SegmentedTrigger value="overview">Overview</SegmentedTrigger>
-        <SegmentedTrigger value="refund-clusters">Refund clusters</SegmentedTrigger>
-        <SegmentedTrigger value="disbursement-clusters" disabled className="disabled:opacity-50">
-          Disbursement clusters
-          <ComingSoonBadge />
-        </SegmentedTrigger>
-      </SegmentedList>
+    <>
+      <Breadcrumb
+        trail={[
+          { label: 'Accounts' },
+          { label: section === 'overview' ? 'Overview' : 'Refund clusters' },
+        ]}
+      />
+      <Tabs
+        value={section}
+        onValueChange={(value) => setSection(value as AccountsSection)}
+        className="gap-4"
+      >
+        <SegmentedList aria-label="Accounts section">
+          <SegmentedTrigger value="overview">Overview</SegmentedTrigger>
+          <SegmentedTrigger value="refund-clusters">Refund clusters</SegmentedTrigger>
+          <SegmentedTrigger value="disbursement-clusters" disabled className="disabled:opacity-50">
+            Disbursement clusters <SoonBadge />
+          </SegmentedTrigger>
+        </SegmentedList>
 
-      <TabsContent value="overview">
-        <RefundManagerPanel />
-      </TabsContent>
-      <TabsContent value="refund-clusters">
-        <RefundClustersPanel onOpenCluster={setOpenClusterId} />
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="overview">
+          <RefundManagerPanel />
+        </TabsContent>
+        <TabsContent value="refund-clusters">
+          <RefundClustersPanel onOpenCluster={setOpenClusterId} />
+        </TabsContent>
+      </Tabs>
+    </>
   );
 }

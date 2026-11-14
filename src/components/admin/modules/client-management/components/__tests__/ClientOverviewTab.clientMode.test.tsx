@@ -12,6 +12,30 @@ vi.mock('@/shared/fna-intake/hooks/useFnaBatchStatus', () => ({
   })),
 }));
 
+// Primary reads succeed (empty): a failed read now shows the error state.
+vi.mock('@/shared/api/clientPolicies', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/api/clientPolicies')>();
+  return {
+    ...actual,
+    clientPoliciesQueryOptions: (clientId: string) => ({
+      queryKey: ['test-policies', clientId],
+      queryFn: async () => [],
+    }),
+    policySchemasQueryOptions: () => ({ queryKey: ['test-schemas'], queryFn: async () => ({}) }),
+  };
+});
+vi.mock('@/components/admin/modules/client-management/api', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/components/admin/modules/client-management/api')>();
+  return {
+    ...actual,
+    getClientProfileQueryOptions: (clientId: string) => ({
+      queryKey: ['test-profile', clientId],
+      queryFn: async () => null,
+    }),
+  };
+});
+
 vi.mock('@/utils/auth/profileService', () => ({
   getClientProfileQueryOptions: (clientId: string) => ({
     queryKey: ['client-profile', clientId],
@@ -74,7 +98,7 @@ describe('ClientOverviewTab client mode', () => {
     renderOverview('adviser');
 
     await waitFor(() => {
-      expect(screen.getByText('Financial Reviews')).toBeTruthy();
+      expect(screen.getByText('Financial reviews')).toBeTruthy();
     });
   });
 });
@@ -116,7 +140,7 @@ describe('ClientOverviewTab dashboard structure', () => {
     renderOverview('adviser');
 
     await waitFor(() => {
-      expect(screen.getAllByText('Financial Reviews').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Financial reviews').length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText(/welcome back/i).length).toBe(0);
   });
@@ -134,7 +158,7 @@ describe('ClientOverviewTab dashboard structure', () => {
     renderOverview('adviser');
 
     await waitFor(() => {
-      expect(screen.getAllByText('Portfolio Summary').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Portfolio summary').length).toBeGreaterThan(0);
     });
     // The client-mode label must not leak into adviser mode.
     expect(screen.queryAllByText('My Policies').length).toBe(0);

@@ -30,10 +30,14 @@ export const applicationsApi = {
       }
     }
 
-    const backendStatus = STATUS_MAP[activeTab as keyof typeof STATUS_MAP];
-    if (!backendStatus) return [];
+    // "All" asks for every status (the list endpoint filters only when given one).
+    const backendStatus =
+      activeTab === 'all' ? null : STATUS_MAP[activeTab as keyof typeof STATUS_MAP];
+    if (activeTab !== 'all' && !backendStatus) return [];
 
-    const url = `/${ENDPOINTS.APPLICATIONS}?status=${backendStatus}&sortBy=submitted_at&sortOrder=desc`;
+    const url = backendStatus
+      ? `/${ENDPOINTS.APPLICATIONS}?status=${backendStatus}&sortBy=submitted_at&sortOrder=desc`
+      : `/${ENDPOINTS.APPLICATIONS}?sortBy=submitted_at&sortOrder=desc`;
 
     try {
       const data = await api.get<ApplicationsResponse>(url);

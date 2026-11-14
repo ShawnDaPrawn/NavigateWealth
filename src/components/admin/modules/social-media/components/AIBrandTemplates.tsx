@@ -68,6 +68,7 @@ import type {
   GeneratePostTextInput,
 } from '../types';
 import { BRAND } from '../constants';
+import { ErrorState } from '../../../layout/page';
 
 // ============================================================================
 // Built-in Template Definition
@@ -518,15 +519,10 @@ export function AIBrandTemplates({ onUseContent }: AIBrandTemplatesProps) {
 
   if (!isConfigured) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Sparkles className="h-12 w-12 text-amber-500 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">AI Service Not Configured</h3>
-          <p className="text-muted-foreground max-w-md">
-            Configure the OpenAI API key to use brand templates.
-          </p>
-        </CardContent>
-      </Card>
+      <ErrorState
+        title="AI content generation is not set up"
+        description="The OpenAI API key is not configured. Ask an administrator to add it to enable AI content generation."
+      />
     );
   }
 

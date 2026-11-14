@@ -9,6 +9,9 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router';
+import { ErrorState, Notice } from '../../../layout/page';
+import { useClientSubCrumbs } from '../../../layout/page';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../../../auth/AuthContext';
 import type { Client } from '../types';
@@ -45,7 +48,12 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
     .join(' ');
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { data: notes = [], isLoading } = useClientNotes(selectedClient.id);
+  const {
+    data: notes = [],
+    isLoading,
+    error: notesError,
+    refetch: refetchNotes,
+  } = useClientNotes(selectedClient.id);
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
@@ -53,8 +61,35 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
 
   // ── UI State ──────────────────────────────────────────────────────────────
   const [search, setSearch] = useState('');
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  // An open note (or a new one) is in the address (?note=<id>|new) and, with
+  // the notes module's page editor, shows as a page in place of the list.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const noteParam = searchParams.get('note');
+  const setNoteParam = useCallback(
+    (value: string | null) =>
+      setSearchParams(
+        (current) => {
+          const params = new URLSearchParams(current);
+          if (value) params.set('note', value);
+          else params.delete('note');
+          return params;
+        },
+        value ? undefined : { replace: true },
+      ),
+    [setSearchParams],
+  );
+  const editorOpen = !!noteParam && (noteParam === 'new' || notes.some((n) => n.id === noteParam));
+  const selectedNote: Note | null =
+    noteParam && noteParam !== 'new' ? (notes.find((n) => n.id === noteParam) ?? null) : null;
+  const missingNote = !!noteParam && noteParam !== 'new' && !isLoading && !selectedNote;
+  useClientSubCrumbs(
+    editorOpen
+      ? [
+          { label: 'Notes', onClick: () => setNoteParam(null) },
+          { label: selectedNote ? selectedNote.title || 'Untitled note' : 'New note' },
+        ]
+      : [],
+  );
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const filteredNotes = useMemo(() => {
@@ -78,15 +113,9 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
   );
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleOpenNote = useCallback((note: Note) => {
-    setSelectedNote(note);
-    setEditorOpen(true);
-  }, []);
+  const handleOpenNote = useCallback((note: Note) => setNoteParam(note.id), [setNoteParam]);
 
-  const handleNewNote = useCallback(() => {
-    setSelectedNote(null);
-    setEditorOpen(true);
-  }, []);
+  const handleNewNote = useCallback(() => setNoteParam('new'), [setNoteParam]);
 
   const handleSave = useCallback(
     async (input: CreateNoteInput | UpdateNoteInput) => {
@@ -137,6 +166,18 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
   );
 
   // ── Loading ───────────────────────────────────────────────────────────────
+  // A failed load is an error, never "No notes for this client".
+  if (notesError && !isLoading && notes.length === 0) {
+    return (
+      <ErrorState
+        title="Couldn't load notes"
+        description="This client's notes could not be loaded."
+        onRetry={() => void refetchNotes()}
+        details={notesError instanceof Error ? notesError.message : String(notesError)}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -159,8 +200,52 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
     );
   }
 
+  // Pre-linked to this client. The notes module's editor shows as a page when it
+  // supports one (variant="page"); typed loosely so either version compiles.
+  const pageEditorProps = {
+    variant: 'page',
+    backLabel: clientFullName || 'client',
+    onTogglePin: handlePin,
+    onToggleArchive: handleArchive,
+  } as object;
+  const editor = (
+    <NoteEditorModal
+      {...pageEditorProps}
+      isOpen={editorOpen}
+      onClose={() => setNoteParam(null)}
+      note={selectedNote}
+      personnelId={personnelId}
+      personnelName={personnelName}
+      defaultClientId={selectedClient.id}
+      defaultClientName={clientFullName}
+      onSave={handleSave}
+      onAutoSave={handleAutoSave}
+      onDelete={(id) => {
+        deleteNote.mutate(id);
+      }}
+      onConvertToTask={(id) => {
+        convertToTask.mutate(id);
+      }}
+    />
+  );
+
+  if (editorOpen) return <div className="space-y-4">{editor}</div>;
+
   return (
     <div className="space-y-4">
+      {missingNote && (
+        <Notice
+          kind="error"
+          title="This note could not be opened."
+          action={
+            <Button variant="outline" size="sm" onClick={() => setNoteParam(null)}>
+              Back to notes
+            </Button>
+          }
+        >
+          It may have been deleted, or the link may be wrong.
+        </Notice>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -184,7 +269,7 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
           size="sm"
           className="bg-purple-600 hover:bg-purple-700 text-white"
         >
-          <Plus className="h-4 w-4 mr-1" /> Add Note
+          <Plus className="h-4 w-4 mr-1" /> Add note
         </Button>
       </div>
 
@@ -193,7 +278,8 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search notes..."
+            placeholder="Search notes"
+            aria-label="Search notes"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-8 text-sm"
@@ -219,7 +305,7 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
                 Create a note to capture meeting minutes, follow-ups, or key information.
               </p>
               <Button onClick={handleNewNote} size="sm" variant="outline" className="mt-3">
-                <Plus className="h-4 w-4 mr-1" /> Create Note
+                <Plus className="h-4 w-4 mr-1" /> Create note
               </Button>
             </>
           )}
@@ -240,28 +326,6 @@ export function ClientNotesTab({ selectedClient }: ClientNotesTabProps) {
           ))}
         </div>
       )}
-
-      {/* Editor Modal — pre-linked to this client */}
-      <NoteEditorModal
-        isOpen={editorOpen}
-        onClose={() => {
-          setEditorOpen(false);
-          setSelectedNote(null);
-        }}
-        note={selectedNote}
-        personnelId={personnelId}
-        personnelName={personnelName}
-        defaultClientId={selectedClient.id}
-        defaultClientName={clientFullName}
-        onSave={handleSave}
-        onAutoSave={handleAutoSave}
-        onDelete={(id) => {
-          deleteNote.mutate(id);
-        }}
-        onConvertToTask={(id) => {
-          convertToTask.mutate(id);
-        }}
-      />
     </div>
   );
 }

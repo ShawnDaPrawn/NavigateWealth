@@ -92,16 +92,22 @@ export function useEvent(id: string | null) {
  * Create a new calendar event
  * Invalidates event queries on success
  */
-export function useCreateEvent() {
+export function useCreateEvent(options: { onView?: (event: CalendarEvent) => void } = {}) {
   const queryClient = useQueryClient();
+  const { onView } = options;
 
   return useMutation({
     mutationFn: async (input: CreateEventInput): Promise<CalendarEvent> => {
       return calendarApi.createEvent(input);
     },
-    onSuccess: () => {
+    onSuccess: (created?: CalendarEvent) => {
       queryClient.invalidateQueries({ queryKey: eventKeys.lists() });
-      toast.success('Event created successfully');
+      toast.success(
+        'Event created',
+        onView && created?.id
+          ? { action: { label: 'View', onClick: () => onView(created) } }
+          : undefined,
+      );
     },
     onError: (error) => {
       console.error('Failed to create event:', error);

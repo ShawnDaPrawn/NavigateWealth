@@ -24,12 +24,13 @@ import { brandApi } from './brand-api';
 import type { ColourSwatch, ColourPalette } from './brand-api';
 import { hexToRgb, getContrastRatio } from './corporateIdentityUtils';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
-import { useConfirm } from '../../../layout/page';
+import { useConfirm, ErrorState } from '../../../layout/page';
 
 export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [palette, setPalette] = useState<ColourPalette | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [newSwatch, setNewSwatch] = useState<Partial<ColourSwatch>>({
@@ -43,7 +44,9 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
     try {
       const data = await brandApi.getColourPalette();
       setPalette(data || { swatches: [], updatedAt: '', updatedBy: '' });
+      setLoadError(null);
     } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
       console.error('Failed to load palette:', err);
     } finally {
       setLoading(false);
@@ -119,6 +122,15 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
   const groups = ['primary', 'secondary', 'accent', 'neutral', 'semantic'] as const;
 
   if (loading) return <SectionSkeleton rows={3} />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load brand colours"
+        onRetry={() => void loadPalette()}
+        details={loadError}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

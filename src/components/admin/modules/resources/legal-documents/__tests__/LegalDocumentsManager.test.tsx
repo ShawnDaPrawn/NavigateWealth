@@ -7,13 +7,11 @@
  * eventual extraction fails CI.
  *
  * Contract pinned here:
- *   • renders the "Legal Documents" header + the migration-summary panel;
+ *   • renders the migration counters;
  *   • fetches the document list on mount via resourcesApi.getLegalDocuments();
- *   • renders each returned document (title + status/render-mode badges) in the
- *     grouped sidebar;
- *   • auto-selects the first document and fetches its detail via
- *     resourcesApi.getLegalDocument(firstSlug) — so the right-hand panel leaves
- *     the "Select a legal document" empty state.
+ *   • lists each document grouped, with search;
+ *   • a document opens as a page of its own (?legalDoc=<slug>), with a
+ *     not-found state.
  *
  * The detail query is left pending (queryFn never resolves) so the detail panel
  * renders its loading skeleton rather than the heavy DetailShell/DraftEditor —
@@ -22,7 +20,8 @@
  * heavy deps); sonner is stubbed.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type {
   LegalDocumentDefinitionResponse,
@@ -86,14 +85,16 @@ const DOCS: LegalDocumentDefinitionResponse[] = [
   },
 ];
 
-function renderWithClient() {
+function renderWithClient(initial = '/') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <LegalDocumentsManager />
-    </QueryClientProvider>,
+    <MemoryRouter initialEntries={[initial]}>
+      <QueryClientProvider client={queryClient}>
+        <LegalDocumentsManager />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -104,14 +105,15 @@ beforeEach(() => {
 });
 
 describe('LegalDocumentsManager', () => {
-  it('renders the Legal Documents workspace header and migration summary', () => {
+  it('renders the migration counters', async () => {
     renderWithClient();
-    expect(screen.getByText('Legal Documents')).toBeTruthy();
-    expect(screen.getByText(/Versioned:/)).toBeTruthy();
-    expect(screen.getByText(/Priority remaining:/)).toBeTruthy();
+    expect(screen.getByText('Versioned')).toBeTruthy();
+    expect(screen.getByText('Draft ready')).toBeTruthy();
+    expect(screen.getByText('Priority remaining')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('Privacy Policy')).toBeTruthy());
   });
 
-  it('fetches the document list on mount and renders each document in the sidebar', async () => {
+  it('fetches the document list on mount and lists each document', async () => {
     renderWithClient();
 
     await waitFor(() => {
@@ -122,16 +124,56 @@ describe('LegalDocumentsManager', () => {
       expect(screen.getByText('Privacy Policy')).toBeTruthy();
       expect(screen.getByText('Terms of Use')).toBeTruthy();
     });
+    // No document opens until one is chosen.
+    expect(getLegalDocument).not.toHaveBeenCalled();
   });
 
-  it('auto-selects the first document and fetches its detail', async () => {
+  it('filters the list by search', async () => {
     renderWithClient();
-
-    await waitFor(() => {
-      expect(getLegalDocument).toHaveBeenCalledWith('privacy-policy');
+    await waitFor(() => expect(screen.getByText('Privacy Policy')).toBeTruthy());
+    fireEvent.change(screen.getByLabelText('Search legal documents'), {
+      target: { value: 'terms' },
     });
+    expect(screen.queryByText('Privacy Policy')).toBeNull();
+    expect(screen.getByText('Terms of Use')).toBeTruthy();
+  });
 
-    // Auto-selection means the right panel is no longer the empty placeholder.
-    expect(screen.queryByText('Select a legal document')).toBeNull();
+  it('opens a document as a page with a back link', async () => {
+    renderWithClient();
+    await waitFor(() => expect(screen.getByText('Terms of Use')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Open Terms of Use' }));
+
+    await waitFor(() => expect(getLegalDocument).toHaveBeenCalledWith('terms-of-use'));
+    expect(screen.getByRole('button', { name: /Legal documents/ })).toBeTruthy();
+    expect(screen.queryByText('Privacy Policy')).toBeNull();
+  });
+
+  it('opens the document named in the address', async () => {
+    renderWithClient('/?legalDoc=privacy-policy');
+    await waitFor(() => expect(getLegalDocument).toHaveBeenCalledWith('privacy-policy'));
+  });
+
+  it('says so when the linked document does not exist', async () => {
+    getLegalDocument.mockRejectedValue(new Error('Not found'));
+    renderWithClient('/?legalDoc=gone');
+    expect(await screen.findByText('Legal document not found')).toBeTruthy();
+  });
+});
+
+describe('LegalDocumentsManager — failed list load', () => {
+  it('shows "Unable to load legal documents", not an empty list', async () => {
+    getLegalDocuments.mockRejectedValue(new Error('Request failed (400)'));
+    renderWithClient();
+    expect(await screen.findByText('Unable to load legal documents')).toBeTruthy();
+    expect(screen.queryByText('No legal documents match your search.')).toBeNull();
+  });
+});
+
+describe('LegalDocumentsManager — failed document load', () => {
+  it('a failed load is "Unable to load", not "not found"', async () => {
+    getLegalDocument.mockRejectedValue(new Error('Request failed (400)'));
+    renderWithClient('/?legalDoc=privacy-policy');
+    expect(await screen.findByText('Unable to load this legal document')).toBeTruthy();
+    expect(screen.queryByText('Legal document not found')).toBeNull();
   });
 });

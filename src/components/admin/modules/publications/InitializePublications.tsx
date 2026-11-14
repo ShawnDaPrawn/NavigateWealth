@@ -1,7 +1,13 @@
+/**
+ * "Setup required" (design system: States) — shown only when the API has
+ * positively reported that Publications has no categories or article types.
+ * A failed status check shows an error instead (see PublicationsModule).
+ */
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '../../../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
-import { CheckCircle, AlertCircle, Loader2, Database } from 'lucide-react';
+import { Notice } from '../../layout/page';
 import { usePublicationsInit } from './hooks';
 
 interface InitializePublicationsProps {
@@ -10,114 +16,46 @@ interface InitializePublicationsProps {
 
 export function InitializePublications({ onInitialized }: InitializePublicationsProps = {}) {
   const { initialize, isInitializing } = usePublicationsInit();
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleInitialize = async () => {
     setError(null);
-    setSuccess(false);
-
     try {
       await initialize({
         create_default_categories: true,
         create_default_types: true,
       });
-
-      setSuccess(true);
-
-      // Call the callback if provided, otherwise reload the page
-      if (onInitialized) {
-        setTimeout(() => {
-          onInitialized();
-        }, 1500);
-      } else {
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      }
+      toast.success('Publications is set up');
+      if (onInitialized) onInitialized();
+      else window.location.reload();
     } catch (err) {
       console.error('Error initializing publications:', err);
-      setError(err instanceof Error ? err.message : 'Failed to initialize publications system');
+      setError(err instanceof Error ? err.message : 'Setup did not finish');
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <Database className="h-8 w-8 text-purple-600" />
-          <div>
-            <CardTitle>Initialize Publications System</CardTitle>
-            <CardDescription>
-              Set up default categories and types for the publications system
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!success && !error && (
-          <div className="contents">
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">
-                This will create the following default categories:
-              </p>
-              <ul className="text-sm text-gray-600 space-y-1 ml-6 list-disc">
-                <li>Market & Economic Insights</li>
-                <li>Personal Finance</li>
-                <li>Retirement Planning</li>
-                <li>Risk & Insurance</li>
-                <li>Estate & Tax Planning</li>
-                <li>Financial Literacy</li>
-                <li>Global Markets</li>
-                <li>Adviser's Corner</li>
-              </ul>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">And these article types:</p>
-              <ul className="text-sm text-gray-600 space-y-1 ml-6 list-disc">
-                <li>Insights & Education</li>
-                <li>Market Watch</li>
-                <li>Market News</li>
-              </ul>
-            </div>
-
-            <Button onClick={handleInitialize} disabled={isInitializing} className="w-full">
-              {isInitializing ? (
-                <div className="contents">
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Initializing...
-                </div>
-              ) : (
-                <div className="contents">
-                  <Database className="h-4 w-4 mr-2" />
-                  Initialize System
-                </div>
-              )}
-            </Button>
-          </div>
-        )}
-
-        {success && (
-          <div className="text-center py-6">
-            <CheckCircle className="h-12 w-12 mx-auto mb-3 text-green-600" />
-            <p className="text-green-600 font-medium">
-              Publications system initialized successfully!
-            </p>
-            <p className="text-sm text-gray-600 mt-2">Reloading page...</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="text-center py-6">
-            <AlertCircle className="h-12 w-12 mx-auto mb-3 text-red-600" />
-            <p className="text-red-600 font-medium mb-2">{error}</p>
-            <Button variant="outline" onClick={handleInitialize}>
-              Try Again
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div
+      className="flex flex-col items-center gap-3 rounded-xl border border-nw-line bg-white px-6 py-12 text-center"
+      data-testid="publications-setup"
+    >
+      <span className="rounded-full bg-nw-violet-50 px-2.5 py-0.5 text-xs font-medium text-nw-violet-600">
+        Setup required
+      </span>
+      <h2 className="text-lg font-semibold text-nw-ink">Set up Publications</h2>
+      <p className="max-w-md text-sm text-nw-text-3">
+        Publications needs its categories and article types created before you can write. This takes
+        a few seconds and only happens once.
+      </p>
+      {error ? (
+        <Notice kind="error" title="Setup did not finish:" className="max-w-md text-left">
+          {error}
+        </Notice>
+      ) : null}
+      <Button onClick={() => void handleInitialize()} disabled={isInitializing} className="mt-1">
+        {isInitializing ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+        {isInitializing ? 'Setting up…' : error ? 'Try again' : 'Initialise publications'}
+      </Button>
+    </div>
   );
 }

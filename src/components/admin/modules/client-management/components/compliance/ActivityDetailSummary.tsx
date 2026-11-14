@@ -30,7 +30,7 @@ export function ActivityDetailSummary({ activity }: { activity: ComplianceActivi
         </span>
       );
 
-    case 'Consumer Credit Check':
+    case 'Consumer credit check':
       return (
         <span className="text-xs text-muted-foreground">
           {d.creditScore ? `Score: ${d.creditScore}` : 'Check completed'}
@@ -95,7 +95,7 @@ export function ActivityDetailSummary({ activity }: { activity: ComplianceActivi
         </span>
       );
 
-    case 'Best Known Address':
+    case 'Best known address':
       return <span className="text-xs text-muted-foreground">Address lookup completed</span>;
 
     case 'CDD Report':

@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../../ui/dialog';
+import { Tabs } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
-import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -11,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { FileText, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { format, isSameDay, isSameMonth, isSameYear } from 'date-fns';
 import type { CalendarEvent } from '../types';
 import { BasePdfLayout, BASE_PDF_CSS } from '../../../../shared/pdf';
@@ -26,7 +27,7 @@ interface CalendarPDFExportModalProps {
 type ExportScope = 'day' | 'month' | 'year';
 
 export function CalendarPDFExportModal({ open, onClose, events }: CalendarPDFExportModalProps) {
-  const [scope, setScope] = useState<ExportScope>('day');
+  const [scope, setScope] = useState<ExportScope>('month');
 
   // Date state
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -289,68 +290,39 @@ export function CalendarPDFExportModal({ open, onClose, events }: CalendarPDFExp
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-purple-600" />
-            Export Schedule to PDF
-          </DialogTitle>
+          <DialogTitle>Export schedule to PDF</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          <div className="space-y-3">
-            <Label>Export Scope</Label>
-            <RadioGroup
-              value={scope}
-              onValueChange={(v) => setScope(v as ExportScope)}
-              className="flex flex-col space-y-2"
-            >
-              <div
-                className={`flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-gray-50 transition-colors ${scope === 'day' ? 'border-purple-600 bg-purple-50' : 'border-gray-200'}`}
-                onClick={() => setScope('day')}
-              >
-                <RadioGroupItem value="day" id="export-scope-day" />
-                <Label htmlFor="export-scope-day" className="flex-1 cursor-pointer">
-                  Daily Schedule
-                </Label>
-              </div>
-              <div
-                className={`flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-gray-50 transition-colors ${scope === 'month' ? 'border-purple-600 bg-purple-50' : 'border-gray-200'}`}
-                onClick={() => setScope('month')}
-              >
-                <RadioGroupItem value="month" id="export-scope-month" />
-                <Label htmlFor="export-scope-month" className="flex-1 cursor-pointer">
-                  Monthly Overview
-                </Label>
-              </div>
-              <div
-                className={`flex items-center space-x-2 rounded-lg border p-3 cursor-pointer hover:bg-gray-50 transition-colors ${scope === 'year' ? 'border-purple-600 bg-purple-50' : 'border-gray-200'}`}
-                onClick={() => setScope('year')}
-              >
-                <RadioGroupItem value="year" id="export-scope-year" />
-                <Label htmlFor="export-scope-year" className="flex-1 cursor-pointer">
-                  Yearly Summary
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
+        <div className="space-y-5 py-2">
+          <Tabs value={scope} onValueChange={(v) => setScope(v as ExportScope)}>
+            <SegmentedList aria-label="Export scope">
+              <SegmentedTrigger value="day">Day</SegmentedTrigger>
+              <SegmentedTrigger value="month">Month</SegmentedTrigger>
+              <SegmentedTrigger value="year">Year</SegmentedTrigger>
+            </SegmentedList>
+          </Tabs>
 
-          <div className="space-y-2">
-            <Label>Select Period</Label>
-
-            {scope === 'day' && (
+          {scope === 'day' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="export-day">Day</Label>
               <Input
+                id="export-day"
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
               />
-            )}
+            </div>
+          )}
 
-            {scope === 'month' && (
-              <div className="flex gap-2">
-                <div className="flex-1">
+          {(scope === 'month' || scope === 'year') && (
+            <div className="flex gap-3">
+              {scope === 'month' && (
+                <div className="flex-1 space-y-1.5">
+                  <Label htmlFor="export-month">Month</Label>
                   <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                    <SelectTrigger>
+                    <SelectTrigger id="export-month">
                       <SelectValue placeholder="Month" />
                     </SelectTrigger>
                     <SelectContent>
@@ -362,60 +334,37 @@ export function CalendarPDFExportModal({ open, onClose, events }: CalendarPDFExp
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex-1">
-                  <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {yearOptions.map((year) => (
-                        <SelectItem key={year} value={String(year)}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              )}
+              <div className="flex-1 space-y-1.5">
+                <Label htmlFor="export-year">Year</Label>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger id="export-year">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={String(year)}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
+            </div>
+          )}
 
-            {scope === 'year' && (
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map((year) => (
-                    <SelectItem key={year} value={String(year)}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            <p className="text-xs text-muted-foreground mt-1">
-              {scope === 'day' && 'Select the specific day to export.'}
-              {scope === 'month' && 'Choose the month and year to export.'}
-              {scope === 'year' && 'Choose the year to export (Current + Past 5 Years).'}
-            </p>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                const now = new Date();
-                setSelectedDate(format(now, 'yyyy-MM-dd'));
-                setSelectedMonth(String(now.getMonth()));
-                setSelectedYear(String(now.getFullYear()));
-                setScope('day');
-              }}
-              className="mr-auto text-xs"
-            >
-              Reset to Today
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const now = new Date();
+              setSelectedDate(format(now, 'yyyy-MM-dd'));
+              setSelectedMonth(String(now.getMonth()));
+              setSelectedYear(String(now.getFullYear()));
+            }}
+          >
+            Use today
+          </Button>
         </div>
 
         <div className="flex justify-end gap-3">
@@ -428,11 +377,11 @@ export function CalendarPDFExportModal({ open, onClose, events }: CalendarPDFExp
             className="bg-purple-600 hover:bg-purple-700"
           >
             {isGenerating ? (
-              <span>Generating...</span>
+              <span>Generating…</span>
             ) : (
               <div className="contents">
                 <Download className="h-4 w-4 mr-2" />
-                Print / Save PDF
+                Print / save PDF
               </div>
             )}
           </Button>

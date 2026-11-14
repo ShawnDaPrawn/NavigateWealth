@@ -114,7 +114,12 @@ export async function fetchClientRecord(clientId: string): Promise<Client | null
 export function useClientList() {
   const queryClient = useQueryClient();
 
-  const { data: clients = [], isLoading: loading } = useQuery({
+  const {
+    data: clients = [],
+    isLoading: loading,
+    error,
+    refetch: refetchList,
+  } = useQuery({
     queryKey: clientKeys.lists(),
     queryFn: fetchClientList,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -129,5 +134,5 @@ export function useClientList() {
     ]);
   }, [queryClient]);
 
-  return { clients, loading, refetch };
+  return { clients, loading, error, refetch, retry: refetchList };
 }

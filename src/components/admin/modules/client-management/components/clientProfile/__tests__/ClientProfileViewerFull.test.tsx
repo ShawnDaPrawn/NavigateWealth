@@ -9,7 +9,7 @@
  * mocked to prevent real HTTP calls during policy-assets fetch.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@/test/utils';
+import { fireEvent, render, screen, waitFor, within } from '@/test/utils';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { UnsavedChangesRegistryProvider } from '@/components/shared/unsaved-changes/UnsavedChangesRegistry';
 
@@ -46,7 +46,19 @@ const profileData = {
   riskProfile: null,
   assets: [],
   liabilities: [],
-  familyMembers: [],
+  familyMembers: [
+    {
+      id: 'f1',
+      fullName: 'Pieter van Wyk',
+      relationship: 'Spouse',
+      dateOfBirth: '1977-02-02',
+      gender: 'Male',
+      idPassportNumber: '7702025555088',
+      isFinanciallyDependent: false,
+    },
+  ],
+  residentialAddressLine1: '14 Jacaranda Street',
+  residentialCity: 'Pretoria',
   bankAccounts: [],
   employers: [],
   chronicConditions: [],
@@ -101,19 +113,22 @@ import { ClientProfileViewerFull } from '../ClientProfileViewerFull';
 
 const minimalClient = { id: 'c-1', name: 'Test Client' };
 
-function renderClientProfileViewer() {
-  const router = createMemoryRouter([
-    {
-      path: '/',
-      element: (
-        <UnsavedChangesRegistryProvider>
-          <ClientProfileViewerFull clientData={minimalClient as never} />
-        </UnsavedChangesRegistryProvider>
-      ),
-    },
-  ]);
+function renderClientProfileViewer(url = '/') {
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/',
+        element: (
+          <UnsavedChangesRegistryProvider>
+            <ClientProfileViewerFull clientData={minimalClient as never} />
+          </UnsavedChangesRegistryProvider>
+        ),
+      },
+    ],
+    { initialEntries: [url] },
+  );
 
-  return render(<RouterProvider router={router} />);
+  return { router, ...render(<RouterProvider router={router} />) };
 }
 
 beforeEach(() => {
@@ -129,10 +144,46 @@ describe('ClientProfileViewerFull', () => {
 
     await waitFor(() => {
       expect(mockApiGet).toHaveBeenCalled();
-      expect(screen.getByText('Personal Info')).toBeTruthy();
-      expect(screen.getByText('Contact Details')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Personal info' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Contact details' })).toBeTruthy();
     });
 
     expect(container).toBeTruthy();
+  }, 30000);
+
+  it('shows the section card in view mode, with Edit swapping in the form', async () => {
+    renderClientProfileViewer();
+    const card = await screen.findByRole('region', { name: 'Personal info' });
+    expect(within(card).getByText('First name')).toBeTruthy();
+    fireEvent.click(within(card).getByRole('button', { name: 'Edit' }));
+    expect(await screen.findByRole('button', { name: 'Save changes' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'Personal info' })).toBeNull();
+  }, 30000);
+
+  it('keeps the open section in the address', async () => {
+    const { router } = renderClientProfileViewer('/?psec=contact');
+    expect(await screen.findByRole('region', { name: 'Contact details' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Address' }));
+    await waitFor(() => expect(router.state.location.search).toBe('?psec=address'));
+  }, 30000);
+
+  it('shows each list section as a read-only table with Add and Edit', async () => {
+    renderClientProfileViewer('/?psec=family');
+    const card = await screen.findByRole('region', { name: 'Family members' });
+    expect(within(card).getByText('Pieter van Wyk')).toBeTruthy();
+    // ID numbers are masked in the view.
+    expect(within(card).getByText('•••• 5088')).toBeTruthy();
+    fireEvent.click(within(card).getByRole('button', { name: 'Add family member' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Family members' })).toBeNull(),
+    );
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeTruthy();
+  }, 30000);
+
+  it('shows the address as a view card', async () => {
+    renderClientProfileViewer('/?psec=address');
+    const card = await screen.findByRole('region', { name: 'Address' });
+    expect(within(card).getByText('14 Jacaranda Street')).toBeTruthy();
+    expect(within(card).getByText('Work address')).toBeTruthy();
   }, 30000);
 });

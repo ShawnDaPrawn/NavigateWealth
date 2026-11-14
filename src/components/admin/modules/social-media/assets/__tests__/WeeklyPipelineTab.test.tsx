@@ -157,9 +157,10 @@ describe('WeeklyPipelineTab', () => {
     expect(screen.getByText('No weekly batches yet')).toBeDefined();
   });
 
-  it('opens the settings dialog', async () => {
-    render(<WeeklyPipelineTab />, { wrapper });
+  it('asks for the automation settings page', () => {
+    const onOpenSettings = vi.fn();
+    render(<WeeklyPipelineTab onOpenSettings={onOpenSettings} />, { wrapper });
     fireEvent.click(screen.getByText('Settings & playbooks'));
-    expect(await screen.findByText('Automation settings & playbooks')).toBeDefined();
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
 });

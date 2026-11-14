@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { adminAuditApi } from '../api';
-import { AuditLogViewer } from './AuditLogViewer';
 import type {
   AdminAuditEntry,
   AuditActionCategory,
@@ -90,24 +89,28 @@ function formatTimestamp(ts: string): string {
   return d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export function AuditLogWidget({ maxEntries = 8 }: AuditLogWidgetProps) {
+export function AuditLogWidget({ maxEntries = 8, onViewAll }: AuditLogWidgetProps) {
   const [entries, setEntries] = useState<AdminAuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewerOpen, setViewerOpen] = useState(false);
   const [summary, setSummary] = useState<Record<AuditActionCategory, number> | null>(null);
   const [summaryDays, _setSummaryDays] = useState(7);
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
-    const [data, summaryData] = await Promise.all([
-      adminAuditApi.getLog({ limit: maxEntries }),
-      adminAuditApi.getSummary(summaryDays),
-    ]);
-    setEntries(data);
-    if (summaryData) {
-      setSummary(summaryData.summary);
+    try {
+      const [data, summaryData] = await Promise.all([
+        adminAuditApi.getLog({ limit: maxEntries }),
+        adminAuditApi.getSummary(summaryDays),
+      ]);
+      setEntries(data);
+      if (summaryData) {
+        setSummary(summaryData.summary);
+      }
+    } catch {
+      // The widget keeps what it had; the full audit trail page reports errors.
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [maxEntries, summaryDays]);
 
   useEffect(() => {
@@ -139,7 +142,8 @@ export function AuditLogWidget({ maxEntries = 8 }: AuditLogWidgetProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setViewerOpen(true)}
+              onClick={onViewAll}
+              disabled={!onViewAll}
               className="text-xs"
             >
               View All
@@ -234,9 +238,6 @@ export function AuditLogWidget({ maxEntries = 8 }: AuditLogWidgetProps) {
           </div>
         )}
       </CardContent>
-
-      {/* Full audit log viewer dialog */}
-      <AuditLogViewer open={viewerOpen} onOpenChange={setViewerOpen} />
     </Card>
   );
 }

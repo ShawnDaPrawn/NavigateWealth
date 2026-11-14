@@ -77,14 +77,14 @@ export function RoAStepStart({
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Plus className="h-8 w-8 text-primary" />
           </div>
-          <h3 className="font-semibold mb-2">Start New RoA</h3>
+          <h3 className="font-semibold mb-2">Start new RoA</h3>
           <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
             Begin a new Record of Advice from scratch. Our guided process ensures compliance and
             completeness.
           </p>
           <Button onClick={onCreateNew} size="lg" className="px-8" disabled={isCreating}>
             <Plus className="h-4 w-4 mr-2" />
-            {isCreating ? 'Creating…' : 'Begin RoA Draft'}
+            {isCreating ? 'Creating…' : 'Begin RoA draft'}
           </Button>
         </CardContent>
       </Card>
@@ -102,7 +102,7 @@ export function RoAStepStart({
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-muted-foreground" />
-            <h3 className="font-semibold">Resume Existing Drafts</h3>
+            <h3 className="font-semibold">Resume existing drafts</h3>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -176,7 +176,7 @@ export function RoAStepStart({
 
                     {/* Resume Button */}
                     <Button variant="outline" className="w-full" onClick={() => onResume(draft)}>
-                      Resume Draft
+                      Resume
                     </Button>
                     {onDiscardDraft && (
                       <Button

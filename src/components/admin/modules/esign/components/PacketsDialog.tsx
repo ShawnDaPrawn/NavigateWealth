@@ -31,7 +31,8 @@ import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { ScrollArea } from '../../../../ui/scroll-area';
 import { Badge } from '../../../../ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import {
   Select,
   SelectContent,
@@ -424,11 +425,11 @@ export function PacketsDialog({
         onValueChange={(v) => setTab(v as typeof tab)}
         className="flex-1 flex flex-col min-h-0"
       >
-        <TabsList className="grid grid-cols-3">
-          <TabsTrigger value="library">Library</TabsTrigger>
-          <TabsTrigger value="author">Author</TabsTrigger>
-          <TabsTrigger value="runs">Runs</TabsTrigger>
-        </TabsList>
+        <SegmentedList aria-label="Packet views">
+          <SegmentedTrigger value="library">Library</SegmentedTrigger>
+          <SegmentedTrigger value="author">Author</SegmentedTrigger>
+          <SegmentedTrigger value="runs">Runs</SegmentedTrigger>
+        </SegmentedList>
 
         {/* ------------- Library ------------- */}
         <TabsContent value="library" className="flex-1 min-h-0 mt-2">

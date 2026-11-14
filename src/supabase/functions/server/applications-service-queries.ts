@@ -14,6 +14,7 @@ import type {
 import { ERROR_MESSAGES } from './constants.ts';
 
 import { createModuleLogger } from './stderr-logger.ts';
+import { countInPeriod, periodWindow, type DashboardPeriod } from './dashboard-period.ts';
 import type { KvApplication, KvTask, KvRequest, KvEsignEnvelope } from './applications-types.ts';
 import {
   isRootApplicationRecord,
@@ -221,7 +222,7 @@ async function loadRootApplications(): Promise<KvApplication[]> {
  * that fails degrades its own counts to zero and the endpoint still responds,
  * rather than one failure taking the whole payload down.
  */
-export async function getStats(): Promise<ApplicationStats> {
+export async function getStats(period: DashboardPeriod = 'month'): Promise<ApplicationStats> {
   const [applicationsRead, tasksRead, eligibleClientsRead, requestsRead, esignRead] =
     await Promise.allSettled([
       loadRootApplications(),
@@ -324,6 +325,11 @@ export async function getStats(): Promise<ApplicationStats> {
     log.error('getStats: Failed to fetch esign stats', esignRead.reason as Error);
   }
 
+  const inPeriod = countInPeriod(
+    applications.map((a) => a.created_at),
+    periodWindow(period),
+  );
+
   return {
     total: applications.length,
     submitted_for_review: applications.filter(
@@ -341,6 +347,9 @@ export async function getStats(): Promise<ApplicationStats> {
     ).length,
     new_this_month: newThisMonth,
     new_last_month: newLastMonth,
+    period,
+    new_in_period: inPeriod.current,
+    new_previous_period: inPeriod.previous,
     new_tasks: taskStats.new_tasks,
     pending_tasks: taskStats.pending_tasks,
     pending_requests: pendingRequests,

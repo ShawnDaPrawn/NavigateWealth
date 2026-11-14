@@ -15,6 +15,8 @@
 import React, { useState, useRef } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
+import { cn } from '../../../../ui/utils';
+import { ErrorState } from '../../../layout/page';
 import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
 import { Skeleton } from '../../../../ui/skeleton';
@@ -30,6 +32,7 @@ import {
   Clock,
   Mail,
   RefreshCw,
+  MoreHorizontal,
   Info,
   UserMinus,
   RotateCcw,
@@ -70,6 +73,12 @@ import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofi
 import { SubscriberDialogs } from './SubscriberDialogs';
 import { isValidSubscriberEmail } from './subscriberEmail';
 import { SubscriberBulkImportDialog } from './SubscriberBulkImportDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../../ui/dropdown-menu';
 
 export function NewsletterSubscribers() {
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'newsletter-subscribers-search' });
@@ -78,12 +87,20 @@ export function NewsletterSubscribers() {
   const [statusFilter, setStatusFilter] = useState<SubscriberStatusFilter>('all');
   const [unsubTimeRange, setUnsubTimeRange] = useState<UnsubTimeRange>('all');
 
-  const { subscribers, filtered, statusTotal, hiddenByTimeRange, stats, isLoading, refetch } =
-    useNewsletterSubscribers({
-      statusFilter,
-      search,
-      unsubTimeRange,
-    });
+  const {
+    subscribers,
+    filtered,
+    statusTotal,
+    hiddenByTimeRange,
+    stats,
+    isLoading,
+    error: loadError,
+    refetch,
+  } = useNewsletterSubscribers({
+    statusFilter,
+    search,
+    unsubTimeRange,
+  });
 
   const addMutation = useAddSubscriber();
   const bulkMutation = useBulkUpload();
@@ -241,29 +258,44 @@ export function NewsletterSubscribers() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold">Newsletter Subscribers</h3>
+          <h3 className="text-base font-semibold">Newsletter subscribers</h3>
           <p className="text-sm text-muted-foreground">
             Manually add subscribers who have opted in offline. Records must be kept separately for
             POPIA compliance.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => refetch()}>
-            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-            Refresh
-          </Button>
           <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>
             <Upload className="h-3.5 w-3.5 mr-1.5" />
-            Bulk Import
+            Bulk import
           </Button>
-          <Button
-            size="sm"
-            className="bg-purple-600 hover:bg-purple-700"
-            onClick={() => setAddOpen(true)}
-          >
+          <Button size="sm" onClick={() => setAddOpen(true)}>
             <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-            Add Subscriber
+            Add subscriber
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" aria-label="More subscriber actions">
+                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => refetch()}>
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                Refresh
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={handleExportUnsubscribed}
+                disabled={statusFilter !== 'unsubscribed' || filtered.length === 0}
+              >
+                <FileDown className="h-4 w-4" aria-hidden="true" />
+                Export unsubscribed
+                {statusFilter !== 'unsubscribed' ? (
+                  <span className="ml-1 text-xs text-nw-text-3">(choose Unsubscribed)</span>
+                ) : null}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -339,8 +371,27 @@ export function NewsletterSubscribers() {
             ] as const
           ).map((s) => {
             const Icon = s.icon;
+            const filterValue = s.key === 'total' ? 'all' : s.key;
+            const active = statusFilter === filterValue;
             return (
-              <Card key={s.key}>
+              <Card
+                key={s.key}
+                role="button"
+                tabIndex={0}
+                aria-pressed={active}
+                aria-label={`${s.label}: ${stats[s.key]} — show ${s.key === 'total' ? 'all subscribers' : s.label.toLowerCase()}`}
+                onClick={() => setStatusFilter(filterValue)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setStatusFilter(filterValue);
+                  }
+                }}
+                className={cn(
+                  'cursor-pointer transition-colors hover:border-nw-violet/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+                  active && 'border-nw-violet ring-1 ring-nw-violet',
+                )}
+              >
                 <CardContent className="pt-4 pb-4">
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg ${s.bg}`}>
@@ -370,26 +421,6 @@ export function NewsletterSubscribers() {
             className="pl-9 h-9"
           />
         </div>
-        <div className="flex items-center border rounded-lg overflow-hidden">
-          {(['all', 'active', 'pending', 'unsubscribed'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
-              className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                statusFilter === f
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-gray-50'
-              }`}
-            >
-              {f}
-              {f !== 'all' && (
-                <span className="ml-1 text-[10px] opacity-60">
-                  {stats[f as keyof typeof stats]}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Unsubscribed Toolbar — time-range filter + export */}
@@ -414,15 +445,6 @@ export function NewsletterSubscribers() {
               ))}
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleExportUnsubscribed}
-            disabled={filtered.length === 0}
-          >
-            <FileDown className="h-3.5 w-3.5 mr-1.5" />
-            Export Unsubscribed
-          </Button>
         </div>
       )}
 
@@ -440,31 +462,49 @@ export function NewsletterSubscribers() {
             ))}
           </CardContent>
         </Card>
+      ) : loadError ? (
+        <ErrorState
+          title="Unable to load subscribers"
+          onRetry={() => void refetch()}
+          details={loadError}
+        />
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
             <Mail className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
             <p className="font-medium text-sm">
-              {subscribers.length === 0 ? 'No subscribers yet' : 'No matching subscribers'}
+              {subscribers.length === 0
+                ? 'No subscribers yet'
+                : 'No subscribers match your filters'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {subscribers.length === 0
                 ? 'Add your first subscriber manually or import from a spreadsheet.'
-                : 'Try adjusting your search or filter.'}
+                : 'Try another search or status.'}
             </p>
+            {subscribers.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('all');
+                  setUnsubTimeRange('all');
+                }}
+              >
+                Clear filters
+              </Button>
+            )}
             {subscribers.length === 0 && (
               <div className="flex items-center justify-center gap-2 mt-4">
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>
                   <Upload className="h-3.5 w-3.5 mr-1.5" />
-                  Bulk Import
+                  Bulk import
                 </Button>
-                <Button
-                  size="sm"
-                  className="bg-purple-600 hover:bg-purple-700"
-                  onClick={() => setAddOpen(true)}
-                >
+                <Button size="sm" onClick={() => setAddOpen(true)}>
                   <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                  Add Subscriber
+                  Add subscriber
                 </Button>
               </div>
             )}

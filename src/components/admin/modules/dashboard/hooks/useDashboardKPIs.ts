@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Users, FileText, CheckSquare, TrendingUp } from 'lucide-react';
-import type { DashboardKPI, DashboardStats, DashboardMetrics } from '../types';
+import type { DashboardKPI, DashboardPeriod, DashboardStats, DashboardMetrics } from '../types';
 import { calculateGrowth } from '../utils';
 
 export interface UseDashboardKPIsReturn {
@@ -11,6 +11,10 @@ export interface UseDashboardKPIsReturn {
 export interface UseDashboardKPIsOptions {
   stats: DashboardStats | null;
   metrics: DashboardMetrics | null;
+  /** Open and completed task totals (the Tasks figure's second line). */
+  taskTotals?: { open: number; completed: number } | null;
+  /** The period the figures cover (labels follow it). */
+  period?: DashboardPeriod;
   loading?: boolean;
   /** Granular loading states per data source — allows per-card skeleton rendering */
   loadingStates?: {
@@ -25,8 +29,22 @@ export interface UseDashboardKPIsOptions {
  * their backing data source hasn't resolved yet, preventing the "pop-in"
  * effect where the 4th card appears only after metrics load.
  */
+const PERIOD_LABELS: Record<DashboardPeriod, string> = {
+  month: 'this month',
+  '30d': 'last 30 days',
+  year: 'this year',
+};
+
 export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboardKPIsReturn {
-  const { stats, metrics, loading = false, loadingStates } = options;
+  const {
+    stats,
+    metrics,
+    taskTotals = null,
+    period = 'month',
+    loading = false,
+    loadingStates,
+  } = options;
+  const periodLabel = PERIOD_LABELS[period];
 
   const kpis = useMemo<DashboardKPI[]>(() => {
     const statsLoading = loadingStates?.stats ?? (!stats && loading);
@@ -35,65 +53,70 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
     // KPI 1: Total Clients
     const totalClientsKpi: DashboardKPI = stats
       ? {
-          title: 'Total Clients',
+          title: 'Total clients',
           value: stats.total_clients || 0,
           change: 0,
           icon: Users,
           format: 'number',
-          subtitle: 'Active clients in system',
+          subtitle: 'active clients in system',
         }
       : {
-          title: 'Total Clients',
+          title: 'Total clients',
           value: 0,
           change: 0,
           icon: Users,
           format: 'number',
-          subtitle: 'Active clients in system',
+          subtitle: 'active clients in system',
           loading: statsLoading,
         };
 
     // KPI 2: New Applications
-    const newThisMonth = stats?.new_this_month || 0;
-    const newLastMonth = stats?.new_last_month || 0;
+    // The period's own counts when the server sent them (older servers: month).
+    const newThisMonth = stats?.new_in_period ?? stats?.new_this_month ?? 0;
+    const newLastMonth = stats?.new_previous_period ?? stats?.new_last_month ?? 0;
     const appsGrowth = stats ? calculateGrowth(newThisMonth, newLastMonth) : 0;
 
     const newApplicationsKpi: DashboardKPI = stats
       ? {
-          title: 'New Applications',
+          title: 'New applications',
           value: newThisMonth,
           change: appsGrowth,
           icon: FileText,
           format: 'number',
-          subtitle: 'Applications this month',
+          subtitle: periodLabel,
           trend: appsGrowth > 0 ? 'up' : appsGrowth < 0 ? 'down' : 'neutral',
         }
       : {
-          title: 'New Applications',
+          title: 'New applications',
           value: 0,
           change: 0,
           icon: FileText,
           format: 'number',
-          subtitle: 'Applications this month',
+          subtitle: periodLabel,
           loading: statsLoading,
         };
 
-    // KPI 3: Pending Tasks
+    // KPI 3: Tasks — open, with completed as the second line (this used to
+    // be a separate System Activity tile).
+    const completedLine = taskTotals ? `open · ${taskTotals.completed} completed` : 'open';
     const pendingTasksKpi: DashboardKPI = stats
       ? {
-          title: 'Pending Tasks',
+          title: 'Tasks',
           value: stats.pending_tasks || 0,
           change: 0,
           icon: CheckSquare,
           format: 'number',
-          subtitle: 'Tasks requiring attention',
+          subtitle: completedLine,
+          hideChange: true,
         }
       : {
-          title: 'Pending Tasks',
+          title: 'Tasks',
           value: 0,
           change: 0,
           icon: CheckSquare,
           format: 'number',
-          subtitle: 'Tasks requiring attention',
+          subtitle: completedLine,
+          hideChange: true,
           loading: statsLoading,
         };
 
@@ -105,16 +128,16 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
 
     const activePoliciesKpi: DashboardKPI = metrics
       ? {
-          title: 'Active Policies',
+          title: 'Active policies',
           value: activePolicies,
           change: policiesGrowth,
           icon: TrendingUp,
           format: 'number',
-          subtitle: `${newPolicies} new this period`,
+          subtitle: `${newPolicies} new ${periodLabel}`,
           trend: policiesGrowth > 0 ? 'up' : policiesGrowth < 0 ? 'down' : 'neutral',
         }
       : {
-          title: 'Active Policies',
+          title: 'Active policies',
           value: 0,
           change: 0,
           icon: TrendingUp,
@@ -124,7 +147,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
         };
 
     return [totalClientsKpi, newApplicationsKpi, pendingTasksKpi, activePoliciesKpi];
-  }, [stats, metrics, loading, loadingStates]);
+  }, [stats, metrics, taskTotals, periodLabel, loading, loadingStates]);
 
   return {
     kpis,

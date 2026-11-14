@@ -19,8 +19,13 @@ import {
   setYear,
   getYear,
   getMonth,
+  format,
+  startOfWeek,
+  endOfWeek,
 } from 'date-fns';
-import { CalendarView } from '../../types';
+import { Tabs } from '../../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../../layout/page';
+import type { CalendarView } from '../../types';
 
 interface CalendarHeaderProps {
   view: CalendarView;
@@ -107,63 +112,90 @@ export function CalendarHeader({
     'December',
   ];
 
-  return (
-    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-      {/* Left: Navigation & Date Picking */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center rounded-lg border bg-gray-50/50 p-0.5 shadow-sm">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hover:bg-white rounded-md"
-            onClick={handlePrevious}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="w-px h-4 bg-gray-200 mx-1"></div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 hover:bg-white rounded-md"
-            onClick={handleNext}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+  const unit = view === 'month' ? 'month' : view === 'week' ? 'week' : 'day';
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+  const label =
+    view === 'week'
+      ? `${format(weekStart, weekStart.getMonth() === weekEnd.getMonth() ? 'd' : 'd MMM')} – ${format(weekEnd, 'd MMMM yyyy')}`
+      : view === 'day'
+        ? format(currentDate, 'EEEE, d MMMM yyyy')
+        : view === 'agenda'
+          ? `From ${format(currentDate, 'd MMMM yyyy')}`
+          : null;
 
-        <Button variant="outline" size="sm" onClick={onToday} className="h-9">
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" size="sm" onClick={onToday} className="h-8">
           Today
         </Button>
-
-        {/* Month & Year Selectors */}
-        <div className="flex items-center gap-2 ml-1">
-          <Select value={getMonth(currentDate).toString()} onValueChange={handleMonthChange}>
-            <SelectTrigger className="h-8 w-[130px] font-medium text-sm bg-white border border-gray-200 hover:bg-gray-50 focus:ring-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((month, index) => (
-                <SelectItem key={month} value={index.toString()}>
-                  {month}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={getYear(currentDate).toString()} onValueChange={handleYearChange}>
-            <SelectTrigger className="h-8 w-[90px] font-medium text-sm bg-white border border-gray-200 hover:bg-gray-50 focus:ring-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {years.map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handlePrevious}
+          aria-label={`Previous ${unit}`}
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </Button>
+        {view === 'month' ? (
+          <div className="flex items-center gap-1">
+            <Select value={getMonth(currentDate).toString()} onValueChange={handleMonthChange}>
+              <SelectTrigger
+                aria-label="Month"
+                className="h-8 w-[130px] border-0 bg-transparent text-base font-semibold text-nw-ink shadow-none hover:bg-gray-100 focus:ring-0"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((month, index) => (
+                  <SelectItem key={month} value={index.toString()}>
+                    {month}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={getYear(currentDate).toString()} onValueChange={handleYearChange}>
+              <SelectTrigger
+                aria-label="Year"
+                className="h-8 w-[88px] border-0 bg-transparent text-base font-semibold text-nw-ink shadow-none hover:bg-gray-100 focus:ring-0"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <h2 className="px-1 text-base font-semibold text-nw-ink" aria-live="polite">
+            {label}
+          </h2>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleNext}
+          aria-label={`Next ${unit}`}
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Button>
       </div>
+
+      <Tabs value={view} onValueChange={(v) => onViewChange(v as CalendarView)}>
+        <SegmentedList aria-label="Calendar view">
+          <SegmentedTrigger value="month">Month</SegmentedTrigger>
+          <SegmentedTrigger value="week">Week</SegmentedTrigger>
+          <SegmentedTrigger value="day">Day</SegmentedTrigger>
+          <SegmentedTrigger value="agenda">Agenda</SegmentedTrigger>
+        </SegmentedList>
+      </Tabs>
     </div>
   );
 }

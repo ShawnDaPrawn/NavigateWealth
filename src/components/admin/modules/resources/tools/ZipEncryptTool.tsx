@@ -1,34 +1,11 @@
 import React, { useState, useRef } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '../../../../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
-import {
-  Lock,
-  Download,
-  RefreshCw,
-  Upload,
-  Plus,
-  X,
-  ChevronRight,
-  FolderOpen,
-  FileArchive,
-} from 'lucide-react';
+import { Lock, Download, RefreshCw, Upload, Plus, X, FolderOpen, FileArchive } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
+
 import {
   Select,
   SelectContent,
@@ -410,9 +387,8 @@ function ZipSettingsSection({
 
 // --- Main Component ---
 
+/** The Zip & Encrypt tool's page body (Resources › Tools › Zip & Encrypt). */
 export function ZipEncryptTool() {
-  const [isOpen, setIsOpen] = useState(false);
-
   // Local State for input management
   const [uploadedFiles, setUploadedFiles] = useState<FileItem[]>([]);
   const [password, setPassword] = useState('');
@@ -448,80 +424,35 @@ export function ZipEncryptTool() {
   };
 
   return (
-    <div className="contents">
-      <Card
-        className="hover:shadow-md transition-shadow cursor-pointer border-dashed border-2 hover:border-primary/50"
-        onClick={() => setIsOpen(true)}
-      >
-        <CardHeader>
-          <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-            <Lock className="h-6 w-6 text-primary" />
-          </div>
-          <CardTitle>Zip & Encrypt</CardTitle>
-          <CardDescription>
-            Securely package documents into a password-protected zip file.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Upload files from your device, organize them into folders, and encrypt them.
-          </p>
-        </CardContent>
-        <CardFooter>
-          <Button
-            variant="ghost"
-            className="w-full justify-start pl-0 text-primary group-hover:pl-2 transition-all"
-          >
-            Open Tool <ChevronRight className="h-4 w-4 ml-2" />
-          </Button>
-        </CardFooter>
-      </Card>
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* Left Column: Upload & Instructions */}
+      <ZipUploadSection onFilesAdded={handleFilesAdded} processing={processing} />
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5 text-primary" />
-              Zip & Encrypt Tool
-            </DialogTitle>
-            <DialogDescription>
-              Create a secure archive from your documents. Files are processed locally on your
-              device.
-            </DialogDescription>
-          </DialogHeader>
+      {/* Right Column: List & Settings */}
+      <div className="space-y-6">
+        <ZipFileList
+          files={uploadedFiles}
+          processing={processing}
+          onRemove={removeFile}
+          onClear={clearAll}
+        />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
-            {/* Left Column: Upload & Instructions */}
-            <ZipUploadSection onFilesAdded={handleFilesAdded} processing={processing} />
-
-            {/* Right Column: List & Settings */}
-            <div className="space-y-6">
-              <ZipFileList
-                files={uploadedFiles}
-                processing={processing}
-                onRemove={removeFile}
-                onClear={clearAll}
-              />
-
-              <ZipSettingsSection
-                zipFilename={zipFilename}
-                setZipFilename={setZipFilename}
-                encryptionMethod={encryptionMethod}
-                setEncryptionMethod={setEncryptionMethod}
-                password={password}
-                setPassword={setPassword}
-                processing={processing}
-                progress={progress}
-                currentAction={currentAction}
-                zipUrl={zipUrl}
-                onGenerate={handleGenerate}
-                onReset={handleReset}
-                fileCount={uploadedFiles.length}
-              />
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <ZipSettingsSection
+          zipFilename={zipFilename}
+          setZipFilename={setZipFilename}
+          encryptionMethod={encryptionMethod}
+          setEncryptionMethod={setEncryptionMethod}
+          password={password}
+          setPassword={setPassword}
+          processing={processing}
+          progress={progress}
+          currentAction={currentAction}
+          zipUrl={zipUrl}
+          onGenerate={handleGenerate}
+          onReset={handleReset}
+          fileCount={uploadedFiles.length}
+        />
+      </div>
     </div>
   );
 }

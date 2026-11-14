@@ -18,9 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { Upload, FileText, Trash2, Link as LinkIcon, Plus, Folder, RefreshCw } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
 import { api } from '../../../../../utils/api';
 import { toast } from 'sonner';
 import { useAuth } from '../../../../auth/AuthContext';
@@ -349,7 +349,7 @@ export function UploadDocumentDialog({
         <div className="p-6 pb-2 flex-none">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-slate-900">
-              Add Document or Link
+              Add document or link
             </DialogTitle>
 
             <DialogDescription className="text-slate-500 mt-1">
@@ -364,23 +364,16 @@ export function UploadDocumentDialog({
           className="w-full flex-1 flex flex-col min-h-0"
         >
           <div className="px-6 flex-none">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-xl">
-              <TabsTrigger
-                value="document"
-                className="rounded-lg data-[state=active]:bg-[#7c3aed] data-[state=active]:text-white data-[state=inactive]:text-slate-600 font-medium transition-all"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Document
-              </TabsTrigger>
-
-              <TabsTrigger
-                value="link"
-                className="rounded-lg data-[state=active]:bg-[#7c3aed] data-[state=active]:text-white data-[state=inactive]:text-slate-600 font-medium transition-all"
-              >
-                <LinkIcon className="h-4 w-4 mr-2" />
-                Add Link
-              </TabsTrigger>
-            </TabsList>
+            <SegmentedList aria-label="What to add">
+              <SegmentedTrigger value="document">
+                <Upload className="h-4 w-4" aria-hidden="true" />
+                Upload document
+              </SegmentedTrigger>
+              <SegmentedTrigger value="link">
+                <LinkIcon className="h-4 w-4" aria-hidden="true" />
+                Add link
+              </SegmentedTrigger>
+            </SegmentedList>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 pt-4">
@@ -388,50 +381,76 @@ export function UploadDocumentDialog({
               {/* Upload Mode Selection */}
 
               <div className="space-y-3">
-                <Label className="font-medium text-slate-900">Upload Type</Label>
+                <Label className="font-medium text-slate-900">Upload type</Label>
 
-                <RadioGroup
+                <Tabs
                   value={uploadMode}
                   onValueChange={(v) => setUploadMode(v as 'general' | 'subcategory')}
-                  className="grid grid-cols-2 gap-4"
                 >
-                  <div>
-                    <RadioGroupItem value="general" id="mode-general" className="peer sr-only" />
-
-                    <Label
-                      htmlFor="mode-general"
-                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-violet-600 peer-data-[state=checked]:bg-violet-50 [&:has([data-state=checked])]:border-violet-600 cursor-pointer transition-all"
-                    >
-                      <FileText className="mb-2 h-6 w-6 text-slate-500 peer-data-[state=checked]:text-violet-600" />
-
-                      <span className="font-medium">General Upload</span>
-                    </Label>
-                  </div>
-
-                  <div>
-                    <RadioGroupItem
-                      value="subcategory"
-                      id="mode-subcategory"
-                      className="peer sr-only"
-                    />
-
-                    <Label
-                      htmlFor="mode-subcategory"
-                      className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-violet-600 peer-data-[state=checked]:bg-violet-50 [&:has([data-state=checked])]:border-violet-600 cursor-pointer transition-all"
-                    >
-                      <Folder className="mb-2 h-6 w-6 text-slate-500 peer-data-[state=checked]:text-violet-600" />
-
-                      <span className="font-medium">Subcategory Group</span>
-                    </Label>
-                  </div>
-                </RadioGroup>
+                  <SegmentedList aria-label="Upload type">
+                    <SegmentedTrigger value="general">
+                      <FileText className="h-4 w-4" aria-hidden="true" />
+                      General upload
+                    </SegmentedTrigger>
+                    <SegmentedTrigger value="subcategory">
+                      <Folder className="h-4 w-4" aria-hidden="true" />
+                      Subcategory group
+                    </SegmentedTrigger>
+                  </SegmentedList>
+                </Tabs>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="doc-category" className="font-medium text-slate-900">
+                    Category *
+                  </Label>
+
+                  <Select value={productCategory} onValueChange={setProductCategory}>
+                    <SelectTrigger
+                      id="doc-category"
+                      className={`h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500 ${!productCategory ? 'text-slate-400' : ''}`}
+                    >
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                      <SelectItem value="General">General</SelectItem>
+
+                      <SelectItem value="Life">Life Insurance</SelectItem>
+
+                      <SelectItem value="Short-Term">Short-Term</SelectItem>
+
+                      <SelectItem value="Investment">Investment</SelectItem>
+
+                      <SelectItem value="Medical Aid">Medical Aid</SelectItem>
+
+                      <SelectItem value="Retirement">Retirement</SelectItem>
+
+                      <SelectItem value="Estate">Estate Planning</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="doc-policy" className="font-medium text-slate-900">
+                    Policy number
+                  </Label>
+
+                  <Input
+                    id="doc-policy"
+                    placeholder="e.g., LIF-2024-00123"
+                    value={policyNumber}
+                    onChange={(e) => setPolicyNumber(e.target.value)}
+                    className="h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500"
+                  />
+                </div>
+              </div>
               {uploadMode === 'general' ? (
                 <div className="space-y-5 animate-in fade-in slide-in-from-top-2">
                   <div className="space-y-2">
                     <Label htmlFor="file-upload" className="font-medium text-slate-900">
-                      Choose File(s) *
+                      Choose file(s) *
                     </Label>
 
                     <div className="relative">
@@ -451,7 +470,7 @@ export function UploadDocumentDialog({
 
                     <div className="flex justify-between items-start mt-1">
                       <p className="text-xs text-slate-400">
-                        Supported: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (Max 50MB)
+                        PDF, DOC, DOCX, XLS, XLSX, JPG, PNG · max 50MB
                       </p>
 
                       {selectedFiles.length > 0 && (
@@ -494,26 +513,26 @@ export function UploadDocumentDialog({
 
                   <div className="space-y-2">
                     <Label htmlFor="master-title" className="font-medium text-slate-900">
-                      Pack Name (Required)
+                      Pack name (required)
                     </Label>
 
                     <Input
                       id="master-title"
-                      placeholder="e.g. Onboarding Documents 2024"
+                      placeholder="e.g. Onboarding documents 2026"
                       value={documentTitle}
                       onChange={(e) => setDocumentTitle(e.target.value)}
                       className="h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500"
                     />
 
                     <p className="text-xs text-slate-500">
-                      This will be the main title of the document pack in the client's profile.
+                      The main title of the document pack in the client’s profile.
                     </p>
                   </div>
 
                   {/* Subcategory Groups */}
 
                   <div className="space-y-4">
-                    <Label className="font-medium text-slate-900">Subcategory Groups</Label>
+                    <Label className="font-medium text-slate-900">Subcategory groups</Label>
 
                     {subcategoryGroups.map((group) => (
                       <div
@@ -527,7 +546,8 @@ export function UploadDocumentDialog({
                             className="h-8 w-8 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50"
                             onClick={() => removeSubcategoryGroup(group.id)}
                             disabled={subcategoryGroups.length <= 1}
-                            title="Remove Group"
+                            title="Remove group"
+                            aria-label="Remove group"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -562,7 +582,7 @@ export function UploadDocumentDialog({
 
                             {group.name === 'Other' && (
                               <Input
-                                placeholder="Custom Name"
+                                placeholder="Custom name"
                                 value={group.customName}
                                 onChange={(e) =>
                                   updateSubcategoryGroup(group.id, { customName: e.target.value })
@@ -611,7 +631,7 @@ export function UploadDocumentDialog({
                       className="w-full border-dashed border-slate-300 text-slate-600 hover:bg-slate-50 hover:border-slate-400"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Add Another Subcategory Group
+                      Add another subcategory group
                     </Button>
                   </div>
 
@@ -619,59 +639,12 @@ export function UploadDocumentDialog({
                     <Folder className="h-4 w-4 mt-0.5 flex-shrink-0" />
 
                     <p>
-                      Each group created above will be sent as a separate, encrypted ZIP file in the
-                      email to the client.
+                      Each group is sent as a separate, encrypted ZIP file in the email to the
+                      client.
                     </p>
                   </div>
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="doc-category" className="font-medium text-slate-900">
-                    Category *
-                  </Label>
-
-                  <Select value={productCategory} onValueChange={setProductCategory}>
-                    <SelectTrigger
-                      id="doc-category"
-                      className={`h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500 ${!productCategory ? 'text-slate-400' : ''}`}
-                    >
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-
-                    <SelectContent>
-                      <SelectItem value="General">General</SelectItem>
-
-                      <SelectItem value="Life">Life Insurance</SelectItem>
-
-                      <SelectItem value="Short-Term">Short-Term</SelectItem>
-
-                      <SelectItem value="Investment">Investment</SelectItem>
-
-                      <SelectItem value="Medical Aid">Medical Aid</SelectItem>
-
-                      <SelectItem value="Retirement">Retirement</SelectItem>
-
-                      <SelectItem value="Estate">Estate Planning</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="doc-policy" className="font-medium text-slate-900">
-                    Policy Number
-                  </Label>
-
-                  <Input
-                    id="doc-policy"
-                    placeholder="e.g., LIF-2024-00123"
-                    value={policyNumber}
-                    onChange={(e) => setPolicyNumber(e.target.value)}
-                    className="h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500"
-                  />
-                </div>
-              </div>
             </TabsContent>
 
             <TabsContent value="link" className="space-y-5 mt-0 focus-visible:ring-0">
@@ -757,7 +730,7 @@ export function UploadDocumentDialog({
 
                 <div className="space-y-2">
                   <Label htmlFor="link-policy" className="font-medium text-slate-900">
-                    Policy Number
+                    Policy number
                   </Label>
 
                   <Input
@@ -806,7 +779,7 @@ export function UploadDocumentDialog({
               <div className="contents">
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
 
-                {uploadType === 'document' ? 'Uploading...' : 'Adding...'}
+                {uploadType === 'document' ? 'Uploading…' : 'Adding…'}
               </div>
             ) : (
               <div className="contents">
@@ -818,7 +791,7 @@ export function UploadDocumentDialog({
                 ) : (
                   <div className="contents">
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Link
+                    Add link
                   </div>
                 )}
               </div>

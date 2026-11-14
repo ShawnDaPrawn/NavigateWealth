@@ -2,7 +2,7 @@
  * Address Panel
  *
  * Phase 2 endpoint:
- * - Best Known Address: POST /natural-person-address
+ * - Best known address: POST /natural-person-address
  *
  * Retrieves the client's best known address from credit bureau records.
  */
@@ -111,12 +111,12 @@ export function AddressReportsPanel({
 
   return (
     <div className="space-y-4">
-      {/* Best Known Address */}
+      {/* Best known address */}
       <Card className="bg-green-50/50 border-green-200">
         <CardHeader className="pb-3">
           <CardTitle className="text-md font-medium flex items-center gap-2">
             <MapPin className="h-5 w-5 text-green-600" />
-            Best Known Address
+            Best known address
           </CardTitle>
           <CardDescription>
             Retrieve the client's known addresses from credit bureau records. This creates a matter
@@ -141,7 +141,7 @@ export function AddressReportsPanel({
           >
             {isAddressLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <Home className="mr-2 h-4 w-4" />
-            Look Up Address
+            Run address lookup
           </Button>
 
           {/* Address results */}
@@ -156,7 +156,7 @@ export function AddressReportsPanel({
               {!addressResult.success && (
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <span className="text-red-800 font-medium">Lookup Failed</span>
+                  <span className="text-red-800 font-medium">Lookup failed</span>
                   <p className="text-red-700 text-xs mt-1">{addressResult.error}</p>
                 </div>
               )}
@@ -165,7 +165,7 @@ export function AddressReportsPanel({
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-green-800 font-medium">Address Lookup Complete</span>
+                    <span className="text-green-800 font-medium">Address lookup complete</span>
                   </div>
 
                   {addressResult.matterId && (
