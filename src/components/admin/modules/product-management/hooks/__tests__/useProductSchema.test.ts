@@ -131,7 +131,22 @@ describe('useProductSchema — query', () => {
     expect(result).toBeNull();
   });
 
-  it('queryFn falls back to DEFAULT_SCHEMAS when fetch throws', async () => {
+  it('queryFn falls back to DEFAULT_SCHEMAS when nothing is saved yet', async () => {
+    let captured: Record<string, unknown> = {};
+    mockUseQuery.mockImplementationOnce((opts: Record<string, unknown>) => {
+      captured = opts;
+      return { data: undefined, isLoading: false };
+    });
+
+    renderHook(() => useProductSchema('life_insurance' as never));
+
+    mockFetchSchema.mockResolvedValue(null);
+    const result = await (captured.queryFn as () => Promise<unknown>)();
+
+    expect(result).toEqual({ fields: [{ id: 'f1', label: 'Field 1' }] });
+  });
+
+  it('queryFn rethrows a failed load instead of offering the default schema', async () => {
     let captured: Record<string, unknown> = {};
     mockUseQuery.mockImplementationOnce((opts: Record<string, unknown>) => {
       captured = opts;
@@ -141,9 +156,7 @@ describe('useProductSchema — query', () => {
     renderHook(() => useProductSchema('life_insurance' as never));
 
     mockFetchSchema.mockRejectedValue(new Error('network error'));
-    const result = await (captured.queryFn as () => Promise<unknown>)();
-
-    expect(result).toEqual({ fields: [{ id: 'f1', label: 'Field 1' }] });
+    await expect((captured.queryFn as () => Promise<unknown>)()).rejects.toThrow('network error');
   });
 
   it('queryFn returns empty fields when category not in DEFAULT_SCHEMAS', async () => {
@@ -155,7 +168,7 @@ describe('useProductSchema — query', () => {
 
     renderHook(() => useProductSchema('unknown_category' as never));
 
-    mockFetchSchema.mockRejectedValue(new Error('not found'));
+    mockFetchSchema.mockResolvedValue(null);
     const result = await (captured.queryFn as () => Promise<unknown>)();
 
     expect(result).toEqual({ fields: [] });

@@ -33,14 +33,16 @@ const formsFixture = [
   },
 ];
 
+const resourcesState = vi.hoisted(() => ({ error: null as string | null }));
+
 vi.mock('@/components/admin/modules/resources/hooks/useResources', () => ({
   useResources: () => ({
+    error: resourcesState.error,
     forms: formsFixture,
     filteredForms: [],
     categories: [],
     clientTypes: [],
     loading: false,
-    error: null,
     filters: {},
     createResource: vi.fn(),
     updateResource: vi.fn(),
@@ -72,6 +74,7 @@ import { ResourcesModule } from '../ResourcesModule';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resourcesState.error = null;
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -136,5 +139,14 @@ describe('ResourcesModule', () => {
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1, name: 'Resources' })).toBeTruthy(),
     );
+  });
+
+  it('shows "Unable to load forms" when the list fails, not "No forms available"', async () => {
+    resourcesState.error = 'Request failed (400)';
+    renderModule();
+    expect(await screen.findByText('Unable to load forms')).toBeTruthy();
+    expect(screen.queryByText('No forms available')).toBeNull();
+    // Header and tabs stay.
+    expect(screen.getByRole('heading', { level: 1, name: 'Resources' })).toBeTruthy();
   });
 });

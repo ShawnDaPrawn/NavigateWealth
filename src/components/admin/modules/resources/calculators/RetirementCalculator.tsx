@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { PageHeader } from '../../../layout/page';
+import { Notice, PageHeader } from '../../../layout/page';
 import { BackLink } from '../components/BackLink';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -68,6 +68,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
   const [inputs, setInputs] = useState<RetirementInputs>(DEFAULT_INPUTS);
   const [results, setResults] = useState<RetirementResults | null>(null);
   const [clients, setClients] = useState<any[]>([]);
+  const [scenariosError, setScenariosError] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [scenarios, setScenarios] = useState<RetirementScenario[]>([]);
   const [scenarioName, setScenarioName] = useState('');
@@ -135,8 +136,11 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
         `/resources/calculators/retirement/scenarios/${clientId}`,
       );
       setScenarios(data.scenarios || []);
+      setScenariosError(null);
     } catch (error) {
       console.error('Error loading scenarios:', error);
+      setScenarios([]);
+      setScenariosError(error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -750,7 +754,21 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
               </div>
 
               <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
-                {scenarios.length === 0 ? (
+                {scenariosError ? (
+                  <Notice
+                    kind="error"
+                    title="Unable to load saved scenarios."
+                    action={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void loadScenarios(selectedClientId)}
+                      >
+                        Try again
+                      </Button>
+                    }
+                  />
+                ) : scenarios.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-2">
                     No scenarios saved for this client.
                   </p>

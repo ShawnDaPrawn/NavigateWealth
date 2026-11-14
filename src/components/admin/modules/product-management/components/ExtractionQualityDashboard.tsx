@@ -13,6 +13,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
+import { ErrorState } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import {
   BarChart3,
@@ -109,6 +110,7 @@ function StatCard({
 export function ExtractionQualityDashboard() {
   const [data, setData] = useState<QualityData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showLowConfidence, setShowLowConfidence] = useState(false);
 
   const fetchStats = useCallback(async () => {
@@ -120,8 +122,10 @@ export function ExtractionQualityDashboard() {
         providerStats: result.providerStats,
         lowConfidenceFields: result.lowConfidenceFields,
       });
+      setLoadError(null);
     } catch (err) {
       console.error('Error loading extraction quality stats:', err);
+      setLoadError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -141,12 +145,11 @@ export function ExtractionQualityDashboard() {
 
   if (!data) {
     return (
-      <div className="text-center py-8 text-sm text-gray-500">
-        Unable to load extraction quality data.
-        <Button variant="ghost" size="sm" onClick={fetchStats} className="ml-2">
-          <RefreshCw className="h-3.5 w-3.5 mr-1" /> Retry
-        </Button>
-      </div>
+      <ErrorState
+        title="Unable to load extraction quality"
+        onRetry={() => void fetchStats()}
+        details={loadError ?? undefined}
+      />
     );
   }
 

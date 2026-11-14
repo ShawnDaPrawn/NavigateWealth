@@ -110,11 +110,14 @@ export function CorporateIdentityTab() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {(Object.keys(STAT_CONFIG) as Array<keyof typeof STAT_CONFIG>).map((key) => {
           const cfg = STAT_CONFIG[key];
+          // A failed summary shows "—", never a misleading 0.
           const value = loading
             ? '…'
-            : key === 'lastUpdated'
-              ? formatDate(summary?.lastUpdated ?? null)
-              : (summary?.[key as keyof BrandSummary] ?? 0);
+            : !summary
+              ? '—'
+              : key === 'lastUpdated'
+                ? formatDate(summary.lastUpdated ?? null)
+                : (summary[key as keyof BrandSummary] ?? 0);
           return <StatCard key={key} label={cfg.label} value={String(value)} />;
         })}
       </div>

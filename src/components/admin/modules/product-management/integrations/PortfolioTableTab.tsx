@@ -31,6 +31,7 @@ import {
   X,
 } from 'lucide-react';
 import { Card } from '../../../../ui/card';
+import { ErrorState } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Skeleton } from '../../../../ui/skeleton';
@@ -291,18 +292,11 @@ export function PortfolioTableTab({ provider, selectedCategoryId }: PortfolioTab
     }
     if (error) {
       return (
-        <div className="flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 p-4">
-          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
-          <div className="min-w-0 flex-1">
-            <h5 className="text-sm font-medium text-red-900">The portfolio could not be loaded</h5>
-            <p className="mt-1 text-sm text-red-700">
-              {error instanceof Error ? error.message : 'Unexpected error'}
-            </p>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            Try again
-          </Button>
-        </div>
+        <ErrorState
+          title="Unable to load the portfolio"
+          onRetry={() => void refetch()}
+          details={error instanceof Error ? error.message : 'Unexpected error'}
+        />
       );
     }
     if (!table || !hasRows) {

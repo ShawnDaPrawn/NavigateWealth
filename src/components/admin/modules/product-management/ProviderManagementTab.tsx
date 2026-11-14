@@ -10,13 +10,21 @@ import {
   type ProductCategoryId,
 } from './types';
 import { useProviders } from './hooks/useProviders';
-import { useBreadcrumbTrail } from '../../layout/page';
+import { ErrorState, useBreadcrumbTrail } from '../../layout/page';
 import { ProviderList } from './components/ProviderList';
 import { ProviderFormDialog } from './components/ProviderFormDialog';
 import { ProviderDeleteDialog } from './components/ProviderDeleteDialog';
 
 export function ProviderManagementTab() {
-  const { providers, isLoading, addProvider, updateProvider, deleteProvider } = useProviders();
+  const {
+    providers,
+    isLoading,
+    error,
+    fetchProviders,
+    addProvider,
+    updateProvider,
+    deleteProvider,
+  } = useProviders();
   useBreadcrumbTrail([{ label: 'Providers' }]);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,13 +121,21 @@ export function ProviderManagementTab() {
         </Button>
       </div>
 
-      <ProviderList
-        providers={filteredProviders}
-        isLoading={isLoading}
-        onEdit={handleOpenModal}
-        isFiltered={searchQuery.trim().length > 0}
-        onAdd={() => handleOpenModal()}
-      />
+      {error ? (
+        <ErrorState
+          title="Unable to load providers"
+          onRetry={() => void fetchProviders()}
+          details={(error as Error).message}
+        />
+      ) : (
+        <ProviderList
+          providers={filteredProviders}
+          isLoading={isLoading}
+          onEdit={handleOpenModal}
+          isFiltered={searchQuery.trim().length > 0}
+          onAdd={() => handleOpenModal()}
+        />
+      )}
 
       <ProviderFormDialog
         isOpen={isModalOpen}

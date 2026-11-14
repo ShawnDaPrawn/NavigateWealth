@@ -93,4 +93,15 @@ describe('DocumentMappingTab', () => {
     renderTab('/?docai=renewals');
     await waitFor(() => expect(screen.getByText('Renewal scanner stub')).toBeTruthy());
   });
+
+  it('shows the error state when the mappings fail to load', async () => {
+    vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({}),
+    } as Response);
+    renderTab();
+    expect(await screen.findByText('Unable to load terminology mappings')).toBeTruthy();
+    expect(screen.queryByText('Terminology mappings')).toBeNull();
+  });
 });
