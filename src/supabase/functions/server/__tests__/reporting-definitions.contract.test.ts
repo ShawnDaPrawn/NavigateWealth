@@ -46,7 +46,6 @@ vi.mock('../email-service.ts', () => ({
 import { kvStore } from './helpers/contract-harness.ts';
 import app from '../reporting-routes.ts';
 
-
 const asUser = (id: string, role: string, email = `${id}@example.co.za`) => {
   const token = `token-${id}`;
   authUsers.set(token, { id, email, app_metadata: { role }, user_metadata: {} });
