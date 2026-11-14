@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
+
 import { Badge } from '../../ui/badge';
 import {
   Shield,
@@ -13,8 +12,6 @@ import {
   TrendingUp,
   CheckCircle,
   Target,
-  Plus,
-  Zap,
   Info,
   Loader2,
   Building2,
@@ -34,6 +31,7 @@ import {
 import { fnaKeys } from '../../../utils/queryKeys';
 import type { Goal } from '../../../shared/goals';
 import { PolicyComparisonPanel } from './PolicyComparisonPanel';
+import { DsButton } from '../layout/page';
 
 import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable';
 
@@ -120,28 +118,23 @@ export function PolicyOverviewTab({
   };
 
   return (
-    <div className={isEmbedded ? 'space-y-4' : 'space-y-8 animate-in fade-in duration-500'}>
+    <div className={isEmbedded ? 'space-y-4' : 'space-y-4'}>
       {!isEmbedded && (
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-nw-ink">Financial portfolio overview</h2>
-            <p className="text-sm text-nw-text-3">
-              Summary of all policies based on your product structure.
-            </p>
+            <p className="ds-meta">Every policy on file, by category.</p>
           </div>
-          <Button onClick={handlePrintOverview} variant="outline">
-            Download report
-          </Button>
+          <DsButton onClick={handlePrintOverview}>Download report</DsButton>
         </div>
       )}
 
       {/* Cross-Policy Comparison */}
       {!isEmbedded && showComparison && <PolicyComparisonPanel clientId={clientId} />}
 
-      {SECTIONS.map((section, index) => (
+      {SECTIONS.map((section) => (
         <OverviewSection
           key={section.id}
-          index={index}
           section={section}
           clientId={clientId}
           onRunFNA={() => onRunFNA?.(section.id)}
@@ -158,7 +151,6 @@ export function PolicyOverviewTab({
 // ----------------------------------------------------------------------
 
 interface OverviewSectionProps {
-  index: number;
   section: {
     id: string;
     categoryId: string;
@@ -213,7 +205,6 @@ async function fetchLatestFnaResults(
 }
 
 function OverviewSection({
-  index,
   section,
   clientId,
   onRunFNA,
@@ -652,22 +643,14 @@ function OverviewSection({
       );
     }
     return (
-      <Card
-        className="mb-8 border-t-4"
-        style={{
-          borderTopColor: section.color.replace('text-', '').replace('[', '').replace(']', ''),
-        }}
-      >
-        <CardHeader className="bg-gray-50/50 pb-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="h-6 w-6 bg-gray-200 rounded animate-pulse" />
-            <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
-          </div>
-        </CardHeader>
-        <CardContent className="py-12 flex justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-        </CardContent>
-      </Card>
+      <section className="ds-card overflow-hidden" aria-busy="true">
+        <div className="ds-card-h">
+          <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
+        </div>
+        <div className="ds-card-b flex justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-nw-text-3" aria-label="Loading" />
+        </div>
+      </section>
     );
   }
 
@@ -702,61 +685,40 @@ function OverviewSection({
   }
 
   return (
-    <Card
-      className="mb-8 border-t-4"
-      style={{
-        borderTopColor: section.color.replace('text-', '').replace('[', '').replace(']', ''),
-      }}
-    >
-      <CardHeader className="bg-gray-50/50 pb-4 border-b border-gray-100">
-        <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg bg-white shadow-sm border border-gray-100`}>
-              <Icon className={`h-5 w-5 ${section.color}`} />
-            </div>
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                {index + 1}. {section.label}
-              </CardTitle>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={onAddPolicy}>
-              <Plus className="h-3 w-3 mr-1" /> Add Policy
-            </Button>
-            {hasFNASupport(section.id) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onRunFNA}
-                className="text-gray-500 hover:text-purple-600"
-              >
-                <Zap className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
+    // CM-Policies: each category is a plain card — its name, then Add policy and
+    // the FNA in the header.
+    <section className="ds-card overflow-hidden" aria-label={section.label}>
+      <div className="ds-card-h flex-wrap">
+        <h3 className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${section.color}`} aria-hidden="true" />
+          {section.label}
+        </h3>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="ds-meta">
+            {policies.length} {policies.length === 1 ? 'policy' : 'policies'}
+          </span>
+          {hasFNASupport(section.id) && (
+            <DsButton size="sm" onClick={onRunFNA}>
+              Open FNA
+            </DsButton>
+          )}
+          <DsButton size="sm" variant="primary" onClick={onAddPolicy}>
+            Add policy
+          </DsButton>
         </div>
-      </CardHeader>
-      <CardContent className="pt-6">
+      </div>
+      <div className="ds-card-b">
         {hasError ? (
-          <div className="text-center py-6 text-red-500">
-            Failed to load data. Please try again.
-          </div>
+          <span className="text-[13.5px] text-red-700">Failed to load data. Please try again.</span>
         ) : policies.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-            <p className="text-sm text-gray-500 mb-2">No policies found for {section.label}</p>
-            {tableStructure.length === 0 && (
-              <p className="text-xs text-amber-600 mt-1">Note: Product structure not configured.</p>
-            )}
-            <Button variant="link" size="sm" onClick={onAddPolicy}>
-              + Add first policy
-            </Button>
-          </div>
+          <span className="ds-meta">
+            No policies yet
+            {tableStructure.length === 0 ? ' · product structure not configured' : ''}
+          </span>
         ) : (
           renderContent()
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
