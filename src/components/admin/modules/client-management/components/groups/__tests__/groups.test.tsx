@@ -16,11 +16,9 @@ const api = vi.hoisted(() => ({
 }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
-vi.mock('../../../../communication', () => ({ communicationApi: api }));
-vi.mock('../../../../communication/components/groups/FilterBuilder', () => ({
+vi.mock('../../../../communication', () => ({
+  communicationApi: api,
   FilterBuilder: () => <div>filter rules</div>,
-}));
-vi.mock('../../../../communication/components/groups/ManualSelection', () => ({
   ManualSelection: (props: { selectedIds: string[] }) => (
     <div>manual selection: {props.selectedIds.length}</div>
   ),

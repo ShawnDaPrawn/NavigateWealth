@@ -444,7 +444,8 @@ describe('provider portal golden flows', () => {
     expect(productTypesSource).toContain('function isPortalAutomationCategory');
     expect(productTypesSource).toContain('function getPortalAutomationCategoryOptions');
     expect(providerFormSource).toContain('formData.categoryIds.filter(isPortalAutomationCategory)');
-    expect(productProviderListSource).toContain('<TableHead>Products</TableHead>');
+    // A Products column (right-aligned since the PM-Providers redesign).
+    expect(productProviderListSource).toMatch(/<TableHead[^>]*>Products<\/TableHead>/);
     expect(productProviderListSource).not.toContain('<TableHead>Description</TableHead>');
     expect(productProviderListSource).toContain(
       'getPortalAutomationCategoryOptions(provider.categoryIds)',
