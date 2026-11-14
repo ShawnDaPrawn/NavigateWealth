@@ -25,6 +25,7 @@ import {
   Wallet,
   Loader2,
   AlertCircle,
+  Plus,
 } from 'lucide-react';
 import { AddressSection } from '../../../../profile-sections/AddressSection';
 import { EmploymentSection } from '../../../../profile-sections/EmploymentSection';
@@ -52,7 +53,17 @@ import {
 
 import { ClientProfilePersonalCard } from './ClientProfilePersonalCard';
 import { ProfileSectionView } from './ProfileSectionView';
-import { contactGroups, personalGroups } from './profileSectionRows';
+import {
+  addressGroups,
+  assetsView,
+  bankingTable,
+  contactGroups,
+  employmentView,
+  familyTable,
+  healthView,
+  kycTable,
+  personalGroups,
+} from './profileSectionRows';
 import { useUrlState } from '../../../../layout/page';
 import { useClientSubCrumbs } from '../../../../layout/page';
 
@@ -71,7 +82,17 @@ const PROFILE_SECTIONS = [
 ] as const;
 type ProfileSection = (typeof PROFILE_SECTIONS)[number];
 /** Sections whose card has a view mode and an Edit button. */
-const VIEW_EDIT_SECTIONS: ReadonlySet<ProfileSection> = new Set(['personal', 'contact']);
+const VIEW_EDIT_SECTIONS: ReadonlySet<ProfileSection> = new Set([
+  'personal',
+  'contact',
+  'kyc',
+  'address',
+  'employment',
+  'health',
+  'family',
+  'banking',
+  'assets',
+]);
 import { ClientProfileContactCard } from './ClientProfileContactCard';
 
 interface ClientProfileViewerFullProps {
@@ -189,6 +210,13 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
   useClientSubCrumbs(activeLabel ? [{ label: activeLabel }] : []);
   const viewOnly = VIEW_EDIT_SECTIONS.has(activeSection) && !editing && !state.hasChanges;
 
+  // Edit (or an Add button) swaps the view card for the section's form; an
+  // Add also starts the new row there.
+  const startEditing = (add?: () => void) => {
+    setEditing(true);
+    if (typeof add === 'function') add();
+  };
+
   const handleSaveAll = async () => {
     if (await actions.handleSave()) setEditing(false);
   };
@@ -263,6 +291,93 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             />
           )}
           {/* Personal Information Section */}
+          {viewOnly && activeSection === 'kyc' && (
+            <ProfileSectionView
+              title="KYC documents"
+              tables={[kycTable(state.profileData)]}
+              onEdit={startEditing}
+              actions={
+                <Button size="sm" onClick={() => startEditing()}>
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add document
+                </Button>
+              }
+            />
+          )}
+          {viewOnly && activeSection === 'address' && (
+            <ProfileSectionView
+              title="Address"
+              groups={addressGroups(state.profileData)}
+              onEdit={startEditing}
+            />
+          )}
+          {viewOnly && activeSection === 'employment' && (
+            <ProfileSectionView
+              title="Employment information"
+              {...employmentView(state.profileData)}
+              onEdit={startEditing}
+              actions={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => startEditing(actions.addEmployer)}
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add employer
+                </Button>
+              }
+            />
+          )}
+          {viewOnly && activeSection === 'health' && (
+            <ProfileSectionView
+              title="Health information"
+              {...healthView(state.profileData)}
+              onEdit={startEditing}
+              actions={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => startEditing(actions.addChronicCondition)}
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add condition
+                </Button>
+              }
+            />
+          )}
+          {viewOnly && activeSection === 'family' && (
+            <ProfileSectionView
+              title="Family members"
+              tables={[familyTable(state.profileData)]}
+              onEdit={startEditing}
+              actions={
+                <Button size="sm" onClick={() => startEditing(actions.addFamilyMember)}>
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add family member
+                </Button>
+              }
+            />
+          )}
+          {viewOnly && activeSection === 'banking' && (
+            <ProfileSectionView
+              title="Banking details"
+              tables={[bankingTable(state.profileData)]}
+              onEdit={startEditing}
+              actions={
+                <Button size="sm" onClick={() => startEditing(actions.addBankAccount)}>
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add bank account
+                </Button>
+              }
+            />
+          )}
+          {viewOnly && activeSection === 'assets' && (
+            <ProfileSectionView
+              title="Assets & liabilities"
+              {...assetsView(state.profileData)}
+              onEdit={startEditing}
+            />
+          )}
           {activeSection === 'personal' && !viewOnly && (
             <ClientProfilePersonalCard state={state} actions={actions} />
           )}
@@ -273,7 +388,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
           )}
 
           {/* KYC Section */}
-          {activeSection === 'kyc' && (
+          {activeSection === 'kyc' && !viewOnly && (
             <IdentitySection
               profileData={profileDataLoose}
               identityDocsInEditMode={state.identityDocsInEditMode}
@@ -295,7 +410,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
           )}
 
           {/* Address Section */}
-          {activeSection === 'address' && (
+          {activeSection === 'address' && !viewOnly && (
             <AddressSection
               profileData={profileDataLoose}
               handleInputChange={handleInputChangeLoose}
@@ -312,7 +427,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
           )}
 
           {/* Employment Section */}
-          {activeSection === 'employment' && (
+          {activeSection === 'employment' && !viewOnly && (
             <EmploymentSection
               profileData={profileDataLoose}
               handleInputChange={handleInputChangeLoose}
@@ -335,7 +450,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
           )}
 
           {/* Health Section */}
-          {activeSection === 'health' && (
+          {activeSection === 'health' && !viewOnly && (
             <HealthSection
               profileData={profileDataLoose}
               handleInputChange={handleInputChangeLoose}
@@ -353,7 +468,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
           )}
 
           {/* Family Section */}
-          {activeSection === 'family' && (
+          {activeSection === 'family' && !viewOnly && (
             <FamilySection
               profileData={profileDataLoose}
               familyMembersInEditMode={state.familyMembersInEditMode}
@@ -370,7 +485,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
           )}
 
           {/* Banking Section */}
-          {activeSection === 'banking' && (
+          {activeSection === 'banking' && !viewOnly && (
             <BankingSection
               profileData={profileDataLoose}
               bankAccountsInEditMode={state.bankAccountsInEditMode}
@@ -405,7 +520,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
           )}
 
           {/* Assets & Liabilities Section */}
-          {activeSection === 'assets' && (
+          {activeSection === 'assets' && !viewOnly && (
             <AssetsLiabilitiesSection
               assets={state.profileData.assets || []}
               liabilities={state.profileData.liabilities || []}

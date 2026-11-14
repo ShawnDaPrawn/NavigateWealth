@@ -82,7 +82,7 @@ export function BankingSection({
                 <CreditCard className="h-5 w-5 text-[#6d28d9]" />
               </div>
               <div>
-                <CardTitle>Banking Details</CardTitle>
+                <CardTitle>Banking details</CardTitle>
                 <CardDescription>Client's bank account information</CardDescription>
               </div>
             </div>

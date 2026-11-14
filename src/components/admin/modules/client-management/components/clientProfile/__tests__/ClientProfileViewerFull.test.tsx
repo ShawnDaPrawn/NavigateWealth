@@ -46,7 +46,19 @@ const profileData = {
   riskProfile: null,
   assets: [],
   liabilities: [],
-  familyMembers: [],
+  familyMembers: [
+    {
+      id: 'f1',
+      fullName: 'Pieter van Wyk',
+      relationship: 'Spouse',
+      dateOfBirth: '1977-02-02',
+      gender: 'Male',
+      idPassportNumber: '7702025555088',
+      isFinanciallyDependent: false,
+    },
+  ],
+  residentialAddressLine1: '14 Jacaranda Street',
+  residentialCity: 'Pretoria',
   bankAccounts: [],
   employers: [],
   chronicConditions: [],
@@ -153,5 +165,25 @@ describe('ClientProfileViewerFull', () => {
     expect(await screen.findByRole('region', { name: 'Contact details' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Address' }));
     await waitFor(() => expect(router.state.location.search).toBe('?psec=address'));
+  }, 30000);
+
+  it('shows each list section as a read-only table with Add and Edit', async () => {
+    renderClientProfileViewer('/?psec=family');
+    const card = await screen.findByRole('region', { name: 'Family members' });
+    expect(within(card).getByText('Pieter van Wyk')).toBeTruthy();
+    // ID numbers are masked in the view.
+    expect(within(card).getByText('•••• 5088')).toBeTruthy();
+    fireEvent.click(within(card).getByRole('button', { name: 'Add family member' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Family members' })).toBeNull(),
+    );
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeTruthy();
+  }, 30000);
+
+  it('shows the address as a view card', async () => {
+    renderClientProfileViewer('/?psec=address');
+    const card = await screen.findByRole('region', { name: 'Address' });
+    expect(within(card).getByText('14 Jacaranda Street')).toBeTruthy();
+    expect(within(card).getByText('Work address')).toBeTruthy();
   }, 30000);
 });
