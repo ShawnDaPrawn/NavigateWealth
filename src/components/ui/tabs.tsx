@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
 import { cn } from './utils';
+import { useTabStrip } from './use-tab-strip';
 
 function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (
@@ -13,12 +14,20 @@ function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPrimitive
   );
 }
 
+/**
+ * When the tabs are wider than the screen the row scrolls sideways (see
+ * useTabStrip) — tabs never shrink below their label, so labels cannot run
+ * into each other on a phone. Lay the row out with flex, not a fixed grid:
+ * `grid-cols-N` forces N equal columns however long the labels are.
+ */
 function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
+  const stripRef = useTabStrip<HTMLDivElement>();
   return (
     <TabsPrimitive.List
+      ref={stripRef}
       data-slot="tabs-list"
       className={cn(
-        'bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-xl p-[3px] flex',
+        'tab-strip bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-start rounded-xl p-[3px]',
         className,
       )}
       {...props}
@@ -31,7 +40,7 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "inline-flex h-[calc(100%-1px)] flex-1 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-all focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
         'data-[state=active]:bg-[#6d28d9] data-[state=active]:text-white data-[state=active]:shadow-sm',
         'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring',

@@ -139,19 +139,19 @@ export function ReportsTable({
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
-              <TableHead style={{ width: '350px' }} scope="col">
+              <TableHead scope="col" className="sm:w-[350px]">
                 Report
               </TableHead>
-              <TableHead style={{ width: '120px' }} scope="col">
+              <TableHead scope="col" className="hidden w-[120px] sm:table-cell">
                 Category
               </TableHead>
-              <TableHead style={{ width: '150px' }} scope="col">
+              <TableHead scope="col" className="hidden w-[150px] sm:table-cell">
                 Last run
               </TableHead>
-              <TableHead style={{ width: '120px' }} scope="col">
+              <TableHead scope="col" className="hidden w-[120px] sm:table-cell">
                 Format
               </TableHead>
-              <TableHead style={{ width: '150px' }} scope="col">
+              <TableHead scope="col" className="sm:w-[150px]">
                 Actions
               </TableHead>
             </TableRow>
@@ -160,7 +160,7 @@ export function ReportsTable({
             {filteredReports.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5}>
-                  <div className="text-center py-12">
+                  <div className="sticky left-0 w-[calc(100vw-5rem)] sm:static sm:w-auto text-center py-12">
                     <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground opacity-50 mb-4" />
                     <h3 className="text-lg font-medium mb-2">No reports found</h3>
                     <p className="text-muted-foreground mb-4">
@@ -191,22 +191,28 @@ export function ReportsTable({
                         </div>
                         <div className="min-w-0">
                           <div className="font-medium">{report.name}</div>
-                          <div className="text-sm text-muted-foreground truncate max-w-[280px]">
+                          <div className="max-w-[calc(100vw-15rem)] truncate text-sm text-muted-foreground sm:max-w-[280px]">
                             {report.description}
+                          </div>
+                          <div className="text-xs text-muted-foreground sm:hidden">
+                            {cfg.label} · Last run{' '}
+                            {report.lastRunAt
+                              ? new Date(report.lastRunAt).toLocaleDateString()
+                              : 'never'}
                           </div>
                         </div>
                       </div>
                     </TableCell>
 
                     {/* Category Badge */}
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="secondary" className={`text-xs ${cfg.badgeClass}`}>
                         {cfg.label}
                       </Badge>
                     </TableCell>
 
                     {/* Last Run */}
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {report.lastRunAt ? (
                         <div className="text-sm">
                           <div>{new Date(report.lastRunAt).toLocaleDateString()}</div>
@@ -220,7 +226,7 @@ export function ReportsTable({
                     </TableCell>
 
                     {/* Format */}
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="outline" className="text-xs">
                         {ext}
                       </Badge>

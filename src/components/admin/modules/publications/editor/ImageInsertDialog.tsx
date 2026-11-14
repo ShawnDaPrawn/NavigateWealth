@@ -236,7 +236,7 @@ export function ImageInsertDialog({ isOpen, onClose, onInsert }: ImageInsertDial
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex-wrap">
           <Button variant="outline" onClick={resetAndClose}>
             Cancel
           </Button>

@@ -908,7 +908,7 @@ export function NoteEditorModal({
                   <h2 className="text-xl font-bold text-gray-900 truncate">
                     {title || 'Untitled Note'}
                   </h2>
-                  <Pencil className="h-3.5 w-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                  <Pencil className="h-3.5 w-3.5 text-gray-400 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity shrink-0" />
                 </div>
               ) : (
                 <Input
@@ -934,9 +934,9 @@ export function NoteEditorModal({
 
           {/* ── Footer ─────────────────────────────────────────────────── */}
           <div
-            className={`px-6 py-4 border-t flex items-center justify-between shrink-0 ${colorCfg.border}`}
+            className={`flex shrink-0 flex-col-reverse gap-3 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 ${colorCfg.border}`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {isEditing && onDelete && (
                 <Button
                   type="button"
@@ -974,8 +974,8 @@ export function NoteEditorModal({
                 </TooltipProvider>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-400 mr-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span className="mr-2 hidden text-[10px] text-gray-400 sm:inline">
                 {navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'}+S to save
               </span>
               <Button type="button" variant="outline" onClick={handleClose}>

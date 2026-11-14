@@ -263,7 +263,7 @@ export function TabPermissions({
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Bulk actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={handleSelectAll} className="text-xs h-7">
               Grant all
             </Button>

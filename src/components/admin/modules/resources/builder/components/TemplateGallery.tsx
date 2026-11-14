@@ -243,7 +243,7 @@ export function TemplateGallery({ onSelectTemplate, onCancel, mode }: TemplateGa
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>

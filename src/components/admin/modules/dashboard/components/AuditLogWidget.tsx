@@ -122,14 +122,14 @@ export function AuditLogWidget({ maxEntries = 8, onViewAll }: AuditLogWidgetProp
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
           <div className="contents">
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <ClipboardList className="h-5 w-5 text-primary" />
               Audit Trail
             </CardTitle>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             <Button
               variant="ghost"
               size="sm"

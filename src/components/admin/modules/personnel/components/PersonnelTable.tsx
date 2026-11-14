@@ -92,6 +92,7 @@ export function PersonnelTable({ data, onRowClick, roles }: PersonnelTableProps)
     },
     {
       key: 'jobTitle',
+      hideOnMobile: true,
       title: 'Title',
       render: (title) =>
         title ? (
@@ -105,12 +106,14 @@ export function PersonnelTable({ data, onRowClick, roles }: PersonnelTableProps)
     },
     {
       key: 'status',
+      hideOnMobile: true,
       title: 'Status',
       render: (status) => <StatusIndicator status={status as string} />,
       width: '110px',
     },
     {
       key: 'id',
+      hideOnMobile: true,
       title: 'Permissions',
       render: (_, person) => (
         <PermissionSummaryBadge
@@ -124,6 +127,7 @@ export function PersonnelTable({ data, onRowClick, roles }: PersonnelTableProps)
     },
     {
       key: 'commissionSplit',
+      hideOnMobile: true,
       title: 'Commission',
       render: (split) =>
         split != null && Number(split) > 0 ? (

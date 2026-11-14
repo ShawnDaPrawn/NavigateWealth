@@ -67,16 +67,19 @@ function DraggableCategoryRow({
       {...provided.draggableProps}
       className={cn('hover:bg-gray-50', isDragging && 'opacity-50 bg-white shadow-lg')}
     >
-      <td className="px-4 py-4 cursor-move" {...provided.dragHandleProps}>
+      <td className="cursor-move px-2 py-4 sm:px-4" {...provided.dragHandleProps}>
         <GripVertical className="h-5 w-5 text-gray-400" />
       </td>
-      <td className="px-4 py-4">
+      <td className="px-2 py-4 sm:px-4">
         <p className="font-medium text-gray-900">{category.name}</p>
+        <code className="block max-w-[9rem] truncate text-xs text-gray-500 sm:hidden">
+          {category.slug}
+        </code>
       </td>
-      <td className="px-4 py-4">
+      <td className="hidden px-4 py-4 sm:table-cell">
         <code className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">{category.slug}</code>
       </td>
-      <td className="px-4 py-4">
+      <td className="hidden px-4 py-4 md:table-cell">
         <p className="text-sm text-gray-600 max-w-xs truncate">{category.description || '-'}</p>
       </td>
       <td className="px-4 py-4">
@@ -295,7 +298,7 @@ export function CategoriesManager() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Article categories</h2>
           <p className="text-sm text-gray-500">Manage article categories and their display order</p>
@@ -403,16 +406,16 @@ export function CategoriesManager() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
-                      Order
+                    <th className="w-10 px-2 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase sm:w-12 sm:px-4">
+                      <span className="sr-only sm:not-sr-only">Order</span>
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Name
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Slug
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Description
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

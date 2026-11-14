@@ -62,7 +62,7 @@ export const BeneficiaryTableBlock: BlockDefinition = {
       <div className="space-y-4">
         <div className="space-y-2">
           <Label className="text-xs">Number of Rows</Label>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="icon"

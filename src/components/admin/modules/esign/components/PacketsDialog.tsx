@@ -453,7 +453,7 @@ export function PacketsDialog({
                         {p.steps.length} step{p.steps.length === 1 ? '' : 's'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                       <Button
                         size="sm"
                         variant="outline"
@@ -487,7 +487,7 @@ export function PacketsDialog({
         <TabsContent value="author" className="flex-1 min-h-0 mt-2">
           <ScrollArea className="h-full pr-2">
             <div className="space-y-3 py-2">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs">Packet name</Label>
                   <Input

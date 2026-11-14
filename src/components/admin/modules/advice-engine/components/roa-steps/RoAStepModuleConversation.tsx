@@ -276,7 +276,7 @@ function ModuleConversationPanel({
   const canComplete = completionMode === 'manual' || isComplete;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
       <Card className="flex flex-col">
         <CardHeader>
           <CardTitle className="text-base">Conversation</CardTitle>

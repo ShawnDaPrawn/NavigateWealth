@@ -146,7 +146,7 @@ export function ProviderCredentialsSection({
                 </div>
               </div>
             )}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-gray-500">
                 {showCredentialSaveSuccess
                   ? 'Credentials were saved successfully. You can create a portal job now.'

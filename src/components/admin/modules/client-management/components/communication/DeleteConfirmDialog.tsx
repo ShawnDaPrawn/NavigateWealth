@@ -44,7 +44,7 @@ export function DeleteConfirmDialog({
             Are you sure you want to delete this communication?
           </p>
         </div>
-        <div className="flex items-center justify-end gap-3 pt-4 border-t">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t flex-wrap">
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

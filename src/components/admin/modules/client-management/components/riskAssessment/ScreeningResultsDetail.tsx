@@ -65,7 +65,7 @@ export function ScreeningResultsDetail({
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
             Natural Person Screening
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
             {personEntries.map(([key, value]) => {
               const info = getScreeningCategoryInfo(key);
               if (!info) return null;
@@ -102,7 +102,7 @@ export function ScreeningResultsDetail({
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
             Company Screening
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
             {companyEntries.map(([key, value]) => {
               const info = getScreeningCategoryInfo(key);
               if (!info) return null;

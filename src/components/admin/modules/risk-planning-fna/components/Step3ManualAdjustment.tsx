@@ -176,7 +176,7 @@ export function Step3ManualAdjustment({
     return (
       <Card key={type}>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-lg">{title}</CardTitle>
               {hasOverride && (
@@ -185,7 +185,7 @@ export function Step3ManualAdjustment({
                 </CardDescription>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {hasOverride && (
                 <Button variant="ghost" size="sm" onClick={() => handleRemoveOverride(type)}>
                   <RotateCcw className="h-4 w-4 mr-1" />

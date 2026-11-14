@@ -477,7 +477,7 @@ export function AIArticleGenerator({
                       type="button"
                       onClick={() => removeKeyPoint(idx)}
                       disabled={isGenerating}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="[@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="h-3 w-3 text-red-400 hover:text-red-600" />
                     </button>

@@ -467,7 +467,7 @@ export function LinktreeTab() {
             <p className="text-sm text-muted-foreground max-w-xs mb-4">
               Add your website, booking page, social profiles and any other links.
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button variant="outline" onClick={() => setQuickAddOpen(true)} className="gap-1.5">
                 <Zap className="h-4 w-4" style={{ color: BRAND.gold }} />
                 Quick add
@@ -544,7 +544,7 @@ export function LinktreeTab() {
                   />
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"

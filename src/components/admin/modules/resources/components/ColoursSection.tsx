@@ -134,7 +134,7 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold">Brand Colours</h3>
           <p className="text-sm text-muted-foreground">
@@ -160,7 +160,7 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
             <h4 className="text-sm font-medium capitalize text-muted-foreground">
               {group} Colours
             </h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
               {swatches.map((swatch) => {
                 const luminance = getContrastRatio(swatch.hex);
                 const textColor = luminance > 0.5 ? 'text-gray-900' : 'text-white';

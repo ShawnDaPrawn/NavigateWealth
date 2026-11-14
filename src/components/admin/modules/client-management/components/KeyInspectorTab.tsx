@@ -126,7 +126,7 @@ export function KeyInspectorTab({ selectedClient }: KeyInspectorTabProps) {
       {/* Header */}
       <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
         <CardHeader>
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
               <div className="p-3 bg-purple-100 rounded-lg">
                 <Database className="w-6 h-6 text-purple-600" />

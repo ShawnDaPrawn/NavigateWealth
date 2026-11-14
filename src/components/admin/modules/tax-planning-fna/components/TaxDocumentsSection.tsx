@@ -293,7 +293,7 @@ export function TaxDocumentsSection({ clientId, clientName }: TaxDocumentsSectio
       {/* Collapsible Header */}
       <Card>
         <CardHeader className="cursor-pointer py-4" onClick={() => setIsExpanded(!isExpanded)}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center">
                 <Paperclip className="h-5 w-5 text-blue-600" />

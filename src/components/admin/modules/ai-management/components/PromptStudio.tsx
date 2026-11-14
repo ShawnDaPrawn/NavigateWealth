@@ -230,7 +230,7 @@ export function PromptStudio() {
           </Button>
         </section>
       ) : (
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Editor */}
           <section className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">

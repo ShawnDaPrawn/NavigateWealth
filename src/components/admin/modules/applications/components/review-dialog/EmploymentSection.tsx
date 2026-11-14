@@ -28,7 +28,7 @@ export function EmploymentSection({
     >
       {isEditing ? (
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <EditSelect
               label="Employment Status"
               value={fv('employmentStatus')}
@@ -49,7 +49,7 @@ export function EmploymentSection({
               icon={Building}
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <EditField
               label="Industry"
               value={fv('industry')}
@@ -68,7 +68,7 @@ export function EmploymentSection({
             />
           </div>
           {fv('employmentStatus') === 'self-employed' && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <EditField
                 label="Company / Business Name"
                 value={fv('selfEmployedCompanyName')}
@@ -90,7 +90,7 @@ export function EmploymentSection({
       ) : (
         <div className="contents">
           {hasEmploymentDetails ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
               <ViewField
                 label="Employment Status"
                 value={

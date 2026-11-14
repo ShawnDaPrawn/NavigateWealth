@@ -73,7 +73,7 @@ export function TreasuryManagerPanel() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setDepositOpen(true)} disabled={!account}>
             <ArrowDownToLine className="h-4 w-4 mr-1" /> Deposit
           </Button>

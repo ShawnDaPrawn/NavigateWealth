@@ -317,7 +317,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
             </div>
 
             {/* Actions row */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
               {/* Filter toggle */}
               <Button
                 variant="outline"
@@ -555,13 +555,14 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                     dir={sortDir}
                     onSort={toggleSort}
                   />
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <SortableHeader
+                    className="hidden sm:table-cell"
                     label="Modified"
                     field="updated_at"
                     current={sortField}
@@ -569,6 +570,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                     onSort={toggleSort}
                   />
                   <SortableHeader
+                    className="hidden sm:table-cell"
                     label="Views"
                     field="view_count"
                     current={sortField}
@@ -602,37 +604,43 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                         )}
                       </button>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-3 sm:px-4">
                       <div className="flex items-center gap-2 min-w-0">
                         {article.is_featured && (
                           <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
                         )}
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate max-w-[300px]">
+                          <p className="line-clamp-2 font-medium text-gray-900 sm:line-clamp-none sm:max-w-[300px] sm:truncate">
                             {article.title}
                           </p>
                           {article.subtitle && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[300px]">
+                            <p className="hidden max-w-[300px] truncate text-xs text-muted-foreground sm:block">
                               {article.subtitle}
                             </p>
                           )}
+                          {/* On a phone status, category and date sit under the title. */}
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 sm:hidden">
+                            <StatusBadge status={article.status} />
+                            <span>{getCategoryName(article.category_id)}</span>
+                            <span>· {getRelativeTime(article.updated_at)}</span>
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-4 py-3 sm:table-cell">
                       <span className="text-sm text-gray-600">
                         {getCategoryName(article.category_id)}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-4 py-3 sm:table-cell">
                       <StatusBadge status={article.status} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-4 py-3 sm:table-cell">
                       <span className="text-sm text-gray-500">
                         {getRelativeTime(article.updated_at)}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-4 py-3 sm:table-cell">
                       <div className="flex items-center gap-1 text-sm text-gray-500">
                         <Eye className="h-3 w-3" />
                         {(article.view_count || 0).toLocaleString()}
@@ -841,7 +849,9 @@ function SortableHeader({
   field,
   current,
   onSort,
+  className,
 }: {
+  className?: string;
   label: string;
   field: SortField;
   current: SortField;
@@ -850,7 +860,12 @@ function SortableHeader({
 }) {
   const isActive = current === field;
   return (
-    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+    <th
+      className={cn(
+        'px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+        className,
+      )}
+    >
       <button
         onClick={() => onSort(field)}
         className={cn('flex items-center gap-1 hover:text-gray-700', isActive && 'text-purple-600')}

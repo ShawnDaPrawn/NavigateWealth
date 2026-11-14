@@ -67,7 +67,7 @@ export function ClientSelector({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[250px] justify-between bg-background h-9 text-sm"
+          className="h-9 w-full min-w-0 flex-1 justify-between bg-background text-sm sm:w-[250px] sm:flex-none"
         >
           {selectedClient ? (
             <div className="flex items-center gap-2 truncate">
@@ -82,7 +82,7 @@ export function ClientSelector({
           <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="end">
+      <PopoverContent className="w-[min(300px,calc(100vw-2rem))] p-0" align="end">
         <Command shouldFilter={false}>
           <CommandInput
             {...searchInputGuard}

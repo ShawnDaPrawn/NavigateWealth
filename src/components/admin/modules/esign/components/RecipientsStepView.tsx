@@ -46,7 +46,7 @@ export function RecipientsStepView({
     // Two columns from `xl`: the recipient list is the work, and the express
     // banner and field setting are context that belongs beside it rather than
     // stacked under it down the middle of a wide screen.
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] xl:items-start">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)] xl:items-start">
       <EsignWizardSection
         icon={Users}
         title="Recipients"
@@ -91,7 +91,7 @@ export function RecipientsStepView({
         )}
 
         <EsignWizardSection>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <Label
                 htmlFor="auto-populate-suggested-fields"

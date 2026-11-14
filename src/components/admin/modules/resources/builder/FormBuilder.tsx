@@ -535,7 +535,7 @@ const FormBuilderWorkspace = ({
     <TooltipProvider delayDuration={300}>
       <div className="flex h-[calc(100vh-60px)] min-h-[640px] flex-col bg-gray-50">
         {/* HEADER */}
-        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10">
+        <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10 flex-wrap gap-3">
           <div className="flex items-center gap-4">
             <div className="flex flex-col">
               <nav aria-label="Breadcrumb" className="text-xs text-nw-text-3">
@@ -572,7 +572,7 @@ const FormBuilderWorkspace = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* AUTOSAVE STATUS INDICATOR */}
             <AutosaveIndicator
               status={autosaveStatus}
@@ -585,7 +585,7 @@ const FormBuilderWorkspace = ({
             <div className="h-6 w-px bg-gray-200 mx-1"></div>
 
             {/* UNDO / REDO BUTTONS */}
-            <div className="flex items-center gap-0.5 mr-2">
+            <div className="flex items-center gap-0.5 mr-2 flex-wrap">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button

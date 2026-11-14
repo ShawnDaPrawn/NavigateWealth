@@ -261,7 +261,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
     return (
       <div className="space-y-6">
         <div className="rounded-lg border bg-muted/20 p-4">
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div>
               <p className="text-xs text-muted-foreground">Compilation</p>
               <p className="truncate text-sm font-medium">{compilation.id}</p>
@@ -287,7 +287,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
 
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Compiled RoA Sections</h3>
-          <div className="grid gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {compilation.documentSections.map(renderCompiledSection)}
           </div>
         </div>
@@ -357,7 +357,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <Label className="font-medium">Client:</Label>
               <p className="text-sm">{clientName}</p>

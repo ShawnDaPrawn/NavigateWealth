@@ -551,7 +551,7 @@ export function AIBrandTemplates({ onUseContent }: AIBrandTemplatesProps) {
       {/* Template Grid */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-orange-50">
@@ -760,7 +760,7 @@ export function AIBrandTemplates({ onUseContent }: AIBrandTemplatesProps) {
                         <p className="text-xs text-gray-600">{post.callToAction}</p>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
                       <Button
                         variant="outline"
                         size="sm"
@@ -826,7 +826,7 @@ export function AIBrandTemplates({ onUseContent }: AIBrandTemplatesProps) {
                 placeholder="Short description"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Icon</Label>
                 <div className="flex flex-wrap gap-1.5">
@@ -880,7 +880,7 @@ export function AIBrandTemplates({ onUseContent }: AIBrandTemplatesProps) {
                 })}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Tone</Label>
                 <Select value={formTone} onValueChange={(v) => setFormTone(v as ContentTone)}>

@@ -221,7 +221,7 @@ function ZipFileList({ files, processing, onRemove, onClear }: ZipFileListProps)
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="h-6 w-6 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => onRemove(file.id)}
                     >
                       <X className="h-3 w-3" />

@@ -197,9 +197,9 @@ export function PrefillReviewModal({
 
           {!loading && readyMatches.length > 0 && (
             <section className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
                 <h3 className="text-sm font-semibold">Ready to fill</h3>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap">
                   <Button type="button" size="sm" variant="ghost" onClick={toggleAllReady}>
                     {allReadySelected ? 'Clear all' : 'Select all'}
                   </Button>

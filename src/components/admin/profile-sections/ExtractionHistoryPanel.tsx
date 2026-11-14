@@ -236,7 +236,7 @@ export function ExtractionHistoryPanel({
               <span className="text-[10px] text-purple-700">
                 {selectedForCompare.size} of 2 selected for comparison
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="ghost"
                   size="sm"

@@ -49,9 +49,9 @@ export function FormsFilterBar({
   return (
     <Card className="border shadow-sm">
       <CardContent className="p-4">
-        <div className="flex items-end gap-4">
+        <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:gap-4">
           {/* Search */}
-          <div className="flex-1">
+          <div className="col-span-2 sm:flex-1">
             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Search
             </Label>
@@ -67,7 +67,7 @@ export function FormsFilterBar({
           </div>
 
           {/* Category */}
-          <div className="w-44">
+          <div className="min-w-0 sm:w-44">
             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Category
             </Label>
@@ -89,7 +89,7 @@ export function FormsFilterBar({
           </div>
 
           {/* Client Type */}
-          <div className="w-40">
+          <div className="min-w-0 sm:w-40">
             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Client Type
             </Label>
@@ -112,7 +112,7 @@ export function FormsFilterBar({
           </div>
 
           {/* Phase 1: Status Filter */}
-          <div className="w-36">
+          <div className="min-w-0 sm:w-36">
             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Status
             </Label>

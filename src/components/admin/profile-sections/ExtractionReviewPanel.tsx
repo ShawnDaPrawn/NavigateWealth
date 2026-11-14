@@ -80,7 +80,7 @@ export function ExtractionReviewPanel({
   return (
     <div className="border border-purple-200 rounded-lg overflow-hidden mb-3">
       {/* Header */}
-      <div className="bg-purple-50 px-3 py-2 flex items-center justify-between border-b border-purple-200">
+      <div className="bg-purple-50 px-3 py-2 flex items-center justify-between border-b border-purple-200 flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-purple-600" />
           <span className="text-sm font-semibold text-purple-800">AI Extraction Results</span>
@@ -88,7 +88,7 @@ export function ExtractionReviewPanel({
             {Math.round(extractedData.overallConfidence * 100)}% confidence
           </Badge>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           <Button
             variant="ghost"
             size="sm"

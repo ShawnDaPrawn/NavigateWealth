@@ -108,7 +108,7 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
       </section>
 
       {/* ── Due today + Quick actions ────────────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TasksWidget onModuleChange={onModuleChange} onViewTask={onViewTask} maxTasks={5} />
         <QuickActionsCard onModuleChange={onModuleChange} />
       </div>
@@ -117,7 +117,7 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
       <RecentNotesWidget onModuleChange={onModuleChange} maxNotes={5} />
 
       {/* ── Publications | Newsletter ────────────────────────────────── */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <PublicationsCard onModuleChange={onModuleChange} maxArticles={5} />
         </div>

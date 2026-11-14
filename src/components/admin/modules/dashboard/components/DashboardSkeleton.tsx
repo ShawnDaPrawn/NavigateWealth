@@ -17,7 +17,7 @@ import { Skeleton } from '../../../../ui/skeleton';
 function KPICardSkeleton() {
   return (
     <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-wrap gap-x-4 gap-y-2">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-8 w-8 rounded-full" />
       </CardHeader>
@@ -86,7 +86,7 @@ function QuickActionsSkeleton() {
 function TasksSkeleton() {
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-wrap gap-x-4 gap-y-2">
         <div>
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-5 rounded" />
@@ -130,20 +130,20 @@ export function DashboardSkeleton() {
     <div className="space-y-6 p-6" role="status" aria-label="Loading dashboard">
       <span className="sr-only">Loading dashboard, please wait…</span>
       {/* KPI Grid — 4 columns */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
         {[1, 2, 3, 4].map((i) => (
           <KPICardSkeleton key={i} />
         ))}
       </div>
 
       {/* Middle section — System Activity + Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <SystemActivitySkeleton />
         <QuickActionsSkeleton />
       </div>
 
       {/* Bottom section — Tasks + Recent Notes */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TasksSkeleton />
         <TasksSkeleton />
       </div>

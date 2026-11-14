@@ -177,7 +177,7 @@ export function RecipientsPanel({ campaign }: { campaign: NewsletterCampaign }) 
             Page {page} of {totalPages} · {formatNumber(total)}{' '}
             {total === 1 ? 'recipient' : 'recipients'}
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             <Button
               variant="ghost"
               size="sm"

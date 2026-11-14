@@ -617,7 +617,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="contribution">Contribution</Label>
                       <CurrencyInputField
@@ -683,7 +683,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
 
                 {showAssumptions && (
                   <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="nominalReturn">Nominal Return (%)</Label>
                         <NumberInputField
@@ -792,7 +792,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
                           e.stopPropagation();
                           deleteScenario(s.id);
                         }}
-                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-gray-400 hover:text-red-500 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
