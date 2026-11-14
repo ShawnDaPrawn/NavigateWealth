@@ -1,6 +1,4 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
-import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import {
   Table,
@@ -18,19 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../../ui/select';
-import {
-  History,
-  Download,
-  RefreshCw,
-  Shield,
-  Filter,
-  X,
-  Loader2,
-  Eye,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+import { X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ComplianceResultViewer } from './ComplianceResultViewer';
+import { StatusPill } from './ComplianceShared';
+import { checkStatusTone } from './complianceTypes';
 import { ActivityDetailSummary } from './ActivityDetailSummary';
 import { exportComplianceDossier } from './exportDossier';
 import { ComplianceActivity } from './complianceTypes';
@@ -116,55 +105,46 @@ export function ActivityLogContent({
 
   return (
     <div className="contents">
-      <Card className="flex flex-col">
-        <CardHeader className="flex flex-row items-center justify-between flex-shrink-0">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <History className="h-5 w-5" />
+      {/* Design CM-K-Reports: the activity log as a titled white card. */}
+      <section className="flex flex-col rounded-xl border border-nw-line bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-nw-line px-5 py-3.5">
+          <h3 className="text-sm font-semibold text-nw-ink">
             Activity log
             {filteredActivities.length !== activities.length && (
-              <Badge variant="secondary" className="text-xs">
+              <span className="ml-2 text-xs font-normal text-nw-text-3">
                 {filteredActivities.length} of {activities.length}
-              </Badge>
+              </span>
             )}
-          </CardTitle>
+          </h3>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onRefresh}>
+              Refresh
+            </Button>
             <Button
-              variant="outline"
               size="sm"
               onClick={handleDownloadAll}
               disabled={isDownloadingAll || activities.length === 0}
             >
-              {isDownloadingAll ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-1" />
+              {isDownloadingAll && (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />
               )}
               Export compliance dossier
             </Button>
-            <Button variant="outline" size="sm" onClick={onRefresh}>
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Refresh
-            </Button>
           </div>
-        </CardHeader>
-        <CardContent className="flex flex-col flex-1 min-h-0">
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col p-5">
           {/* Third-party attribution banner */}
-          <div className="mb-4 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 flex items-center gap-2 flex-shrink-0">
-            <Shield className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
-            <span className="text-xs text-slate-600">
+          <div className="mb-4 flex-shrink-0">
+            <span className="text-xs text-nw-text-3">
               All compliance checks performed by independent third party{' '}
-              <strong className="text-slate-800">Honeycomb Information Services</strong> via the
-              Beeswax platform.
+              <strong className="font-medium text-nw-text-2">Honeycomb Information Services</strong>{' '}
+              via the Beeswax platform.
             </span>
           </div>
 
           {/* Filter bar */}
           {activities.length > 0 && (
-            <div className="mb-4 flex flex-wrap items-end gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 flex-shrink-0">
-              <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                <Filter className="h-3.5 w-3.5" />
-                <span className="font-medium">Filters</span>
-              </div>
+            <div className="mb-4 flex flex-shrink-0 flex-wrap items-end gap-3">
               <div className="flex-1 min-w-[160px] max-w-[220px]">
                 <label className="block text-xs text-gray-500 mb-1">Check type</label>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -232,7 +212,7 @@ export function ActivityLogContent({
             </div>
           ) : (
             <div className="flex flex-col">
-              <div className="overflow-auto max-h-[520px] border border-gray-200 rounded-lg">
+              <div className="max-h-[520px] overflow-auto rounded-lg border border-nw-line">
                 <Table>
                   <TableHeader className="sticky top-0 bg-white z-10">
                     <TableRow>
@@ -263,12 +243,9 @@ export function ActivityLogContent({
                           <span className="text-xs text-muted-foreground">Honeycomb</span>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="bg-green-50 text-green-700 border-green-200"
-                          >
+                          <StatusPill tone={checkStatusTone(activity.status.toLowerCase())}>
                             {activity.status}
-                          </Badge>
+                          </StatusPill>
                         </TableCell>
                         <TableCell className="text-sm max-w-[200px]">
                           <ActivityDetailSummary activity={activity} />
@@ -280,8 +257,7 @@ export function ActivityLogContent({
                             className="h-8"
                             onClick={() => setViewerActivity(activity)}
                           >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
+                            Details
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -335,7 +311,7 @@ export function ActivityLogContent({
                           key={item}
                           variant={item === safePage ? 'default' : 'outline'}
                           size="sm"
-                          className={`h-8 w-8 p-0 text-xs ${item === safePage ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''}`}
+                          className="h-8 w-8 p-0 text-xs"
                           onClick={() => setCurrentPage(item as number)}
                         >
                           {item}
@@ -356,8 +332,8 @@ export function ActivityLogContent({
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <ComplianceResultViewer
         open={!!viewerActivity}
