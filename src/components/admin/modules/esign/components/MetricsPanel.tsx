@@ -105,7 +105,7 @@ export function MetricsPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Org metrics</h3>
           <p className="text-xs text-muted-foreground">
@@ -138,7 +138,7 @@ export function MetricsPanel({
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 text-xs [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
             {(
               [
                 ['Draft', statusCounts.draft, 'bg-gray-100 text-gray-700'],
@@ -161,7 +161,7 @@ export function MetricsPanel({
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Funnel */}
         <Card>
           <CardHeader className="pb-3">

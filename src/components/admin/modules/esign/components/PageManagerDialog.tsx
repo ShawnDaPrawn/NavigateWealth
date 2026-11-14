@@ -278,7 +278,7 @@ export function PageManagerDialog({
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"
+                  className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1"
                 >
                   <AnimatePresence>
                     {pages.map((p, index) => (
@@ -318,7 +318,7 @@ export function PageManagerDialog({
                                 #{index + 1}{' '}
                                 <span className="text-gray-400">(src {p.sourcePage})</span>
                               </span>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                              <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition">
                                 <button
                                   type="button"
                                   onClick={() => rotatePage(p.uid)}

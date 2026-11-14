@@ -384,7 +384,7 @@ export function EntityTransactionsDialog({
                   <span className="font-medium">{formatZar(liveVat)}</span>
                 </div>
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 flex-wrap">
                 <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
                   Cancel
                 </Button>
@@ -517,7 +517,7 @@ function VatSummaryPanel({ summary }: { summary: ReturnType<typeof summarizeTran
         ? 'text-amber-700'
         : 'text-foreground';
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
       <SummaryCard label="Total Income" value={formatZar(summary.totalIncome)} />
       <SummaryCard
         label="Total Expenses"
@@ -560,7 +560,7 @@ function InvoiceCell({
 }) {
   if (txn.invoice) {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 flex-wrap">
         <Button size="icon" variant="ghost" aria-label="View invoice" onClick={onView}>
           <ExternalLink className="h-4 w-4" />
         </Button>

@@ -112,7 +112,7 @@ export function GroupEditor({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
         <Button variant="ghost" onClick={onCancel} className="gap-2">
           <ArrowLeft className="h-4 w-4" /> Back to Groups
         </Button>
@@ -123,7 +123,7 @@ export function GroupEditor({
         </Button>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Metadata */}
         <Card>
           <CardHeader>

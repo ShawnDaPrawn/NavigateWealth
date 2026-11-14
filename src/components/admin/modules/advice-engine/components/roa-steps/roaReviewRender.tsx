@@ -95,7 +95,7 @@ export const renderCompiledModule = (module: RoACompiledModule) => (
     <p className="mb-4 text-sm text-muted-foreground">{module.summary}</p>
 
     {module.outputValues.length > 0 && (
-      <div className="mb-4 grid gap-2 md:grid-cols-2">
+      <div className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-2">
         {module.outputValues.map((item) => (
           <div key={`${module.moduleId}-${item.label}`} className="rounded-md bg-muted/30 p-2">
             <p className="text-xs text-muted-foreground">{item.label}</p>

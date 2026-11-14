@@ -734,7 +734,7 @@ export function WillDraftingWizard({
         {/* ── Footer ───────────────────────────────────────── */}
         <div className="shrink-0 border-t border-gray-100 px-6 py-4 bg-gray-50/40">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Button variant="outline" onClick={onClose} className="text-sm">
                 Cancel
               </Button>
@@ -746,7 +746,7 @@ export function WillDraftingWizard({
               )}
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               {/* Step counter */}
               <span className="text-xs text-muted-foreground hidden sm:inline-block">
                 Step {currentStepIndex + 1} of {steps.length}

@@ -191,7 +191,7 @@ export function ReminderConfigPanel({ envelopeId, envelopeStatus }: ReminderConf
             </div>
 
             {/* Interval (fixed mode) + Max reminders */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {config.schedule === 'fixed' ? (
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground flex items-center gap-1">

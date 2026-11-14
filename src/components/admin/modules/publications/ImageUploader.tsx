@@ -154,7 +154,7 @@ export function ImageUploader({
               <ImageIcon className="h-12 w-12 text-gray-400" />
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-3">Upload an image or add URL</p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"

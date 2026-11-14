@@ -105,7 +105,7 @@ export function RoAStepStart({
             <h3 className="font-semibold">Resume Existing Drafts</h3>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {existingDrafts.map((draft) => {
               const completion = getCompletionStatus(draft);
               const completionPercentage =
@@ -211,7 +211,7 @@ export function RoAStepStart({
             Final records are read-only. Open one to download documents or branch a new editable
             version from the review step.
           </p>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {finalisedDrafts.map((draft) => (
               <Card key={draft.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
@@ -251,7 +251,7 @@ export function RoAStepStart({
       <Card className="bg-muted/30">
         <CardContent className="p-6">
           <h3 className="font-semibold mb-3">What you'll create:</h3>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                 <FileText className="h-4 w-4 text-primary" />

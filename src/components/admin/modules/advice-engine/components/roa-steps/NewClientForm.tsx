@@ -67,7 +67,7 @@ export function NewClientForm({ onDataChange, initialData }: NewClientFormProps)
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Basic Information */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="firstName">First Name *</Label>
             <Input
@@ -89,7 +89,7 @@ export function NewClientForm({ onDataChange, initialData }: NewClientFormProps)
         </div>
 
         {/* Contact Information */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="email">Email Address *</Label>
             <Input

@@ -58,7 +58,7 @@ export function IncomeDetailsForm() {
           <CardTitle className="text-lg font-semibold">Income Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="grossMonthlyIncome"
@@ -80,7 +80,7 @@ export function IncomeDetailsForm() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="netMonthlyIncome"
@@ -128,7 +128,7 @@ export function IncomeDetailsForm() {
           <CardTitle className="text-lg font-semibold">Personal Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <FormField
               control={form.control}
               name="currentAge"
@@ -188,7 +188,7 @@ export function IncomeDetailsForm() {
           <CardTitle className="text-lg font-semibold">Financial Position</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="totalOutstandingDebts"

@@ -9,7 +9,7 @@ export function IssuesSkeleton() {
         <Skeleton className="h-5 w-96 max-w-full" />
         <Skeleton className="h-4 w-72 max-w-full" />
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
         <Skeleton className="h-[122px] rounded-xl" />
         <Skeleton className="h-[122px] rounded-xl" />
         <Skeleton className="h-[122px] rounded-xl" />

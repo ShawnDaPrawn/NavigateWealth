@@ -16,7 +16,8 @@
     "npm:@types/node@*": "25.9.1",
     "npm:@zip.js/zip.js@*": "2.8.26",
     "npm:docx@*": "9.7.1",
-    "npm:hono@*": "4.13.7",
+    "npm:hono@*": "4.13.18",
+    "npm:hono@4.13.18": "4.13.18",
     "npm:jspdf-autotable@*": "5.0.8_jspdf@4.2.1",
     "npm:jspdf@*": "4.2.1",
     "npm:node-forge@1.4.0": "1.4.0",
@@ -344,8 +345,8 @@
         "minimalistic-assert"
       ]
     },
-    "hono@4.13.7": {
-      "integrity": "sha512-c8/gF9ac8Y78/agExVocyLevgR+JlpNB444Py0FSX8pJoPdYUfUzRcXtYEYGwt6l19qIlVZPN5Mfsw9jFShmQQ=="
+    "hono@4.13.18": {
+      "integrity": "sha512-H9q/E1XizaWstJxUW881dmLxEj+t/TrGGnyxINkm4+sK0qUwsMtFdo2BWI9Vs3cIS19MU6b6iCijoUoEf4f3DA=="
     },
     "html2canvas@1.4.1": {
       "integrity": "sha512-fPU6BHNpsyIhr8yyMpTLLxAbkaK8ArIBcmZIRiBLiDhjeqvXolaEmDGmELFuX9I4xDcaKKcJl+TKZLqruBbmWA==",
@@ -716,7 +717,7 @@
       "jsr:@supabase/supabase-js@2.49.8",
       "npm:@e965/xlsx@0.20.3",
       "npm:@types/node@*",
-      "npm:hono@4.13.7",
+      "npm:hono@4.13.18",
       "npm:pdf-lib@1.17.1",
       "npm:zod@4.6.5"
     ]

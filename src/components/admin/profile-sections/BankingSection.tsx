@@ -76,7 +76,7 @@ export function BankingSection({
     <div className="contents">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-[#6d28d9]/10 flex items-center justify-center">
                 <CreditCard className="h-5 w-5 text-[#6d28d9]" />
@@ -140,7 +140,7 @@ export function BankingSection({
                       key={account.id}
                       className={`p-5 rounded-lg border-2 ${isInEditMode ? 'border-[#6d28d9] bg-white' : 'border-gray-200 bg-white'}`}
                     >
-                      <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
                             <CreditCard className="h-5 w-5 text-[#6d28d9]" />
@@ -162,7 +162,7 @@ export function BankingSection({
                             )}
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           {!isInEditMode ? (
                             <div className="contents">
                               <Button
@@ -341,7 +341,7 @@ export function BankingSection({
                             <Label htmlFor={`proof-${account.id}`}>Proof of Bank Document</Label>
                             {account.proofOfBankDocument ? (
                               <div className="mt-1.5 p-4 border-2 border-green-200 rounded-lg bg-green-50">
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between flex-wrap gap-3">
                                   <div className="flex items-center gap-2">
                                     <FileText className="h-5 w-5 text-green-600" />
                                     <div>
@@ -351,7 +351,7 @@ export function BankingSection({
                                       <p className="text-xs text-gray-600">Document uploaded</p>
                                     </div>
                                   </div>
-                                  <div className="flex gap-2">
+                                  <div className="flex gap-2 flex-wrap">
                                     <Button
                                       variant="outline"
                                       size="sm"

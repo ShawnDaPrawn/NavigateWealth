@@ -6,6 +6,7 @@
 import React from 'react';
 import { Badge } from '../../../../../ui/badge';
 import { Label } from '../../../../../ui/label';
+import { ScrollRow } from '../../../../../ui/scroll-row';
 import { ProductKey, ProductKeyCategory } from '../types';
 import { KeyAPI } from '../api';
 import { CATEGORY_ICONS } from '../constants';
@@ -56,7 +57,7 @@ export function CategoryFilter({
   return (
     <div className={`space-y-2 ${className}`}>
       {label && <Label className="text-sm font-medium text-muted-foreground">{label}</Label>}
-      <div className="flex flex-wrap gap-2">
+      <ScrollRow className="gap-2 p-0.5 sm:flex-wrap sm:overflow-visible">
         {/* All Categories Badge */}
         <Badge
           variant={selectedCategory === 'all' ? 'default' : 'outline'}
@@ -87,7 +88,7 @@ export function CategoryFilter({
             </Badge>
           );
         })}
-      </div>
+      </ScrollRow>
     </div>
   );
 }

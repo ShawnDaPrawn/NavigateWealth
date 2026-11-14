@@ -196,7 +196,7 @@ export function ContentPipeline({
       </div>
 
       {/* Kanban columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-start min-h-[500px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4 items-start md:min-h-[500px]">
         {COLUMNS.map((col) => {
           const colArticles = grouped[col.status];
           const Icon = col.icon;
@@ -206,7 +206,7 @@ export function ContentPipeline({
             <div
               key={col.status}
               className={cn(
-                'rounded-xl border transition-all min-h-[400px] flex flex-col',
+                'rounded-xl border transition-all md:min-h-[400px] flex flex-col',
                 col.borderColor,
                 isDragOver ? 'ring-2 ring-purple-400 ring-offset-2 bg-purple-50/40' : 'bg-white',
               )}

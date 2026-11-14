@@ -773,7 +773,7 @@ export function PDFViewer({
         >
           {/* Hover label */}
           <div
-            className="absolute -top-6 left-0 px-2 py-0.5 rounded text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap flex items-center gap-1 pointer-events-none"
+            className="absolute -top-6 left-0 px-2 py-0.5 rounded text-xs font-medium text-white [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity whitespace-nowrap flex items-center gap-1 pointer-events-none"
             style={{
               backgroundColor: color,
               transform: `scale(${100 / zoom})`,
@@ -792,7 +792,7 @@ export function PDFViewer({
                 e.stopPropagation();
                 onFieldDelete(field.id);
               }}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 z-50"
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-red-600 z-50"
             >
               <X className="h-3 w-3" />
             </button>
@@ -801,7 +801,7 @@ export function PDFViewer({
           {/* Resize handle */}
           {!readOnly && (
             <div
-              className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-center justify-center z-40 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-center justify-center z-40 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
               onMouseDown={(e) => handleFieldResizeMouseDown(e, field)}
               style={{ transform: `scale(${100 / zoom})`, transformOrigin: 'bottom right' }}
             >
@@ -1070,9 +1070,9 @@ export function PDFViewer({
 
       {/* Floating toolbar */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 transition-transform duration-200 translate-y-2 group-hover/viewer:translate-y-0">
-        <div className="bg-gray-900/90 backdrop-blur text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-4 border border-white/10">
+        <div className="bg-gray-900/90 backdrop-blur text-white px-4 py-2 rounded-full shadow-2xl flex items-center gap-4 border border-white/10 flex-wrap">
           {/* Zoom controls */}
-          <div className="flex items-center gap-2 border-r border-white/20 pr-4">
+          <div className="flex items-center gap-2 border-r border-white/20 pr-4 flex-wrap">
             <Button
               variant="ghost"
               size="icon"
@@ -1095,7 +1095,7 @@ export function PDFViewer({
           </div>
 
           {/* Page info + fit controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {pages.length > 0 && (
               <span className="text-xs text-white/60 mr-1">
                 {pages.length} pg{pages.length !== 1 ? 's' : ''}

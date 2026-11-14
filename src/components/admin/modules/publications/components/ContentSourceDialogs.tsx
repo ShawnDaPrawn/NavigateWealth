@@ -187,7 +187,7 @@ export function ContentSourceDialogs({
                             <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-white">
                               {feed.type.toUpperCase()}
                             </Badge>
-                            <span className="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+                            <span className="text-xs text-blue-500 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity font-medium">
                               Select
                             </span>
                           </div>
@@ -250,7 +250,7 @@ export function ContentSourceDialogs({
             </div>
 
             {/* Frequency */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Check Interval</Label>
                 <Select
@@ -294,7 +294,7 @@ export function ContentSourceDialogs({
             </div>
 
             {/* Daily / Weekly limits */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Max per Day</Label>
                 <NumberInputField

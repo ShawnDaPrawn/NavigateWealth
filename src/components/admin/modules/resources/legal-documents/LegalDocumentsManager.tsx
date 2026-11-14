@@ -124,10 +124,10 @@ export default function LegalDocumentsManager() {
   });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
       <Card className="h-fit">
         <CardHeader>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle className="text-xl">Legal Documents</CardTitle>
               <CardDescription>
@@ -150,7 +150,7 @@ export default function LegalDocumentsManager() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-muted-foreground">
+          <div className="mb-4 grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-muted-foreground">
             <div>
               Versioned:{' '}
               <span className="font-medium text-gray-900">{migrationSummary.migrated}</span>

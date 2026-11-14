@@ -249,7 +249,7 @@ export function RoAStepModules({ draft, onUpdate, modules }: RoAStepModulesProps
           <div key={categoryName} className="space-y-4">
             <h3 className="font-semibold text-lg border-b pb-2">{categoryName}</h3>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {moduleIds.map((moduleId) => {
                 const module = allModules.find((m) => m.id === moduleId);
                 if (!module) return null;

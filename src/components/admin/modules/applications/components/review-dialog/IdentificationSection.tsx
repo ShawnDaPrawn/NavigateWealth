@@ -22,7 +22,7 @@ export function IdentificationSection({
       }
     >
       {isEditing ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
           <EditSelect
             label="ID Type"
             value={fv('idType')}
@@ -51,7 +51,7 @@ export function IdentificationSection({
           />
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
           <ViewField
             label="ID Type"
             value={

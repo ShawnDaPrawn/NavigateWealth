@@ -150,7 +150,7 @@ export function DocumentSummaryEntry({
           </div>
 
           {!editing && (
-            <div className="flex flex-shrink-0 items-center gap-1">
+            <div className="flex flex-shrink-0 items-center gap-1 flex-wrap">
               {canRetry && (
                 <Button
                   variant="ghost"
@@ -240,7 +240,7 @@ export function DocumentSummaryEntry({
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button size="sm" onClick={handleSave} disabled={saving || !draft.summary.trim()}>
                 <Check className="mr-2 h-4 w-4" />
                 {saving ? 'Saving…' : 'Save summary'}

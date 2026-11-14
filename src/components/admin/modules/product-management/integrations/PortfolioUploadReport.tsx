@@ -256,7 +256,7 @@ export function PortfolioUploadReport({
       </div>
 
       {report.dryRun && (
-        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4 flex-wrap">
           <Button variant="outline" onClick={onDismiss}>
             Cancel
           </Button>

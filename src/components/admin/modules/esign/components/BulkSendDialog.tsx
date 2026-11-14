@@ -551,7 +551,7 @@ export function BulkSendDialog({
                   onValueChange={(value) => setSourceMode(value as 'group' | 'csv')}
                   className="w-full"
                 >
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="w-full">
                     <TabsTrigger value="group">Client Groups</TabsTrigger>
                     <TabsTrigger value="csv">CSV Import</TabsTrigger>
                   </TabsList>
@@ -678,7 +678,7 @@ export function BulkSendDialog({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Campaign title</Label>
                   <Input

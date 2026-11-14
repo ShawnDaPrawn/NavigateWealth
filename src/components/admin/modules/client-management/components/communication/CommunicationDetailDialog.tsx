@@ -154,7 +154,7 @@ export function CommunicationDetailDialog({
             )}
 
             <div className="flex items-center justify-between pt-4 border-t">
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">{communication.category}</Badge>
                 {communication.sent_via_email && <Badge variant="outline">Email</Badge>}
                 {(communication.email_status === 'failed' ||
