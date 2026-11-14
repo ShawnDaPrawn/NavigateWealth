@@ -142,7 +142,7 @@ export const PropertiesPanel = ({
         </div>
 
         {/* Action Bar — Move, Duplicate, Delete */}
-        <div className="flex items-center gap-1 pt-1">
+        <div className="flex flex-wrap items-center gap-1 pt-1">
           <Button
             variant="outline"
             size="sm"

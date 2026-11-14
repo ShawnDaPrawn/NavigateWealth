@@ -113,7 +113,7 @@ export function Step1InputForm({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="w-full">
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-2" />
             Client Profile

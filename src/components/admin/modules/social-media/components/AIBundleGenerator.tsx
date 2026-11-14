@@ -519,7 +519,7 @@ export function AIBundleGenerator({ onUseContent, onUseImage, onUseBoth }: AIBun
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 pt-1">
+                      <div className="flex items-center gap-2 pt-1 flex-wrap">
                         <Button
                           variant="outline"
                           size="sm"
@@ -585,7 +585,7 @@ export function AIBundleGenerator({ onUseContent, onUseImage, onUseBoth }: AIBun
                       </p>
                     )}
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Button
                         variant="outline"
                         size="sm"

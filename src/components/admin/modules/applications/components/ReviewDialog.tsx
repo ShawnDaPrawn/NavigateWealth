@@ -258,7 +258,7 @@ export function ReviewDialog({
         {/* SCROLLABLE BODY */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-gray-50/30">
           {/* Overview strip */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
             {[
               {
                 label: 'Application ID',
@@ -433,7 +433,7 @@ export function ReviewDialog({
               Close
             </Button>
             {isActionable && (
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 flex-wrap">
                 <Button
                   variant="outline"
                   className="gap-1.5 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"

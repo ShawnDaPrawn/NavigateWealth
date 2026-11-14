@@ -57,7 +57,7 @@ export function IssuingCardsPanel() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={() => setCardholderOpen(true)}>
             <UserPlus className="h-4 w-4 mr-1" /> New cardholder
           </Button>

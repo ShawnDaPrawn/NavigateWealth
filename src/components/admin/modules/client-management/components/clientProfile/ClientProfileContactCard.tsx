@@ -30,7 +30,7 @@ export function ClientProfileContactCard({ state, actions }: ClientProfileContac
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <InputWithCopy
               label="Email"
@@ -96,7 +96,7 @@ export function ClientProfileContactCard({ state, actions }: ClientProfileContac
 
         <Separator className="my-6" />
         <h3 className="text-lg font-medium mb-4">Emergency Contact</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <InputWithCopy
               label="Contact Name"

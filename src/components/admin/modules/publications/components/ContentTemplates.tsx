@@ -131,7 +131,7 @@ function TemplateForm({ template, onSave, onCancel, isSaving }: TemplateFormProp
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-2 pt-2">
+      <div className="flex items-center justify-end gap-2 pt-2 flex-wrap">
         <Button type="button" variant="outline" size="sm" onClick={onCancel}>
           Cancel
         </Button>
@@ -284,7 +284,7 @@ export function ContentTemplates() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
             <Sparkles className="h-5 w-5 text-purple-600" />
@@ -297,7 +297,7 @@ export function ContentTemplates() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {templates.length === 0 && (
             <Button variant="outline" size="sm" onClick={handleSeedDefaults} className="gap-1.5">
               <RotateCcw className="h-3.5 w-3.5" />
@@ -323,7 +323,7 @@ export function ContentTemplates() {
           <p className="text-xs text-gray-500 mb-4">
             Create templates to streamline article creation
           </p>
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={handleSeedDefaults} className="gap-1.5">
               <RotateCcw className="h-3.5 w-3.5" />
               Load Default Templates
@@ -382,7 +382,7 @@ export function ContentTemplates() {
               )}
 
               {/* Actions */}
-              <div className="flex items-center gap-1.5 pt-2 border-t border-gray-100">
+              <div className="flex items-center gap-1.5 pt-2 border-t border-gray-100 flex-wrap">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -405,7 +405,7 @@ export function ContentTemplates() {
                 </Button>
 
                 {deleteConfirm === template.id ? (
-                  <div className="flex items-center gap-1 ml-auto">
+                  <div className="flex items-center gap-1 ml-auto flex-wrap">
                     <Button
                       variant="destructive"
                       size="sm"

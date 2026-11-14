@@ -195,7 +195,7 @@ export function HealthSection({
             <div className="contents">
               <Separator />
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="text-sm text-gray-900">Manage Health Conditions</h4>
                     <p className="text-xs text-gray-500">Details about health conditions</p>
@@ -239,7 +239,7 @@ export function HealthSection({
                           key={condition.id}
                           className={`p-5 rounded-lg border-2 ${isInEditMode ? 'border-[#6d28d9] bg-white' : 'border-gray-200 bg-white'}`}
                         >
-                          <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
                             <div className="flex items-center gap-2">
                               <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
                                 <Pill className="h-5 w-5 text-[#6d28d9]" />
@@ -258,7 +258,7 @@ export function HealthSection({
                                   )}
                               </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 flex-wrap">
                               {!isInEditMode ? (
                                 <div className="contents">
                                   <Button

@@ -53,7 +53,7 @@ export function PublicationsSkeleton() {
         {/* Analytics content area */}
         <div className="mt-6 space-y-6">
           {/* KPI row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
             <KPICardSkeleton />
             <KPICardSkeleton />
             <KPICardSkeleton />

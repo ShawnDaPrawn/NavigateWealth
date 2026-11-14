@@ -89,7 +89,7 @@ export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdmin
     <Card className="border-purple-200/60 bg-gradient-to-r from-purple-50/60 to-white shadow-none overflow-hidden">
       <CardContent className="p-5">
         {!isEditing ? (
-          <div className="flex items-center justify-between gap-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 sm:gap-6">
             {/* Left: Avatar + Info */}
             <div className="flex items-center gap-4 min-w-0">
               <Avatar className="h-12 w-12 ring-2 ring-purple-200 flex-shrink-0">
@@ -103,7 +103,7 @@ export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdmin
                   <h3 className="text-base font-semibold text-gray-900">
                     {displayFirstName} {displayLastName}
                   </h3>
-                  <Badge className="bg-purple-600 hover:bg-purple-700 text-[10px] px-1.5 py-0 h-5">
+                  <Badge className="h-5 bg-purple-600 px-1.5 py-0 text-[10px] text-white hover:bg-purple-700">
                     Super Admin
                   </Badge>
                   <Badge
@@ -187,7 +187,7 @@ export function SuperAdminProfileCard({ profile, loading, onUpdate }: SuperAdmin
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-purple-100">
+            <div className="flex justify-end gap-2 pt-2 border-t border-purple-100 flex-wrap">
               <Button
                 onClick={handleCancel}
                 variant="ghost"

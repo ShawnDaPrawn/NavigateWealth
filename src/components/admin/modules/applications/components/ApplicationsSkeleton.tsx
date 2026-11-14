@@ -69,7 +69,7 @@ export function ApplicationsSkeleton() {
       </div>
 
       {/* Stats Cards — 5 columns */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatsCardSkeleton active />
         <StatsCardSkeleton />
         <StatsCardSkeleton />

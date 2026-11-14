@@ -217,7 +217,7 @@ export function ContentCalendar({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
             <CalendarIcon className="h-5 w-5 text-purple-600" />
@@ -231,15 +231,15 @@ export function ContentCalendar({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Button variant="outline" size="sm" onClick={goToToday}>
             Today
           </Button>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             <Button variant="ghost" size="sm" onClick={goToPreviousMonth} className="h-8 w-8 p-0">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm font-semibold text-gray-900 min-w-[160px] text-center">
+            <span className="min-w-[120px] text-center text-sm font-semibold text-gray-900 sm:min-w-[160px]">
               {MONTH_NAMES[currentMonth]} {currentYear}
             </span>
             <Button variant="ghost" size="sm" onClick={goToNextMonth} className="h-8 w-8 p-0">
@@ -258,7 +258,7 @@ export function ContentCalendar({
       </div>
 
       {/* Month stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
         {[
           { label: 'Published', count: monthStats.published, color: 'bg-green-500' },
           { label: 'Scheduled', count: monthStats.scheduled, color: 'bg-blue-500' },
@@ -285,9 +285,10 @@ export function ContentCalendar({
           {DAY_NAMES.map((day) => (
             <div
               key={day}
-              className="py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-gray-500"
+              className="py-2.5 text-center text-[11px] font-semibold tracking-wider text-gray-500 uppercase sm:text-xs"
             >
-              {day}
+              <span className="sm:hidden">{day.charAt(0)}</span>
+              <span className="hidden sm:inline">{day}</span>
             </div>
           ))}
         </div>
@@ -299,7 +300,7 @@ export function ContentCalendar({
               key={i}
               onClick={() => setSelectedDay(day.articles.length > 0 ? day : null)}
               className={cn(
-                'min-h-[100px] p-1.5 border-b border-r border-gray-100 text-left transition-colors',
+                'min-h-[56px] p-1 border-b border-r border-gray-100 text-left transition-colors sm:min-h-[100px] sm:p-1.5',
                 !day.isCurrentMonth && 'bg-gray-50/50',
                 day.isToday && 'bg-purple-50/50',
                 selectedDay &&
@@ -320,14 +321,26 @@ export function ContentCalendar({
                   {day.date.getDate()}
                 </span>
                 {day.articles.length > 2 && (
-                  <span className="text-[10px] text-gray-400 font-medium">
+                  <span className="hidden text-[10px] font-medium text-gray-400 sm:inline">
                     +{day.articles.length - 2}
                   </span>
                 )}
               </div>
 
+              {/* On a phone a cell is ~50px wide: dots, tap for the day's articles. */}
+              {day.articles.length > 0 && (
+                <div className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden="true">
+                  {day.articles.slice(0, 3).map((article) => (
+                    <span
+                      key={article.id}
+                      className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT_COLORS[article.status])}
+                    />
+                  ))}
+                </div>
+              )}
+
               {/* Article pills (show max 2) */}
-              <div className="space-y-0.5">
+              <div className="hidden space-y-0.5 sm:block">
                 {day.articles.slice(0, 2).map((article) => (
                   <div
                     key={article.id}
@@ -430,7 +443,7 @@ export function ContentCalendar({
                       e.stopPropagation();
                       onEditArticle(article);
                     }}
-                    className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-7 w-7 p-0 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
                   </Button>

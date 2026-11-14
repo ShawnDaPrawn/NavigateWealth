@@ -124,7 +124,7 @@ export function PolicyDocumentViewer({
         } flex flex-col p-0 gap-0 overflow-hidden`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50/80 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50/80 flex-shrink-0 flex-wrap gap-x-3 gap-y-2">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
               <FileText className="h-4 w-4 text-purple-600" />
@@ -167,7 +167,7 @@ export function PolicyDocumentViewer({
             </div>
           </div>
 
-          <div className="flex items-center gap-1 flex-shrink-0 ml-3">
+          <div className="flex items-center gap-1 flex-shrink-0 ml-3 flex-wrap">
             {signedUrl && (
               <div className="contents">
                 <Button
@@ -212,7 +212,7 @@ export function PolicyDocumentViewer({
                 <AlertCircle className="h-10 w-10 text-red-400 mx-auto mb-3" />
                 <p className="text-sm font-medium text-gray-800 mb-1">Unable to load document</p>
                 <p className="text-xs text-gray-500 mb-4">{error}</p>
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={fetchSignedUrl}>
                     Try Again
                   </Button>

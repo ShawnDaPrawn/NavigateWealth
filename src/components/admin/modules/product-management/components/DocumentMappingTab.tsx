@@ -681,7 +681,7 @@ export function DocumentMappingTab() {
                           {new Date(existingMap.updatedAt).toLocaleDateString('en-ZA')}
                         </span>
                       )}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {(benefitCount > 0 || productCount > 0) && (
                           <Button
                             onClick={(e) => {

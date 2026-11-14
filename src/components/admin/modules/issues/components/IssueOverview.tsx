@@ -68,7 +68,7 @@ export function IssueViewCards({
     <div
       role="group"
       aria-label="Filter issues by view"
-      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1"
     >
       {ISSUE_VIEWS.map((view) => {
         const config = issueViewConfig[view];

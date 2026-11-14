@@ -442,7 +442,7 @@ export function VoiceRecorderButton({ onInsertText, disabled = false }: VoiceRec
             </p>
             {warning && <p className="text-[10px] text-amber-600 mt-1">{warning}</p>}
           </div>
-          <div className="flex items-center gap-1 shrink-0 pt-1">
+          <div className="flex items-center gap-1 shrink-0 pt-1 flex-wrap">
             <Button
               type="button"
               size="sm"

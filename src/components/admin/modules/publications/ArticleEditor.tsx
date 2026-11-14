@@ -605,7 +605,7 @@ export function ArticleEditor({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={handleBackClick}>
             <ArrowLeft className="h-4 w-4" />
@@ -629,7 +629,7 @@ export function ArticleEditor({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             onClick={() => setActiveTab(activeTab === 'preview' ? 'editor' : 'preview')}
@@ -708,7 +708,7 @@ export function ArticleEditor({
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <button
             onClick={() => setActiveTab('editor')}
             className={cn(

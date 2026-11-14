@@ -182,7 +182,7 @@ export function Step3ManualAdjustment({
               <CardTitle className="text-base flex justify-between items-center">
                 <span>Impact Analysis</span>
                 {adjustments.length > 0 ? (
-                  <Badge variant="default" className="bg-amber-600">
+                  <Badge variant="default" className="bg-amber-600 text-white">
                     Modified
                   </Badge>
                 ) : (

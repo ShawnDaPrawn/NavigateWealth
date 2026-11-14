@@ -228,7 +228,7 @@ export function PrepareFormEditor({
     return (
       <div className="fixed inset-0 z-50 bg-gray-50 flex flex-col">
         {/* Full Screen Header */}
-        <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+        <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => setIsFullScreen(false)}>
               <ArrowLeft className="h-4 w-4 mr-1" />
@@ -237,7 +237,7 @@ export function PrepareFormEditor({
             <h2 className="font-semibold text-lg">{envelope.title}</h2>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               onClick={handleSave}
@@ -342,7 +342,7 @@ export function PrepareFormEditor({
     <div className="space-y-4">
       {/* Header */}
       <Card className="p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             {onBack && (
               <Button variant="ghost" size="sm" onClick={onBack} className="h-8">
@@ -358,7 +358,7 @@ export function PrepareFormEditor({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {autoSaving && (
               <Badge variant="secondary" className="text-blue-600">
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -460,7 +460,7 @@ export function PrepareFormEditor({
               </span>
             </div>
             {isValid ? (
-              <Badge variant="default" className="ml-auto bg-green-600">
+              <Badge variant="default" className="ml-auto bg-green-600 text-white">
                 Ready to send
               </Badge>
             ) : (

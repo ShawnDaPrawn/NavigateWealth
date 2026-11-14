@@ -36,6 +36,7 @@ import {
 } from '../../../../ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../../ui/popover';
 import { Calendar } from '../../../../ui/calendar';
+import { useIsMobile } from '../../../../ui/use-mobile';
 import { useEnvelopes } from '../hooks/useEnvelopes';
 import { useEnvelopeActions } from '../hooks/useEnvelopeActions';
 import { StatusBadge } from './StatusBadge';
@@ -70,6 +71,7 @@ export function EnvelopesList({
 }: EnvelopesListProps) {
   const { envelopes, loading, error, refetch } = useEnvelopes({ autoLoad: true, refreshTrigger });
   const { voidEnvelope, voiding, deleteEnvelope, deleting } = useEnvelopeActions();
+  const isMobile = useIsMobile();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -219,7 +221,7 @@ export function EnvelopesList({
     <div className="space-y-4">
       {/* ==================== BULK ACTION BAR ==================== */}
       {hasSelection && (
-        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 animate-in slide-in-from-top-2">
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 animate-in slide-in-from-top-2 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-blue-800">
               {selectedIds.size} envelope{selectedIds.size > 1 ? 's' : ''} selected
@@ -234,7 +236,7 @@ export function EnvelopesList({
               Clear
             </Button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {canBulkRemind && (
               <Button
                 size="sm"
@@ -263,9 +265,9 @@ export function EnvelopesList({
 
       {/* ==================== FILTERS ==================== */}
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-1">
-            <div className="relative flex-1 max-w-sm">
+        <div className="flex items-start justify-between gap-2 sm:items-center sm:gap-4">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <div className="relative w-full sm:w-auto sm:max-w-sm sm:flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search envelopes..."
@@ -309,14 +311,14 @@ export function EnvelopesList({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     id="date"
                     variant={'outline'}
                     className={cn(
-                      'w-[260px] justify-start text-left font-normal',
+                      'w-full justify-start text-left font-normal sm:w-[260px]',
                       !dateRange && 'text-muted-foreground',
                     )}
                   >
@@ -342,7 +344,7 @@ export function EnvelopesList({
                     defaultMonth={dateRange?.from}
                     selected={dateRange}
                     onSelect={setDateRange}
-                    numberOfMonths={2}
+                    numberOfMonths={isMobile ? 1 : 2}
                   />
                 </PopoverContent>
               </Popover>
@@ -388,9 +390,9 @@ export function EnvelopesList({
                 />
               </TableHead>
               <TableHead>Envelope</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Recipients</TableHead>
-              <TableHead>Last Updated</TableHead>
+              <TableHead className="hidden sm:table-cell">Status</TableHead>
+              <TableHead className="hidden sm:table-cell">Recipients</TableHead>
+              <TableHead className="hidden sm:table-cell">Last Updated</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -398,7 +400,7 @@ export function EnvelopesList({
             {filteredEnvelopes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
-                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <div className="sticky left-0 w-[calc(100vw-5rem)] sm:static sm:w-auto flex flex-col items-center justify-center text-muted-foreground">
                     <FileText className="h-8 w-8 mb-2 opacity-20" />
                     <p>No envelopes found</p>
                     {envelopes.length === 0 && (
@@ -422,24 +424,42 @@ export function EnvelopesList({
                       aria-label={`Select envelope ${envelope.title}`}
                     />
                   </TableCell>
-                  <TableCell className="max-w-[280px] sm:max-w-[340px]">
+                  <TableCell className="max-w-[calc(100vw-12rem)] whitespace-normal sm:max-w-[340px] sm:whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       {/* P8.1 — page-1 PDF thumbnail (60x80, lazy + cached). */}
-                      <EnvelopeThumbnail envelopeId={envelope.id} version={envelope.updated_at} />
+                      <div className="hidden shrink-0 sm:block">
+                        <EnvelopeThumbnail envelopeId={envelope.id} version={envelope.updated_at} />
+                      </div>
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium truncate" title={envelope.title}>
                           {envelope.title}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="hidden text-xs text-muted-foreground sm:inline">
                           ID: {envelope.id.slice(0, 8)}...
                         </span>
+                        {/* On a phone the status, signers and date columns are hidden,
+                            so their essentials sit under the title. */}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
+                          <StatusBadge status={envelope.status} type="envelope" size="sm" />
+                          {envelope.signedCount != null && (envelope.totalSigners ?? 0) > 0 && (
+                            <span>
+                              {envelope.signedCount}/{envelope.totalSigners} signed
+                            </span>
+                          )}
+                          <span>
+                            {format(
+                              new Date(envelope.updated_at || envelope.created_at),
+                              'd MMM yyyy',
+                            )}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <StatusBadge status={envelope.status} type="envelope" showIcon size="sm" />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div className="flex flex-col gap-1">
                       {envelope.signers?.slice(0, 2).map((r) => (
                         <div key={r.id} className="text-sm flex items-center gap-1">
@@ -465,7 +485,7 @@ export function EnvelopesList({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div className="text-sm">
                       {format(
                         new Date(envelope.updated_at || envelope.created_at),

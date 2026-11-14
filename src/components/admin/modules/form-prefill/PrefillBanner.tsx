@@ -34,7 +34,7 @@ export function PrefillBanner({
     <div className="space-y-2">
       <Alert className="border-purple-100 bg-purple-50/40">
         <Sparkles className="h-4 w-4 text-purple-600" />
-        <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <AlertDescription className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm">
             {loading && (
               <span className="inline-flex items-center gap-2">

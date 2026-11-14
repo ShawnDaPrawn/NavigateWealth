@@ -176,7 +176,7 @@ export function EntityDocumentsDialog({ open, onOpenChange, entity }: EntityDocu
                           {new Date(doc.uploadedAt).toLocaleDateString()}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0 flex-wrap">
                         <Button
                           type="button"
                           size="icon"

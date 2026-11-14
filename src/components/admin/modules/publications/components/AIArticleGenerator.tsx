@@ -459,7 +459,7 @@ export function AIArticleGenerator({
                       type="button"
                       onClick={() => removeKeyPoint(idx)}
                       disabled={isGenerating}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="[@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="h-3 w-3 text-red-400 hover:text-red-600" />
                     </button>
@@ -528,7 +528,7 @@ export function AIArticleGenerator({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50/50 rounded-b-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50/50 rounded-b-2xl flex-wrap gap-3">
           <div className="flex items-center gap-2">
             {isGenerating && progress && (
               <div className="flex items-center gap-2 text-purple-600">
@@ -537,7 +537,7 @@ export function AIArticleGenerator({
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="ghost" size="sm" onClick={onClose} disabled={isGenerating}>
               Cancel
             </Button>

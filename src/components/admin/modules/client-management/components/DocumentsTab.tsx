@@ -339,14 +339,14 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-medium">Document Management</h3>
           <p className="text-sm text-muted-foreground">
             Upload documents and links for {selectedClient.firstName} {selectedClient.lastName}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={fetchDocuments} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh

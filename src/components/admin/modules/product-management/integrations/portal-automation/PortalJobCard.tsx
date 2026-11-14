@@ -239,7 +239,7 @@ export function PortalJobCard({
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-5 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
               <div className="rounded-lg border bg-gray-50 p-2 text-center">
                 <p className="text-[10px] uppercase text-gray-500">Total</p>
                 <p className="font-semibold">{queueSummary.total}</p>
@@ -712,7 +712,7 @@ export function PortalJobCard({
                   {discoveryReport.urlHost || 'provider portal'} for {selectedCategoryId}.
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-5 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
                 <div className="rounded-lg border bg-gray-50 p-3">
                   <p className="text-[10px] uppercase text-gray-500">Inputs</p>
                   <p className="font-semibold">{discoveryReport.summary.inputCount}</p>

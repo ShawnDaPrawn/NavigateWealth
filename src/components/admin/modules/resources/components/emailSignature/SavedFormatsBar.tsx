@@ -88,7 +88,7 @@ export function SavedFormatsBar({
                   Load
                 </Button>
                 <button
-                  className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                  className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
                   onClick={() => onDeleteFormat(fmt.id)}
                   title="Delete format"
                 >

@@ -37,7 +37,7 @@ export function GoalCard({ goal, policies, onEdit }: GoalCardProps) {
   return (
     <Card className="min-w-[320px] w-full md:w-[380px] shadow-sm hover:shadow-md transition-shadow border-t-4 border-t-blue-500 flex flex-col h-full">
       <CardHeader className="pb-3 flex-none">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <Target className="h-4 w-4 text-blue-500" />

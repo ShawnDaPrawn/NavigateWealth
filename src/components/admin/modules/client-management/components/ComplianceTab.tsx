@@ -1,3 +1,4 @@
+import { ScrollRow } from '../../../../ui/scroll-row';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -234,7 +235,7 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
 
       {/* SUBTABS - Level 2: Secondary Navigation */}
       <div className="pb-4 border-b border-gray-200">
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <ScrollRow className="gap-2 p-0.5">
           {SUB_TABS.map((subtab) => {
             const Icon = subtab.icon;
             return (
@@ -252,7 +253,7 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
               </button>
             );
           })}
-        </div>
+        </ScrollRow>
       </div>
 
       {/* ──── Sub-tab Content ──── */}

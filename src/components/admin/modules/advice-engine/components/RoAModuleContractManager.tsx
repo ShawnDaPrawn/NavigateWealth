@@ -233,7 +233,7 @@ export function RoAModuleContractManager() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
         <Card>
           <CardContent className="h-96 animate-pulse bg-muted/30" />
         </Card>
@@ -269,10 +269,10 @@ export function RoAModuleContractManager() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Contracts</div>
+          <CardContent className="p-3 sm:p-4">
+            <div className="text-xs text-muted-foreground sm:text-sm">Contracts</div>
             <div className="text-2xl font-semibold">{visibleContracts.length}</div>
             {filtersActive && (
               <div className="mt-2 text-xs text-muted-foreground">
@@ -282,14 +282,14 @@ export function RoAModuleContractManager() {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Schema Version</div>
+          <CardContent className="p-3 sm:p-4">
+            <div className="text-xs text-muted-foreground sm:text-sm">Schema Version</div>
             <div className="text-2xl font-semibold">{schemaFormat?.schemaVersion || '1.0'}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Active modules</div>
+          <CardContent className="p-3 sm:p-4">
+            <div className="text-xs text-muted-foreground sm:text-sm">Active modules</div>
             <div className="text-2xl font-semibold">
               {visibleContracts.filter((contract) => contract.status === 'active').length}
             </div>
@@ -298,7 +298,7 @@ export function RoAModuleContractManager() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
         <Card className="h-fit">
           <CardHeader className="space-y-4 pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -320,7 +320,7 @@ export function RoAModuleContractManager() {
               <Filter className="h-3.5 w-3.5" />
               Filters
             </div>
-            <div className="grid gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Status</Label>
                 <Select
@@ -444,7 +444,7 @@ export function RoAModuleContractManager() {
 
         {draft ? (
           <Tabs defaultValue="basic" className="space-y-4">
-            <TabsList className="grid grid-cols-3 lg:grid-cols-7">
+            <TabsList className="w-full">
               <TabsTrigger value="basic">Basic</TabsTrigger>
               {isConversationContract(draft) ? (
                 <TabsTrigger value="conversation">Conversation</TabsTrigger>

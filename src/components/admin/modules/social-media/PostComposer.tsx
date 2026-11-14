@@ -330,7 +330,7 @@ export function PostComposer({
               onChange={(e) => setLinkTitle(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
             <Input
               aria-label="UTM source"
               placeholder="UTM source"
@@ -366,7 +366,7 @@ export function PostComposer({
             </p>
           )}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="outline" disabled={!canSubmit} onClick={() => submit('draft')}>
                 <Save className="h-4 w-4 mr-2" />
                 Save as Buffer draft
@@ -380,7 +380,7 @@ export function PostComposer({
                 Preview
               </Button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={!canSubmit} onClick={() => submit('queue')}>
                 Add to queue
               </Button>

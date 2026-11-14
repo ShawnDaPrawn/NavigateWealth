@@ -37,7 +37,7 @@ export function ExistingCoverForm({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-medium">Existing Cover Configuration</h3>
           <p className="text-sm text-muted-foreground">
@@ -89,7 +89,7 @@ export function ExistingCoverForm({
           <CardTitle>Life Cover</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="existingCoverLifePersonal"
@@ -128,7 +128,7 @@ export function ExistingCoverForm({
           <CardTitle>Disability Cover</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="existingCoverDisabilityPersonal"
@@ -167,7 +167,7 @@ export function ExistingCoverForm({
           <CardTitle>Severe Illness Cover</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="existingCoverSevereIllnessPersonal"
@@ -207,7 +207,7 @@ export function ExistingCoverForm({
           <CardDescription>Offsets only against short-term benefits</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="existingCoverIPTemporaryPersonal"
@@ -268,7 +268,7 @@ export function ExistingCoverForm({
           <CardDescription>Offsets only against benefits payable to retirement</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="existingCoverIPPermanentPersonal"
