@@ -132,7 +132,7 @@ export function SignaturePreviewPanel({
                   </div>
                 ) : (
                   <div className="text-center py-16 px-6">
-                    <span className="ds-meta">Enter a full name to see the preview</span>
+                    <span className="ds-meta">Enter a name to see the preview</span>
                   </div>
                 )}
               </motion.div>
