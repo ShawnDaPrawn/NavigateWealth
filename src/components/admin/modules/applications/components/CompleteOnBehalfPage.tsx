@@ -12,6 +12,7 @@
 
 import { useCallback } from 'react';
 import { BackLink } from '../../../layout/page/FilterControls';
+import { ErrorState } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Progress } from '../../../../ui/progress';
@@ -57,6 +58,8 @@ export function CompleteOnBehalfPage({
     data,
     isLoading,
     isInitialLoad,
+    loadError,
+    retryLoad,
     validationErrors,
     progress,
     updateData,
@@ -181,7 +184,14 @@ export function CompleteOnBehalfPage({
             </div>
           </div>
         )}
-        {isInitialLoad ? (
+        {loadError ? (
+          <ErrorState
+            title="Unable to load the application"
+            description="The saved application could not be loaded, so nothing can be changed yet. Nothing was overwritten."
+            onRetry={retryLoad}
+            details={loadError}
+          />
+        ) : isInitialLoad ? (
           <div role="status" aria-label="Loading the application" className="space-y-4">
             <span className="sr-only">Loading the application…</span>
             <Skeleton className="h-6 w-56" />
@@ -207,18 +217,18 @@ export function CompleteOnBehalfPage({
           <Button
             variant="outline"
             onClick={goToPreviousStep}
-            disabled={currentStep === 1 || isLoading}
+            disabled={currentStep === 1 || isLoading || !!loadError}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             Previous
           </Button>
           {currentStep < totalSteps ? (
-            <Button onClick={goToNextStep} disabled={isLoading || isInitialLoad}>
+            <Button onClick={goToNextStep} disabled={isLoading || isInitialLoad || !!loadError}>
               Next
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           ) : (
-            <Button onClick={() => void handleSubmit()} disabled={isLoading}>
+            <Button onClick={() => void handleSubmit()} disabled={isLoading || !!loadError}>
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (

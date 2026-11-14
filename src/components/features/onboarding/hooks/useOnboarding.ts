@@ -61,6 +61,11 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  // Loading an existing application failed (network / server error — not
+  // "no application yet"). Nothing is saved while this is set, so an empty
+  // form can never overwrite the saved application.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const totalSteps = 5;
 
   // Refs for debounce and dedup
@@ -73,7 +78,9 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
   // Stable userId that never clears — survives logout transitions
   const stableUserIdRef = useRef(effectiveUserId);
   const isInitialLoadRef = useRef(true);
-  const hasMountedRef = useRef(false);
+  const loadErrorRef = useRef<string | null>(null);
+  // The user and attempt the last load ran for (a retry bumps the attempt).
+  const loadedForRef = useRef<string | null>(null);
   // Cached session JWT for the synchronous beforeunload keepalive save —
   // /applications routes require a real session token (SECURITY-AUDIT C-8)
   // and beforeunload cannot await a token fetch. Refreshed on every save.
@@ -84,6 +91,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
   stepRef.current = currentStep;
   userIdRef.current = effectiveUserId;
   isInitialLoadRef.current = isInitialLoad;
+  loadErrorRef.current = loadError;
   if (effectiveUserId) {
     stableUserIdRef.current = effectiveUserId;
   }
@@ -91,7 +99,8 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
   // ── Core save function ────────────────────────────────────────────────────
   const saveToServer = useCallback(async (forceUserId?: string): Promise<boolean> => {
     const userId = forceUserId || stableUserIdRef.current;
-    if (!userId || isInitialLoadRef.current || isSavingRef.current) return false;
+    if (!userId || isInitialLoadRef.current || loadErrorRef.current || isSavingRef.current)
+      return false;
 
     const dataToSave = { ...dataRef.current, currentStep: stepRef.current };
     const serialised = JSON.stringify(dataToSave);
@@ -140,20 +149,32 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
       return;
     }
 
-    // Prevent duplicate loads on re-mount with same userId
-    if (hasMountedRef.current && userIdRef.current === effectiveUserId) return;
-    hasMountedRef.current = true;
+    // Prevent duplicate loads on re-mount with the same user (a retry differs)
+    const loadKey = `${effectiveUserId}:${reloadKey}`;
+    if (loadedForRef.current === loadKey) return;
+    loadedForRef.current = loadKey;
 
     let cancelled = false;
 
     const loadData = async () => {
       setIsInitialLoad(true);
+      isInitialLoadRef.current = true;
+      setLoadError(null);
       logger.debug('[useOnboarding] Loading application for user', { userId: effectiveUserId });
 
       try {
         const existingApp = await getApplication(effectiveUserId);
 
         if (cancelled) return;
+
+        // The service answers success with data null when there is no
+        // application yet; success false means the load itself failed.
+        if (!existingApp.success) {
+          logger.error('[useOnboarding] Load FAILED', { error: existingApp.error });
+          loadErrorRef.current = existingApp.error || 'Could not load the application';
+          setLoadError(loadErrorRef.current);
+          return;
+        }
 
         if (existingApp.success && existingApp.data) {
           const appData = existingApp.data;
@@ -195,7 +216,11 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
         }
       } catch (error) {
         console.error('[useOnboarding] Load FAILED:', error);
-        prefillFromUser();
+        if (!cancelled) {
+          loadErrorRef.current =
+            error instanceof Error ? error.message : 'Could not load the application';
+          setLoadError(loadErrorRef.current);
+        }
       } finally {
         if (!cancelled) {
           setIsInitialLoad(false);
@@ -219,11 +244,16 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveUserId]); // Only re-run if userId changes
+  }, [effectiveUserId, reloadKey]); // Re-run when the user changes or on retry
+
+  /** Try loading the saved application again after a failure. */
+  const retryLoad = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
 
   // ── Debounced save on data changes ────────────────────────────────────────
   useEffect(() => {
-    if (isInitialLoad || !effectiveUserId) return;
+    if (isInitialLoad || loadError || !effectiveUserId) return;
 
     // Re-arm the unload-save token on every edit: getAccessToken() proactively
     // refreshes near-expiry tokens, so even after a long idle period the
@@ -252,7 +282,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
         debounceTimerRef.current = null;
       }
     };
-  }, [data, currentStep, effectiveUserId, isInitialLoad, saveToServer]);
+  }, [data, currentStep, effectiveUserId, isInitialLoad, loadError, saveToServer]);
 
   // ── Save before unmount / page unload ─────────────────────────────────────
   useEffect(() => {
@@ -267,7 +297,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
 
     const handleBeforeUnload = () => {
       const uid = stableUserIdRef.current;
-      if (!uid || isInitialLoadRef.current) return;
+      if (!uid || isInitialLoadRef.current || loadErrorRef.current) return;
       const token = accessTokenRef.current;
       if (!token) return; // can't authenticate — debounced saves have the data
       const dataToSave = { ...dataRef.current, currentStep: stepRef.current };
@@ -356,6 +386,7 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
 
   // ── Submission ────────────────────────────────────────────────────────────
   const submit = async () => {
+    if (loadErrorRef.current) return { success: false, error: loadErrorRef.current };
     const errors = validateStep(currentStep, data);
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -395,6 +426,8 @@ export function useOnboarding(options: UseOnboardingOptions = {}) {
     data,
     isLoading,
     isInitialLoad,
+    loadError,
+    retryLoad,
     validationErrors,
     applicationId,
     mode,
