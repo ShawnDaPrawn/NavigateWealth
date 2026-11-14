@@ -24,6 +24,9 @@ interface DocumentSummaryTimelineProps {
   clientId: string;
   /** Bumped by the parent after an upload/delete so the timeline refetches. */
   refreshToken?: number;
+  /** Heading; the E-Sign tab shows the same summaries as "Signing summaries". */
+  title?: string;
+  description?: string;
 }
 
 /**
@@ -38,7 +41,12 @@ interface DocumentSummaryTimelineProps {
  * Permissions come from the server (`canEdit` / `canGenerate`) rather than
  * being re-derived here. Editing is super admin only.
  */
-export function DocumentSummaryTimeline({ clientId, refreshToken }: DocumentSummaryTimelineProps) {
+export function DocumentSummaryTimeline({
+  clientId,
+  refreshToken,
+  title = 'Activity timeline',
+  description = 'AI summaries of what each batch of documents was — a running history of what was done for this client.',
+}: DocumentSummaryTimelineProps) {
   const [summaries, setSummaries] = useState<DocumentSummary[]>([]);
   const [batches, setBatches] = useState<DocumentBatch[]>([]);
   const [canEdit, setCanEdit] = useState(false);
@@ -157,12 +165,9 @@ export function DocumentSummaryTimeline({ clientId, refreshToken }: DocumentSumm
         <div>
           <CardTitle className="flex items-center gap-2 text-lg">
             <History className="h-5 w-5" />
-            Document Activity Timeline
+            {title}
           </CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            AI summaries of what each batch of documents was — a running history of what was done
-            for this client.
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-2">
@@ -287,7 +292,7 @@ export function DocumentSummaryTimeline({ clientId, refreshToken }: DocumentSumm
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete}>Delete summary</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

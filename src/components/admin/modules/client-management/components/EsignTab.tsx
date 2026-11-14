@@ -26,6 +26,7 @@ import { Input } from '../../../../ui/input';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '../../../../ui/table';
 import { Plus, AlertCircle, Search, X, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { DocumentSummaryTimeline } from './DocumentSummaryTimeline';
 import { logger } from '../../../../../utils/logger';
 
 // ==================== SHARED E-SIGN MODULE IMPORTS ====================
@@ -758,8 +759,10 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
                   <TableHead>Status</TableHead>
                   <TableHead>Progress</TableHead>
                   <TableHead>Signers</TableHead>
-                  <TableHead>Expiry</TableHead>
-                  <TableHead className="text-right pr-4">Actions</TableHead>
+                  <TableHead>Expires</TableHead>
+                  <TableHead className="text-right pr-4">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -768,6 +771,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
                     key={envelope.id}
                     envelope={envelope}
                     resuming={resumingEnvelopeId === envelope.id}
+                    actionsLayout="menu"
                     onRowClick={() => handleEnvelopeClick(envelope)}
                     onView={() => handleViewEnvelope(envelope)}
                     onDownload={() => handleDownload(envelope)}
@@ -786,6 +790,13 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Signing summaries (design: CM 11 — summaries below the table) */}
+      <DocumentSummaryTimeline
+        clientId={selectedClient.id}
+        title="Signing summaries"
+        description="Document summaries for this client: what each batch of signed and uploaded documents was."
+      />
 
       {/* ==================== DIALOGS ==================== */}
 

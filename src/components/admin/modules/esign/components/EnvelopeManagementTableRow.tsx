@@ -17,7 +17,14 @@ import {
   Loader2,
   Pencil,
   Award,
+  MoreHorizontal,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../../ui/dropdown-menu';
 import { toast } from 'sonner';
 import { esignApi } from '../api';
 import {
@@ -40,6 +47,11 @@ export interface EnvelopeManagementTableRowProps {
   onDownload: () => Promise<void>;
   onDelete: () => void;
   onRecall: () => void;
+  /**
+   * 'icons' (default): every action as an icon button. 'menu': the most-used
+   * action as a labelled button and the rest under ⋯ (client page E-Sign tab).
+   */
+  actionsLayout?: 'icons' | 'menu';
 }
 
 export function EnvelopeManagementTableRow({
@@ -51,6 +63,7 @@ export function EnvelopeManagementTableRow({
   onDownload,
   onDelete,
   onRecall,
+  actionsLayout = 'icons',
 }: EnvelopeManagementTableRowProps) {
   const progress = calculateSigningProgress(envelope);
   const daysUntilExpiry = getDaysUntilExpiry(envelope.expires_at ?? null);
@@ -179,9 +192,179 @@ export function EnvelopeManagementTableRow({
       </TableCell>
 
       <TableCell className="text-right pr-4">
-        <div className="flex items-center justify-end gap-1">
-          {isDraft && !portalReadOnly && (
-            <div className="contents">
+        {actionsLayout === 'menu' ? (
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            {isDraft && !portalReadOnly ? (
+              <Button size="sm" variant="outline" onClick={onRowClick}>
+                Continue
+              </Button>
+            ) : isCompleted ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDownloadDocument}
+                disabled={downloadLoading}
+              >
+                {downloadLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Download PDF
+              </Button>
+            ) : !isDraft ? (
+              <Button size="sm" variant="outline" onClick={onView}>
+                View details
+              </Button>
+            ) : null}
+            {(isCompleted || (isPending && !portalReadOnly) || (isDraft && !portalReadOnly)) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    aria-label={`More actions: ${envelope.title}`}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {isCompleted && (
+                    <>
+                      <DropdownMenuItem onClick={onView}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => void handleDownloadCertificate(e)}
+                        disabled={certLoading}
+                      >
+                        <Award className="mr-2 h-4 w-4" />
+                        Download certificate
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {isPending && !portalReadOnly && (
+                    <DropdownMenuItem onClick={onRecall}>
+                      <Undo2 className="mr-2 h-4 w-4" />
+                      Recall…
+                    </DropdownMenuItem>
+                  )}
+                  {isDraft && !portalReadOnly && (
+                    <DropdownMenuItem
+                      className="text-red-700 focus:text-red-700"
+                      onClick={onDelete}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete…
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-end gap-1">
+            {isDraft && !portalReadOnly && (
+              <div className="contents">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRowClick();
+                      }}
+                      aria-label="Continue editing"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Continue Editing</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                      }}
+                      aria-label="Delete envelope"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+
+            {isPending && !portalReadOnly && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRecall();
+                    }}
+                    aria-label="Recall envelope"
+                  >
+                    <Undo2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Recall</TooltipContent>
+              </Tooltip>
+            )}
+
+            {isCompleted && (
+              <div className="contents">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={handleDownloadDocument}
+                      disabled={downloadLoading}
+                      aria-label="Download PDF"
+                    >
+                      {downloadLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Download PDF</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8"
+                      onClick={handleDownloadCertificate}
+                      disabled={certLoading}
+                      aria-label="Download certificate"
+                    >
+                      {certLoading ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Award className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Certificate</TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+
+            {!isDraft && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -190,118 +373,18 @@ export function EnvelopeManagementTableRow({
                     className="h-8 w-8"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onRowClick();
+                      onView();
                     }}
-                    aria-label="Continue editing"
+                    aria-label="View details"
                   >
-                    <Pencil className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Continue Editing</TooltipContent>
+                <TooltipContent>View Details</TooltipContent>
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete();
-                    }}
-                    aria-label="Delete envelope"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Delete</TooltipContent>
-              </Tooltip>
-            </div>
-          )}
-
-          {isPending && !portalReadOnly && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 text-amber-500 hover:text-amber-600 hover:bg-amber-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRecall();
-                  }}
-                  aria-label="Recall envelope"
-                >
-                  <Undo2 className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Recall</TooltipContent>
-            </Tooltip>
-          )}
-
-          {isCompleted && (
-            <div className="contents">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={handleDownloadDocument}
-                    disabled={downloadLoading}
-                    aria-label="Download PDF"
-                  >
-                    {downloadLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Download PDF</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={handleDownloadCertificate}
-                    disabled={certLoading}
-                    aria-label="Download certificate"
-                  >
-                    {certLoading ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Award className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Certificate</TooltipContent>
-              </Tooltip>
-            </div>
-          )}
-
-          {!isDraft && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onView();
-                  }}
-                  aria-label="View details"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>View Details</TooltipContent>
-            </Tooltip>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </TableCell>
     </TableRow>
   );
