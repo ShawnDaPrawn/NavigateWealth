@@ -16,6 +16,7 @@ import type {
 import { formatZodError } from './shared-validation-utils.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 import { MAX_REASSIGN_BATCH, reassignClients } from './personnel-client-reassign-service.ts';
+import { personnelDocumentUrl, uploadPersonnelDocument } from './personnel-documents-service.ts';
 import { z } from 'npm:zod@4.6.5';
 
 const app = new Hono();
@@ -323,6 +324,66 @@ app.post('/:id/documents', async (c) => {
 
     const result = await PersonnelService.addDocument(asPersonnelRole(ctx.role), targetId, body);
     return c.json({ data: result });
+  } catch (e) {
+    return handleError(c, e);
+  }
+});
+
+/**
+ * POST /:id/documents/upload — store a compliance document (multipart: file,
+ * name, type) in the private personnel-documents bucket and record it.
+ */
+const DocumentUploadFieldsSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  type: z.enum(['qualification', 'cpd', 'identification', 'other']),
+});
+
+app.post('/:id/documents/upload', async (c) => {
+  try {
+    const ctx = await getAuthContext(c);
+    requireRole(ctx, ['super_admin', 'admin', 'compliance']);
+    await requireCapability(ctx, 'personnel', 'edit');
+
+    const body = await c.req.parseBody();
+    const file = body['file'];
+    // Duck-typed: a multipart file is a Blob with a name, whichever realm built it.
+    if (
+      typeof file !== 'object' ||
+      file === null ||
+      !('arrayBuffer' in file) ||
+      !('name' in file)
+    ) {
+      return c.json({ error: 'No file uploaded' }, 400);
+    }
+    const parsed = DocumentUploadFieldsSchema.safeParse({ name: body['name'], type: body['type'] });
+    if (!parsed.success) {
+      return c.json({ error: 'Validation failed', ...formatZodError(parsed.error) }, 400);
+    }
+
+    const targetId = c.req.param('id')!;
+    const doc = await uploadPersonnelDocument(
+      asPersonnelRole(ctx.role),
+      targetId,
+      file as File,
+      parsed.data,
+    );
+    return c.json({ data: doc });
+  } catch (e) {
+    return handleError(c, e);
+  }
+});
+
+/** GET /:id/documents/:docId/url — a short-lived link to open a stored document. */
+app.get('/:id/documents/:docId/url', async (c) => {
+  try {
+    const ctx = await getAuthContext(c);
+    requireRole(ctx, ['super_admin', 'admin', 'compliance']);
+    const url = await personnelDocumentUrl(
+      asPersonnelRole(ctx.role),
+      c.req.param('id')!,
+      c.req.param('docId')!,
+    );
+    return c.json({ data: { url } });
   } catch (e) {
     return handleError(c, e);
   }

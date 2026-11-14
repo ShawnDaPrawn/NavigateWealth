@@ -8,6 +8,8 @@ export interface PersonnelDocument {
   name: string;
   type: 'qualification' | 'cpd' | 'identification' | 'other';
   url: string;
+  /** Storage path in the private personnel-documents bucket (uploaded files). */
+  path?: string;
   uploadedAt: string;
   expiryDate?: string;
 }

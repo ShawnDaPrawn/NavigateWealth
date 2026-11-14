@@ -7,6 +7,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import type { ComplianceDocumentType } from '../api';
 import { personnelApi } from '../api';
 import { personnelKeys } from './usePersonnel';
 import type {
@@ -333,6 +334,32 @@ export function useSendPersonnelPasswordReset() {
     },
     onError: (error: Error) => {
       toast.error(`Could not send the reset link: ${error.message}`);
+    },
+  });
+}
+
+/** Upload a compliance document file for a staff member. */
+export function useUploadPersonnelDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      personnelId,
+      file,
+      name,
+      type,
+    }: {
+      personnelId: string;
+      file: File;
+      name: string;
+      type: ComplianceDocumentType;
+    }) => personnelApi.uploadDocument(personnelId, file, { name, type }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: personnelKeys.lists() });
+      toast.success('Document uploaded');
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not upload the document: ${error.message}`);
     },
   });
 }

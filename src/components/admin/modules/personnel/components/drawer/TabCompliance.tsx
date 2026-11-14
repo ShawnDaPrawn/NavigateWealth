@@ -21,127 +21,168 @@ import {
   SelectValue,
 } from '../../../../../ui/select';
 import { Shield, Upload, FileText, ExternalLink } from 'lucide-react';
-import { FormErrorBanner, SoonBadge } from '../../../../layout/page';
-import { Personnel } from '../../types';
+import { toast } from 'sonner';
+import { FormErrorBanner } from '../../../../layout/page';
+import { Personnel, type PersonnelDocument } from '../../types';
+import { useUploadPersonnelDocument } from '../../hooks';
+import { useCurrentUserPermissions } from '../../hooks/usePermissions';
+import { personnelApi, type ComplianceDocumentType } from '../../api';
 
 interface TabComplianceProps {
   selectedPersonnel: Personnel;
 }
 
 /**
- * Fit & proper status and compliance documents.
- *
- * Upload stays switched off: `POST /personnel/:id/documents` only records a
- * document that already has a URL; there is no endpoint that stores a staff
- * member's file. The dialog (design PE-Upload) is built so it only needs wiring.
+ * Fit & proper status and compliance documents. Upload stores the file in
+ * private storage; opening one asks the server for a short-lived link.
  */
 export function TabCompliance({ selectedPersonnel }: TabComplianceProps) {
+  const { canDo } = useCurrentUserPermissions();
+  const canUpload = canDo('personnel', 'edit');
+  const { mutate: upload, isPending: uploading } = useUploadPersonnelDocument();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  // Uploaded here, shown straight away (the page's record is a snapshot).
+  const [added, setAdded] = useState<PersonnelDocument[]>([]);
+  const documents = [...(selectedPersonnel.documents ?? []), ...added];
+
+  const openDocument = async (doc: PersonnelDocument) => {
+    try {
+      const url = doc.path ? await personnelApi.documentUrl(selectedPersonnel.id, doc.id) : doc.url;
+      if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      toast.error(
+        `Could not open the document: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Shield className="h-5 w-5 text-purple-600" aria-hidden="true" />
-          Fit &amp; proper status
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-4">
-          <div>
-            <div className="font-medium" id="fsp-rep-label">
-              FSP representative
-            </div>
-            <div className="text-sm text-muted-foreground">Authorised to give advice</div>
-          </div>
-          <Switch
-            checked={selectedPersonnel.fscaStatus === 'active'}
-            aria-labelledby="fsp-rep-label"
-          />
-        </div>
-
-        <div className="space-y-4">
-          <h4 className="text-sm font-medium">Required qualifications</h4>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex items-center justify-between rounded border p-3">
-              <span className="text-sm">RE5 certificate</span>
-              <Checkbox
-                checked={selectedPersonnel.qualifications?.re5}
-                aria-label="RE5 certificate"
-              />
-            </div>
-            <div className="flex items-center justify-between rounded border p-3">
-              <span className="text-sm">CFP® designation</span>
-              <Checkbox
-                checked={selectedPersonnel.qualifications?.cfp}
-                aria-label="CFP® designation"
-              />
-            </div>
-            <div className="flex items-center justify-between rounded border p-3">
-              <span className="text-sm">Class of business</span>
-              <Checkbox
-                checked={selectedPersonnel.qualifications?.cob}
-                aria-label="Class of business"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-sm font-medium">Compliance documents</h4>
-            <Button size="sm" variant="outline" disabled>
-              <Upload className="h-3 w-3" aria-hidden="true" /> Upload <SoonBadge />
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            {selectedPersonnel.documents?.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between rounded border bg-slate-50 p-3"
-              >
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-blue-500" aria-hidden="true" />
-                  <span className="text-sm font-medium">{doc.name}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    aria-label={`Open document ${doc.name}`}
-                    disabled={!doc.url}
-                    onClick={() => window.open(doc.url, '_blank', 'noopener,noreferrer')}
-                  >
-                    <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                  </Button>
-                </div>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Shield className="h-5 w-5 text-purple-600" aria-hidden="true" />
+            Fit &amp; proper status
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-4">
+            <div>
+              <div className="font-medium" id="fsp-rep-label">
+                FSP representative
               </div>
-            ))}
-            {!selectedPersonnel.documents?.length && (
-              <div className="text-sm text-muted-foreground italic">No documents uploaded</div>
-            )}
+              <div className="text-sm text-muted-foreground">Authorised to give advice</div>
+            </div>
+            <Switch
+              checked={selectedPersonnel.fscaStatus === 'active'}
+              aria-labelledby="fsp-rep-label"
+            />
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium">Required qualifications</h4>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex items-center justify-between rounded border p-3">
+                <span className="text-sm">RE5 certificate</span>
+                <Checkbox
+                  checked={selectedPersonnel.qualifications?.re5}
+                  aria-label="RE5 certificate"
+                />
+              </div>
+              <div className="flex items-center justify-between rounded border p-3">
+                <span className="text-sm">CFP® designation</span>
+                <Checkbox
+                  checked={selectedPersonnel.qualifications?.cfp}
+                  aria-label="CFP® designation"
+                />
+              </div>
+              <div className="flex items-center justify-between rounded border p-3">
+                <span className="text-sm">Class of business</span>
+                <Checkbox
+                  checked={selectedPersonnel.qualifications?.cob}
+                  aria-label="Class of business"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-sm font-medium">Compliance documents</h4>
+              {canUpload && (
+                <Button size="sm" variant="outline" onClick={() => setUploadOpen(true)}>
+                  <Upload className="h-3 w-3" aria-hidden="true" /> Upload
+                </Button>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between rounded border bg-slate-50 p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-blue-500" aria-hidden="true" />
+                    <span className="text-sm font-medium">{doc.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      aria-label={`Open document ${doc.name}`}
+                      disabled={!doc.url && !doc.path}
+                      onClick={() => void openDocument(doc)}
+                    >
+                      <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              {documents.length === 0 && (
+                <div className="text-sm text-muted-foreground italic">No documents uploaded</div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      {uploadOpen && (
+        <UploadComplianceDocumentDialog
+          open
+          onOpenChange={setUploadOpen}
+          submitting={uploading}
+          onUpload={({ type, name, file }) =>
+            upload(
+              { personnelId: selectedPersonnel.id, file, name, type },
+              {
+                onSuccess: (doc) => {
+                  setAdded((prev) => [...prev, doc]);
+                  setUploadOpen(false);
+                },
+              },
+            )
+          }
+        />
+      )}
+    </>
   );
 }
 
-const COMPLIANCE_DOCUMENT_TYPES = [
+const COMPLIANCE_DOCUMENT_TYPES: { value: ComplianceDocumentType; label: string }[] = [
   { value: 'qualification', label: 'Qualification' },
-  { value: 're5', label: 'RE5 certificate' },
-  { value: 'cfp', label: 'CFP® designation' },
-  { value: 'cob', label: 'Class of business' },
+  { value: 'cpd', label: 'CPD certificate' },
+  { value: 'identification', label: 'Identification' },
   { value: 'other', label: 'Other' },
-] as const;
+];
 
 const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 
 interface UploadComplianceDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (input: { type: string; name: string; file: File }) => void;
+  onUpload: (input: { type: ComplianceDocumentType; name: string; file: File }) => void;
   submitting?: boolean;
 }
 
@@ -152,7 +193,7 @@ export function UploadComplianceDocumentDialog({
   onUpload,
   submitting = false,
 }: UploadComplianceDocumentDialogProps) {
-  const [type, setType] = useState<string>('qualification');
+  const [type, setType] = useState<ComplianceDocumentType>('qualification');
   const [name, setName] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<{ name?: string; file?: string }>({});
@@ -191,7 +232,7 @@ export function UploadComplianceDocumentDialog({
           />
           <div className="space-y-2">
             <Label htmlFor="compliance-doc-type">Document type</Label>
-            <Select value={type} onValueChange={setType}>
+            <Select value={type} onValueChange={(v) => setType(v as ComplianceDocumentType)}>
               <SelectTrigger id="compliance-doc-type">
                 <SelectValue />
               </SelectTrigger>

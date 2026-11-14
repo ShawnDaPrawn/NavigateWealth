@@ -181,6 +181,45 @@ export async function deletePersonnel(id: string): Promise<void> {
 }
 
 // ============================================================================
+// COMPLIANCE DOCUMENTS (uploaded files)
+// ============================================================================
+
+export type ComplianceDocumentType = 'qualification' | 'cpd' | 'identification' | 'other';
+
+/** Upload a compliance document file for a staff member (private storage). */
+export async function uploadPersonnelDocument(
+  personnelId: string,
+  file: File,
+  meta: { name: string; type: ComplianceDocumentType },
+): Promise<PersonnelDocument> {
+  try {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('name', meta.name);
+    form.append('type', meta.type);
+    const response = await api.post<{ data: PersonnelDocument }>(
+      `personnel/${personnelId}/documents/upload`,
+      form,
+    );
+    return response.data;
+  } catch (error) {
+    logger.error('[API] Failed to upload personnel document', error, { personnelId });
+    throw error;
+  }
+}
+
+/** A short-lived link to open one of a staff member's documents. */
+export async function fetchPersonnelDocumentUrl(
+  personnelId: string,
+  documentId: string,
+): Promise<string> {
+  const response = await api.get<{ data: { url: string } }>(
+    `personnel/${personnelId}/documents/${documentId}/url`,
+  );
+  return response.data.url;
+}
+
+// ============================================================================
 // ACCOUNT ACCESS (shared /security routes — they act on any signed-in user)
 // ============================================================================
 
@@ -557,6 +596,8 @@ export const personnelApi = {
   restoreAccess: restorePersonnelAccess,
   sendPasswordReset: sendPersonnelPasswordReset,
   reassignClients: reassignPersonnelClients,
+  uploadDocument: uploadPersonnelDocument,
+  documentUrl: fetchPersonnelDocumentUrl,
 
   // Personnel clients
   fetchClients: fetchPersonnelClients,

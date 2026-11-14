@@ -142,7 +142,10 @@ export interface PersonnelDocument {
   /** Document type/category */
   type: string;
 
-  /** Document download URL */
+  /** Storage path of an uploaded file (opened through a short-lived link). */
+  path?: string;
+
+  /** Document download URL (empty for uploaded files) */
   url: string;
 
   /** Upload timestamp (ISO 8601) */

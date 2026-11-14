@@ -11,10 +11,12 @@ vi.mock('../../../hooks', () => ({
     ],
   }),
   useReassignPersonnelClients: () => ({ mutate: reassign, isPending: false }),
+  useUploadPersonnelDocument: () => ({ mutate: upload, isPending: false }),
 }));
 vi.mock('../../../hooks/usePermissions', () => ({
-  useCurrentUserPermissions: () => ({ isSuperAdmin: perms.isSuperAdmin }),
+  useCurrentUserPermissions: () => ({ isSuperAdmin: perms.isSuperAdmin, canDo: () => true }),
 }));
+const upload = vi.hoisted(() => vi.fn());
 
 import { TabCompliance, UploadComplianceDocumentDialog } from '../TabCompliance';
 import { ReassignClientsDialog, TabClientBook } from '../TabClientBook';
@@ -35,12 +37,20 @@ const clients: ClientSummary[] = [
   { id: 'c-2', name: 'Annelie de Villiers', email: 'a@example.com', status: 'pending' },
 ] as ClientSummary[];
 
-describe('switched-off staff actions (no endpoint yet)', () => {
-  it('shows Upload disabled with a Soon tag', () => {
+describe('staff documents and client book actions', () => {
+  it('uploads a compliance document from the Upload dialog', () => {
     render(<TabCompliance selectedPersonnel={staff} />);
-    const upload = screen.getByRole('button', { name: /Upload/ }) as HTMLButtonElement;
-    expect(upload.disabled).toBe(true);
-    expect(upload.textContent).toContain('Soon');
+    fireEvent.click(screen.getByRole('button', { name: /Upload/ }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.textContent).toContain('Upload compliance document');
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'RE5 certificate' } });
+    const file = new File(['%PDF'], 're5.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Choose file'), { target: { files: [file] } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Upload' }).at(-1)!);
+    expect(upload).toHaveBeenCalledWith(
+      { personnelId: 'p-1', file, name: 'RE5 certificate', type: 'qualification' },
+      expect.any(Object),
+    );
   });
 
   it('lets the super admin open Bulk reassign; others do not see it', () => {
