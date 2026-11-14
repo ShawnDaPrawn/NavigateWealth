@@ -162,8 +162,8 @@ export function NewsletterList({
 
       {isError ? (
         <ErrorState
-          title="The newsletters could not be loaded"
-          description={error instanceof Error ? error.message : undefined}
+          title="Unable to load newsletters"
+          details={error instanceof Error ? error.message : undefined}
           onRetry={() => refetch()}
           retrying={isFetching}
         />
@@ -179,7 +179,7 @@ export function NewsletterList({
             ) : visible.length === 0 ? (
               <EmptyState
                 icon={hasFilters ? Search : Sparkles}
-                title={hasFilters ? 'No newsletters match' : 'No newsletters yet'}
+                title={hasFilters ? 'No newsletters match your filters' : 'No newsletters yet'}
                 description={
                   hasFilters
                     ? 'Try another status or a different search.'

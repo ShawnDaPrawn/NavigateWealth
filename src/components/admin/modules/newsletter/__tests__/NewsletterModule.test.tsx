@@ -13,7 +13,13 @@ const hooks = vi.hoisted(() => ({
     refetch: vi.fn(),
     isFetching: false,
   },
-  dashboard: { data: undefined as unknown, isLoading: false },
+  dashboard: {
+    data: undefined as unknown,
+    isLoading: false,
+    isError: false,
+    error: null as unknown,
+    refetch: vi.fn(),
+  },
   detailProps: [] as unknown[],
 }));
 
@@ -190,6 +196,17 @@ describe('NewsletterModule', () => {
     expect(crumbs.trail.map((c) => c.label)).toEqual(['September issue']);
   });
 
+  it('shows the shared error state when the overview fails to load', () => {
+    hooks.dashboard.isError = true;
+    hooks.dashboard.error = new Error('400');
+    renderAt('?module=newsletter');
+    expect(screen.getByText('Unable to load the newsletter overview')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+    expect(hooks.dashboard.refetch).toHaveBeenCalled();
+    hooks.dashboard.isError = false;
+    hooks.dashboard.error = null;
+  });
+
   it('shows the upload form as a page with its own header and a way back', () => {
     renderAt('?module=newsletter&campaign=new');
     expect(screen.getByRole('heading', { level: 1, name: 'New newsletter' })).toBeTruthy();
@@ -210,6 +227,7 @@ describe('NewsletterModule', () => {
     hooks.campaign.error = new Error('Campaign c-1 not found');
     renderAt('?module=newsletter&campaign=c-1');
     expect(screen.getByText('This newsletter could not be opened')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /show details/i }));
     expect(screen.getByText('Campaign c-1 not found')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));

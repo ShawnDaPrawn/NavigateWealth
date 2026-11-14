@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { cn } from '../../../../ui/utils';
+import { Skeleton } from '../../../../ui/skeleton';
 import { Badge } from '../../../../ui/badge';
 import { PublicationsAPI } from '../api';
 import type { ContentTemplate, CreateTemplateInput, UpdateTemplateInput } from '../types';
@@ -198,15 +199,17 @@ export function ContentTemplates() {
   const { confirm, confirmDialog } = useConfirm();
   const [isSaving, setIsSaving] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<ContentTemplate | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const data = await PublicationsAPI.Templates.getTemplates();
       setTemplates(data);
     } catch (err) {
       console.error('Failed to load templates:', err);
-      toast.error('Failed to load templates');
+      setLoadError(err instanceof Error ? err.message : 'Failed to load templates');
     } finally {
       setIsLoading(false);
     }
@@ -279,10 +282,26 @@ export function ContentTemplates() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 gap-3">
-        <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-        <span className="text-sm text-gray-500">Loading templates...</span>
+      <div
+        aria-busy="true"
+        aria-label="Loading templates"
+        className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+        data-testid="templates-loading"
+      >
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-40 rounded-xl" />
+        ))}
       </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load templates"
+        onRetry={() => void loadTemplates()}
+        details={loadError}
+      />
     );
   }
 

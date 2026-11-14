@@ -42,6 +42,8 @@ import type {
   ArticleEmailEngagementSummary,
   ArticleNotificationProcessorState,
 } from '../types';
+import { Skeleton } from '../../../../ui/skeleton';
+import { ErrorState } from '../../../layout/page';
 
 const EMAIL_ENGAGEMENT_CHANGED_EVENT = 'publications:email-engagement-changed';
 
@@ -192,6 +194,7 @@ export function ArticleEmailEngagementPanel() {
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [detail, setDetail] = useState<ArticleEmailEngagementDetail | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [retryingArticleId, setRetryingArticleId] = useState<string | null>(null);
 
   const loadSummary = useCallback(
@@ -247,11 +250,13 @@ export function ArticleEmailEngagementPanel() {
     setIsDetailLoading(true);
     setDetail(null);
 
+    setDetailError(null);
     try {
       const result = await PublicationsAPI.Articles.getArticleEmailEngagement(articleId);
       setDetail(normalizeDetail(result));
-    } catch {
+    } catch (err) {
       setDetail(null);
+      setDetailError(err instanceof Error ? err.message : 'Failed to load recipient activity');
     } finally {
       setIsDetailLoading(false);
     }
@@ -530,14 +535,21 @@ export function ArticleEmailEngagementPanel() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="py-12 flex items-center justify-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading article email engagement...
+              <div
+                aria-busy="true"
+                aria-label="Loading article email engagement"
+                className="space-y-2"
+              >
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                ))}
               </div>
             ) : error ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </div>
+              <ErrorState
+                title="Unable to load article email engagement"
+                onRetry={() => void loadSummary()}
+                details={error}
+              />
             ) : summaries.length === 0 ? (
               <div className="py-12 text-center">
                 <Users className="h-8 w-8 mx-auto text-muted-foreground/40 mb-3" />
@@ -669,10 +681,21 @@ export function ArticleEmailEngagementPanel() {
 
           <div className="flex-1 overflow-auto">
             {isDetailLoading ? (
-              <div className="py-16 flex items-center justify-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading recipient activity...
+              <div
+                aria-busy="true"
+                aria-label="Loading recipient activity"
+                className="space-y-2 p-1"
+              >
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-10 w-full rounded-lg" />
+                ))}
               </div>
+            ) : detailError && selectedArticleId ? (
+              <ErrorState
+                title="Unable to load recipient activity"
+                onRetry={() => void openDetail(selectedArticleId)}
+                details={detailError}
+              />
             ) : !detail ? (
               <div className="py-16 text-center text-sm text-muted-foreground">
                 No recipient detail available.

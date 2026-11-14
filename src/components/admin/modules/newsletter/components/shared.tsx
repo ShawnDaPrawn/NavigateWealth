@@ -4,8 +4,8 @@
  * Keeping them here keeps every studio view visually consistent.
  */
 import type { ComponentType, ReactNode } from 'react';
-import { AlertTriangle, ChevronLeft, type LucideProps, RefreshCw } from 'lucide-react';
-import { Button } from '../../../../ui/button';
+import { ChevronLeft, type LucideProps } from 'lucide-react';
+import { ErrorState as SharedErrorState } from '../../../layout/page';
 import { Card, CardContent } from '../../../../ui/card';
 import { cn } from '../../../../ui/utils';
 
@@ -55,37 +55,23 @@ export function EmptyState({
   );
 }
 
+/** The shared admin error state (error pill, reassurance, Try again, details). */
 export function ErrorState({
-  title = 'Something went wrong',
+  title = 'Unable to load',
   description,
+  details,
   onRetry,
-  retrying = false,
 }: {
   title?: string;
   description?: ReactNode;
+  /** Technical message, behind "Show details". */
+  details?: string;
   onRetry?: () => void;
+  /** Kept for callers; the shared state shows its own busy feedback. */
   retrying?: boolean;
 }) {
   return (
-    <Card>
-      <CardContent className="py-10">
-        <div className="flex flex-col items-center text-center">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300">
-            <AlertTriangle className="h-5 w-5" aria-hidden />
-          </div>
-          <h3 className="text-base font-semibold">{title}</h3>
-          {description ? (
-            <p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p>
-          ) : null}
-          {onRetry ? (
-            <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
-              <RefreshCw className={cn('h-3.5 w-3.5', retrying && 'animate-spin')} aria-hidden />
-              Try again
-            </Button>
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
+    <SharedErrorState title={title} description={description} details={details} onRetry={onRetry} />
   );
 }
 

@@ -17,6 +17,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
 import {
+  ErrorState,
   PageHeader,
   NavTabsList,
   NavTabsTrigger,
@@ -27,7 +28,8 @@ import {
 } from '../../layout/page';
 import { Button } from '../../../ui/button';
 
-import { Loader2, PlusCircle, RefreshCw } from 'lucide-react';
+import { PlusCircle, RefreshCw } from 'lucide-react';
+import { Skeleton } from '../../../ui/skeleton';
 import { cn } from '../../../ui/utils';
 
 // Existing module components
@@ -132,10 +134,16 @@ export function PublicationsModule() {
     (GenerateArticleResult & { categoryId?: string }) | null
   >(null);
 
-  const { isInitialized, isLoading: initLoading, checkInitialization } = usePublicationsInit();
+  const {
+    isInitialized,
+    isLoading: initLoading,
+    loadError: initLoadError,
+    checkInitialization,
+  } = usePublicationsInit();
   const {
     articles,
     isLoading: articlesLoading,
+    error: articlesError,
     isRefreshing: articlesRefreshing,
     refetch: refetchArticles,
   } = useArticles();
@@ -380,13 +388,31 @@ export function PublicationsModule() {
 
   // ── Initialization gate ──────────────────────────────────────────────
 
+  // A failed status check is an error, never "not set up".
+  if (initLoadError) {
+    return (
+      <div className="flex flex-col gap-6 p-6 lg:p-8">
+        <PageHeader
+          title="Publications"
+          description="Articles, content pipeline, subscribers and website content."
+        />
+        <ErrorState
+          title="Unable to load Publications"
+          onRetry={() => void checkInitialization()}
+          details={initLoadError instanceof Error ? initLoadError.message : String(initLoadError)}
+        />
+      </div>
+    );
+  }
+
   if (isInitialized === false) {
     return (
-      <div className="space-y-6 p-6">
-        <ModuleHeader title="Publications" subtitle="First-time setup required" />
-        <div className="max-w-2xl mx-auto mt-12">
-          <InitializePublications onInitialized={checkInitialization} />
-        </div>
+      <div className="flex flex-col gap-6 p-6 lg:p-8">
+        <PageHeader
+          title="Publications"
+          description="Articles, content pipeline, subscribers and website content."
+        />
+        <InitializePublications onInitialized={checkInitialization} />
       </div>
     );
   }
@@ -481,7 +507,13 @@ export function PublicationsModule() {
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="mt-6">
           {articlesLoading ? (
-            <LoadingPlaceholder message="Loading analytics..." />
+            <LoadingPlaceholder message="Loading analytics…" />
+          ) : articlesError ? (
+            <ErrorState
+              title="Unable to load articles"
+              onRetry={() => void refetchArticles()}
+              details={articlesError}
+            />
           ) : (
             <div className="space-y-6">
               <ContentAnalytics articles={articles} categories={categories} />
@@ -498,7 +530,13 @@ export function PublicationsModule() {
         {/* Pipeline Tab */}
         <TabsContent value="pipeline" className="mt-6">
           {articlesLoading ? (
-            <LoadingPlaceholder message="Loading pipeline..." />
+            <LoadingPlaceholder message="Loading pipeline…" />
+          ) : articlesError ? (
+            <ErrorState
+              title="Unable to load articles"
+              onRetry={() => void refetchArticles()}
+              details={articlesError}
+            />
           ) : (
             <ContentPipeline
               articles={articles}
@@ -513,7 +551,13 @@ export function PublicationsModule() {
         {/* Calendar Tab */}
         <TabsContent value="calendar" className="mt-6">
           {articlesLoading ? (
-            <LoadingPlaceholder message="Loading calendar..." />
+            <LoadingPlaceholder message="Loading calendar…" />
+          ) : articlesError ? (
+            <ErrorState
+              title="Unable to load articles"
+              onRetry={() => void refetchArticles()}
+              details={articlesError}
+            />
           ) : (
             <ContentCalendar
               articles={articles}
@@ -580,20 +624,16 @@ export function PublicationsModule() {
 
 // ── Shared sub-components ────────────────────────────────────────────────
 
-function ModuleHeader({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight text-gray-900">{title}</h1>
-      <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
-    </div>
-  );
-}
-
+/** Loading = a skeleton in the shape of the content (design system: States). */
 function LoadingPlaceholder({ message }: { message: string }) {
   return (
-    <div className="flex items-center justify-center py-20 gap-3">
-      <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-      <span className="text-sm text-muted-foreground">{message}</span>
+    <div aria-busy="true" aria-label={message} className="space-y-3" data-testid="tab-skeleton">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-20 rounded-xl" />
+        ))}
+      </div>
+      <Skeleton className="h-64 w-full rounded-xl" />
     </div>
   );
 }

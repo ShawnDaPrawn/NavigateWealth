@@ -114,11 +114,8 @@ export function NewsletterModule() {
             <BackToList onClick={goList} />
             <ErrorState
               title="This newsletter could not be opened"
-              description={
-                openQuery.error instanceof Error
-                  ? openQuery.error.message
-                  : 'It may have been deleted, or the link may be wrong.'
-              }
+              description="It may have been deleted, or the link may be wrong."
+              details={openQuery.error instanceof Error ? openQuery.error.message : undefined}
               onRetry={() => openQuery.refetch()}
               retrying={openQuery.isFetching}
             />
@@ -185,7 +182,16 @@ function Header({ canCreate, onNew }: { canCreate: boolean; onNew: () => void })
 }
 
 function Overview({ caps }: { caps: NewsletterCaps }) {
-  const { data, isLoading } = useStudioDashboard();
+  const { data, isLoading, isError, error, refetch } = useStudioDashboard();
+  if (isError) {
+    return (
+      <ErrorState
+        title="Unable to load the newsletter overview"
+        details={error instanceof Error ? error.message : undefined}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
   if (isLoading || !data) {
     return (
       <div className="grid gap-4 md:grid-cols-3">

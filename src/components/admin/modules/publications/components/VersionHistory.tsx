@@ -10,18 +10,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
-import {
-  History,
-  ChevronLeft,
-  RotateCcw,
-  Eye,
-  Loader2,
-  AlertTriangle,
-  User,
-  Hash,
-  Type,
-} from 'lucide-react';
-import { PageHeader, useConfirm } from '../../../layout/page';
+import { History, ChevronLeft, RotateCcw, Eye, Loader2, User, Hash, Type } from 'lucide-react';
+import { ErrorState, Notice, PageHeader, useConfirm } from '../../../layout/page';
+import { Skeleton } from '../../../../ui/skeleton';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { cn } from '../../../../ui/utils';
@@ -193,19 +184,24 @@ export function VersionHistory({
       <div className="max-w-3xl rounded-xl border border-nw-line bg-white">
         <div>
           {isLoading && (
-            <div className="flex items-center justify-center py-16 gap-3">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-              <span className="text-sm text-gray-500">Loading history...</span>
+            <div aria-busy="true" aria-label="Loading history" className="space-y-3 p-5">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-lg" />
+              ))}
             </div>
           )}
 
-          {error && (
-            <div className="m-4 bg-red-50 border border-red-200 rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-red-700">{error}</p>
-              </div>
-            </div>
+          {!isLoading && error && versions.length === 0 && (
+            <ErrorState
+              title="Unable to load version history"
+              onRetry={() => void loadVersions()}
+              details={error}
+            />
+          )}
+          {!isLoading && error && versions.length > 0 && (
+            <Notice kind="error" title="That did not work:" className="m-4">
+              {error}
+            </Notice>
           )}
 
           {!isLoading && !error && versions.length === 0 && (

@@ -18,7 +18,7 @@ import { useStudioRecipients } from '../../hooks/useNewsletterStudio';
 import type { NewsletterCampaign } from '../../types';
 import { formatDateTime, formatNumber, formatRelative } from '../../utils/format';
 import { DeliveryStatusBadge } from '../StatusBadge';
-import { EmptyState, SectionHeader } from '../shared';
+import { EmptyState, ErrorState, SectionHeader } from '../shared';
 import { Tabs } from '../../../../../ui/tabs';
 import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../../layout/page';
 
@@ -91,6 +91,14 @@ export function RecipientsPanel({ campaign }: { campaign: NewsletterCampaign }) 
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-10 w-full" />
             ))}
+          </div>
+        ) : query.isError ? (
+          <div className="p-4">
+            <ErrorState
+              title="Unable to load recipients"
+              details={query.error instanceof Error ? query.error.message : undefined}
+              onRetry={() => void query.refetch()}
+            />
           </div>
         ) : recipients.length === 0 ? (
           <EmptyState

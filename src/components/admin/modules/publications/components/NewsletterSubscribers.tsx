@@ -16,6 +16,7 @@ import React, { useState, useRef } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { cn } from '../../../../ui/utils';
+import { ErrorState } from '../../../layout/page';
 import { Badge } from '../../../../ui/badge';
 import { Input } from '../../../../ui/input';
 import { Skeleton } from '../../../../ui/skeleton';
@@ -86,12 +87,20 @@ export function NewsletterSubscribers() {
   const [statusFilter, setStatusFilter] = useState<SubscriberStatusFilter>('all');
   const [unsubTimeRange, setUnsubTimeRange] = useState<UnsubTimeRange>('all');
 
-  const { subscribers, filtered, statusTotal, hiddenByTimeRange, stats, isLoading, refetch } =
-    useNewsletterSubscribers({
-      statusFilter,
-      search,
-      unsubTimeRange,
-    });
+  const {
+    subscribers,
+    filtered,
+    statusTotal,
+    hiddenByTimeRange,
+    stats,
+    isLoading,
+    error: loadError,
+    refetch,
+  } = useNewsletterSubscribers({
+    statusFilter,
+    search,
+    unsubTimeRange,
+  });
 
   const addMutation = useAddSubscriber();
   const bulkMutation = useBulkUpload();
@@ -453,31 +462,49 @@ export function NewsletterSubscribers() {
             ))}
           </CardContent>
         </Card>
+      ) : loadError ? (
+        <ErrorState
+          title="Unable to load subscribers"
+          onRetry={() => void refetch()}
+          details={loadError}
+        />
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
             <Mail className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
             <p className="font-medium text-sm">
-              {subscribers.length === 0 ? 'No subscribers yet' : 'No matching subscribers'}
+              {subscribers.length === 0
+                ? 'No subscribers yet'
+                : 'No subscribers match your filters'}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {subscribers.length === 0
                 ? 'Add your first subscriber manually or import from a spreadsheet.'
-                : 'Try adjusting your search or filter.'}
+                : 'Try another search or status.'}
             </p>
+            {subscribers.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('all');
+                  setUnsubTimeRange('all');
+                }}
+              >
+                Clear filters
+              </Button>
+            )}
             {subscribers.length === 0 && (
               <div className="flex items-center justify-center gap-2 mt-4">
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>
                   <Upload className="h-3.5 w-3.5 mr-1.5" />
-                  Bulk Import
+                  Bulk import
                 </Button>
-                <Button
-                  size="sm"
-                  className="bg-purple-600 hover:bg-purple-700"
-                  onClick={() => setAddOpen(true)}
-                >
+                <Button size="sm" onClick={() => setAddOpen(true)}>
                   <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                  Add Subscriber
+                  Add subscriber
                 </Button>
               </div>
             )}

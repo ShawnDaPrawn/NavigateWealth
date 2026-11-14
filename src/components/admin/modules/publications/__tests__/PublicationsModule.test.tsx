@@ -10,15 +10,26 @@ import { BreadcrumbContext, type Crumb } from '../../../layout/page';
 
 const ARTICLE = { id: 'a-1', title: 'Gap cover explained', status: 'draft' };
 
+const init = vi.hoisted(() => ({
+  state: {
+    isInitialized: true as boolean | null,
+    loadError: null as Error | null,
+    checkInitialization: () => undefined as unknown,
+  },
+  articlesError: null as string | null,
+}));
+
 vi.mock('../hooks', () => ({
   usePublicationsInit: () => ({
-    isInitialized: true,
+    ...init.state,
     isLoading: false,
-    checkInitialization: vi.fn(),
+    initialize: vi.fn(),
+    isInitializing: false,
   }),
   useArticles: () => ({
     articles: [ARTICLE],
     isLoading: false,
+    error: init.articlesError,
     isRefreshing: false,
     refetch: vi.fn(),
   }),
@@ -83,9 +94,42 @@ function renderAt(search: string) {
 
 beforeEach(() => {
   crumbs.trail = [];
+  init.state = { isInitialized: true, loadError: null, checkInitialization: vi.fn() };
+  init.articlesError = null;
 });
 
 describe('PublicationsModule', () => {
+  it('shows an error, never the setup screen, when the status check fails', () => {
+    const retry = vi.fn();
+    init.state = {
+      isInitialized: null,
+      loadError: new Error('400 Bad Request'),
+      checkInitialization: retry,
+    };
+    renderAt('?tab=articles');
+    expect(screen.getByText('Unable to load Publications')).toBeDefined();
+    expect(screen.queryByText(/set up publications/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /initialise/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /show details/i }));
+    expect(screen.getByText('400 Bad Request')).toBeDefined();
+  });
+
+  it('shows "Setup required" only when the API reports the system is not set up', () => {
+    init.state = { isInitialized: false, loadError: null, checkInitialization: vi.fn() };
+    renderAt('');
+    expect(screen.getByText('Setup required')).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Set up Publications' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Initialise publications' })).toBeDefined();
+  });
+
+  it('shows the shared error state on article-backed tabs when articles fail to load', () => {
+    init.articlesError = 'Failed to fetch articles';
+    renderAt('?tab=pipeline');
+    expect(screen.getByText('Unable to load articles')).toBeDefined();
+  });
+
   it('opens an article named in the address as a page, and goes back to the list', () => {
     renderAt('?tab=articles&article=a-1');
     expect(screen.getByRole('heading', { level: 1, name: 'Edit article' })).toBeDefined();
