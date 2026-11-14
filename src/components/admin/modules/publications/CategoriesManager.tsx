@@ -33,6 +33,7 @@ import {
 import { useCategories, useCategoryActions } from './hooks';
 
 import { LoadingState } from './components/LoadingState';
+import { ErrorState } from './components/ErrorState';
 import { TextField, TextareaField, CheckboxField } from './components/FormField';
 import { ConfirmDialog, useConfirmDialog } from './components/ConfirmDialog';
 
@@ -125,7 +126,12 @@ function DraggableCategoryRow({
 
 export function CategoriesManager() {
   // Data fetching with hooks
-  const { categories: initialCategories, isLoading, refetch } = useCategories({ autoSort: true });
+  const {
+    categories: initialCategories,
+    isLoading,
+    error: loadError,
+    refetch,
+  } = useCategories({ autoSort: true });
 
   // Local state for drag reordering
   const [categories, setCategories] = useState<Category[]>([]);
@@ -273,7 +279,17 @@ export function CategoriesManager() {
   };
 
   if (isLoading) {
-    return <LoadingState message="Loading categories..." />;
+    return <LoadingState message="Loading categories…" />;
+  }
+
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load categories"
+        message={loadError}
+        onRetry={() => void refetch()}
+      />
+    );
   }
 
   return (

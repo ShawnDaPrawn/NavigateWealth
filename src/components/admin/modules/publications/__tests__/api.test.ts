@@ -567,11 +567,9 @@ describe('InitializationAPI', () => {
       expect(result.is_initialized).toBe(false);
     });
 
-    it('returns defaults on error', async () => {
+    it('rejects on error rather than reporting "not set up"', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
-      const result = await InitializationAPI.checkStatus();
-      expect(result.is_initialized).toBe(false);
-      expect(result.has_categories).toBe(false);
+      await expect(InitializationAPI.checkStatus()).rejects.toThrow('Network error');
     });
   });
 

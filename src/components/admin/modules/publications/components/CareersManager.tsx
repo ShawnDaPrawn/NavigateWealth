@@ -145,6 +145,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 export function CareersManager() {
   const [listings, setListings] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Dialog state
@@ -163,12 +164,13 @@ export function CareersManager() {
   // ── Load ─────────────────────────────────────────────────────────────
   const loadListings = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await apiFetch('/careers/admin');
       setListings(data.data || []);
     } catch (err) {
       console.error('Failed to load job listings:', err);
-      toast.error('Failed to load job listings');
+      setLoadError(err instanceof Error ? err.message : 'Failed to load job listings');
     } finally {
       setLoading(false);
     }
@@ -318,7 +320,13 @@ export function CareersManager() {
   const secondError = submitted && !String(form.category).trim() ? 'Choose a department' : null;
   const formErrorCount = (nameError ? 1 : 0) + (secondError ? 1 : 0);
 
-  if (pageId !== null && pageId !== 'new' && !loading && !listings.some((x) => x.id === pageId)) {
+  if (
+    pageId !== null &&
+    pageId !== 'new' &&
+    !loading &&
+    !loadError &&
+    !listings.some((x) => x.id === pageId)
+  ) {
     return (
       <ErrorState
         title="Not found"
@@ -665,6 +673,12 @@ export function CareersManager() {
             ))}
           </CardContent>
         </Card>
+      ) : loadError ? (
+        <ErrorState
+          title="Unable to load job listings"
+          onRetry={() => void loadListings()}
+          details={loadError}
+        />
       ) : listings.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">

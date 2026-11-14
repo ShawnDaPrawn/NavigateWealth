@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '../../../ui/button';
-import { useConfirm, useUrlState } from '../../layout/page';
+import { ErrorState, useConfirm, useUrlState } from '../../layout/page';
+import { Skeleton } from '../../../ui/skeleton';
 import { cn } from '../../../ui/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Input } from '../../../ui/input';
@@ -52,9 +53,11 @@ export function PublicationsSettings() {
   const [pressExperience, setPressExperience] = useState('55+');
   const [pressLoading, setPressLoading] = useState(true);
   const [pressSaving, setPressSaving] = useState(false);
+  const [pressError, setPressError] = useState<string | null>(null);
 
   const loadPressConfig = useCallback(async () => {
     setPressLoading(true);
+    setPressError(null);
     try {
       const json = await api.get<{
         success?: boolean;
@@ -67,6 +70,7 @@ export function PublicationsSettings() {
       }
     } catch (err) {
       console.error('Failed to load press config:', err);
+      setPressError(err instanceof Error ? err.message : 'Failed to load the press page stats');
     } finally {
       setPressLoading(false);
     }
@@ -373,10 +377,21 @@ export function PublicationsSettings() {
             </CardHeader>
             <CardContent className="space-y-4">
               {pressLoading ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading current config...
+                <div
+                  aria-busy="true"
+                  aria-label="Loading press page stats"
+                  className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+                >
+                  {[0, 1, 2].map((i) => (
+                    <Skeleton key={i} className="h-16 rounded-lg" />
+                  ))}
                 </div>
+              ) : pressError ? (
+                <ErrorState
+                  title="Unable to load the press page stats"
+                  onRetry={() => void loadPressConfig()}
+                  details={pressError}
+                />
               ) : (
                 <div className="contents">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

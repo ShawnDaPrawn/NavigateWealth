@@ -109,6 +109,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 export function TeamManager() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Dialog state
@@ -126,12 +127,13 @@ export function TeamManager() {
   // ── Load ─────────────────────────────────────────────────────────────
   const loadMembers = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await apiFetch('/team/admin');
       setMembers(data.data || []);
     } catch (err) {
       console.error('Failed to load team members:', err);
-      toast.error('Failed to load team members');
+      setLoadError(err instanceof Error ? err.message : 'Failed to load team members');
     } finally {
       setLoading(false);
     }
@@ -276,7 +278,13 @@ export function TeamManager() {
   const secondError = submitted && !String(form.title).trim() ? 'Add a title' : null;
   const formErrorCount = (nameError ? 1 : 0) + (secondError ? 1 : 0);
 
-  if (pageId !== null && pageId !== 'new' && !loading && !members.some((x) => x.id === pageId)) {
+  if (
+    pageId !== null &&
+    pageId !== 'new' &&
+    !loading &&
+    !loadError &&
+    !members.some((x) => x.id === pageId)
+  ) {
     return (
       <ErrorState
         title="Not found"
@@ -580,6 +588,12 @@ export function TeamManager() {
             ))}
           </CardContent>
         </Card>
+      ) : loadError ? (
+        <ErrorState
+          title="Unable to load team members"
+          onRetry={() => void loadMembers()}
+          details={loadError}
+        />
       ) : members.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">

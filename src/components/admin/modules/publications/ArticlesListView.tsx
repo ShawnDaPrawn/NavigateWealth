@@ -260,7 +260,8 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
 
   // ── Loading / error ──────────────────────────────────────────────────
   if (isLoading) return <LoadingState message="Loading articles..." />;
-  if (error) return <ErrorState message={error} onRetry={refetch} />;
+  if (error)
+    return <ErrorState title="Unable to load articles" message={error} onRetry={refetch} />;
 
   // ── Render ───────────────────────────────────────────────────────────
   return (
@@ -503,17 +504,28 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
           <CardContent className="py-16 text-center">
             <FileText className="h-12 w-12 text-gray-200 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-1">
-              {articles.length === 0 ? 'No articles yet' : 'No matching articles'}
+              {articles.length === 0 ? 'No articles yet' : 'No articles match your filters'}
             </h3>
             <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
               {articles.length === 0
                 ? 'Create your first article to start building your content library.'
-                : 'Try adjusting your filters or search query.'}
+                : 'Try another search, status or category.'}
             </p>
-            {articles.length === 0 && (
-              <Button onClick={onCreateNew} className="gap-2 bg-purple-600 hover:bg-purple-700">
+            {articles.length === 0 ? (
+              <Button onClick={onCreateNew} className="gap-2">
                 <PlusCircle className="h-4 w-4" />
-                Create First Article
+                New article
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedStatus('');
+                  setSelectedCategory('');
+                }}
+              >
+                Clear filters
               </Button>
             )}
           </CardContent>
