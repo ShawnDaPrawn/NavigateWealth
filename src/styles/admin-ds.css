@@ -271,6 +271,11 @@
   .ds-toolbar .grow {
     flex: 1;
   }
+  /* Inside a card the toolbar is the card's top strip (.card > .toolbar). */
+  .ds-card > .ds-toolbar {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--nw-line-2);
+  }
   .ds-input {
     height: 36px;
     min-width: 240px;
@@ -865,6 +870,21 @@
     margin-top: 5px;
     flex: 0 0 auto;
     box-shadow: 0 0 0 4px var(--nw-violet-50);
+  }
+
+
+  /* ---------- meter (.meter) ---------- */
+  .ds-meter {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--nw-line-2);
+    overflow: hidden;
+  }
+  .ds-meter > i {
+    display: block;
+    height: 100%;
+    background: var(--nw-violet);
+    border-radius: 3px;
   }
 
   /* ---------- phone ---------- */

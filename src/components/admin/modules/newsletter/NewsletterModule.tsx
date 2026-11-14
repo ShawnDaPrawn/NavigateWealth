@@ -85,7 +85,7 @@ export function NewsletterModule() {
   const goOpen = (id: string) => setCampaignParam(id);
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6 p-6">
+    <div className="ds-page">
       {campaignParam === 'new' ? (
         <>
           <BackToList onClick={goList} />

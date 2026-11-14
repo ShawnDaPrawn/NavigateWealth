@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
-import { Brain, AlertTriangle } from 'lucide-react';
+
 import { toast } from 'sonner';
 import { ConfirmDialog } from '../../publications';
 
@@ -13,7 +11,7 @@ import { ChatHistory, ChatInput, ClientSelector, ApiKeyWarning } from './';
 
 // Utils
 import { copyToClipboard } from '../utils';
-import { ErrorState } from '../../../layout/page';
+import { DsButton, ErrorState } from '../../../layout/page';
 
 /**
  * Ask Vasco Interface Component
@@ -117,47 +115,34 @@ export function AskAIInterface() {
 
   return (
     <div className="space-y-6">
-      <Card className="flex h-[640px] flex-col sm:h-[800px]">
-        <CardHeader className="flex-none border-b bg-white px-4 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            {/* Header Title */}
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center border border-violet-200">
-                <Brain className="h-5 w-5 text-violet-700" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-semibold text-gray-900">Ask Vasco</CardTitle>
-                <p className="text-sm text-muted-foreground">AI-powered advisory assistant</p>
-              </div>
-            </div>
-
-            {/* Client Selector (Header Action) */}
-            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-              <ClientSelector
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                results={results}
-                isSearching={isSearching}
-                selectedClient={selectedClient}
-                onSelectClient={selectClient}
-                placeholder="Search client context..."
-              />
-
-              <Button
-                onClick={() => setShowClearConfirm(true)}
-                variant="outline"
-                size="sm"
-                className="shrink-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
-                disabled={isLoading}
-              >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Clear chat
-              </Button>
-            </div>
+      <section className="ds-card flex h-[640px] flex-col overflow-hidden sm:h-[720px]">
+        {/* AE-Vasco: client context and Clear chat in the card's header strip */}
+        <div className="ds-card-h">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <ClientSelector
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              results={results}
+              isSearching={isSearching}
+              selectedClient={selectedClient}
+              onSelectClient={selectClient}
+              placeholder="Client context: none"
+            />
+            <span className="ds-meta hidden lg:inline">
+              Pick a client so Vasco answers with their profile, policies and FNAs
+            </span>
           </div>
-        </CardHeader>
+          <DsButton
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowClearConfirm(true)}
+            disabled={isLoading}
+          >
+            Clear chat
+          </DsButton>
+        </div>
 
-        <CardContent className="flex-1 flex flex-col min-h-0 p-0 bg-slate-50 relative overflow-hidden">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#fafafb]">
           {/* API Key Warning */}
           <div className="flex-none px-4 empty:hidden [&:has(>*)]:pt-2">
             <ApiKeyWarning status={apiKeyStatus} />
@@ -175,7 +160,7 @@ export function AskAIInterface() {
           </div>
 
           {/* Input Area */}
-          <div className="flex-none p-4 bg-white border-t">
+          <div className="flex-none border-t border-nw-line bg-white px-3.5 py-3">
             <ChatInput
               value={input}
               onChange={setInput}
@@ -188,8 +173,8 @@ export function AskAIInterface() {
               maxLength={4000}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       <ConfirmDialog
         isOpen={showClearConfirm}

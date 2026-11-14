@@ -3,7 +3,7 @@ import { Skeleton } from '../../../../ui/skeleton';
 /** Mirrors the Issue Manager layout: header, four view cards, then the list. */
 export function IssuesSkeleton() {
   return (
-    <div className="mx-auto max-w-[1800px] space-y-6 p-6">
+    <div className="ds-page">
       <div className="space-y-2 border-b border-gray-200/60 pb-4">
         <Skeleton className="h-9 w-64" />
         <Skeleton className="h-5 w-96 max-w-full" />

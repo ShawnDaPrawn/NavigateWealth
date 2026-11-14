@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Bot, Copy, Check } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 import { MessageRenderer } from '../../../../shared/MessageRenderer';
 import { formatTimestamp } from '../utils';
 import type { ChatMessageProps } from '../types';
@@ -41,20 +41,14 @@ export function ChatMessage({ message, onCopy }: ChatMessageProps) {
 
   return (
     <div className={`flex gap-3 mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
-      {/* Assistant Avatar */}
-      {isAssistant && (
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center flex-shrink-0 shadow-sm mt-1">
-          <Bot className="h-4 w-4 text-white" />
-        </div>
-      )}
-
       {/* Message Content */}
-      <div className={`flex flex-col gap-1 max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`flex flex-col gap-1 max-w-[72%] ${isUser ? 'items-end' : 'items-start'}`}>
+        {/* AE-Vasco: the board's chat bubbles (.bubble.me / .bubble.ai) */}
         <div
-          className={`rounded-2xl px-4 py-2.5 shadow-sm text-sm ${
+          className={`max-w-full rounded-[14px] px-3.5 py-2.5 text-[13.5px] leading-5 ${
             isUser
-              ? 'bg-violet-600 text-white rounded-br-none'
-              : 'bg-white border border-gray-100 text-gray-800 rounded-bl-none'
+              ? 'rounded-br-[4px] bg-nw-violet text-white'
+              : 'rounded-bl-[4px] border border-nw-line bg-white text-nw-ink'
           }`}
         >
           {isAssistant ? (
