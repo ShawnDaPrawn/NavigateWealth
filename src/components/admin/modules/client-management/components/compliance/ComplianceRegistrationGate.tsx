@@ -1,6 +1,5 @@
-import { Card, CardContent } from '../../../../../ui/card';
 import { Button } from '../../../../../ui/button';
-import { Shield, Loader2, Link as LinkIcon } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import { Notice } from '../../../../layout/page';
 
@@ -50,46 +49,26 @@ export function ComplianceRegistrationGate({
         </Notice>
       )}
 
-      <Card className="border-dashed border-2">
-        <CardContent className="py-12 flex flex-col items-center justify-center text-center space-y-4">
-          <div className="bg-purple-100 p-4 rounded-full">
-            <Shield className="h-12 w-12 text-purple-600" />
-          </div>
-          <div>
-            <h4 className="text-xl font-semibold mb-2">Registration required</h4>
-            <p className="text-gray-500 max-w-md mx-auto">
-              Register this client with Honeycomb (Beeswax) to run KYC and sanctions checks. Their
-              SA ID or passport number is needed.
-            </p>
-          </div>
-          <div className="flex gap-4 pt-4">
-            <Button
-              onClick={onRegister}
-              disabled={isRegistering || !hasIdentification}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              {isRegistering ? (
-                <div className="contents">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Registering…
-                </div>
-              ) : (
-                <div className="contents">
-                  <LinkIcon className="mr-2 h-4 w-4" />
-                  Register client
-                </div>
-              )}
-            </Button>
-          </div>
-          <p className="text-xs text-gray-400 mt-4">
-            This will create a profile using Name:{' '}
-            <strong>
-              {clientFirstName} {clientLastName}
-            </strong>{' '}
-            and ID: <strong>{resolvedIdNumber || 'N/A — update client profile'}</strong>
-          </p>
-        </CardContent>
-      </Card>
+      {/* Design CM-K-Gate: one plain card, centred. */}
+      <section className="rounded-xl border border-nw-line bg-white px-6 py-14 text-center">
+        <h3 className="text-base font-semibold text-nw-ink">Registration required</h3>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-nw-text-2">
+          Register this client with Honeycomb (Beeswax) to run KYC and sanctions checks. Their SA ID
+          or passport number is needed.
+        </p>
+        <Button
+          className="mt-4"
+          onClick={onRegister}
+          disabled={isRegistering || !hasIdentification}
+        >
+          {isRegistering && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+          {isRegistering ? 'Registering…' : 'Register client'}
+        </Button>
+        <p className="mt-4 text-xs text-nw-text-3">
+          The profile will use {clientFirstName} {clientLastName}
+          {resolvedIdNumber ? ', ID ' + resolvedIdNumber : ''}.
+        </p>
+      </section>
     </div>
   );
 }
