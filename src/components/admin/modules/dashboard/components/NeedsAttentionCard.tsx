@@ -7,11 +7,15 @@ interface NeedsAttentionCardProps {
   onModuleChange?: (module: string) => void;
   /** Tasks due today, from the Due today card's own data. */
   tasksDueToday: number;
+  /** The Due today request failed, so the count is unknown. */
+  tasksDueTodayFailed?: boolean;
 }
 
 interface AttentionRow {
   module: AdminModule;
   count: number;
+  /** The count could not be loaded: show "—", not a misleading 0. */
+  failed?: boolean;
   label: (n: number) => string;
   caption: string;
   destination: string;
@@ -21,13 +25,18 @@ interface AttentionRow {
  * The sidebar's waiting counts in one place, each one click from its list
  * (design DB 1). Shares the sidebar's query, so it costs no extra request.
  */
-export function NeedsAttentionCard({ onModuleChange, tasksDueToday }: NeedsAttentionCardProps) {
+export function NeedsAttentionCard({
+  onModuleChange,
+  tasksDueToday,
+  tasksDueTodayFailed = false,
+}: NeedsAttentionCardProps) {
   const counts = usePendingCounts();
 
   const rows: AttentionRow[] = [
     {
       module: 'applications',
       count: counts.applications?.count ?? 0,
+      failed: counts.applications?.failed,
       label: (n) => (n === 1 ? 'Application to review' : 'Applications to review'),
       caption: 'Pending review',
       destination: 'Applications',
@@ -35,6 +44,7 @@ export function NeedsAttentionCard({ onModuleChange, tasksDueToday }: NeedsAtten
     {
       module: 'submissions',
       count: counts.submissions?.count ?? 0,
+      failed: counts.submissions?.failed,
       label: (n) => (n === 1 ? 'New submission' : 'New submissions'),
       caption: 'Not picked up yet',
       destination: 'Submissions',
@@ -42,6 +52,7 @@ export function NeedsAttentionCard({ onModuleChange, tasksDueToday }: NeedsAtten
     {
       module: 'tasks',
       count: tasksDueToday,
+      failed: tasksDueTodayFailed,
       label: (n) => (n === 1 ? 'Task due today' : 'Tasks due today'),
       caption: 'Due today',
       destination: 'To-Do',
@@ -49,6 +60,7 @@ export function NeedsAttentionCard({ onModuleChange, tasksDueToday }: NeedsAtten
     {
       module: 'issues',
       count: counts.issues?.count ?? 0,
+      failed: counts.issues?.failed,
       label: (n) => (n === 1 ? 'Open issue' : 'Open issues'),
       caption: 'Unresolved',
       destination: 'Issue Manager',
@@ -71,18 +83,20 @@ export function NeedsAttentionCard({ onModuleChange, tasksDueToday }: NeedsAtten
               >
                 <span
                   className={
-                    row.count > 0
+                    row.count > 0 && !row.failed
                       ? 'text-2xl font-semibold text-nw-ink'
                       : 'text-2xl font-semibold text-nw-text-3'
                   }
                 >
-                  {row.count.toLocaleString()}
+                  {row.failed ? '—' : row.count.toLocaleString()}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-nw-ink">
                     {row.label(row.count)}
                   </span>
-                  <span className="block truncate text-xs text-nw-text-3">{row.caption}</span>
+                  <span className="block truncate text-xs text-nw-text-3">
+                    {row.failed ? "Couldn't load" : row.caption}
+                  </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1 text-xs text-nw-text-2">
                   <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />

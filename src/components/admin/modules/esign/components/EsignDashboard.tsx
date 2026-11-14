@@ -113,7 +113,9 @@ export function EsignDashboard({
   refreshTrigger,
   viewOnly = false,
 }: EsignDashboardProps) {
-  const { envelopes } = useEnvelopes({ autoLoad: true, refreshTrigger });
+  const { envelopes, error: envelopesError } = useEnvelopes({ autoLoad: true, refreshTrigger });
+  // Unknown totals show "—", not a misleading 0, when the list failed to load.
+  const shown = (value: number | string) => (envelopesError ? '—' : value);
   const [tab, setTab] = useUrlState<EsignTab>('tab', 'envelopes', ESIGN_TABS);
 
   const availableTools = MANAGE_TOOLS.filter((tool) => manageAccess[tool]);
@@ -205,28 +207,28 @@ export function EsignDashboard({
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <StatCard
           label="Action required"
-          value={metrics.pending}
+          value={shown(metrics.pending)}
           meta="Pending signatures"
-          tone={metrics.pending > 0 ? 'attention' : 'default'}
+          tone={!envelopesError && metrics.pending > 0 ? 'attention' : 'default'}
         />
-        <StatCard label="Completed" value={metrics.completed} meta="Fully signed" />
-        <StatCard label="Drafts" value={metrics.draft} meta="Not yet sent" />
+        <StatCard label="Completed" value={shown(metrics.completed)} meta="Fully signed" />
+        <StatCard label="Drafts" value={shown(metrics.draft)} meta="Not yet sent" />
         <StatCard
           label="Expired"
-          value={metrics.expired}
+          value={shown(metrics.expired)}
           meta="Past deadline"
-          tone={metrics.expired > 0 ? 'attention' : 'default'}
+          tone={!envelopesError && metrics.expired > 0 ? 'attention' : 'default'}
         />
         <StatCard
           label="Completion rate"
-          value={`${metrics.completionRate}%`}
+          value={shown(`${metrics.completionRate}%`)}
           meta="Of sent envelopes"
         />
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as EsignTab)} className="gap-5">
         <NavTabsList aria-label="E-Signature">
-          <NavTabsTrigger value="envelopes" count={metrics.total}>
+          <NavTabsTrigger value="envelopes" count={envelopesError ? undefined : metrics.total}>
             Envelopes
           </NavTabsTrigger>
           <NavTabsTrigger value="templates">Templates</NavTabsTrigger>

@@ -89,7 +89,9 @@ export function PublicationsCard({ onModuleChange, maxArticles = 5 }: Publicatio
   } = useArticles();
 
   const loading = statsLoading || articlesLoading;
-  const error = statsFailed && !!articlesError;
+  // The recent-articles list needs the articles; the tiles show "—" on their own
+  // when only the totals failed.
+  const error = !!articlesError;
 
   const sortedArticles = useMemo(
     () =>
@@ -170,7 +172,7 @@ export function PublicationsCard({ onModuleChange, maxArticles = 5 }: Publicatio
               {loading ? (
                 <Skeleton className="h-6 w-10 mx-auto mb-1" />
               ) : (
-                <p className="text-xl font-bold leading-tight">{tile.value}</p>
+                <p className="text-xl font-bold leading-tight">{statsFailed ? '—' : tile.value}</p>
               )}
               <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{tile.label}</p>
             </div>

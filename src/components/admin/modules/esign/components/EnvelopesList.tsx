@@ -47,6 +47,7 @@ import { VoidEnvelopeDialog } from './VoidEnvelopeDialog';
 import { DiscardEnvelopeDialog } from './DiscardEnvelopeDialog';
 import { BulkRemindDialog, BulkVoidDialog } from './BulkActionDialogs';
 import { EnvelopeThumbnail } from './EnvelopeThumbnail';
+import { ErrorState } from '../../../layout/page';
 import { toast } from 'sonner';
 
 interface EnvelopesListProps {
@@ -206,12 +207,12 @@ export function EnvelopesList({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-red-500">
-        <p>Error loading envelopes: {error}</p>
-        <Button variant="outline" onClick={() => refetch()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        title="Couldn't load envelopes"
+        description="Something went wrong while loading. Nothing has changed."
+        details={error}
+        onRetry={() => void refetch()}
+      />
     );
   }
 

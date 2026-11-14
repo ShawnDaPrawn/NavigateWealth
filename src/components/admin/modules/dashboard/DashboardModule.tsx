@@ -80,7 +80,11 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
       <DashboardHeader userName={user?.firstName} onOpenAuditTrail={() => setView('audit')} />
 
       {/* ── Needs your attention: the sidebar's waiting counts ─────────── */}
-      <NeedsAttentionCard onModuleChange={onModuleChange} tasksDueToday={tasks.length} />
+      <NeedsAttentionCard
+        onModuleChange={onModuleChange}
+        tasksDueToday={tasks.length}
+        tasksDueTodayFailed={errors.tasks}
+      />
 
       {/* ── Practice at a glance ──────────────────────────────────────── */}
       <section aria-labelledby="practice-at-a-glance" className="space-y-3">

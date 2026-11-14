@@ -9,15 +9,25 @@ const hooks = vi.hoisted(() => ({
   index: null as KnowledgeIndexStatus | null,
   newLeads: [] as unknown[],
   agents: [] as AIAgentConfig[],
+  configFailed: false,
+  analyticsFailed: false,
 }));
 
 vi.mock('../../hooks', () => ({
   useVascoConfig: () => ({
-    data: { enabled: hooks.enabled, updatedAt: '2026-01-01T00:00:00Z', updatedBy: 'x' },
+    data: hooks.configFailed
+      ? undefined
+      : { enabled: hooks.enabled, updatedAt: '2026-01-01T00:00:00Z', updatedBy: 'x' },
     isLoading: false,
+    isError: hooks.configFailed,
+    refetch: vi.fn(),
   }),
   useToggleVasco: () => ({ mutate: hooks.toggle, isPending: false }),
-  useAnalyticsSummary: () => ({ data: hooks.analytics, isLoading: false }),
+  useAnalyticsSummary: () => ({
+    data: hooks.analytics,
+    isLoading: false,
+    isError: hooks.analyticsFailed,
+  }),
   useRagIndexStatus: () => ({ data: hooks.index }),
   useHandoffs: () => ({ data: hooks.newLeads }),
   useAgents: () => ({ data: hooks.agents, isLoading: false }),
@@ -124,6 +134,8 @@ const agent: AIAgentConfig = {
 };
 
 beforeEach(() => {
+  hooks.configFailed = false;
+  hooks.analyticsFailed = false;
   hooks.enabled = false;
   hooks.toggle.mockReset();
   hooks.analytics = analytics();
@@ -199,5 +211,18 @@ describe('OverviewTab', () => {
     expect(screen.getByText('Retirement')).toBeDefined();
     expect(screen.getByText('Tax')).toBeDefined();
     expect(screen.getByTestId('area-chart')).toBeDefined();
+  });
+
+  it('does not claim Vasco is off when its state failed to load, and locks the switch', () => {
+    hooks.configFailed = true;
+    hooks.analyticsFailed = true;
+    render(<OverviewTab onNavigate={vi.fn()} />);
+    expect(screen.getByText("Couldn't check whether Vasco is on")).toBeDefined();
+    expect(screen.queryByText('Vasco is switched off on the public website')).toBeNull();
+    const toggle = screen.getByRole('switch', { name: 'Vasco public website chat' });
+    expect(toggle.hasAttribute('disabled') || toggle.getAttribute('data-disabled') !== null).toBe(
+      true,
+    );
+    expect(screen.getByText("Couldn't load the conversation figures.")).toBeDefined();
   });
 });

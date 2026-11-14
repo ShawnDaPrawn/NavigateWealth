@@ -103,11 +103,22 @@ function StatTile({
 
 // ── Main ───────────────────────────────────────────────────────────────────
 export function OverviewTab({ onNavigate }: OverviewTabProps) {
-  const { data: vascoConfig, isLoading: configLoading } = useVascoConfig();
+  const {
+    data: vascoConfig,
+    isLoading: configLoading,
+    isError: configFailed,
+    refetch: refetchConfig,
+  } = useVascoConfig();
   const toggleVasco = useToggleVasco();
-  const { data: analytics, isLoading: analyticsLoading } = useAnalyticsSummary();
-  const { data: index } = useRagIndexStatus();
-  const { data: newLeads } = useHandoffs('new');
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    isError: analyticsFailed,
+  } = useAnalyticsSummary();
+  const { data: index, isFetched: indexFetched } = useRagIndexStatus();
+  const { data: newLeads, isError: leadsFailed } = useHandoffs('new');
+  // getStatus returns null when the request fails.
+  const indexFailed = indexFetched && !index;
   const { data: agents, isLoading: agentsLoading } = useAgents();
 
   const enabled = vascoConfig?.enabled ?? false;
@@ -147,11 +158,25 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
           <h2 id="vasco-switch-heading" className="text-base font-semibold text-gray-900">
             {configLoading
               ? 'Checking Vasco…'
-              : enabled
-                ? 'Vasco is live on the public website'
-                : 'Vasco is switched off on the public website'}
+              : configFailed
+                ? "Couldn't check whether Vasco is on"
+                : enabled
+                  ? 'Vasco is live on the public website'
+                  : 'Vasco is switched off on the public website'}
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">
+            {configFailed && (
+              <>
+                The switch is locked until its state loads.{' '}
+                <button
+                  type="button"
+                  onClick={() => void refetchConfig()}
+                  className="font-medium text-nw-violet underline-offset-2 hover:underline"
+                >
+                  Try again
+                </button>{' '}
+              </>
+            )}
             This switch controls the chat widget visitors see on the website. Logged-in clients
             always have their portal assistant.
             {vascoConfig && (
@@ -163,11 +188,13 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
           </p>
         </div>
         <label className="flex items-center gap-3 shrink-0 cursor-pointer">
-          <span className="text-sm font-medium text-gray-700">{enabled ? 'On' : 'Off'}</span>
+          <span className="text-sm font-medium text-gray-700">
+            {configFailed ? '—' : enabled ? 'On' : 'Off'}
+          </span>
           <Switch
             checked={enabled}
             onCheckedChange={(checked) => toggleVasco.mutate(checked)}
-            disabled={toggleVasco.isPending || configLoading}
+            disabled={toggleVasco.isPending || configLoading || configFailed}
             aria-label="Vasco public website chat"
           />
         </label>
@@ -177,24 +204,38 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatTile
           label="Conversations, last 7 days"
-          value={analyticsLoading ? '…' : (analytics?.totalSessions ?? 0)}
-          detail={analyticsLoading ? '' : plural(analytics?.totalMessages ?? 0, 'message')}
+          value={analyticsLoading ? '…' : analyticsFailed ? '—' : (analytics?.totalSessions ?? 0)}
+          detail={
+            analyticsLoading
+              ? ''
+              : analyticsFailed
+                ? "Couldn't load"
+                : plural(analytics?.totalMessages ?? 0, 'message')
+          }
         />
         <StatTile
           label="Answers rated helpful"
           value={analyticsLoading ? '…' : helpfulPct === null ? '—' : `${helpfulPct}%`}
-          detail={ratings === 0 ? 'No ratings yet' : `from ${plural(ratings, 'rating')}`}
+          detail={
+            analyticsFailed
+              ? "Couldn't load"
+              : ratings === 0
+                ? 'No ratings yet'
+                : `from ${plural(ratings, 'rating')}`
+          }
           tone={helpfulPct !== null && helpfulPct >= 70 ? 'good' : 'neutral'}
           onClick={() => onNavigate('feedback')}
           actionLabel="Read feedback"
         />
         <StatTile
           label="Leads waiting for a call"
-          value={newLeads ? newLeads.length : '…'}
+          value={leadsFailed ? '—' : newLeads ? newLeads.length : '…'}
           detail={
-            newLeads && newLeads.length > 0
-              ? 'Visitors who asked to speak to an adviser'
-              : 'Nobody is waiting right now'
+            leadsFailed
+              ? "Couldn't load"
+              : newLeads && newLeads.length > 0
+                ? 'Visitors who asked to speak to an adviser'
+                : 'Nobody is waiting right now'
           }
           tone={newLeads && newLeads.length > 0 ? 'warn' : 'neutral'}
           onClick={() => onNavigate('leads')}
@@ -202,10 +243,14 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
         />
         <StatTile
           label="Knowledge Vasco can use"
-          value={index ? indexedSources : '…'}
+          value={index ? indexedSources : indexFailed ? '—' : '…'}
           detail={
             !index ? (
-              ''
+              indexFailed ? (
+                "Couldn't load"
+              ) : (
+                ''
+              )
             ) : knowledgeNeedsAttention ? (
               <span className="inline-flex items-center gap-1 text-amber-700">
                 <AlertTriangle className="h-3 w-3" />
@@ -238,6 +283,10 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
           {analyticsLoading ? (
             <div className="h-56 flex items-center justify-center">
               <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+            </div>
+          ) : analyticsFailed ? (
+            <div className="h-56 flex items-center justify-center text-sm text-gray-500">
+              Couldn&apos;t load the conversation figures.
             </div>
           ) : chartData.length === 0 ? (
             <div className="h-56 flex items-center justify-center text-sm text-gray-500">
@@ -317,7 +366,9 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
               })}
             </ol>
           ) : (
-            <p className="text-sm text-gray-500 py-6 text-center">No topics recorded yet.</p>
+            <p className="text-sm text-gray-500 py-6 text-center">
+              {analyticsFailed ? "Couldn't load the topics." : 'No topics recorded yet.'}
+            </p>
           )}
         </section>
       </div>

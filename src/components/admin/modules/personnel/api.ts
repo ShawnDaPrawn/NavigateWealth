@@ -51,8 +51,9 @@ export async function fetchPersonnel(filters?: Partial<PersonnelFilters>): Promi
 
     return filtered;
   } catch (error) {
+    // Rethrow: an empty list would read as "No personnel yet".
     logger.error('[API] Failed to fetch personnel', error, { filters });
-    return [];
+    throw error;
   }
 }
 

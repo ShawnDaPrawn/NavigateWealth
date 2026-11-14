@@ -33,13 +33,17 @@ vi.mock('sonner', () => ({
   toast: { error: (m: string) => toastError(m), success: vi.fn(), info: vi.fn() },
 }));
 
+const personnelLoad = vi.hoisted(() => ({ failed: false, refetch: vi.fn() }));
 const clientsQuery = vi.hoisted(() =>
   vi.fn((_id: string, _enabled: boolean) => ({ data: [], isLoading: false })),
 );
 vi.mock('../hooks', () => {
   const mutation = () => ({ mutate: vi.fn(), mutateAsync: vi.fn() });
   return {
-    usePersonnel: () => ({ data: personnel, isLoading: false }),
+    usePersonnel: () =>
+      personnelLoad.failed
+        ? { data: undefined, isLoading: false, isError: true, refetch: personnelLoad.refetch }
+        : { data: personnel, isLoading: false },
     useSuperAdmin: () => ({ data: null, isLoading: false }),
     usePersonnelClients: (id: string, enabled: boolean) => clientsQuery(id, enabled),
     useInvitePersonnel: mutation,
@@ -134,6 +138,19 @@ function renderAt(url = '/admin?module=personnel') {
 }
 
 describe('Personnel page', () => {
+  it('shows an error with Try again, not "No personnel yet", when the list fails', () => {
+    personnelLoad.failed = true;
+    try {
+      renderAt();
+      expect(screen.getByText("Couldn't load personnel")).toBeDefined();
+      expect(screen.queryByText('No personnel yet')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(personnelLoad.refetch).toHaveBeenCalled();
+    } finally {
+      personnelLoad.failed = false;
+    }
+  });
+
   it('shows the header, figures and staff list', () => {
     renderAt();
     expect(screen.getByRole('heading', { level: 1, name: 'Personnel' })).toBeDefined();

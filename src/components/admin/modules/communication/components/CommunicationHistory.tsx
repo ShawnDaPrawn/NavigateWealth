@@ -43,7 +43,7 @@ import {
   RecipientType,
 } from '../types';
 import { communicationApi } from '../api';
-import { useRecordInUrl } from '../../../layout/page';
+import { ErrorState, useRecordInUrl } from '../../../layout/page';
 import { Crumbs } from './Crumbs';
 import { toast } from 'sonner';
 
@@ -468,9 +468,11 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-          <span>
-            {total} communication{total !== 1 ? 's' : ''} found
-          </span>
+          {!error && (
+            <span>
+              {total} communication{total !== 1 ? 's' : ''} found
+            </span>
+          )}
           {(searchTerm ||
             channelFilter !== 'all' ||
             recipientFilter !== 'all' ||
@@ -523,7 +525,11 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     {error ? (
-                      <span className="text-red-600">{error}</span>
+                      <ErrorState
+                        title="Couldn't load the history"
+                        description="Something went wrong while loading. Nothing has changed."
+                        onRetry={triggerRefresh}
+                      />
                     ) : (
                       'No communications match your filters.'
                     )}

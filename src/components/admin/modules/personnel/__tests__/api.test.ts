@@ -73,10 +73,9 @@ describe('fetchPersonnel', () => {
     expect(mockApiGet).toHaveBeenCalledWith('personnel/list');
   });
 
-  it('returns empty array on API error', async () => {
+  it('rethrows an API error so the page can show it (not "No personnel yet")', async () => {
     mockApiGet.mockRejectedValue(new Error('Network error'));
-    const result = await fetchPersonnel();
-    expect(result).toEqual([]);
+    await expect(fetchPersonnel()).rejects.toThrow('Network error');
   });
 
   it('filters by role client-side', async () => {

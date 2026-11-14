@@ -10,6 +10,7 @@ import { Personnel, type SuperAdminProfile } from './types';
 import type { InviteUserFormValues } from './schema';
 import type { AdminModule } from '../../layout/types';
 import {
+  ErrorState,
   PageHeader,
   StatCard,
   useBreadcrumbTrail,
@@ -100,7 +101,12 @@ type PersonTab = (typeof PERSON_TABS)[number];
 
 export function PersonnelModule() {
   // 1. Data & State
-  const { data: personnel = [], isLoading } = usePersonnel();
+  const {
+    data: personnel = [],
+    isLoading,
+    isError: personnelFailed,
+    refetch: refetchPersonnel,
+  } = usePersonnel();
   const { data: superAdminProfile, isLoading: superAdminLoading } = useSuperAdmin();
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -313,7 +319,7 @@ export function PersonnelModule() {
           active && status !== 'all' && 'ring-2 ring-nw-violet',
         )}
       >
-        <StatCard label={label} value={isLoading ? '—' : value} />
+        <StatCard label={label} value={isLoading || personnelFailed ? '—' : value} />
       </button>
     );
   };
@@ -465,6 +471,12 @@ export function PersonnelModule() {
       {/* ── Data Table ────────────────────────────────────────── */}
       {isLoading ? (
         <TableSkeleton />
+      ) : personnelFailed ? (
+        <ErrorState
+          title="Couldn't load personnel"
+          description="Something went wrong while loading your team. Nothing has changed."
+          onRetry={() => void refetchPersonnel()}
+        />
       ) : filteredPersonnel.length === 0 ? (
         <Card className="border border-gray-200/80 shadow-none">
           <CardContent className="py-16 flex flex-col items-center justify-center text-center">
