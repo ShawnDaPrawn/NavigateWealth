@@ -101,9 +101,9 @@ export function AskAIInterface() {
 
   return (
     <div className="space-y-6">
-      <Card className="flex flex-col h-[800px]">
-        <CardHeader className="flex-none border-b bg-white px-6 py-4">
-          <div className="flex items-center justify-between">
+      <Card className="flex h-[640px] flex-col sm:h-[800px]">
+        <CardHeader className="flex-none border-b bg-white px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {/* Header Title */}
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center border border-violet-200">
@@ -116,7 +116,7 @@ export function AskAIInterface() {
             </div>
 
             {/* Client Selector (Header Action) */}
-            <div className="flex items-center gap-2">
+            <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
               <ClientSelector
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
@@ -131,7 +131,7 @@ export function AskAIInterface() {
                 onClick={() => setShowClearConfirm(true)}
                 variant="outline"
                 size="sm"
-                className="text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                className="shrink-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
                 disabled={isLoading}
               >
                 <AlertTriangle className="h-4 w-4 mr-2" />
@@ -143,10 +143,8 @@ export function AskAIInterface() {
 
         <CardContent className="flex-1 flex flex-col min-h-0 p-0 bg-slate-50 relative overflow-hidden">
           {/* API Key Warning */}
-          <div className="absolute top-0 left-0 right-0 z-10 px-4 pt-2 pointer-events-none">
-            <div className="pointer-events-auto">
-              <ApiKeyWarning status={apiKeyStatus} />
-            </div>
+          <div className="flex-none px-4 empty:hidden [&:has(>*)]:pt-2">
+            <ApiKeyWarning status={apiKeyStatus} />
           </div>
 
           {/* Chat History Area */}

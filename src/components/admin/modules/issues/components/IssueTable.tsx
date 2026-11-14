@@ -43,7 +43,7 @@ function IssueRow({ issue, onSelect }: { issue: QualityIssue; onSelect: () => vo
 
   return (
     <TableRow onClick={onSelect} className="cursor-pointer align-top hover:bg-gray-50/80">
-      <TableCell className="py-4 pl-6 whitespace-normal">
+      <TableCell className="py-4 pl-4 whitespace-normal sm:pl-6">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -63,17 +63,25 @@ function IssueRow({ issue, onSelect }: { issue: QualityIssue; onSelect: () => vo
         <p className="mt-1 text-xs wrap-anywhere text-gray-500">
           {describeIssueContext(issue, labels.area).join(' · ')}
         </p>
+        {/* On a phone the other columns are hidden; their essentials sit here. */}
+        <div className="mt-2 flex flex-wrap items-center gap-2 sm:hidden">
+          <PriorityBadge priority={issue.priority} />
+          <WorkflowBadge status={issue.status} />
+          <span className="text-xs text-gray-500">
+            {issue.ownerName || 'Unassigned'} · {formatRelativeTime(issue.lastSeenAt)}
+          </span>
+        </div>
       </TableCell>
-      <TableCell className="py-4">
+      <TableCell className="hidden py-4 sm:table-cell">
         <PriorityBadge priority={issue.priority} />
       </TableCell>
-      <TableCell className="py-4">
+      <TableCell className="hidden py-4 sm:table-cell">
         <WorkflowBadge status={issue.status} />
         {issue.status === 'resolved' && !issue.resolutionEvidence ? (
           <p className="mt-1.5 text-xs text-amber-700">No evidence</p>
         ) : null}
       </TableCell>
-      <TableCell className="py-4 whitespace-normal">
+      <TableCell className="hidden py-4 whitespace-normal sm:table-cell">
         <p className={cn('text-sm', issue.ownerName ? 'text-gray-900' : 'text-gray-400')}>
           {issue.ownerName || 'Unassigned'}
         </p>
@@ -89,7 +97,7 @@ function IssueRow({ issue, onSelect }: { issue: QualityIssue; onSelect: () => vo
           </a>
         ) : null}
       </TableCell>
-      <TableCell className="py-4 pr-6 text-right text-gray-600">
+      <TableCell className="hidden py-4 pr-6 text-right text-gray-600 sm:table-cell">
         <span title={formatDate(issue.lastSeenAt)}>{formatRelativeTime(issue.lastSeenAt)}</span>
       </TableCell>
     </TableRow>
@@ -107,11 +115,13 @@ export function IssueTable({
     <Table>
       <TableHeader>
         <TableRow className="bg-gray-50/60 text-xs tracking-wide text-gray-500 uppercase hover:bg-gray-50/60">
-          <TableHead className="pl-6 text-gray-500">Issue</TableHead>
-          <TableHead className="w-28 text-gray-500">Priority</TableHead>
-          <TableHead className="w-36 text-gray-500">Status</TableHead>
-          <TableHead className="w-44 text-gray-500">Owner</TableHead>
-          <TableHead className="w-32 pr-6 text-right text-gray-500">Last seen</TableHead>
+          <TableHead className="pl-4 text-gray-500 sm:pl-6">Issue</TableHead>
+          <TableHead className="hidden w-28 text-gray-500 sm:table-cell">Priority</TableHead>
+          <TableHead className="hidden w-36 text-gray-500 sm:table-cell">Status</TableHead>
+          <TableHead className="hidden w-44 text-gray-500 sm:table-cell">Owner</TableHead>
+          <TableHead className="hidden w-32 pr-6 text-right text-gray-500 sm:table-cell">
+            Last seen
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

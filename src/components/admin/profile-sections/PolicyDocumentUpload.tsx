@@ -421,7 +421,7 @@ export function PolicyDocumentUpload({
         {/* Existing document display */}
         {existingDocument && !selectedFile && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
                   <FileText className="h-5 w-5 text-green-600" />
@@ -439,7 +439,7 @@ export function PolicyDocumentUpload({
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+              <div className="flex flex-wrap items-center gap-1 flex-shrink-0 ml-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -482,7 +482,7 @@ export function PolicyDocumentUpload({
 
             {/* AI Extraction Button — shown when document exists */}
             <div className="mt-2 pt-2 border-t border-green-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {hasExtraction && (
                   <Badge className="bg-green-600 hover:bg-green-600 text-white text-[10px]">
                     <Check className="h-3 w-3 mr-1" />
@@ -507,7 +507,7 @@ export function PolicyDocumentUpload({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {hasExtraction && (
                   <Button
                     variant="ghost"

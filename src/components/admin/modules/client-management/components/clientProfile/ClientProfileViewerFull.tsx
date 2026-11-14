@@ -6,6 +6,7 @@
  * including CRUD operations, validations, file uploads, risk assessment, and more.
  */
 
+import { ScrollRow } from '../../../../../ui/scroll-row';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '../../../../../ui/button';
 import { Alert, AlertDescription, AlertTitle } from '../../../../../ui/alert';
@@ -172,7 +173,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
     <div className="h-full flex flex-col">
       {/* SUBTABS - Level 2: Secondary Navigation within Personal Details tab */}
       <div className="mb-6 pb-4 border-b border-gray-200">
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <ScrollRow className="gap-2 p-0.5">
           {sections.map((section) => {
             const Icon = section.icon;
             return (
@@ -190,7 +191,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               </button>
             );
           })}
-        </div>
+        </ScrollRow>
       </div>
 
       {state.error && (

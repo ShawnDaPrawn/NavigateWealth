@@ -44,7 +44,7 @@ export function ClientProfilePersonalCard({ state, actions }: ClientProfilePerso
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <InputWithCopy
               label="Title"
@@ -195,7 +195,7 @@ export function ClientProfilePersonalCard({ state, actions }: ClientProfilePerso
           </div>
           <h3 className="text-lg font-medium">Income Information</h3>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <CurrencyInputWithCopy
               label="Gross Monthly Income (R)"
@@ -237,7 +237,7 @@ export function ClientProfilePersonalCard({ state, actions }: ClientProfilePerso
           </div>
           <h3 className="text-lg font-medium">Identity</h3>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="idCountry">ID Country</Label>
             <div className="mt-1.5">

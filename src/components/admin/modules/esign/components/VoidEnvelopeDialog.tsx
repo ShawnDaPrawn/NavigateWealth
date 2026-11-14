@@ -50,8 +50,8 @@ export function VoidEnvelopeDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
+        <div className="grid grid-cols-1 gap-4 py-4">
+          <div className="grid grid-cols-1 gap-2">
             <Label htmlFor="reason">Reason for voiding (Required)</Label>
             <Textarea
               id="reason"

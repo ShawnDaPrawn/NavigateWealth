@@ -112,7 +112,7 @@ export function TransactionalEmailsManager({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-nw-ink">Email settings &amp; templates</h2>
           <p className="text-sm text-nw-text-3">

@@ -83,7 +83,7 @@ export function SocialAnalytics() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Social Analytics</h2>
           <p className="text-sm text-muted-foreground">
@@ -110,7 +110,7 @@ export function SocialAnalytics() {
       </div>
 
       {/* Summary stat cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
         {[
           {
             label: 'Total Impressions',

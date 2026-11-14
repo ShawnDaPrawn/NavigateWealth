@@ -50,7 +50,7 @@ export function OverviewContent({
   return (
     <div className="space-y-4">
       {/* Quick stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatCard
           label="Total Checks"
           value={activities.length}
@@ -168,7 +168,7 @@ export function OverviewContent({
       {/* Recent activity snapshot */}
       {activities.length > 0 && (
         <Card>
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between flex-wrap gap-x-4 gap-y-2">
             <CardTitle className="text-md font-medium flex items-center gap-2">
               <History className="h-5 w-5 text-gray-500" />
               Recent Activity

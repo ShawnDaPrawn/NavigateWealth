@@ -136,7 +136,7 @@ export function ConfirmDialog({
           </p>
 
           {/* Actions */}
-          <div className="flex gap-3 justify-end">
+          <div className="flex gap-3 justify-end flex-wrap">
             <Button
               variant="outline"
               onClick={onClose}

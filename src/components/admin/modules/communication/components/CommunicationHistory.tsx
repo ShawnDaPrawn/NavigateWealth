@@ -42,6 +42,7 @@ import {
   RecipientType,
 } from '../types';
 import { communicationApi } from '../api';
+import { useIsMobile } from '../../../../ui/use-mobile';
 import { useRecordInUrl } from '../../../layout/page';
 import { toast } from 'sonner';
 
@@ -80,6 +81,7 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
   const [total, setTotal] = useState(0);
   const [senderOptions, setSenderOptions] = useState<CampaignHistorySenderOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
   const [error, setError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -315,8 +317,8 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
   return (
     <Card className="w-full">
       <CardContent className="space-y-4 pt-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="flex-1 min-w-[200px]">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+          <div className="col-span-2 min-w-[200px] flex-1">
             <label htmlFor="comm-history-search" className="sr-only">
               Search communications
             </label>
@@ -428,7 +430,12 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
             </SelectContent>
           </Select>
 
-          <Button variant="outline" onClick={triggerRefresh} disabled={loading}>
+          <Button
+            variant="outline"
+            onClick={triggerRefresh}
+            disabled={loading}
+            className="col-span-2 sm:col-auto"
+          >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden />
             Refresh
           </Button>
@@ -463,145 +470,209 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           )}
         </div>
 
-        <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border">
-          <Table className="min-w-[920px]">
-            <TableHeader className="sticky top-0 z-10 bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
-              <TableRow className="hover:bg-transparent">
-                <TableHead scope="col">Date &amp; time</TableHead>
-                <TableHead scope="col">Status</TableHead>
-                <TableHead scope="col">Channel</TableHead>
-                <TableHead scope="col">Recipients</TableHead>
-                <TableHead scope="col">Subject / preview</TableHead>
-                <TableHead scope="col">Sent by</TableHead>
-                <TableHead scope="col">Attachments</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" aria-hidden />
-                    Loading history…
-                  </TableCell>
-                </TableRow>
-              ) : logs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    {error ? (
-                      <span className="text-red-600">{error}</span>
-                    ) : (
-                      'No communications match your filters.'
-                    )}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                logs.map((log) => (
-                  <TableRow
-                    key={log.id}
-                    className="cursor-pointer hover:bg-muted/50 focus-within:bg-muted/50"
-                    tabIndex={0}
-                    role="button"
-                    aria-label={`Open details: ${log.subject || 'Communication'}`}
+        {/* Phone: one card per message. The table needs ~920px to be readable.
+            Rendered instead of the table (not alongside it) so each message
+            appears once for screen readers. */}
+        {isMobile ? (
+          <ul className="divide-y rounded-lg border" aria-label="Communications">
+            {loading ? (
+              <li className="py-10 text-center text-sm text-muted-foreground">
+                <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" aria-hidden />
+                Loading history…
+              </li>
+            ) : logs.length === 0 ? (
+              <li className="px-4 py-8 text-center text-sm text-muted-foreground">
+                {error ? <span className="text-red-600">{error}</span> : 'No communications found'}
+              </li>
+            ) : (
+              logs.map((log) => (
+                <li key={log.id}>
+                  <button
+                    type="button"
                     onClick={() => openRow(log)}
-                    onKeyDown={(e) => onRowKeyDown(e, log)}
+                    className="flex w-full flex-col gap-1.5 px-4 py-3 text-left hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none"
                   >
-                    <TableCell className="text-sm align-top">
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <Calendar className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
-                        <span className="tabular-nums">{formatTimestamp(log.timestamp)}</span>
-                      </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        {formatTimestamp(log.timestamp)}
+                      </span>
+                      {getStatusBadge(log.status)}
+                    </div>
+                    <span className="line-clamp-2 text-sm font-medium leading-snug">
+                      {log.subject || (
+                        <span className="italic text-muted-foreground">No subject</span>
+                      )}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        {getChannelIcon(log.channel)}
+                        {CHANNEL_LABEL[log.channel] ?? log.channel}
+                      </span>
+                      <span aria-hidden>·</span>
+                      <span>{formatRecipientLine(log)}</span>
+                      {log.attachmentCount > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <Paperclip className="h-3 w-3" aria-hidden />
+                          {log.attachmentCount}
+                        </span>
+                      )}
+                    </span>
+                    {formatDeliveryLine(log) && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {formatDeliveryLine(log)}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        ) : (
+          <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border">
+            <Table className="min-w-[920px]">
+              <TableHeader className="sticky top-0 z-10 bg-background shadow-[inset_0_-1px_0_0_hsl(var(--border))]">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead scope="col">Date &amp; time</TableHead>
+                  <TableHead scope="col">Status</TableHead>
+                  <TableHead scope="col">Channel</TableHead>
+                  <TableHead scope="col">Recipients</TableHead>
+                  <TableHead scope="col">Subject / preview</TableHead>
+                  <TableHead scope="col">Sent by</TableHead>
+                  <TableHead scope="col">Attachments</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" aria-hidden />
+                      Loading history…
                     </TableCell>
-
-                    <TableCell className="align-top">
-                      <div className="flex flex-col gap-1">
-                        {getStatusBadge(log.status)}
-                        {formatDeliveryLine(log) && (
-                          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                            {formatDeliveryLine(log)}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      <div className="flex flex-col items-start gap-1">
-                        <div className="flex items-center gap-2">
-                          {getChannelIcon(log.channel)}
-                          <Badge variant={log.channel === 'email' ? 'outline' : 'secondary'}>
-                            {CHANNEL_LABEL[log.channel] ?? log.channel}
-                          </Badge>
-                        </div>
-                        {log.origin === 'direct' && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] py-0 h-5 text-purple-700 border-purple-300"
-                          >
-                            Individual
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      <div className="flex items-start gap-2 min-w-[8rem]">
-                        {getRecipientIcon(log.recipientType)}
-                        <span className="text-sm leading-snug">{formatRecipientLine(log)}</span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="min-w-[280px] max-w-md align-top">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-start justify-between gap-2">
-                          {log.subject ? (
-                            <div className="font-medium text-sm leading-snug line-clamp-2 min-w-0 flex-1">
-                              {log.subject}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground italic">No subject</span>
-                          )}
-                          {log.templateUsed ? (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] shrink-0 py-0 h-6 gap-1"
-                            >
-                              <FileText className="h-3 w-3" aria-hidden />
-                              {log.templateUsed}
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <div>
-                          <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
-                            Preview
-                          </div>
-                          <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
-                            {log.messagePreview || '—'}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      <span className="font-medium text-sm">{displaySenderName(log)}</span>
-                    </TableCell>
-
-                    <TableCell className="align-top">
-                      {log.attachmentCount > 0 ? (
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Paperclip className="h-4 w-4 shrink-0" aria-hidden />
-                          <span>
-                            {log.attachmentCount} {log.attachmentCount === 1 ? 'file' : 'files'}
-                          </span>
-                        </div>
+                  </TableRow>
+                ) : logs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {error ? (
+                        <span className="text-red-600">{error}</span>
                       ) : (
-                        <span className="text-sm text-muted-foreground/80">None</span>
+                        'No communications match your filters.'
                       )}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                ) : (
+                  logs.map((log) => (
+                    <TableRow
+                      key={log.id}
+                      className="cursor-pointer hover:bg-muted/50 focus-within:bg-muted/50"
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Open details: ${log.subject || 'Communication'}`}
+                      onClick={() => openRow(log)}
+                      onKeyDown={(e) => onRowKeyDown(e, log)}
+                    >
+                      <TableCell className="text-sm align-top">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <Calendar
+                            className="h-4 w-4 text-muted-foreground shrink-0"
+                            aria-hidden
+                          />
+                          <span className="tabular-nums">{formatTimestamp(log.timestamp)}</span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        <div className="flex flex-col gap-1">
+                          {getStatusBadge(log.status)}
+                          {formatDeliveryLine(log) && (
+                            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                              {formatDeliveryLine(log)}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        <div className="flex flex-col items-start gap-1">
+                          <div className="flex items-center gap-2">
+                            {getChannelIcon(log.channel)}
+                            <Badge variant={log.channel === 'email' ? 'outline' : 'secondary'}>
+                              {CHANNEL_LABEL[log.channel] ?? log.channel}
+                            </Badge>
+                          </div>
+                          {log.origin === 'direct' && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] py-0 h-5 text-purple-700 border-purple-300"
+                            >
+                              Individual
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        <div className="flex items-start gap-2 min-w-[8rem]">
+                          {getRecipientIcon(log.recipientType)}
+                          <span className="text-sm leading-snug">{formatRecipientLine(log)}</span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="min-w-[280px] max-w-md align-top">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-start justify-between gap-2">
+                            {log.subject ? (
+                              <div className="font-medium text-sm leading-snug line-clamp-2 min-w-0 flex-1">
+                                {log.subject}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground italic">
+                                No subject
+                              </span>
+                            )}
+                            {log.templateUsed ? (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] shrink-0 py-0 h-6 gap-1"
+                              >
+                                <FileText className="h-3 w-3" aria-hidden />
+                                {log.templateUsed}
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
+                              Preview
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-snug line-clamp-2">
+                              {log.messagePreview || '—'}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        <span className="font-medium text-sm">{displaySenderName(log)}</span>
+                      </TableCell>
+
+                      <TableCell className="align-top">
+                        {log.attachmentCount > 0 ? (
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Paperclip className="h-4 w-4 shrink-0" aria-hidden />
+                            <span>
+                              {log.attachmentCount} {log.attachmentCount === 1 ? 'file' : 'files'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground/80">None</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
         {total > 0 && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

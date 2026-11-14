@@ -518,7 +518,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
                       <h2 className="text-lg font-semibold text-gray-900 truncate">
                         {formData.title || 'Untitled Task'}
                       </h2>
-                      <Pencil className="h-3.5 w-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                      <Pencil className="h-3.5 w-3.5 text-gray-400 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity shrink-0" />
                     </div>
                   )}
                   <div className="text-sm text-gray-500 mt-2 flex items-center gap-1">
@@ -531,7 +531,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
               </div>
 
               {/* Meta Data Row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pl-9">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pl-9 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
                 {/* Assignee */}
                 <div className="space-y-2">
                   <Label className="text-xs font-medium text-gray-500 uppercase">Assignee</Label>
@@ -713,7 +713,7 @@ export function TaskFormModal({ isOpen, onClose, task, mode }: TaskFormModalProp
           </div>
 
           {/* Fixed Footer */}
-          <div className="px-6 py-4 bg-white border-t flex items-center justify-end gap-3 z-10">
+          <div className="px-6 py-4 bg-white border-t flex items-center justify-end gap-3 z-10 flex-wrap">
             <Button type="button" variant="outline" onClick={onClose}>
               Close
             </Button>

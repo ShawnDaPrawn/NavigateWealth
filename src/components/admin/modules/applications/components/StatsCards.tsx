@@ -77,7 +77,7 @@ export function StatsCards({ stats, activeTab, setActiveTab }: StatsCardsProps) 
   const total = stats?.total || 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
       {TAB_CARDS.map((card) => {
         const isActive = activeTab === card.tab;
         const count =

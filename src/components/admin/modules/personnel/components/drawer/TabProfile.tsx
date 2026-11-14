@@ -117,7 +117,7 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
                     </span>
                   )}
                 </p>
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
                   <Button
                     type="button"
                     variant="outline"
@@ -156,7 +156,7 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
       )}
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-x-4 gap-y-2">
           <CardTitle className="text-lg">Access Control</CardTitle>
           {isDirty && (
             <Button size="sm" type="submit" disabled={isSubmitting}>
@@ -166,7 +166,7 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>System Role</Label>
               <Select
@@ -211,7 +211,7 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
           <CardTitle className="text-lg">Personal Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Phone</Label>
               <Input {...register('phone')} placeholder="+27..." />
@@ -224,7 +224,7 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
         </CardContent>
       </Card>
 
-      <div className="flex gap-2 pt-4">
+      <div className="flex gap-2 pt-4 flex-wrap">
         {/* Neither action has a working endpoint yet, so both stay off. */}
         <Button type="button" variant="destructive" className="w-full" disabled>
           <Lock className="h-4 w-4 mr-2" />

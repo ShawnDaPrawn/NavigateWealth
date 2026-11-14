@@ -111,7 +111,7 @@ export function FieldsEditor({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <Input
                 value={section.id}
                 onChange={(event) => updateSection(sectionIndex, { id: toId(event.target.value) })}
@@ -124,7 +124,7 @@ export function FieldsEditor({
             <Separator />
             {section.fields.map((field, fieldIndex) => (
               <div key={`${field.key}-${fieldIndex}`} className="rounded-md border p-3">
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-2">
                     <Label>Key</Label>
                     <Input
@@ -188,7 +188,7 @@ export function FieldsEditor({
                     </Select>
                   </div>
                 </div>
-                <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
                   <Input
                     placeholder="Options, comma separated"
                     value={field.options?.join(', ') || ''}

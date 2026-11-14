@@ -222,7 +222,7 @@ export function DocumentList({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 mr-2">
+                      <div className="flex items-center gap-2 mr-2 flex-wrap">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -301,7 +301,7 @@ export function DocumentList({
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-1 flex-shrink-0">
+                              <div className="flex items-center gap-1 flex-shrink-0 flex-wrap">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -399,7 +399,7 @@ export function DocumentList({
                     {/* Content */}
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start justify-between gap-4 flex-wrap gap-y-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-medium truncate">{doc.title}</h4>
@@ -436,7 +436,7 @@ export function DocumentList({
                             </div>
                           )}
 
-                          <div className="flex items-center gap-2 mt-2">
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
                             <Badge className={`${getCategoryColor(doc.productCategory)} border`}>
                               <span className="flex items-center gap-1">
                                 {getCategoryIcon(doc.productCategory)}
@@ -467,7 +467,7 @@ export function DocumentList({
 
                         {/* Actions */}
 
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-wrap">
                           <Button
                             variant="ghost"
                             size="sm"

@@ -311,7 +311,7 @@ export function HistoryDialog({
                           variant="ghost"
                           size="icon"
                           aria-label="Delete communication"
-                          className="h-8 w-8 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-8 w-8 text-gray-400 hover:text-red-600 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                           onClick={(e) => {
                             e.stopPropagation();
                             onDelete(log.id, e);

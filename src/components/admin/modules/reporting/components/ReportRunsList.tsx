@@ -99,7 +99,7 @@ export function ReportRunsList({ runs, reports }: ReportRunsListProps) {
                     </div>
                   )}
                   {run.status === 'Completed' && (
-                    <Badge variant="default" className="bg-green-600">
+                    <Badge variant="default" className="bg-green-600 text-white">
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       Completed
                     </Badge>

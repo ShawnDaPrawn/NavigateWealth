@@ -272,7 +272,7 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0 -mr-2 text-gray-400 hover:text-gray-600 no-drag opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="h-6 w-6 p-0 -mr-2 text-gray-400 hover:text-gray-600 no-drag [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>

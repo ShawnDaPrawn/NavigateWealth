@@ -167,7 +167,7 @@ export function RenewalAlertScanner() {
       {/* Controls */}
       <Card className="bg-white border border-gray-200 shadow-none">
         <CardContent className="p-4">
-          <div className="flex items-end gap-4">
+          <div className="flex items-end gap-4 flex-wrap">
             <div className="space-y-1.5">
               <Label className="text-xs text-gray-600">Scan Window (days ahead)</Label>
               <NumberInputField
@@ -225,7 +225,7 @@ export function RenewalAlertScanner() {
       {scanResult && (
         <>
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
             <Card className="bg-white border border-gray-200 shadow-none">
               <CardContent className="p-3">
                 <div className="flex items-center gap-2.5">

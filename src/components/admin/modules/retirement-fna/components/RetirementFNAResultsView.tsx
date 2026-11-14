@@ -76,7 +76,7 @@ export function RetirementFNAResultsView({ fna }: RetirementFNAResultsViewProps)
         {/* Main Summary Card */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <CardTitle>Retirement Plan Summary</CardTitle>
                 <CardDescription className="mt-2">

@@ -116,7 +116,7 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
           }
         />
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
           <StatCard label="All tasks" value={stats?.total || 0} meta="Active tasks on board" />
           <StatCard
             label="To do"
@@ -181,7 +181,7 @@ export function TaskManagementModule({ initialTaskId }: TaskManagementModuleProp
             {/* Kanban Board */}
             <div className="h-[calc(100vh-380px)] min-h-[500px] overflow-hidden">
               <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="flex gap-6 h-full overflow-x-auto pb-4 px-1">
+                <div className="flex h-full snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-4 sm:snap-none sm:gap-6">
                   {visibleColumns.map((status) => (
                     <TaskColumn
                       key={status}

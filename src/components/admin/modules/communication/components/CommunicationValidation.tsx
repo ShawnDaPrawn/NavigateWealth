@@ -186,7 +186,7 @@ export function CommunicationValidation({
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={onCancel} disabled={isLoading}>
               Cancel
             </Button>

@@ -147,7 +147,7 @@ export function RiskPlanningFNAResultsView({ fna }: RiskPlanningFNAResultsViewPr
       {/* Header */}
       <Card className="border-green-200 bg-green-50">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-green-900">Risk Planning FNA - Published</CardTitle>
               <CardDescription className="text-green-700">

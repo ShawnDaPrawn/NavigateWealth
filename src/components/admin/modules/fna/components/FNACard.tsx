@@ -31,7 +31,7 @@ export function FNACard({ fna, config, onEdit, onDelete, onPublish, onView }: FN
   return (
     <Card className="mt-4 border-2 border-primary/20">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
@@ -52,7 +52,7 @@ export function FNACard({ fna, config, onEdit, onDelete, onPublish, onView }: FN
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {/* View Details Button */}
             {onView && (
               <Button variant="default" size="sm" onClick={onView}>

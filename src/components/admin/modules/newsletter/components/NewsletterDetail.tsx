@@ -87,7 +87,7 @@ export function NewsletterDetail({
   const terminal = campaign.status === 'finished' || campaign.status === 'cancelled';
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
       <div className="space-y-6">
         {campaign.source === 'routine' && campaign.status === 'draft' ? (
           <Notice tone="warn" icon={Bot} title="Handed over by the monthly routine">
@@ -212,7 +212,7 @@ function DraftEditor({ campaign, caps }: { campaign: NewsletterCampaign; caps: N
         </div>
 
         {caps.create ? (
-          <div className="flex items-center justify-end gap-2 border-t border-border/60 pt-4">
+          <div className="flex items-center justify-end gap-2 border-t border-border/60 pt-4 flex-wrap">
             {dirty ? (
               <Button
                 variant="ghost"
@@ -356,7 +356,7 @@ function ActionsCard({
         ) : null}
 
         {caps.send && editable ? (
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <Button
               variant="outline"
               onClick={() => setTestOpen(true)}

@@ -444,7 +444,7 @@ export const InteractiveFormRenderer = ({
                           <td className="px-2 py-1 border-b border-gray-100 text-center">
                             <button
                               onClick={() => removeRow(ri)}
-                              className="h-7 w-7 inline-flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                              className="h-7 w-7 inline-flex items-center justify-center rounded text-gray-400 hover:text-red-500 hover:bg-red-50 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-all"
                               title="Remove row"
                               aria-label={`Remove row ${ri + 1}`}
                             >

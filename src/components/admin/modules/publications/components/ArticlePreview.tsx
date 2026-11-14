@@ -285,7 +285,7 @@ export function ArticlePreview({ article, categories, types, onClose }: ArticleP
             {/* Header — matches the published page header */}
             <div className="bg-[rgb(49,54,83)] pt-10 pb-10 px-8 md:px-12">
               {/* Badges */}
-              <div className="flex items-center gap-2.5 mb-5">
+              <div className="flex flex-wrap items-center gap-2.5 mb-5">
                 {categoryName && (
                   <Badge className="bg-purple-500/90 text-white border-0 px-3 py-1 text-xs font-medium">
                     {categoryName}

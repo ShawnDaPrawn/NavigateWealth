@@ -585,12 +585,12 @@ export function SubmissionDetailModal({
                     {topLevelFields.map((entry) => (
                       <div
                         key={entry.key}
-                        className="flex justify-between items-start px-4 py-2.5 gap-4"
+                        className="flex flex-col gap-0.5 px-4 py-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
                       >
                         <span className="text-xs font-medium text-gray-500 min-w-[100px] flex-shrink-0 pt-0.5">
                           {entry.label}
                         </span>
-                        <span className="text-sm text-gray-900 text-right break-words font-medium">
+                        <span className="text-sm font-medium break-words text-gray-900 sm:text-right">
                           {entry.value}
                         </span>
                       </div>

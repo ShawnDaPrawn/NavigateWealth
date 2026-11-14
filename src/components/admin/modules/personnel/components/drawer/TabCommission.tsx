@@ -27,7 +27,7 @@ export function TabCommission({ selectedPersonnel }: TabCommissionProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label>Standard Split (%)</Label>
             <div className="flex items-center gap-2">

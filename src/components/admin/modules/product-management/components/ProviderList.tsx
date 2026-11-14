@@ -34,9 +34,9 @@ export function ProviderList({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[100px]">Logo</TableHead>
+            <TableHead className="w-[64px] sm:w-[100px]">Logo</TableHead>
             <TableHead>Provider Name</TableHead>
-            <TableHead>Products</TableHead>
+            <TableHead className="hidden sm:table-cell">Products</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -57,7 +57,7 @@ export function ProviderList({
             providers.map((provider, providerIndex) => (
               <TableRow key={`${provider.id}-${providerIndex}`}>
                 <TableCell>
-                  <div className="w-20 h-10 rounded bg-gray-50 border flex items-center justify-center overflow-hidden">
+                  <div className="flex h-10 w-12 items-center justify-center overflow-hidden rounded border bg-gray-50 sm:w-20">
                     {provider.logo ? (
                       <ImageWithFallback
                         src={provider.logo}
@@ -69,8 +69,8 @@ export function ProviderList({
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">{provider.name}</TableCell>
-                <TableCell>
+                <TableCell className="font-medium whitespace-normal">{provider.name}</TableCell>
+                <TableCell className="hidden sm:table-cell">
                   <div className="flex flex-wrap gap-1">
                     {[...new Set(getPortalAutomationCategoryOptions(provider.categoryIds))].map((categoryId, categoryIndex) => (
                         <Badge

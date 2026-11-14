@@ -110,7 +110,7 @@ export function AutomationSettingsDialog({
         </DialogHeader>
 
         <Tabs defaultValue="general" className="mt-2">
-          <TabsList className="flex flex-wrap h-auto">
+          <TabsList className="h-auto">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="slots">Posting slots</TabsTrigger>
             <TabsTrigger value="style">Style guide</TabsTrigger>

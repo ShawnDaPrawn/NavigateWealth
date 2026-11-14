@@ -199,7 +199,7 @@ export function PostCalendar({
         {days.map((day) => (
           <div
             key={`h-${day.toISOString()}`}
-            className="bg-card p-3 border-b text-center font-medium text-sm"
+            className="bg-card border-b px-0.5 py-2 text-center text-xs font-medium sm:p-3 sm:text-sm"
           >
             {day.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric' })}
           </div>
@@ -211,7 +211,7 @@ export function PostCalendar({
           return (
             <div
               key={`c-${day.toISOString()}`}
-              className={`bg-card p-2 min-h-[180px] cursor-pointer hover:bg-muted/20 ${isSelected ? 'ring-2 ring-primary ring-inset' : ''} ${isToday ? 'bg-primary/5' : ''}`}
+              className={`bg-card min-h-[120px] cursor-pointer p-1 sm:min-h-[180px] sm:p-2 hover:bg-muted/20 ${isSelected ? 'ring-2 ring-primary ring-inset' : ''} ${isToday ? 'bg-primary/5' : ''}`}
               onClick={() => onDateChange(day)}
             >
               <div className="space-y-2">
@@ -221,14 +221,15 @@ export function PostCalendar({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full h-8 text-xs text-muted-foreground"
+                  className="h-8 w-full px-0 text-xs text-muted-foreground sm:px-3"
+                  aria-label="Compose"
                   onClick={(e) => {
                     e.stopPropagation();
                     onCreatePost(day);
                   }}
                 >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Compose
+                  <Plus className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Compose</span>
                 </Button>
               </div>
             </div>
@@ -337,7 +338,7 @@ export function PostCalendar({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -427,7 +428,7 @@ export function PostCalendar({
               {selectedPost.failureReason && (
                 <p className="text-sm text-destructive">{selectedPost.failureReason}</p>
               )}
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 flex-wrap">
                 {selectedPost.externalLink && (
                   <Button asChild variant="outline">
                     <a href={selectedPost.externalLink} target="_blank" rel="noreferrer">

@@ -106,7 +106,7 @@ export function SystemActivityCard({
                   </div>
 
                   {/* Hover effect arrow */}
-                  <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-3 right-3 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity">
                     <ArrowRight className="h-4 w-4" />
                   </div>
                 </div>

@@ -715,7 +715,7 @@ export function AIWritingPanel({
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-1.5 px-3 py-2 bg-purple-100/30 border-t border-purple-200">
+              <div className="flex items-center gap-1.5 px-3 py-2 bg-purple-100/30 border-t border-purple-200 flex-wrap">
                 {result.action !== 'compliance_check' &&
                   result.action !== 'seo_optimize' &&
                   result.action !== 'headline' && (

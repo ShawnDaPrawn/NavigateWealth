@@ -37,18 +37,18 @@ export function ReviewDialogHeader({
   return (
     <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
       <div className="h-1 bg-gradient-to-r from-[#6d28d9] via-purple-500 to-purple-400" />
-      <div className="px-6 py-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3.5">
+      <div className="px-4 py-4 pr-12 sm:px-6">
+        <div className="flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3.5">
             <ClientAvatar name={fullName || 'Unknown'} />
-            <div>
+            <div className="min-w-0">
               <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 {fullName || 'Unknown Applicant'}
                 {preferredName && preferredName !== firstName && (
                   <span className="text-sm font-normal text-gray-400">"{preferredName}"</span>
                 )}
               </DialogTitle>
-              <DialogDescription className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
+              <DialogDescription className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
                 <span className="flex items-center gap-1">
                   <Hash className="h-3 w-3" />
                   {selectedApplication.application_number || selectedApplication.id.substring(0, 8)}
@@ -61,8 +61,8 @@ export function ReviewDialogHeader({
                 {selectedApplication.user_email && (
                   <span className="contents">
                     <span className="text-gray-300">|</span>
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
+                    <span className="flex min-w-0 items-center gap-1 break-all">
+                      <Mail className="h-3 w-3 shrink-0" />
                       {selectedApplication.user_email}
                     </span>
                   </span>
@@ -117,7 +117,7 @@ export function ReviewDialogHeader({
             )}
 
             {isEditing ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="ghost"
                   size="sm"

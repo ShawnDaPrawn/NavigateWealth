@@ -96,7 +96,7 @@ export function TaskChecklistSection({
                         <button
                           type="button"
                           onClick={() => handleDeleteChecklistItem(item.id)}
-                          className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-gray-400 hover:text-red-500 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                         >
                           <X className="h-4 w-4" />
                         </button>

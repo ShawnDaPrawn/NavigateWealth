@@ -351,7 +351,7 @@ export function SubmissionInviteModal({ open, onClose }: SubmissionInviteModalPr
                           A branded invitation has been sent to{' '}
                           <span className="font-medium">{recipientEmail}</span>
                         </p>
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-3 flex-wrap">
                           <Button
                             variant="outline"
                             size="sm"

@@ -19,7 +19,7 @@ export function GroupList({ groups, onEdit, onDelete, onSelectGroup }: GroupList
           <CardHeader>
             <div className="flex justify-between items-start">
               <Badge variant="outline">Custom</Badge>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
                 <Button
                   variant="ghost"
                   size="icon"

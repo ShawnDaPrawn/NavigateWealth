@@ -351,7 +351,7 @@ export function RecipientSelector({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleClientSelect(client)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="[@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                         >
                           <X className="h-4 w-4" />
                         </Button>

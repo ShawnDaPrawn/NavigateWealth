@@ -379,7 +379,7 @@ export function Step1InputForm({
 
         {/* Section E: Existing Medical Aid Details */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-wrap gap-x-4 gap-y-2">
             <div className="flex items-center gap-2">
               <Heart className="w-5 h-5 text-primary" />
               <CardTitle className="text-lg">Existing Medical Aid Details (Optional)</CardTitle>
@@ -603,7 +603,7 @@ export function Step1InputForm({
             {/* Penalty Bands Reference */}
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <p className="text-sm font-medium text-foreground">Penalty Bands:</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
                 <div className="bg-background rounded border p-3">
                   <div className="font-semibold text-foreground">0 years</div>
                   <div className="text-muted-foreground">No penalty</div>

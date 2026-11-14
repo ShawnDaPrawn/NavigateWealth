@@ -406,7 +406,7 @@ export function RecipientsManager({
                   </div>
 
                   {/* Name & Email (read-only if system client) */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label>Name</Label>
                       <Input
@@ -454,7 +454,7 @@ export function RecipientsManager({
                   </div>
 
                   {/* Security */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label>Access Code (Optional)</Label>
                       <div className="relative">
@@ -564,7 +564,7 @@ export function RecipientsManager({
 
               {/* Actions */}
               {!disabled && (
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity flex-wrap">
                   <Button variant="ghost" size="sm" onClick={() => setEditingIndex(index)}>
                     <Edit2 className="h-4 w-4 text-gray-500" />
                   </Button>

@@ -129,7 +129,7 @@ export function FNAManagementView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">

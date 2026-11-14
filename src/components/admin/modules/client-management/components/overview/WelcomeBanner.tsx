@@ -149,7 +149,7 @@ export function WelcomeBanner({
         </div>
       </div>
 
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div className="flex flex-col lg:flex-row lg:items-center gap-6">
           {/* Left: Identity (compact) */}
           <div className="flex-1 min-w-0">
@@ -174,7 +174,7 @@ export function WelcomeBanner({
                   {!isClientMode && (
                     <Badge
                       variant={client.applicationStatus === 'approved' ? 'default' : 'secondary'}
-                      className={`text-[10px] ${client.applicationStatus === 'approved' ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                      className={`text-[10px] ${client.applicationStatus === 'approved' ? 'bg-green-600 text-white hover:bg-green-700' : ''}`}
                     >
                       {client.applicationStatus === 'approved'
                         ? 'Active'
@@ -206,7 +206,7 @@ export function WelcomeBanner({
                 )}
 
                 {/* Financial snapshot stats — merged from former snapshot cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wider leading-none">
                       {isClientMode ? 'My Net Worth' : 'Net Worth'}
@@ -258,8 +258,8 @@ export function WelcomeBanner({
           </div>
 
           {/* Right: Health Score + Sub-Scores + Actions */}
-          <div className="flex items-start gap-5 flex-shrink-0">
-            <div className="flex flex-col items-center gap-3">
+          <div className="flex w-full items-start gap-5 lg:w-auto lg:flex-shrink-0">
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-3 lg:flex-none">
               {/* Health Score Ring */}
               <HealthScoreRing
                 score={healthScore}

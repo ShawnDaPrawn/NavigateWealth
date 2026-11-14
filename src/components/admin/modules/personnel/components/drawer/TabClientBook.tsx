@@ -14,7 +14,7 @@ interface TabClientBookProps {
 export function TabClientBook({ clients, loading }: TabClientBookProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-x-4 gap-y-2">
         <CardTitle className="text-lg">Assigned Client Book</CardTitle>
         <Button variant="outline" size="sm" disabled>
           <Briefcase className="h-4 w-4 mr-2" />
