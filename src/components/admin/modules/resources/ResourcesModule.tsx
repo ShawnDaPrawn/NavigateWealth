@@ -26,17 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../ui/dropdown-menu';
 
-import {
-  PenTool,
-  Printer,
-  Scale,
-  Loader2,
-  MoreHorizontal,
-  Users,
-  ChevronRight,
-  X,
-  Mail,
-} from 'lucide-react';
+import { Printer, Scale, Loader2, MoreHorizontal, Users, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Module imports
@@ -51,7 +41,14 @@ import { useCurrentUserPermissions } from '../personnel';
 // Phase 1 — Form status config
 import { FormsFilterBar } from './components/FormsFilterBar';
 import { FormsList } from './components/FormsList';
-import { PageHeader, NavTabsList, NavTabsTrigger, ErrorState, useConfirm } from '../../layout/page';
+import {
+  DsButton,
+  PageHeader,
+  NavTabsList,
+  NavTabsTrigger,
+  ErrorState,
+  useConfirm,
+} from '../../layout/page';
 import { BackLink } from './components/BackLink';
 import { BreadcrumbTrail } from './components/BreadcrumbTrail';
 
@@ -469,7 +466,7 @@ export function ResourcesModule() {
   // ============================================================================
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="ds-page">
       {/* PDF Template Viewer (supports multi-form navigation) */}
       <Suspense fallback={<LazyFallback />}>
         <PdfTemplateViewer
@@ -555,13 +552,13 @@ export function ResourcesModule() {
         {/* ============================================================ */}
         {/* FORMS TAB */}
         {/* ============================================================ */}
-        <TabsContent value="forms" className="space-y-6">
+        <TabsContent value="forms" className="space-y-4">
           <BreadcrumbTrail trail={[{ label: 'Forms & documents' }]} />
           {/* Header Row: title + primary actions */}
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-nw-ink">Form management & pre-filling</h2>
-              <p className="mt-0.5 text-sm text-nw-text-3">
+              <h2 className="ds-h2">Form management &amp; pre-filling</h2>
+              <p className="ds-meta mt-0.5">
                 Build forms and letters, then pre-fill them with a client&apos;s details.
               </p>
             </div>
@@ -569,26 +566,19 @@ export function ResourcesModule() {
               {/* Primary actions */}
               {canCreate && (
                 <div className="contents">
-                  <Button variant="outline" onClick={() => setBuildParam('letter')}>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Compose letter
-                  </Button>
-                  <Button
-                    className="bg-primary hover:bg-primary/90"
-                    onClick={() => setBuildParam('form')}
-                  >
-                    <PenTool className="h-4 w-4 mr-2" />
+                  <DsButton onClick={() => setBuildParam('letter')}>Compose letter</DsButton>
+                  <DsButton variant="primary" onClick={() => setBuildParam('form')}>
                     Build new form
-                  </Button>
+                  </DsButton>
                 </div>
               )}
 
               {/* Secondary actions menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" aria-label="More actions">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <DsButton variant="ghost" aria-label="More actions">
+                    <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                  </DsButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuItem onClick={openDemo}>
@@ -625,26 +615,15 @@ export function ResourcesModule() {
           />
           {/* Selection action bar */}
           {isSelectMode && selectedFormIds.size > 0 && (
-            <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-lg">
-              <Badge className="bg-primary text-white">{selectedFormIds.size} selected</Badge>
-              <Button size="sm" variant="outline" onClick={toggleSelectAll}>
+            <div className="ds-notice dark" role="status">
+              <b>{selectedFormIds.size} selected</b>
+              <span className="grow" />
+              <DsButton size="sm" onClick={toggleSelectAll}>
                 {selectedFormIds.size === filteredForms.length ? 'Deselect all' : 'Select all'}
-              </Button>
-              <div className="flex-1" />
-              <Button size="sm" onClick={handlePrefillSelected}>
-                <Users className="h-4 w-4 mr-1.5" />
+              </DsButton>
+              <DsButton size="sm" variant="primary" onClick={handlePrefillSelected}>
                 Pre-fill selected
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setSelectedFormIds(new Set());
-                  setIsSelectMode(false);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              </DsButton>
             </div>
           )}
 

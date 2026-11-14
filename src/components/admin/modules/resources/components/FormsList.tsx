@@ -3,8 +3,8 @@
  * with selection, status badges and row actions, and the count footer.
  * Pure view over props from ResourcesModule.
  */
-import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
+import { cn } from '../../../../ui/utils';
+import { DsButton, DsState } from '../../../layout/page';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,25 +12,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
-import {
-  FileText,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  CheckSquare,
-  Square,
-  Users,
-  Mail,
-} from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 
 // Module imports
 import { FormDefinition } from '../types';
-import { getCategoryColor } from '../utils';
+
 import { Skeleton } from '../../../../ui/skeleton';
 
 // Phase 1 — Form status config
-import { FORM_STATUS_CONFIG, type FormStatus } from '../builder/constants';
 import type { FormFilters } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -88,146 +77,88 @@ export function FormsList({
   return (
     <div>
       {loading ? (
-        <div className="border rounded-lg divide-y bg-white">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-border">
-              <Skeleton className="w-9 h-9 rounded-lg flex-shrink-0" />
-              <div className="flex-1 min-w-0 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-44" />
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                </div>
-                <Skeleton className="h-3 w-64" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="ds-card ds-card-b flex flex-col gap-2">
+              <Skeleton className="h-5 w-14 rounded-full" />
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-52" />
+              <div className="flex gap-1.5 pt-1.5">
+                <Skeleton className="h-7 w-16 rounded-md" />
+                <Skeleton className="h-7 w-16 rounded-md" />
               </div>
-              <Skeleton className="h-3 w-8 hidden lg:block" />
-              <Skeleton className="h-3 w-16 hidden lg:block" />
-              <Skeleton className="h-7 w-16 rounded-md" />
-              <Skeleton className="h-7 w-16 rounded-md" />
             </div>
           ))}
         </div>
       ) : filteredForms.length > 0 ? (
-        <div className="border rounded-lg divide-y bg-white">
+        // RE-Forms: a grid of form cards — kind pill, title, meta, then Preview /
+        // Pre-fill / ⋯ — with a checkbox on each card in select mode.
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredForms.map((form) => {
             const isSelected = selectedFormIds.has(form.id);
+            const isDraft = form.status === 'draft';
+            const isLetter = form.category === 'Letters';
+            const pill = isDraft
+              ? { tone: '', label: 'Draft' }
+              : form.status === 'archived'
+                ? { tone: '', label: 'Archived' }
+                : isLetter
+                  ? { tone: 'info', label: 'Letter' }
+                  : { tone: 'brand', label: form.category === 'Forms' ? 'Form' : form.category };
             return (
-              <div
+              <section
                 key={form.id}
-                className={`flex items-center gap-4 px-4 py-3 group hover:bg-gray-50/50 transition-colors ${
-                  isSelected ? 'bg-primary/5' : ''
-                }`}
-              >
-                {/* Selection checkbox */}
-                {isSelectMode && (
-                  <button onClick={() => toggleFormSelection(form.id)} className="shrink-0">
-                    {isSelected ? (
-                      <CheckSquare className="h-5 w-5 text-primary" />
-                    ) : (
-                      <Square className="h-5 w-5 text-gray-300 hover:text-gray-500" />
-                    )}
-                  </button>
+                className={cn(
+                  'ds-card ds-card-b flex flex-col gap-2',
+                  isSelected && 'border-nw-violet ring-1 ring-nw-violet',
                 )}
-
-                {/* Icon */}
-                <div
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                    form.category === 'Letters' ? 'bg-violet-50' : 'bg-gray-100'
-                  }`}
-                >
-                  {form.category === 'Letters' ? (
-                    <Mail className="h-4 w-4 text-violet-500" />
-                  ) : (
-                    <FileText className="h-4 w-4 text-gray-500" />
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className={cn('ds-pill', pill.tone)}>{pill.label}</span>
+                  {isSelectMode && (
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-[var(--nw-violet)]"
+                      checked={isSelected}
+                      onChange={() => toggleFormSelection(form.id)}
+                      aria-label={`Select ${form.name}`}
+                    />
                   )}
                 </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold truncate">{form.name}</h3>
-                    <Badge
-                      variant="secondary"
-                      className={`text-[10px] px-1.5 py-0 h-5 ${getCategoryColor(form.category)}`}
-                    >
-                      {form.category}
-                    </Badge>
-                    {/* Phase 1: Status badge */}
-                    {form.status && FORM_STATUS_CONFIG[form.status as FormStatus] && (
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] px-1.5 py-0 h-5 ${FORM_STATUS_CONFIG[form.status as FormStatus].badgeClass}`}
-                      >
-                        <span
-                          className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${FORM_STATUS_CONFIG[form.status as FormStatus].dotClass}`}
-                        />
-                        {FORM_STATUS_CONFIG[form.status as FormStatus].label}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
-                    {form.description || 'No description'}
-                  </p>
-                </div>
-
-                {/* Meta */}
-                <div className="hidden lg:flex items-center gap-4 text-xs text-muted-foreground shrink-0">
-                  <span>v{form.version}</span>
-                  <span>{form.clientTypes[0] || 'Universal'}</span>
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-wrap items-center gap-1 shrink-0 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2 text-xs"
-                    onClick={() => handleQuickPreview(form)}
-                    title="Quick preview (empty data)"
-                  >
-                    <Eye className="h-3.5 w-3.5 mr-1" />
+                <h3 className="text-[14px] font-semibold text-nw-ink">{form.name}</h3>
+                <span className="ds-meta line-clamp-2">
+                  {form.description ||
+                    (isDraft
+                      ? 'Not published yet'
+                      : isLetter
+                        ? 'Letter template'
+                        : `v${form.version}`)}
+                </span>
+                <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1.5">
+                  <DsButton size="sm" onClick={() => handleQuickPreview(form)}>
                     Preview
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2 text-xs text-primary"
-                    onClick={() => handlePrefill([form])}
-                    title="Pre-fill with client data"
-                  >
-                    <Users className="h-3.5 w-3.5 mr-1" />
+                  </DsButton>
+                  <DsButton size="sm" variant="primary" onClick={() => handlePrefill([form])}>
                     Pre-fill
-                  </Button>
-                  {canEdit && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 px-2 text-xs"
-                      onClick={() => handleEdit(form)}
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  {/* Phase 1: Row-level actions menu (duplicate, status, delete) */}
+                  </DsButton>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
+                      <DsButton
                         size="sm"
                         variant="ghost"
-                        className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
+                        aria-label={`More actions for ${form.name}`}
                       >
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                      </Button>
+                        <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                      </DsButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       {canEdit && (
                         <DropdownMenuItem onClick={() => handleEdit(form)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit in Builder
+                          Edit in builder
                         </DropdownMenuItem>
                       )}
                       {canCreate && (
                         <DropdownMenuItem onClick={() => duplicateResource(form.id)}>
-                          <FileText className="h-4 w-4 mr-2" />
                           Duplicate
                         </DropdownMenuItem>
                       )}
@@ -236,40 +167,22 @@ export function FormsList({
                           <DropdownMenuSeparator />
                           {form.status !== 'published' && (
                             <DropdownMenuItem
-                              onClick={() =>
-                                updateResource(form.id, { status: 'published' } as Record<
-                                  string,
-                                  unknown
-                                >)
-                              }
+                              onClick={() => updateResource(form.id, { status: 'published' })}
                             >
-                              <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2" />
                               Publish
                             </DropdownMenuItem>
                           )}
                           {form.status !== 'draft' && (
                             <DropdownMenuItem
-                              onClick={() =>
-                                updateResource(form.id, { status: 'draft' } as Record<
-                                  string,
-                                  unknown
-                                >)
-                              }
+                              onClick={() => updateResource(form.id, { status: 'draft' })}
                             >
-                              <span className="inline-block w-2 h-2 rounded-full bg-amber-500 mr-2" />
-                              Revert to Draft
+                              Revert to draft
                             </DropdownMenuItem>
                           )}
                           {form.status !== 'archived' && (
                             <DropdownMenuItem
-                              onClick={() =>
-                                updateResource(form.id, { status: 'archived' } as Record<
-                                  string,
-                                  unknown
-                                >)
-                              }
+                              onClick={() => updateResource(form.id, { status: 'archived' })}
                             >
-                              <span className="inline-block w-2 h-2 rounded-full bg-gray-400 mr-2" />
                               Archive
                             </DropdownMenuItem>
                           )}
@@ -279,10 +192,9 @@ export function FormsList({
                         <div className="contents">
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            className="text-red-600 focus:text-red-700"
+                            className="text-red-700 focus:text-red-700"
                             onClick={() => handleDelete(form)}
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
                         </div>
@@ -290,27 +202,17 @@ export function FormsList({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              </div>
+              </section>
             );
           })}
         </div>
       ) : (
-        <div className="text-center py-16 text-muted-foreground border rounded-lg bg-white">
-          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="text-lg font-medium">
-            {filters.search ? 'No forms match your search' : 'No forms available'}
-          </p>
-          <p className="text-sm mt-1">
-            {filters.search
-              ? 'Try adjusting your search or filters'
-              : 'Build a new form to get started'}
-          </p>
-        </div>
+        <DsState title={filters.search ? 'No forms match your search' : 'No forms available'} />
       )}
 
       {/* Count footer */}
       {!loading && filteredForms.length > 0 && (
-        <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground px-1">
+        <div className="ds-meta mt-3 flex items-center justify-between px-1">
           <span>
             {filteredForms.length} form{filteredForms.length !== 1 ? 's' : ''}
           </span>
