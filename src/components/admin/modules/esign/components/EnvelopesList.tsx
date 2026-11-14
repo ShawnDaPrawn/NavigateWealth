@@ -47,6 +47,7 @@ import { VoidEnvelopeDialog } from './VoidEnvelopeDialog';
 import { DiscardEnvelopeDialog } from './DiscardEnvelopeDialog';
 import { BulkRemindDialog, BulkVoidDialog } from './BulkActionDialogs';
 import { EnvelopeThumbnail } from './EnvelopeThumbnail';
+import { ErrorState } from '../../../layout/page';
 import { toast } from 'sonner';
 
 interface EnvelopesListProps {
@@ -206,61 +207,17 @@ export function EnvelopesList({
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-red-500">
-        <p>Error loading envelopes: {error}</p>
-        <Button variant="outline" onClick={() => refetch()} className="mt-4">
-          Try Again
-        </Button>
-      </div>
+      <ErrorState
+        title="Couldn't load envelopes"
+        description="Something went wrong while loading. Nothing has changed."
+        details={error}
+        onRetry={() => void refetch()}
+      />
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* ==================== BULK ACTION BAR ==================== */}
-      {hasSelection && (
-        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 animate-in slide-in-from-top-2">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-blue-800">
-              {selectedIds.size} envelope{selectedIds.size > 1 ? 's' : ''} selected
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearSelection}
-              className="text-blue-600 hover:text-blue-800 h-7 px-2"
-            >
-              <X className="h-3.5 w-3.5 mr-1" />
-              Clear
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            {canBulkRemind && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setBulkRemindOpen(true)}
-                className="h-8 gap-1.5"
-              >
-                <Send className="h-3.5 w-3.5" />
-                Send Reminders ({remindableIds.length})
-              </Button>
-            )}
-            {canBulkVoid && (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => setBulkVoidOpen(true)}
-                className="h-8 gap-1.5"
-              >
-                <Ban className="h-3.5 w-3.5" />
-                Void Selected ({voidableIds.length})
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* ==================== FILTERS ==================== */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4">
@@ -372,6 +329,49 @@ export function EnvelopesList({
           </div>
         </div>
       </div>
+
+      {/* ==================== BULK ACTION BAR ==================== */}
+      {hasSelection && (
+        <div
+          role="region"
+          aria-label="Bulk actions"
+          className="flex flex-wrap items-center gap-3 rounded-lg bg-nw-ink px-4 py-2.5 text-white animate-in slide-in-from-top-2"
+        >
+          <span className="text-sm font-semibold">{selectedIds.size} selected</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearSelection}
+            className="h-7 px-2 text-white/80 hover:bg-white/10 hover:text-white"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Clear
+          </Button>
+          <span className="flex-1" />
+          {canBulkRemind && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setBulkRemindOpen(true)}
+              className="h-8 gap-1.5 bg-white text-nw-ink hover:bg-white/90"
+            >
+              <Send className="h-3.5 w-3.5" />
+              Send reminders ({remindableIds.length})
+            </Button>
+          )}
+          {canBulkVoid && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setBulkVoidOpen(true)}
+              className="h-8 gap-1.5"
+            >
+              <Ban className="h-3.5 w-3.5" />
+              Void… ({voidableIds.length})
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* ==================== TABLE ==================== */}
       <div className="rounded-md border overflow-x-auto">

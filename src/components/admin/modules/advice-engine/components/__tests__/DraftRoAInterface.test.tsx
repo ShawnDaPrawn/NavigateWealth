@@ -43,6 +43,7 @@ vi.mock('../../api', () => ({
   },
 }));
 
+import { BreadcrumbContext } from '@/components/admin/layout/page';
 import { DraftRoAInterface } from '../DraftRoAInterface';
 import { roaApi } from '../../api';
 import type { RoADraft } from '../../types';
@@ -116,5 +117,52 @@ describe('DraftRoAInterface — new draft creation', () => {
 
     resolveSave(serverDraft);
     expect(await screen.findByText('client-step')).toBeTruthy();
+  });
+});
+
+describe('DraftRoAInterface — step progress', () => {
+  it('shows the four steps with the current one marked, and Back / Continue to modules', async () => {
+    mockedSaveDraft.mockResolvedValue(serverDraft);
+    renderInterface();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Begin RoA draft/i }));
+    expect(await screen.findByText('client-step')).toBeTruthy();
+
+    const steps = screen.getByRole('list', { name: 'Record of Advice steps' });
+    expect(steps.textContent).toContain('Client');
+    expect(steps.textContent).toContain('Modules');
+    expect(steps.textContent).toContain('Module details');
+    expect(steps.textContent).toContain('Review & compile');
+    expect(steps.querySelector('[aria-current="step"]')?.textContent).toBe('1');
+
+    expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy();
+    // No client chosen yet, so the wizard cannot move on.
+    expect(
+      (screen.getByRole('button', { name: 'Continue to modules' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+});
+
+describe('DraftRoAInterface — breadcrumb', () => {
+  it('adds the wizard step to the top-bar trail', async () => {
+    mockedSaveDraft.mockResolvedValue(serverDraft);
+    const setTrail = vi.fn();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <BreadcrumbContext.Provider value={{ trail: [], setTrail }}>
+        <QueryClientProvider client={queryClient}>
+          <DraftRoAInterface />
+        </QueryClientProvider>
+      </BreadcrumbContext.Provider>,
+    );
+    const labels = () =>
+      (setTrail.mock.calls.at(-1)?.[0] as Array<{ label: string }>).map((c) => c.label);
+
+    await screen.findByRole('button', { name: /Begin RoA draft/i });
+    expect(labels()).toEqual(['Draft RoA']);
+
+    fireEvent.click(screen.getByRole('button', { name: /Begin RoA draft/i }));
+    expect(await screen.findByText('client-step')).toBeTruthy();
+    await waitFor(() => expect(labels()).toEqual(['Draft RoA', 'Client']));
   });
 });

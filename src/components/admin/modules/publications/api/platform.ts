@@ -62,25 +62,19 @@ export const InitializationAPI = {
    * ```
    */
   async checkStatus(): Promise<InitializationStatus> {
-    try {
-      const categoriesResponse = await fetch(`${BASE_URL}/categories`, { headers });
-      const categories = await handleResponse<Category[]>(categoriesResponse);
+    // A failed request must surface as an error, never as "not set up": an
+    // admin shown the setup screen on a live system could run setup again.
+    const categoriesResponse = await fetch(`${BASE_URL}/categories`, { headers });
+    const categories = await handleResponse<Category[]>(categoriesResponse);
 
-      const typesResponse = await fetch(`${BASE_URL}/types`, { headers });
-      const types = await handleResponse<ContentType[]>(typesResponse);
+    const typesResponse = await fetch(`${BASE_URL}/types`, { headers });
+    const types = await handleResponse<ContentType[]>(typesResponse);
 
-      return {
-        is_initialized: categories.length > 0 && types.length > 0,
-        has_categories: categories.length > 0,
-        has_types: types.length > 0,
-      };
-    } catch {
-      return {
-        is_initialized: false,
-        has_categories: false,
-        has_types: false,
-      };
-    }
+    return {
+      is_initialized: categories.length > 0 && types.length > 0,
+      has_categories: categories.length > 0,
+      has_types: types.length > 0,
+    };
   },
 
   /**

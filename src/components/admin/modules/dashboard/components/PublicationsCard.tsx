@@ -29,6 +29,7 @@ import { StatsAPI, useArticles } from '../../publications';
 import type { ArticleStatus } from '../../publications';
 import { publicationKeys } from '../../../../../utils/queryKeys';
 import type { PublicationsCardProps } from '../types';
+import { CardError } from './CardError';
 
 /** Status → badge styling + label (config-driven, §5.3). */
 const STATUS_CONFIG: Record<ArticleStatus, { label: string; badgeClass: string }> = {
@@ -71,6 +72,7 @@ export function PublicationsCard({ onModuleChange, maxArticles = 5 }: Publicatio
     data: stats = null,
     isLoading: statsLoading,
     isError: statsFailed,
+    refetch: refetchStats,
   } = useQuery({
     queryKey: publicationKeys.stats(),
     queryFn: () => StatsAPI.getStats(),
@@ -79,10 +81,17 @@ export function PublicationsCard({ onModuleChange, maxArticles = 5 }: Publicatio
 
   // The Publications module's own hook, so the article list is fetched once and
   // shared with it rather than fetched again on the way in.
-  const { articles, isLoading: articlesLoading, error: articlesError } = useArticles();
+  const {
+    articles,
+    isLoading: articlesLoading,
+    error: articlesError,
+    refetch: refetchArticles,
+  } = useArticles();
 
   const loading = statsLoading || articlesLoading;
-  const error = statsFailed && !!articlesError;
+  // The recent-articles list needs the articles; the tiles show "—" on their own
+  // when only the totals failed.
+  const error = !!articlesError;
 
   const sortedArticles = useMemo(
     () =>
@@ -112,18 +121,18 @@ export function PublicationsCard({ onModuleChange, maxArticles = 5 }: Publicatio
       iconColor: 'text-gray-600',
     },
     {
+      label: 'In review',
+      value: stats?.by_status.in_review ?? 0,
+      icon: Eye,
+      iconBg: 'bg-amber-50',
+      iconColor: 'text-amber-600',
+    },
+    {
       label: 'Scheduled',
       value: stats?.by_status.scheduled ?? 0,
       icon: CalendarClock,
       iconBg: 'bg-blue-50',
       iconColor: 'text-blue-600',
-    },
-    {
-      label: 'In Review',
-      value: stats?.by_status.in_review ?? 0,
-      icon: Eye,
-      iconBg: 'bg-amber-50',
-      iconColor: 'text-amber-600',
     },
   ];
 
@@ -163,7 +172,7 @@ export function PublicationsCard({ onModuleChange, maxArticles = 5 }: Publicatio
               {loading ? (
                 <Skeleton className="h-6 w-10 mx-auto mb-1" />
               ) : (
-                <p className="text-xl font-bold leading-tight">{tile.value}</p>
+                <p className="text-xl font-bold leading-tight">{statsFailed ? '—' : tile.value}</p>
               )}
               <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{tile.label}</p>
             </div>
@@ -184,13 +193,13 @@ export function PublicationsCard({ onModuleChange, maxArticles = 5 }: Publicatio
             ))}
           </div>
         ) : error ? (
-          <div className="py-6 text-center">
-            <BookOpen className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Publications data unavailable</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Open the Publications module to manage content.
-            </p>
-          </div>
+          <CardError
+            title="Couldn't load publications"
+            onRetry={() => {
+              void refetchStats();
+              void refetchArticles();
+            }}
+          />
         ) : recentArticles.length === 0 ? (
           <div className="py-6 text-center">
             <BookOpen className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />

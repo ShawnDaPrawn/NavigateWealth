@@ -13,8 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Label } from '../../../../ui/label';
 import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../ui/alert';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
-import { User, Wallet, Info, Loader2, CalendarDays, TrendingUp } from 'lucide-react';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
+import { User, Wallet, Info, Loader2, TrendingUp } from 'lucide-react';
 import { CurrencyInputField } from '../../../../ui/currency-input';
 import { NumberInputField } from '../../../../ui/number-input';
 import { RetirementFNAInputs, RetirementFNAAdjustments } from '../types';
@@ -177,16 +178,10 @@ export function Step1InputForm({
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="profile">
-              <CalendarDays className="h-4 w-4 mr-2" />
-              Client Profile
-            </TabsTrigger>
-            <TabsTrigger value="financial">
-              <Wallet className="h-4 w-4 mr-2" />
-              Financial Position
-            </TabsTrigger>
-          </TabsList>
+          <SegmentedList aria-label="Information sections">
+            <SegmentedTrigger value="profile">Client profile</SegmentedTrigger>
+            <SegmentedTrigger value="financial">Financial position</SegmentedTrigger>
+          </SegmentedList>
 
           <TabsContent value="profile" className="space-y-6 mt-6">
             <Card>

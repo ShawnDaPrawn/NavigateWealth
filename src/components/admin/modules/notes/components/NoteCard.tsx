@@ -5,7 +5,6 @@
  * §8.3 — Config-driven colour coding
  */
 
-import { useState } from 'react';
 import type { Note } from '../types';
 import { NOTE_COLOR_CONFIG } from '../constants';
 import { Button } from '../../../../ui/button';
@@ -17,16 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../../ui/alert-dialog';
+import { useConfirm } from '../../../layout/page';
 import {
   Pin,
   MoreVertical,
@@ -67,7 +57,16 @@ export function NoteCard({
   isSelected = false,
   onToggleSelect,
 }: NoteCardProps) {
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
+  const askDelete = async () => {
+    const ok = await confirm({
+      title: 'Delete note',
+      description: `Delete “${note.title || 'Untitled note'}”? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) onDelete(note);
+  };
   const colorCfg = NOTE_COLOR_CONFIG[note.color] || NOTE_COLOR_CONFIG.default;
 
   const contentPreview =
@@ -180,9 +179,10 @@ export function NoteCard({
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button
+                aria-label={`More actions for ${note.title || 'note'}`}
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 transition-opacity"
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -203,7 +203,7 @@ export function NoteCard({
                     onConvertToTask(note);
                   }}
                 >
-                  <ListTodo className="h-4 w-4 mr-2" /> Convert to Task
+                  <ListTodo className="h-4 w-4 mr-2" /> Convert to task
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -227,7 +227,7 @@ export function NoteCard({
                 className="text-red-600 focus:text-red-600"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowDeleteDialog(true);
+                  void askDelete();
                 }}
               >
                 <Trash2 className="h-4 w-4 mr-2" /> Delete
@@ -236,26 +236,9 @@ export function NoteCard({
           </DropdownMenu>
         </div>
 
-        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Note</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete &quot;{note.title}&quot;? This action cannot be
-                undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-red-600 hover:bg-red-700"
-                onClick={() => onDelete(note)}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <span className="contents" onClick={(e) => e.stopPropagation()}>
+          {confirmDialog}
+        </span>
       </div>
     );
   }
@@ -318,9 +301,10 @@ export function NoteCard({
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button
+                aria-label={`More actions for ${note.title || 'note'}`}
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 -mr-1 -mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-7 w-7 p-0 -mr-1 -mt-0.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 transition-opacity"
               >
                 <MoreVertical className="h-3.5 w-3.5" />
               </Button>
@@ -341,7 +325,7 @@ export function NoteCard({
                     onConvertToTask(note);
                   }}
                 >
-                  <ListTodo className="h-4 w-4 mr-2" /> Convert to Task
+                  <ListTodo className="h-4 w-4 mr-2" /> Convert to task
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
@@ -365,7 +349,7 @@ export function NoteCard({
                 className="text-red-600 focus:text-red-600"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowDeleteDialog(true);
+                  void askDelete();
                 }}
               >
                 <Trash2 className="h-4 w-4 mr-2" /> Delete
@@ -426,26 +410,9 @@ export function NoteCard({
         </div>
       </div>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Note</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{note.title}&quot;? This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => onDelete(note)}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <span className="contents" onClick={(e) => e.stopPropagation()}>
+        {confirmDialog}
+      </span>
     </div>
   );
 }

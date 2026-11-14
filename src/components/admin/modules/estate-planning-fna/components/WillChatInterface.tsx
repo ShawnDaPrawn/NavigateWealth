@@ -22,7 +22,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import {
   AlertDialog,
@@ -706,24 +707,12 @@ export function WillChatInterface({
       {/* Main content */}
       {willReady && outputPack ? (
         <Tabs defaultValue="chat" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="chat" className="flex items-center gap-1.5">
-              <Bot className="h-3.5 w-3.5" />
-              Chat
-            </TabsTrigger>
-            <TabsTrigger value="will" className="flex items-center gap-1.5">
-              <Scroll className="h-3.5 w-3.5" />
-              Will
-            </TabsTrigger>
-            <TabsTrigger value="issues" className="flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5" />
-              Issues
-            </TabsTrigger>
-            <TabsTrigger value="checklist" className="flex items-center gap-1.5">
-              <ClipboardList className="h-3.5 w-3.5" />
-              Checklist
-            </TabsTrigger>
-          </TabsList>
+          <SegmentedList aria-label="AI will builder">
+            <SegmentedTrigger value="chat">Chat</SegmentedTrigger>
+            <SegmentedTrigger value="will">Will</SegmentedTrigger>
+            <SegmentedTrigger value="issues">Issues</SegmentedTrigger>
+            <SegmentedTrigger value="checklist">Checklist</SegmentedTrigger>
+          </SegmentedList>
 
           <TabsContent value="chat">{chatCard}</TabsContent>
 

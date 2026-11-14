@@ -121,12 +121,9 @@ describe('aiIntelligenceApi.getStatus', () => {
     expect(status.valid).toBe(true);
   });
 
-  it('returns unconfigured status on failure', async () => {
+  it('rethrows a failed request (a failed load is not "key missing")', async () => {
     mockApiGet.mockRejectedValue(new Error('Server error'));
-    const status = await aiIntelligenceApi.getStatus();
-    expect(status.configured).toBe(false);
-    expect(status.valid).toBe(false);
-    expect(typeof status.error).toBe('string');
+    await expect(aiIntelligenceApi.getStatus()).rejects.toThrow('Server error');
   });
 });
 

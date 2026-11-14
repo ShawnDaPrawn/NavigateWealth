@@ -6,10 +6,9 @@
  */
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Button } from '../../../../../ui/button';
-import { Badge } from '../../../../../ui/badge';
-import { Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { StatusPill } from './ComplianceShared';
 import { toast } from 'sonner';
 import { api } from '../../../../../../utils/api';
 
@@ -18,8 +17,8 @@ interface HoneycombActionCardProps {
   title: string;
   /** Card description */
   description: string;
-  /** Icon component to render in the header */
-  icon: React.ReactNode;
+  /** Kept for callers; the design (CM-K-*) shows no icon in the card header. */
+  icon?: React.ReactNode;
   /** Label for the action button */
   actionLabel: string;
   /** Server route path (relative to /integrations/honeycomb/) */
@@ -30,7 +29,7 @@ interface HoneycombActionCardProps {
   disabled?: boolean;
   /** Tooltip/reason why the button is disabled */
   disabledReason?: string;
-  /** Card background colour variant */
+  /** Kept for callers; every card is now the same white card. */
   variant?: 'default' | 'blue' | 'green' | 'amber';
   /** Custom content to render above the button (e.g. extra form fields) */
   children?: React.ReactNode;
@@ -40,23 +39,14 @@ interface HoneycombActionCardProps {
   onError?: (error: string) => void;
 }
 
-const variantStyles: Record<string, string> = {
-  default: 'bg-slate-50 border-slate-200',
-  blue: 'bg-blue-50/50 border-blue-200',
-  green: 'bg-green-50/50 border-green-200',
-  amber: 'bg-amber-50/50 border-amber-200',
-};
-
 export function HoneycombActionCard({
   title,
   description,
-  icon,
   actionLabel,
   endpoint,
   requestBody,
   disabled = false,
   disabledReason,
-  variant = 'default',
   children,
   onSuccess,
   onError,
@@ -88,88 +78,65 @@ export function HoneycombActionCard({
     }
   };
 
-  return (
-    <Card className={variantStyles[variant]}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-md font-medium flex items-center gap-2">
-          {icon}
-          {title}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {children}
+  const matterId =
+    result?.success && result.data ? (result.data as Record<string, unknown>).matterId : undefined;
 
+  return (
+    <section className="flex flex-col rounded-xl border border-nw-line bg-white p-5">
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-sm font-semibold text-nw-ink">{title}</h3>
+        {result && (
+          <StatusPill tone={result.success ? 'good' : 'bad'}>
+            {result.success ? 'Completed' : 'Failed'}
+          </StatusPill>
+        )}
+      </div>
+      <p className="mt-2 text-sm text-nw-text-2">{description}</p>
+
+      {children && <div className="mt-3 space-y-3">{children}</div>}
+
+      <div className="mt-4">
         <Button
-          className="w-full"
-          variant="secondary"
+          variant="outline"
           onClick={handleAction}
           disabled={isLoading || disabled}
           title={disabled ? disabledReason : undefined}
         >
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
           {actionLabel}
         </Button>
+      </div>
 
-        {disabled && disabledReason && <p className="text-xs text-amber-600">{disabledReason}</p>}
+      {disabled && disabledReason && (
+        <p className="mt-2 text-xs text-nw-amber-700">{disabledReason}</p>
+      )}
 
-        {/* Result display */}
-        {result && (
-          <div
-            className={`mt-3 rounded-lg p-3 text-sm ${
-              result.success
-                ? 'bg-green-50 border border-green-200'
-                : 'bg-red-50 border border-red-200'
-            }`}
-          >
-            <div className="flex items-center gap-2 font-medium">
-              {result.success ? (
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              ) : (
-                <AlertTriangle className="h-4 w-4 text-red-600" />
+      {result && (result.error || result.success) && (
+        <div className="mt-3 space-y-2 text-sm">
+          {result.error && <p className="text-xs text-red-700">{result.error}</p>}
+          {result.success && !!result.data && (
+            <>
+              {!!matterId && (
+                <p className="text-xs text-nw-text-2">
+                  Matter ID <span className="font-mono text-nw-ink">{String(matterId)}</span>
+                </p>
               )}
-              <span className={result.success ? 'text-green-800' : 'text-red-800'}>
-                {result.success ? 'Check Completed' : 'Check Failed'}
-              </span>
-            </div>
-
-            {result.error && <p className="mt-1 text-red-700 text-xs">{result.error}</p>}
-
-            {result.success && !!result.data && (
-              <div className="mt-2">
-                {/* Show matterId if present */}
-                {!!(result.data as Record<string, unknown>)?.matterId && (
-                  <div className="flex items-center gap-1 text-xs text-gray-600">
-                    <span>Matter ID:</span>
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {String((result.data as Record<string, unknown>).matterId)}
-                    </Badge>
-                  </div>
-                )}
-
-                {/* Toggle raw response */}
-                <button
-                  onClick={() => setShowRawResponse(!showRawResponse)}
-                  className="flex items-center gap-1 mt-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  {showRawResponse ? (
-                    <ChevronUp className="h-3 w-3" />
-                  ) : (
-                    <ChevronDown className="h-3 w-3" />
-                  )}
-                  {showRawResponse ? 'Hide' : 'Show'} details
-                </button>
-
-                {showRawResponse && (
-                  <pre className="mt-2 p-2 bg-gray-900 text-gray-100 text-xs rounded overflow-auto max-h-48 font-mono">
-                    {JSON.stringify(result.data, null, 2)}
-                  </pre>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              <button
+                type="button"
+                onClick={() => setShowRawResponse(!showRawResponse)}
+                className="text-xs font-medium text-nw-violet hover:underline"
+              >
+                {showRawResponse ? 'Hide' : 'Show'} details
+              </button>
+              {showRawResponse && (
+                <pre className="max-h-48 overflow-auto rounded bg-gray-900 p-2 font-mono text-xs text-gray-100">
+                  {JSON.stringify(result.data, null, 2)}
+                </pre>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </section>
   );
 }

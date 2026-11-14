@@ -78,7 +78,7 @@ export function SecurityTabDialogs({
       <Dialog open={suspendDialogOpen} onOpenChange={setSuspendDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Suspend Client Account</DialogTitle>
+            <DialogTitle>Suspend client account</DialogTitle>
             <DialogDescription>
               Are you sure you want to suspend {selectedClient.firstName} {selectedClient.lastName}
               &apos;s account? They will not be able to log in until the account is unsuspended.
@@ -87,7 +87,7 @@ export function SecurityTabDialogs({
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="reason">Reason for Suspension</Label>
+              <Label htmlFor="reason">Reason for suspension</Label>
               <Textarea
                 id="reason"
                 placeholder="Enter the reason for suspending this account..."
@@ -121,7 +121,7 @@ export function SecurityTabDialogs({
               ) : (
                 <div className="contents">
                   <Ban className="mr-2 h-4 w-4" />
-                  Suspend Account
+                  Suspend account
                 </div>
               )}
             </Button>
@@ -132,7 +132,7 @@ export function SecurityTabDialogs({
       <AlertDialog open={unsuspendDialogOpen} onOpenChange={setUnsuspendDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Unsuspend Client Account</AlertDialogTitle>
+            <AlertDialogTitle>Unsuspend client account</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to restore access for {selectedClient.firstName}{' '}
               {selectedClient.lastName}? They will be able to log in immediately after unsuspension.
@@ -153,7 +153,7 @@ export function SecurityTabDialogs({
               ) : (
                 <div className="contents">
                   <UserCheck className="mr-2 h-4 w-4" />
-                  Unsuspend Account
+                  Unsuspend
                 </div>
               )}
             </AlertDialogAction>
@@ -164,7 +164,7 @@ export function SecurityTabDialogs({
       <Dialog open={resetPasswordDialogOpen} onOpenChange={setResetPasswordDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Reset Client Password</DialogTitle>
+            <DialogTitle>Reset client password</DialogTitle>
             <DialogDescription>
               Set a new password for {selectedClient.firstName} {selectedClient.lastName}. Make sure
               to securely communicate this password to the client.
@@ -173,7 +173,7 @@ export function SecurityTabDialogs({
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
+              <Label htmlFor="newPassword">New password</Label>
               <div className="relative">
                 <Input
                   id="newPassword"
@@ -237,7 +237,7 @@ export function SecurityTabDialogs({
               ) : (
                 <div className="contents">
                   <Key className="mr-2 h-4 w-4" />
-                  Reset Password
+                  Reset password
                 </div>
               )}
             </Button>

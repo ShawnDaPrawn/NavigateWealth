@@ -107,6 +107,40 @@ describe('NoteEditorModal', () => {
     expect(titleInput.value).toBe('Meeting notes');
   });
 
+  // Regression: pinning refetched the list and passed a new note object,
+  // which reset the form and dropped an unsaved draft.
+  it('keeps an unsaved draft when the same note is refreshed, and loads a different note', () => {
+    const base = {
+      id: 'n-1',
+      title: 'My Note',
+      content: 'Server copy',
+      color: 'default',
+      tags: [],
+    };
+    const props = {
+      isOpen: true,
+      onClose: noop,
+      personnelId: 'p-1',
+      personnelName: 'Test User',
+      onSave: noopSave,
+    };
+    const { rerender } = render(<NoteEditorModal {...props} note={base as never} />);
+    const contentArea = screen.getByPlaceholderText(/write your note here/i) as HTMLTextAreaElement;
+    fireEvent.change(contentArea, { target: { value: 'Unsaved draft' } });
+
+    rerender(<NoteEditorModal {...props} note={{ ...base, isPinned: true } as never} />);
+    expect(
+      (screen.getByPlaceholderText(/write your note here/i) as HTMLTextAreaElement).value,
+    ).toBe('Unsaved draft');
+
+    rerender(
+      <NoteEditorModal {...props} note={{ ...base, id: 'n-2', content: 'Other note' } as never} />,
+    );
+    expect(
+      (screen.getByPlaceholderText(/write your note here/i) as HTMLTextAreaElement).value,
+    ).toBe('Other note');
+  });
+
   it('renders the searchable client picker trigger when clients are provided', () => {
     render(
       <NoteEditorModal

@@ -78,7 +78,7 @@ export function HealthSection({
               <Heart className="h-5 w-5 text-[#6d28d9]" />
             </div>
             <div>
-              <CardTitle>Health Information</CardTitle>
+              <CardTitle>Health information</CardTitle>
               <CardDescription>Client's health and wellness details</CardDescription>
             </div>
           </div>
@@ -181,7 +181,7 @@ export function HealthSection({
 
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-sm text-gray-900">Health Conditions</h4>
+                <h4 className="text-sm text-gray-900">Health conditions</h4>
                 <p className="text-xs text-gray-500">Does the client have any health conditions?</p>
               </div>
               <Switch
@@ -197,7 +197,7 @@ export function HealthSection({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm text-gray-900">Manage Health Conditions</h4>
+                    <h4 className="text-sm text-gray-900">Manage health conditions</h4>
                     <p className="text-xs text-gray-500">Details about health conditions</p>
                   </div>
                   <Button

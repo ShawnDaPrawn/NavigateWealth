@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import { brandApi, LOGO_THEME_GROUPS, LOGO_VARIANTS } from './brand-api';
 import type { LogoEntry, LogoAssetFormat } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
-import { useConfirm } from '../../../layout/page';
+import { useConfirm, ErrorState } from '../../../layout/page';
 
 const LOGO_UPLOAD_FIELDS: Array<{
   format: LogoAssetFormat;
@@ -83,6 +83,7 @@ export function LogosSection({ onUpdate }: { onUpdate: () => void }) {
 
   const [logos, setLogos] = useState<LogoEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<string>(LOGO_VARIANTS[0].value);
   const [isUploadSlotLocked, setIsUploadSlotLocked] = useState(false);
@@ -99,9 +100,10 @@ export function LogosSection({ onUpdate }: { onUpdate: () => void }) {
     try {
       const data = await brandApi.getLogos();
       setLogos(data);
+      setLoadError(null);
     } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
       console.error('Failed to load logos:', err);
-      toast.error('Failed to load logos');
     } finally {
       setLoading(false);
     }
@@ -222,6 +224,15 @@ export function LogosSection({ onUpdate }: { onUpdate: () => void }) {
   };
 
   if (loading) return <SectionSkeleton rows={4} />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load logos"
+        onRetry={() => void loadLogos()}
+        details={loadError}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

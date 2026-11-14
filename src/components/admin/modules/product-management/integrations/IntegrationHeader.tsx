@@ -1,6 +1,7 @@
-import { TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../../ui/select';
-import { Bot, ClipboardCheck, KeyRound, Settings2, TableProperties } from 'lucide-react';
+import { Button } from '../../../../ui/button';
+import { ChevronLeft, Plug, Settings2 } from 'lucide-react';
+import { PageHeader, SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import {
   IntegrationProvider,
   IntegrationStats,
@@ -8,13 +9,22 @@ import {
   getProductCategoryLabel,
 } from '../types';
 
+
 interface IntegrationHeaderProps {
   provider: IntegrationProvider;
   selectedCategoryId: string;
   stats?: IntegrationStats;
   onCategoryChange: (id: string) => void;
-  /** Proposed changes waiting for a decision, shown as a count on the tab. */
+  /** Proposed changes waiting for a decision, shown as a count on the section. */
   pendingReviewCount?: number;
+  /** "‹ Integrations": back to the connections list. */
+  onBack?: () => void;
+  /** Opens the Advanced & diagnostics page. */
+  onOpenAdvanced?: () => void;
+  /** The sign-in action for this provider ("Test sign-in", "Reconnect"…), when there is one. */
+  connectAction?: { label: string; onClick: () => void };
+  /** How we reach this provider ("Connected", "Spreadsheet sync"…), shown under the title. */
+  statusLabel?: string;
 }
 
 const formatCategorySync = (stats?: IntegrationStats) => {
@@ -28,81 +38,104 @@ const getCategoryStatus = (stats?: IntegrationStats) => {
   return 'Not synced';
 };
 
-export function IntegrationHeader({ provider, selectedCategoryId, stats, onCategoryChange, pendingReviewCount = 0 }: IntegrationHeaderProps) {
+/**
+ * The top of an integration page: back link, the provider's name as the page
+ * title, the header actions (guided sign-in and Advanced & diagnostics), and
+ * the segmented control for the five sections. Render inside `Tabs`.
+ */
+export function IntegrationHeader({
+  provider,
+  selectedCategoryId,
+  stats,
+  onCategoryChange,
+  pendingReviewCount = 0,
+  onBack,
+  onOpenAdvanced,
+  connectAction,
+  statusLabel = 'Spreadsheet sync',
+}: IntegrationHeaderProps) {
   const automationCategoryIds = getPortalAutomationCategoryOptions(provider.categoryIds);
+  const categorySummary = automationCategoryIds.map(getProductCategoryLabel).join(', ');
 
   return (
-    <div className="p-6 border-b bg-white z-10">
-      <div className="flex justify-between items-start gap-6 mb-6">
-        <div className="min-w-0">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{provider.name} Integration</h2>
-          <p className="text-gray-500">Review proposed {provider.name} policy updates, and configure how they are collected</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <div className="w-[250px]">
-            <Select value={selectedCategoryId} onValueChange={onCategoryChange} disabled={automationCategoryIds.length === 0}>
-              <SelectTrigger className="h-9 bg-white border-gray-300">
-                <SelectValue placeholder={automationCategoryIds.length === 0 ? 'No automation category' : 'Select product...'} />
-              </SelectTrigger>
-              <SelectContent>
-                {automationCategoryIds.map((catId) => (
-                  <SelectItem key={catId} value={catId}>
-                    {getProductCategoryLabel(catId)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="mt-1 text-xs text-gray-500">
-              {automationCategoryIds.length === 0
-                ? 'Select a specific product subcategory on this provider first.'
-                : `${getCategoryStatus(stats)} - Last sync: ${formatCategorySync(stats)}`}
-            </p>
-          </div>
+    <div className="flex flex-col gap-4">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Integrations
+        </button>
+      )}
+      <PageHeader
+        title={`${provider.name} integration`}
+        description={categorySummary ? `${statusLabel} · ${categorySummary}` : statusLabel}
+        actions={
+          <>
+            {connectAction && (
+              <Button variant="outline" onClick={connectAction.onClick}>
+                <Plug className="h-4 w-4" aria-hidden="true" />
+                {connectAction.label}
+              </Button>
+            )}
+            {onOpenAdvanced && (
+              <Button variant="outline" onClick={onOpenAdvanced}>
+                <Settings2 className="h-4 w-4" aria-hidden="true" />
+                Advanced &amp; diagnostics
+              </Button>
+            )}
+          </>
+        }
+      />
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <SegmentedList aria-label="Integration sections">
+          <SegmentedTrigger value="review" className="gap-1.5">
+            Review
+            {pendingReviewCount > 0 && (
+              <span className="rounded-full bg-nw-count px-1.5 text-[11px] font-semibold tabular-nums text-nw-text-2">
+                {pendingReviewCount}
+              </span>
+            )}
+          </SegmentedTrigger>
+          <SegmentedTrigger value="portfolio">Portfolio</SegmentedTrigger>
+          <SegmentedTrigger value="setup">Provider setup</SegmentedTrigger>
+          <SegmentedTrigger value="mapping">Mapping configuration</SegmentedTrigger>
+          <SegmentedTrigger value="portal">Portal automation</SegmentedTrigger>
+        </SegmentedList>
+
+        <div className="w-full lg:w-[250px]">
+          <Select
+            value={selectedCategoryId}
+            onValueChange={onCategoryChange}
+            disabled={automationCategoryIds.length === 0}
+          >
+            <SelectTrigger className="h-9 bg-white" aria-label="Product category">
+              <SelectValue
+                placeholder={
+                  automationCategoryIds.length === 0
+                    ? 'No automation category'
+                    : 'Select product...'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {automationCategoryIds.map((catId) => (
+                <SelectItem key={catId} value={catId}>
+                  {getProductCategoryLabel(catId)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="mt-1 text-xs text-gray-500">
+            {automationCategoryIds.length === 0
+              ? 'Select a specific product subcategory on this provider first.'
+              : `${getCategoryStatus(stats)} - Last sync: ${formatCategorySync(stats)}`}
+          </p>
         </div>
       </div>
-
-      <TabsList className="h-auto p-1 bg-gray-100 border border-gray-200 rounded-lg inline-flex gap-1">
-        <TabsTrigger
-          value="upload"
-          className="rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-gray-500 font-medium transition-all flex items-center gap-2"
-        >
-          <ClipboardCheck className="w-3.5 h-3.5" />
-          Review
-          {pendingReviewCount > 0 && (
-            <span className="ml-1 rounded-full bg-purple-100 px-1.5 text-[11px] font-semibold text-purple-700">
-              {pendingReviewCount}
-            </span>
-          )}
-        </TabsTrigger>
-        <TabsTrigger
-          value="portfolio"
-          className="rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-gray-500 font-medium transition-all flex items-center gap-2"
-        >
-          <TableProperties className="w-3.5 h-3.5" />
-          Portfolio
-        </TabsTrigger>
-        <TabsTrigger
-          value="setup"
-          className="rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-gray-500 font-medium transition-all flex items-center gap-2"
-        >
-          <KeyRound className="w-3.5 h-3.5" />
-          Provider Setup
-        </TabsTrigger>
-        <TabsTrigger
-          value="mapping"
-          className="rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-gray-500 font-medium transition-all flex items-center gap-2"
-        >
-          <Settings2 className="w-3.5 h-3.5" />
-          Mapping Configuration
-        </TabsTrigger>
-        <TabsTrigger
-          value="portal"
-          className="rounded-md px-4 py-1.5 text-sm data-[state=active]:bg-white data-[state=active]:text-purple-700 data-[state=active]:shadow-sm text-gray-500 font-medium transition-all flex items-center gap-2"
-        >
-          <Bot className="w-3.5 h-3.5" />
-          Portal Automation
-        </TabsTrigger>
-      </TabsList>
     </div>
   );
 }

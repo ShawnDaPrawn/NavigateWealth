@@ -5,3 +5,4 @@
  * `src/components/admin/moduleLoaders.ts`.
  */
 export { TasksSkeleton } from './components/TasksSkeleton';
+export { taskAddress } from './taskLink';

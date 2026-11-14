@@ -221,6 +221,7 @@ const ADMIN_ROUTES: Route[] = [
   { name: 'delete group', method: 'DELETE', path: `/groups/${GROUP}` },
   { name: 'recalculate groups', method: 'POST', path: '/groups/recalculate', body: {} },
   { name: 'group debug', method: 'GET', path: '/groups/debug' },
+  { name: 'preview group', method: 'POST', path: '/groups/preview', body: {} },
   { name: 'list templates', method: 'GET', path: '/templates' },
   { name: 'create template', method: 'POST', path: '/templates', body: {} },
   { name: 'get template', method: 'GET', path: `/templates/${TEMPLATE}` },

@@ -9,6 +9,7 @@ import { GlobalFooterEditor } from './GlobalFooterEditor';
 import { communicationApi } from '../api';
 import { EmailTemplate } from '../types';
 import { toast } from 'sonner';
+import { Crumbs } from './Crumbs';
 import { useRecordInUrl } from '../../../layout/page';
 
 /** The address value for the global footer editor (?edit=footer). */
@@ -94,24 +95,45 @@ export function TransactionalEmailsManager({
   const generalTemplate = templates.find((t) => t.id === 'general_campaign');
   const systemTemplates = templates.filter((t) => t.id !== 'general_campaign');
 
+  const backToList = { label: 'Transactional emails', onClick: () => setEditingTemplateId(null) };
+
   if (isEditingFooter) {
-    return <GlobalFooterEditor onBack={() => setIsEditingFooter(false)} />;
+    return (
+      <>
+        <Crumbs
+          trail={[
+            { label: 'Transactional emails', onClick: () => setIsEditingFooter(false) },
+            { label: 'Global footer' },
+          ]}
+        />
+        <GlobalFooterEditor onBack={() => setIsEditingFooter(false)} />
+      </>
+    );
   }
 
   if (editingTemplateId) {
     return (
-      <EmailTemplateEditor
-        templateId={editingTemplateId}
-        onBack={() => {
-          setEditingTemplateId(null);
-          loadTemplates(); // Reload to get updates
-        }}
-      />
+      <>
+        <Crumbs
+          trail={[
+            backToList,
+            { label: templates.find((t) => t.id === editingTemplateId)?.name || 'Template' },
+          ]}
+        />
+        <EmailTemplateEditor
+          templateId={editingTemplateId}
+          onBack={() => {
+            setEditingTemplateId(null);
+            loadTemplates(); // Reload to get updates
+          }}
+        />
+      </>
     );
   }
 
   return (
     <div className="space-y-8">
+      <Crumbs trail={[{ label: 'Transactional emails' }]} />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-nw-ink">Email settings &amp; templates</h2>

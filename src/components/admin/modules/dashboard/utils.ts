@@ -6,6 +6,7 @@ import type {
   DashboardStats,
   DashboardMetrics,
   SystemActivity,
+  AdminAuditEntry,
 } from './types';
 import {
   formatNumber,
@@ -224,4 +225,53 @@ export function buildSystemActivity(
       color: 'blue',
     },
   ];
+}
+
+/** Days without a KV cleanup before System health reads "Overdue". */
+export const HEALTH_STALE_THRESHOLD_DAYS = 7;
+
+export type HealthStatus = 'ok' | 'overdue' | 'unknown';
+
+/** The status shown on the dashboard's System health button. */
+export function getHealthStatus(
+  lastRun: { timestamp: string } | null | undefined,
+  now: number = Date.now(),
+): HealthStatus {
+  if (!lastRun) return 'unknown';
+  const age = now - new Date(lastRun.timestamp).getTime();
+  if (Number.isNaN(age)) return 'unknown';
+  return age > HEALTH_STALE_THRESHOLD_DAYS * 86_400_000 ? 'overdue' : 'ok';
+}
+
+/** "Good morning" / "Good afternoon" / "Good evening" for the given hour. */
+export function getGreeting(hour: number = new Date().getHours()): string {
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+/** The audit entries as CSV, newest first (as shown). */
+export function auditEntriesToCsv(entries: AdminAuditEntry[]): string {
+  const quote = (value: string) => `"${value.replace(/"/g, '""')}"`;
+  const headers = [
+    'Timestamp',
+    'Category',
+    'Severity',
+    'Action',
+    'Summary',
+    'Entity Type',
+    'Entity ID',
+    'Actor Role',
+  ];
+  const rows = entries.map((e) => [
+    e.timestamp,
+    e.category,
+    e.severity,
+    e.action,
+    quote(e.summary),
+    e.entityType || '',
+    e.entityId || '',
+    e.actorRole,
+  ]);
+  return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 }

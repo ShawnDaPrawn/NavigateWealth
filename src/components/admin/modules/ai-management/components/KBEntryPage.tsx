@@ -13,7 +13,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ChevronDown, ChevronLeft, Loader2 } from 'lucide-react';
-import { PageHeader } from '../../../layout/page';
+import { FormErrorBanner, PageHeader } from '../../../layout/page';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
@@ -115,7 +115,7 @@ export function KBEntryPage({ onClose, entry, onSubmit, isSubmitting }: KBEntryP
     watch,
     setValue,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitted },
   } = useForm<FormValues>({ defaultValues: EMPTY });
 
   // Reset the form when the page opens for another entry (or a new one)
@@ -225,16 +225,21 @@ export function KBEntryPage({ onClose, entry, onSubmit, isSubmitting }: KBEntryP
         onSubmit={handleSubmit(onFormSubmit)}
         className="max-w-[880px] space-y-5 rounded-xl border border-nw-line bg-white p-5 sm:p-6"
       >
+        {isSubmitted && (
+          <FormErrorBanner count={Object.keys(errors).length} action="save the entry" />
+        )}
         {/* Title */}
         <div className="space-y-1.5">
           <Label htmlFor="kb-title">Title</Label>
           <Input
             id="kb-title"
             {...register('title', {
-              required: 'Give the entry a title',
-              validate: (v) => v.trim().length > 0 || 'Give the entry a title',
+              required: 'Add a title',
+              validate: (v) => v.trim().length > 0 || 'Add a title',
             })}
             placeholder="e.g. Tax-free savings account annual limit"
+            aria-invalid={errors.title ? true : undefined}
+            className={errors.title ? 'border-red-400 focus-visible:ring-red-400' : undefined}
             autoFocus
           />
           <p className="text-xs text-gray-500">
@@ -273,6 +278,10 @@ export function KBEntryPage({ onClose, entry, onSubmit, isSubmitting }: KBEntryP
                   validate: (v) => !isQA || v.trim().length > 0 || 'Add the question people ask',
                 })}
                 placeholder="e.g. How much can I put into a tax-free savings account each year?"
+                aria-invalid={errors.question ? true : undefined}
+                className={
+                  errors.question ? 'border-red-400 focus-visible:ring-red-400' : undefined
+                }
               />
               {errors.question && <p className="text-xs text-red-600">{errors.question.message}</p>}
             </div>
@@ -285,6 +294,8 @@ export function KBEntryPage({ onClose, entry, onSubmit, isSubmitting }: KBEntryP
                     !isQA || v.trim().length > 0 || 'Add the answer Vasco should give',
                 })}
                 placeholder="The annual limit is R36,000 per tax year, with a lifetime limit of R500,000…"
+                aria-invalid={errors.answer ? true : undefined}
+                className={errors.answer ? 'border-red-400 focus-visible:ring-red-400' : undefined}
                 rows={5}
               />
               {errors.answer && <p className="text-xs text-red-600">{errors.answer.message}</p>}

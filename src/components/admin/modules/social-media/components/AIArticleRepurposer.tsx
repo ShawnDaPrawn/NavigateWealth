@@ -54,6 +54,8 @@ import type {
   GeneratePostTextInput,
 } from '../types';
 import { BRAND } from '../constants';
+import { ErrorState } from '../../../layout/page';
+import { Skeleton } from '../../../../ui/skeleton';
 
 // ============================================================================
 // Types
@@ -165,6 +167,8 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
     isGeneratingBundle,
     isConfigured,
     statusLoading,
+    statusError,
+    refetchStatus,
   } = useSocialMediaAI();
 
   const isProcessing = isGenerating || isGeneratingBundle;
@@ -296,24 +300,33 @@ export function AIArticleRepurposer({ onUseContent }: AIArticleRepurposerProps) 
 
   if (statusLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Checking AI service...</span>
-        </CardContent>
-      </Card>
+      <div
+        aria-busy="true"
+        aria-label="Checking the AI service"
+        className="grid gap-4 lg:grid-cols-2"
+      >
+        <Skeleton className="h-80 rounded-xl" />
+        <Skeleton className="h-80 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (statusError) {
+    return (
+      <ErrorState
+        title="Unable to check the AI service"
+        onRetry={() => void refetchStatus()}
+        details={statusError}
+      />
     );
   }
 
   if (!isConfigured) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">AI Service Not Configured</h3>
-          <p className="text-muted-foreground max-w-md">The OpenAI API key is not configured.</p>
-        </CardContent>
-      </Card>
+      <ErrorState
+        title="AI content generation is not set up"
+        description="The OpenAI API key is not configured. Ask an administrator to add it to enable AI content generation."
+      />
     );
   }
 

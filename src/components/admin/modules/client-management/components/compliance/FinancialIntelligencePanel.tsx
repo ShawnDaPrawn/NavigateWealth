@@ -2,38 +2,25 @@
  * Financial Intelligence Panel
  *
  * Phase 1 endpoints:
- * - Bank Account Verification (real-time): POST /natural-person-account-verification-real-time
- * - Consumer Credit Check: POST /natural-person-consumer-credit
+ * - Bank account verification (real-time): POST /natural-person-account-verification-real-time
+ * - Consumer credit check: POST /natural-person-consumer-credit
  *
  * Bank verification pre-populates from the client's profile bank accounts.
  * Credit check requires explicit consent acknowledgement.
  */
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { Label } from '../../../../../ui/label';
 import { Input } from '../../../../../ui/input';
-import {
-  Landmark,
-  CreditCard,
-  Loader2,
-  CheckCircle,
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  ShieldCheck,
-  AlertCircle,
-  Search,
-  FileText,
-  Home,
-  TrendingUp,
-} from 'lucide-react';
+import { Loader2, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../../../../utils/api';
 import { clientApi } from '../../api';
 import { HoneycombActionCard } from './HoneycombActionCard';
+import { PanelCard } from './ComplianceShared';
+import { Notice } from '../../../../layout/page';
 
 interface FinancialIntelligencePanelProps {
   clientId: string;
@@ -204,31 +191,26 @@ export function FinancialIntelligencePanel({
 
   return (
     <div className="space-y-4">
-      {/* ──── Bank Account Verification ──── */}
-      <Card className="bg-blue-50/50 border-blue-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-md font-medium flex items-center gap-2">
-            <Landmark className="h-5 w-5 text-blue-600" />
-            Bank Account Verification
-          </CardTitle>
-          <CardDescription>
-            Real-time bank account verification via the credit bureau. Confirms the account exists,
-            is open, and the holder name matches.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      {/* ──── Bank account verification ──── */}
+      {/* Design CM-K-FinIntel: plain white cards with titled headers. */}
+      <PanelCard title="Bank account verification">
+        <div className="space-y-4">
+          <p className="text-sm text-nw-text-2">
+            Real-time verification via the credit bureau: confirms the account exists, is open, and
+            the holder name matches.
+          </p>
           {/* Bank account selector */}
           {bankAccounts.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-600">Select Bank Account</Label>
+              <Label className="text-xs font-medium text-gray-600">Select bank account</Label>
               <div className="space-y-1">
                 {bankAccounts.map((ba, idx) => (
                   <label
                     key={idx}
                     className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-sm transition-colors ${
                       !useCustomBank && selectedBankIdx === idx
-                        ? 'border-blue-300 bg-blue-50'
-                        : 'border-gray-200 hover:bg-gray-50'
+                        ? 'border-nw-violet/40 bg-nw-violet/5'
+                        : 'border-nw-line hover:bg-nw-bg'
                     }`}
                   >
                     <input
@@ -252,8 +234,8 @@ export function FinancialIntelligencePanel({
                 <label
                   className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-sm transition-colors ${
                     useCustomBank
-                      ? 'border-blue-300 bg-blue-50'
-                      : 'border-gray-200 hover:bg-gray-50'
+                      ? 'border-nw-violet/40 bg-nw-violet/5'
+                      : 'border-nw-line hover:bg-nw-bg'
                   }`}
                 >
                   <input
@@ -273,38 +255,38 @@ export function FinancialIntelligencePanel({
           {(bankAccounts.length === 0 || useCustomBank) && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Bank Name</Label>
+                <Label className="text-xs">Bank name</Label>
                 <Input
                   value={customBank.bankName}
                   onChange={(e) => setCustomBank({ ...customBank, bankName: e.target.value })}
                   placeholder="e.g. FNB"
-                  className="h-8 text-sm"
+                  className="h-9 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Account Number</Label>
+                <Label className="text-xs">Account number</Label>
                 <Input
                   value={customBank.accountNumber}
                   onChange={(e) => setCustomBank({ ...customBank, accountNumber: e.target.value })}
                   placeholder="Account number"
-                  className="h-8 text-sm"
+                  className="h-9 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Branch Code</Label>
+                <Label className="text-xs">Branch code</Label>
                 <Input
                   value={customBank.branchCode}
                   onChange={(e) => setCustomBank({ ...customBank, branchCode: e.target.value })}
                   placeholder="e.g. 250655"
-                  className="h-8 text-sm"
+                  className="h-9 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Account Type</Label>
+                <Label className="text-xs">Account type</Label>
                 <select
                   value={customBank.accountType}
                   onChange={(e) => setCustomBank({ ...customBank, accountType: e.target.value })}
-                  className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
                 >
                   <option value="savings">Savings</option>
                   <option value="cheque">Cheque / Current</option>
@@ -316,17 +298,14 @@ export function FinancialIntelligencePanel({
           )}
 
           {!hasIdentification && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-amber-700">
-                Client ID/passport required for bank verification.
-              </p>
-            </div>
+            <Notice kind="attention" title="No ID or passport number on file.">
+              It is needed for bank verification.
+            </Notice>
           )}
 
           <Button
-            className="w-full"
-            variant="secondary"
+            variant="outline"
+            className="w-fit"
             onClick={handleBankVerify}
             disabled={
               isBankVerifying ||
@@ -335,8 +314,7 @@ export function FinancialIntelligencePanel({
             }
           >
             {isBankVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            <ShieldCheck className="mr-2 h-4 w-4" />
-            Verify Bank Account
+            Verify bank account
           </Button>
 
           {/* Bank Result */}
@@ -347,24 +325,18 @@ export function FinancialIntelligencePanel({
               onToggleDetails={() => setShowBankDetails(!showBankDetails)}
             />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </PanelCard>
 
-      {/* ──── Consumer Credit Check ──── */}
-      <Card className="bg-green-50/50 border-green-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-md font-medium flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-green-600" />
-            Consumer Credit Check
-          </CardTitle>
-          <CardDescription>
-            Performs a consumer credit check via the XDS credit bureau. Returns credit score, active
-            accounts, judgments, and defaults. Requires explicit client consent.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      {/* ──── Consumer credit check ──── */}
+      <PanelCard title="Consumer credit check">
+        <div className="space-y-4">
+          <p className="text-sm text-nw-text-2">
+            A consumer credit check via the XDS credit bureau: credit score, active accounts,
+            judgments and defaults.
+          </p>
           {/* Consent gate */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="rounded-lg border border-nw-line bg-nw-bg p-3">
             <label className="flex items-start gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -373,8 +345,8 @@ export function FinancialIntelligencePanel({
                 className="rounded border-gray-300 mt-0.5"
               />
               <div>
-                <p className="text-sm font-medium text-amber-800">Client Consent Required</p>
-                <p className="text-xs text-amber-700 mt-0.5">
+                <p className="text-sm font-semibold text-nw-ink">Client consent required</p>
+                <p className="text-xs text-nw-text-2 mt-0.5">
                   I confirm that the client ({firstName} {lastName}) has provided explicit consent
                   for a credit bureau enquiry to be performed on their behalf. This enquiry will
                   appear on their credit report.
@@ -384,29 +356,24 @@ export function FinancialIntelligencePanel({
           </div>
 
           {!hasIdentification && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-amber-700">
-                Client ID/passport required for credit checks.
-              </p>
-            </div>
+            <Notice kind="attention" title="No ID or passport number on file.">
+              It is needed for credit checks.
+            </Notice>
           )}
 
           <Button
-            className="w-full"
-            variant="secondary"
+            variant="outline"
+            className="w-fit"
             onClick={handleCreditCheck}
             disabled={isCreditRunning || !consentGiven || !hasIdentification}
           >
             {isCreditRunning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            <CreditCard className="mr-2 h-4 w-4" />
-            Run Credit Check
+            Run credit check
           </Button>
 
           {!consentGiven && (
-            <p className="text-xs text-gray-500 flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              Tick the consent checkbox above to enable this check.
+            <p className="text-xs text-nw-text-3">
+              Tick the consent box above to enable this check.
             </p>
           )}
 
@@ -418,19 +385,17 @@ export function FinancialIntelligencePanel({
               onToggleDetails={() => setShowCreditDetails(!showCreditDetails)}
             />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </PanelCard>
 
       {/* ──── Phase 2: Consumer Trace & Debt Review ──── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <HoneycombActionCard
           title="Consumer Trace"
           description="Trace the client across credit bureau records to find known addresses, employers, contact numbers, and email addresses linked to their ID."
-          icon={<Search className="h-5 w-5 text-indigo-600" />}
           actionLabel="Run Consumer Trace"
           endpoint="financial/consumer-trace"
           requestBody={{ clientId, firstName, lastName, idNumber, passport }}
-          variant="default"
           disabled={!hasIdentification}
           disabledReason={!hasIdentification ? 'Client ID/passport required' : undefined}
           onSuccess={onCheckComplete}
@@ -439,11 +404,9 @@ export function FinancialIntelligencePanel({
         <HoneycombActionCard
           title="Debt Review Enquiry"
           description="Check whether the client is currently registered under debt review (debt counselling) via the National Credit Regulator."
-          icon={<FileText className="h-5 w-5 text-amber-600" />}
           actionLabel="Run Debt Review Check"
           endpoint="financial/debt-review"
           requestBody={{ clientId, firstName, lastName, idNumber, passport }}
-          variant="amber"
           disabled={!hasIdentification}
           disabledReason={!hasIdentification ? 'Client ID/passport required' : undefined}
           onSuccess={onCheckComplete}
@@ -455,11 +418,9 @@ export function FinancialIntelligencePanel({
         <HoneycombActionCard
           title="Lifestyle Audit"
           description="Profile the client's lifestyle based on property ownership, vehicle registrations, and estimated spending patterns from credit bureau data."
-          icon={<Home className="h-5 w-5 text-purple-600" />}
           actionLabel="Run Lifestyle Audit"
           endpoint="financial/lifestyle-audit"
           requestBody={{ clientId, firstName, lastName, idNumber, passport }}
-          variant="default"
           disabled={!hasIdentification}
           disabledReason={!hasIdentification ? 'Client ID/passport required' : undefined}
           onSuccess={onCheckComplete}
@@ -468,11 +429,9 @@ export function FinancialIntelligencePanel({
         <HoneycombActionCard
           title="Income Predictor"
           description="Estimate the client's income using credit bureau data and statistical models. Returns a predicted income range with confidence level."
-          icon={<TrendingUp className="h-5 w-5 text-green-600" />}
           actionLabel="Run Income Predictor"
           endpoint="financial/income-predictor"
           requestBody={{ clientId, firstName, lastName, idNumber, passport }}
-          variant="green"
           disabled={!hasIdentification}
           disabledReason={!hasIdentification ? 'Client ID/passport required' : undefined}
           onSuccess={onCheckComplete}

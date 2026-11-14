@@ -1,16 +1,6 @@
 import React from 'react';
 import { toast } from 'sonner';
-import {
-  Archive,
-  CheckCircle,
-  Filter,
-  Layers,
-  Plus,
-  Save,
-  Search,
-  ShieldCheck,
-  Star,
-} from 'lucide-react';
+import { Archive, CheckCircle, Filter, Layers, Plus, Save, Search, Star } from 'lucide-react';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
@@ -23,7 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { useSearchParams } from 'react-router';
+import {
+  SegmentedList,
+  SegmentedTrigger,
+  ErrorState,
+  NoAccess,
+  useConfirm,
+  useUrlState,
+} from '../../../layout/page';
 import { Textarea } from '../../../../ui/textarea';
 import { useAuth } from '../../../../auth/AuthContext';
 import { useRoAModuleContracts } from '../hooks';
@@ -47,6 +46,18 @@ import { DocumentEditor } from './roa-contract-editors/DocumentEditor';
 import { DisclosuresEditor } from './roa-contract-editors/DisclosuresEditor';
 import { PreviewPanel } from './roa-contract-editors/PreviewPanel';
 
+const CONTRACT_TABS = [
+  'basic',
+  'conversation',
+  'fields',
+  'evidence',
+  'document',
+  'disclosures',
+  'json',
+  'preview',
+] as const;
+type ContractTab = (typeof CONTRACT_TABS)[number];
+
 export function RoAModuleContractManager() {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'super-admin';
@@ -58,9 +69,29 @@ export function RoAModuleContractManager() {
     publishContract,
     archiveContract,
     isSaving,
+    error: contractsError,
+    refetch: refetchContracts,
   } = useRoAModuleContracts({ includeArchived: true });
 
-  const [selectedId, setSelectedId] = React.useState<string>('');
+  // The open contract and editor tab are in the address (?contract=<id>&contractTab=fields).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedId = searchParams.get('contract') ?? '';
+  const setSelectedId = React.useCallback(
+    (id: string) => {
+      setSearchParams(
+        (current) => {
+          const params = new URLSearchParams(current);
+          if (id) params.set('contract', id);
+          else params.delete('contract');
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+  const [editorTab, setEditorTab] = useUrlState<ContractTab>('contractTab', 'basic', CONTRACT_TABS);
+  const { confirm, confirmDialog } = useConfirm();
   const [draft, setDraft] = React.useState<RoAModuleContract | null>(null);
   const [jsonDraft, setJsonDraft] = React.useState('');
   const [listSearch, setListSearch] = React.useState('');
@@ -119,7 +150,7 @@ export function RoAModuleContractManager() {
     if (!selectedId && visibleContracts.length > 0) {
       setSelectedId(visibleContracts[0].id);
     }
-  }, [visibleContracts, selectedId]);
+  }, [visibleContracts, selectedId, setSelectedId]);
 
   React.useEffect(() => {
     const selected = visibleContracts.find((contract) => contract.id === selectedId);
@@ -198,6 +229,13 @@ export function RoAModuleContractManager() {
 
   const handleArchive = async () => {
     if (!draft) return;
+    const ok = await confirm({
+      title: 'Archive contract?',
+      description: `Archive “${draft.title}”? It stops appearing when advisers pick modules. Existing RoAs are not changed.`,
+      confirmLabel: 'Archive',
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       const archived = await archiveContract(draft.id);
       setSelectedId(archived.id);
@@ -219,15 +257,22 @@ export function RoAModuleContractManager() {
 
   if (!isSuperAdmin) {
     return (
-      <Card>
-        <CardContent className="py-10 text-center">
-          <ShieldCheck className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-          <p className="font-medium">Super admin access required</p>
-          <p className="text-sm text-muted-foreground">
-            RoA module contracts are system-level configuration.
-          </p>
-        </CardContent>
-      </Card>
+      <NoAccess
+        what="RoA contracts"
+        howToGetAccess="RoA module contracts are system-level configuration, so only a super admin can change them."
+      />
+    );
+  }
+
+  // A failed load is an error — never the built-in fallback contracts shown
+  // as if they were the saved ones.
+  if (!isLoading && contractsError) {
+    return (
+      <ErrorState
+        title="Unable to load RoA contracts"
+        onRetry={refetchContracts}
+        details={(contractsError as Error).message}
+      />
     );
   }
 
@@ -246,65 +291,25 @@ export function RoAModuleContractManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">RoA Module Contracts</h2>
-          <p className="text-sm text-muted-foreground">
-            Configure the module schemas advisers use when drafting Records of Advice.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Contract
-          </Button>
-          <Button variant="outline" onClick={handleSave} disabled={!draft || isSaving}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Draft
-          </Button>
-          <Button onClick={handlePublish} disabled={!draft || isSaving}>
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Publish
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Contracts</div>
-            <div className="text-2xl font-semibold">{visibleContracts.length}</div>
-            {filtersActive && (
-              <div className="mt-2 text-xs text-muted-foreground">
-                Showing {filteredContracts.length} filtered
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Schema Version</div>
-            <div className="text-2xl font-semibold">{schemaFormat?.schemaVersion || '1.0'}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-sm text-muted-foreground">Active modules</div>
-            <div className="text-2xl font-semibold">
-              {visibleContracts.filter((contract) => contract.status === 'active').length}
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">Flagship {flagshipCount}</div>
-          </CardContent>
-        </Card>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <Card className="h-fit">
           <CardHeader className="space-y-4 pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Layers className="h-4 w-4" />
-              Contracts
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Layers className="h-4 w-4" aria-hidden="true" />
+                Contracts
+                <span className="text-xs font-normal tabular-nums text-nw-text-3">
+                  {filtersActive
+                    ? `${filteredContracts.length} of ${visibleContracts.length}`
+                    : visibleContracts.length}
+                  {flagshipCount > 0 ? ` · ${flagshipCount} flagship` : ''}
+                </span>
+              </CardTitle>
+              <Button size="sm" variant="outline" onClick={handleCreate}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New
+              </Button>
+            </div>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -443,22 +448,67 @@ export function RoAModuleContractManager() {
         </Card>
 
         {draft ? (
-          <Tabs defaultValue="basic" className="space-y-4">
-            <TabsList className="grid grid-cols-3 lg:grid-cols-7">
-              <TabsTrigger value="basic">Basic</TabsTrigger>
+          <Tabs
+            value={
+              isConversationContract(draft)
+                ? editorTab === 'fields' || editorTab === 'evidence'
+                  ? 'basic'
+                  : editorTab
+                : editorTab === 'conversation'
+                  ? 'basic'
+                  : editorTab
+            }
+            onValueChange={(v) => setEditorTab(v as ContractTab)}
+            className="space-y-4"
+          >
+            <div className="flex flex-col gap-3 rounded-xl border border-nw-line bg-white p-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-semibold text-nw-ink">
+                  {draft.title || 'Untitled contract'}
+                </h2>
+                <p className="text-sm text-nw-text-3">
+                  {[
+                    draft.category || 'Uncategorised',
+                    isConversationContract(draft) ? 'AI conversation' : 'Form',
+                    `schema ${draft.schemaVersion}`,
+                  ].join(' · ')}{' '}
+                  <span className="ml-1 inline-block align-middle">{getStatusBadge(draft)}</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleArchive}
+                  disabled={isSaving || draft.status === 'archived'}
+                >
+                  <Archive className="h-4 w-4" aria-hidden="true" />
+                  Archive
+                </Button>
+                <Button variant="outline" onClick={handleSave} disabled={isSaving}>
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                  Save draft
+                </Button>
+                <Button onClick={handlePublish} disabled={isSaving}>
+                  <CheckCircle className="h-4 w-4" aria-hidden="true" />
+                  Publish
+                </Button>
+              </div>
+            </div>
+            <SegmentedList aria-label="Contract editor">
+              <SegmentedTrigger value="basic">Basic</SegmentedTrigger>
               {isConversationContract(draft) ? (
-                <TabsTrigger value="conversation">Conversation</TabsTrigger>
+                <SegmentedTrigger value="conversation">Conversation</SegmentedTrigger>
               ) : (
                 <>
-                  <TabsTrigger value="fields">Fields</TabsTrigger>
-                  <TabsTrigger value="evidence">Evidence</TabsTrigger>
+                  <SegmentedTrigger value="fields">Fields</SegmentedTrigger>
+                  <SegmentedTrigger value="evidence">Evidence</SegmentedTrigger>
                 </>
               )}
-              <TabsTrigger value="document">Document</TabsTrigger>
-              <TabsTrigger value="disclosures">Disclosures</TabsTrigger>
-              <TabsTrigger value="json">JSON</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-            </TabsList>
+              <SegmentedTrigger value="document">Document</SegmentedTrigger>
+              <SegmentedTrigger value="disclosures">Disclosures</SegmentedTrigger>
+              <SegmentedTrigger value="json">JSON</SegmentedTrigger>
+              <SegmentedTrigger value="preview">Preview</SegmentedTrigger>
+            </SegmentedList>
 
             <TabsContent value="basic">
               <BasicEditor draft={draft} updateDraft={updateDraft} />
@@ -528,18 +578,7 @@ export function RoAModuleContractManager() {
         )}
       </div>
 
-      {draft && (
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            onClick={handleArchive}
-            disabled={isSaving || draft.status === 'archived'}
-          >
-            <Archive className="h-4 w-4 mr-2" />
-            Archive Contract
-          </Button>
-        </div>
-      )}
+      {confirmDialog}
     </div>
   );
 }

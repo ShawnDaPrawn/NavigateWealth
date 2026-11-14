@@ -19,7 +19,13 @@
 
 import { useSearchParams } from 'react-router';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { NavTabsList, NavTabsTrigger, PageHeader, useUrlState } from '../../layout/page';
+import {
+  NavTabsList,
+  NavTabsTrigger,
+  PageHeader,
+  useBreadcrumbTrail,
+  useUrlState,
+} from '../../layout/page';
 import { KB_ENTRY_PARAM, TAB_CONFIG } from './constants';
 import { OverviewTab } from './components/OverviewTab';
 import { KnowledgeBase } from './components/KnowledgeBase';
@@ -33,12 +39,31 @@ const AI_TABS = TAB_CONFIG.map((tab) => tab.id) as readonly AIManagementTab[];
 
 export function AIManagementModule() {
   const [activeTab, setActiveTab] = useUrlState<AIManagementTab>('tab', 'overview', AI_TABS);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   // Same query the Overview's "Leads waiting" figure uses, so it is shared.
   const { data: newLeads } = useHandoffs('new');
 
   // A knowledge entry form is open: it is the page.
   const entryPageOpen = activeTab === 'knowledge' && searchParams.has(KB_ENTRY_PARAM);
+
+  // Top-bar breadcrumb: AI Management / <tab> (/ New entry or Edit entry).
+  const tabLabel = TAB_CONFIG.find((tab) => tab.id === activeTab)?.label ?? '';
+  useBreadcrumbTrail(
+    entryPageOpen
+      ? [
+          {
+            label: tabLabel,
+            onClick: () =>
+              setSearchParams((current) => {
+                const params = new URLSearchParams(current);
+                params.delete(KB_ENTRY_PARAM);
+                return params;
+              }),
+          },
+          { label: searchParams.get(KB_ENTRY_PARAM) === 'new' ? 'New entry' : 'Edit entry' },
+        ]
+      : [{ label: tabLabel }],
+  );
 
   return (
     <div className="min-h-screen pb-10">

@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import type { Article, Category } from '../types';
+import { Tabs } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
 
 interface ContentAnalyticsProps {
   articles: Article[];
@@ -67,7 +69,26 @@ function monthLabel(d: Date): string {
 
 // ── Component ────────────────────────────────────────────────────────────
 
-export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps) {
+const RANGES = ['all', '7', '30', '90'] as const;
+type Range = (typeof RANGES)[number];
+const RANGE_LABEL: Record<Range, string> = {
+  all: 'All time',
+  '7': '7 days',
+  '30': '30 days',
+  '90': '90 days',
+};
+
+export function ContentAnalytics({ articles: allArticles, categories }: ContentAnalyticsProps) {
+  // Date range is a segmented control kept in the address (?range=).
+  const [range, setRange] = useUrlState<Range>('range', 'all', RANGES);
+  const articles = useMemo(() => {
+    if (range === 'all') return allArticles;
+    const since = daysAgo(Number(range));
+    return allArticles.filter((a) => {
+      const when = a.published_at || a.created_at;
+      return when ? new Date(when) >= since : false;
+    });
+  }, [allArticles, range]);
   // ── KPI computation ──────────────────────────────────────────────────
 
   const kpis = useMemo(() => {
@@ -75,10 +96,13 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
     const sixtyDaysAgo = daysAgo(60);
 
     const published = articles.filter((a) => a.status === 'published');
-    const recentPublished = published.filter(
+    // The trend always compares the last 30 days with the 30 before, whatever
+    // range is chosen, so it reads the same as its label.
+    const allPublished = allArticles.filter((a) => a.status === 'published');
+    const recentPublished = allPublished.filter(
       (a) => a.published_at && new Date(a.published_at) >= thirtyDaysAgo,
     );
-    const prevPublished = published.filter(
+    const prevPublished = allPublished.filter(
       (a) =>
         a.published_at &&
         new Date(a.published_at) >= sixtyDaysAgo &&
@@ -103,7 +127,7 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
       totalViews,
       avgViews,
     };
-  }, [articles]);
+  }, [articles, allArticles]);
 
   // ── Publishing velocity (last 6 months) ──────────────────────────────
 
@@ -230,19 +254,29 @@ export function ContentAnalytics({ articles, categories }: ContentAnalyticsProps
 
   return (
     <div className="space-y-6">
+      <Tabs value={range} onValueChange={(v) => setRange(v as Range)}>
+        <SegmentedList aria-label="Date range">
+          {RANGES.map((r) => (
+            <SegmentedTrigger key={r} value={r}>
+              {RANGE_LABEL[r]}
+            </SegmentedTrigger>
+          ))}
+        </SegmentedList>
+      </Tabs>
+
       {/* ── KPI Row ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <KPICard label="Total Articles" value={kpis.total} icon={FileText} accent="purple" />
+        <KPICard label="Total articles" value={kpis.total} icon={FileText} accent="purple" />
         <KPICard
           label="Published"
           value={kpis.published}
           icon={CheckCircle2}
           accent="green"
           trend={publishTrend}
-          trendLabel="vs prev 30 days"
+          trendLabel="vs previous 30 days"
         />
         <KPICard
-          label="Total Views"
+          label="Total views"
           value={kpis.totalViews.toLocaleString()}
           icon={Eye}
           accent="blue"

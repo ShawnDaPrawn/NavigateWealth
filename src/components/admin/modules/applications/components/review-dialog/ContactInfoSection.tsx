@@ -9,7 +9,7 @@ export function ContactInfoSection({
   data,
 }: SectionProps) {
   return (
-    <ReviewSection icon={Mail} title="Contact Information">
+    <ReviewSection icon={Mail} title="Contact information">
       {isEditing ? (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">

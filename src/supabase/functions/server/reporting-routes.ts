@@ -9,6 +9,17 @@ import { asyncHandler } from './error.middleware.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { corsResponseHeaders } from './cors-origin.ts';
 import { ReportingService } from './reporting-service.ts';
+import { z } from 'npm:zod@4.6.5';
+import { validateBody, body } from './validate.ts';
+import {
+  REPORT_CATEGORIES,
+  REPORT_DATA_SOURCES,
+} from './repositories/report-definitions-repository.ts';
+import {
+  createReportDefinition,
+  deleteReportDefinition,
+  listReportDefinitions,
+} from './reporting-definitions-service.ts';
 import {
   generateClientOverviewPDF,
   type ClientOverviewReportData,
@@ -31,6 +42,52 @@ app.get(
   asyncHandler(async (c) => {
     const stats = await service.getDashboardReport();
     return c.json(stats);
+  }),
+);
+
+// ============================================================================
+// SAVED CUSTOM REPORTS (Reporting › New report)
+// ============================================================================
+
+const CreateReportDefinitionSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  category: z.enum(REPORT_CATEGORIES),
+  dataSource: z.enum(REPORT_DATA_SOURCES),
+  columns: z.array(z.string().trim().min(1).max(120)).min(1).max(80),
+  format: z.literal('xlsx').default('xlsx'),
+});
+
+/** GET /reporting/definitions — the saved custom reports. */
+app.get(
+  '/definitions',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const definitions = await listReportDefinitions();
+    return c.json({ data: definitions });
+  }),
+);
+
+/** POST /reporting/definitions — save a custom report. */
+app.post(
+  '/definitions',
+  requireAdmin,
+  validateBody(CreateReportDefinitionSchema),
+  asyncHandler(async (c) => {
+    const input = body(c, CreateReportDefinitionSchema);
+    const definition = await createReportDefinition(input, c.get('userId') as string);
+    log.info('Report definition saved', { id: definition.id, dataSource: definition.dataSource });
+    return c.json({ data: definition }, 201);
+  }),
+);
+
+/** DELETE /reporting/definitions/:id — remove a saved custom report. */
+app.delete(
+  '/definitions/:id',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const removed = await deleteReportDefinition(c.req.param('id')!);
+    if (!removed) return c.json({ error: 'Report not found' }, 404);
+    return c.json({ success: true });
   }),
 );
 

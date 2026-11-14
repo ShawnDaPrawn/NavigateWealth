@@ -1,12 +1,11 @@
 import React, { useState, useMemo, useCallback, useRef, Suspense } from 'react';
-import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../ui/avatar';
 import { Badge } from '../../../ui/badge';
 import { Tabs, TabsContent } from '../../../ui/tabs';
 import { Card, CardContent } from '../../../ui/card';
 import {
   PageHeader,
-  StatCard,
+  ErrorState,
   NavTabsList,
   NavTabsTrigger,
   useUrlState,
@@ -15,24 +14,24 @@ import {
 } from '../../layout/page';
 import {
   Plus,
-  Filter,
+  ChevronLeft,
   Download,
   Users,
   Search,
   Building,
   Database,
-  ChevronDown,
+  FileSpreadsheet,
   MoreHorizontal,
   Loader2,
 } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { Button } from '../../../ui/button';
 import { Input } from '../../../ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../ui/dropdown-menu';
 import { DataTable, Column } from '../../components/DataTable';
@@ -46,7 +45,9 @@ import {
   deriveAccountStatus,
   countByStatus,
 } from './utils';
-import { ACCOUNT_STATUS_CONFIG, ACCOUNT_STATUS_FILTER_OPTIONS, CONFIG } from './constants';
+import { ACCOUNT_STATUS_CONFIG, CONFIG } from './constants';
+import { FilterStatCard, FilterChipMenu } from './components/ListFilters';
+import { Crumbs } from './components/Crumbs';
 import { useCurrentUserPermissions } from '../personnel';
 import { useAdminNavigation } from '../../layout/AdminNavigationContext';
 import { useOptionalUnsavedChangesRegistry } from '../../../shared/unsaved-changes';
@@ -58,14 +59,18 @@ import { useInvalidateFnaBatchStatus } from '@/shared/fna-intake/hooks/useFnaBat
 const ClientDrawer = React.lazy(() =>
   import('./components/ClientDrawer').then((m) => ({ default: m.ClientDrawer })),
 );
-import { CustomGroupManager } from '../communication';
-import { FNAIntakeQueueSkeleton } from './components/FNAIntakeQueueSkeleton';
+const ClientGroupsTab = React.lazy(() =>
+  import('./components/groups/ClientGroupsTab').then((m) => ({ default: m.ClientGroupsTab })),
+);
+const GroupEditorRoute = React.lazy(() =>
+  import('./components/groups/GroupEditorRoute').then((m) => ({ default: m.GroupEditorRoute })),
+);
 
 const ClientFieldRepository = React.lazy(() =>
   import('./components/ClientFieldRepository').then((m) => ({ default: m.ClientFieldRepository })),
 );
-const AddClientDialog = React.lazy(() =>
-  import('./components/AddClientDialog').then((m) => ({ default: m.AddClientDialog })),
+const AddClientPage = React.lazy(() =>
+  import('./components/AddClientPage').then((m) => ({ default: m.AddClientPage })),
 );
 const FNAIntakeQueue = React.lazy(() =>
   import('./components/FNAIntakeQueue').then((m) => ({ default: m.FNAIntakeQueue })),
@@ -75,6 +80,29 @@ const IntakeWizardHandoff = React.lazy(() =>
 );
 
 const CLIENT_TABS = ['personal', 'groups', 'corporate', 'adviser'] as const;
+const TAB_LABELS: Record<(typeof CLIENT_TABS)[number], string> = {
+  personal: 'Personal clients',
+  groups: 'Groups',
+  corporate: 'Corporate clients',
+  adviser: 'Adviser clients',
+};
+const ACCOUNT_FILTERS = ['all', 'active', 'suspended', 'closed'] as const;
+type AccountFilter = (typeof ACCOUNT_FILTERS)[number];
+const ACCOUNT_LABELS: Record<AccountFilter, string> = {
+  all: 'All',
+  active: 'Active',
+  suspended: 'Suspended',
+  closed: 'Closed',
+};
+const APPLICATION_FILTERS = ['all', 'approved', 'pending'] as const;
+type ApplicationFilter = (typeof APPLICATION_FILTERS)[number];
+const APPLICATION_LABELS: Record<ApplicationFilter, string> = {
+  all: 'All',
+  approved: 'Active',
+  pending: 'In application',
+};
+const ADD_VIEWS = ['', 'single', 'bulk'] as const;
+type AddParam = (typeof ADD_VIEWS)[number];
 
 /** Shared spinner for lazy-loaded sub-components */
 function LazyFallback() {
@@ -86,13 +114,70 @@ function LazyFallback() {
 }
 
 export function ClientManagementModule() {
-  const { clients, loading, refetch } = useClientList();
-  const [filters, setFilters] = useState<ClientFilters>({});
+  const { clients, loading, error: listError, refetch, retry } = useClientList();
+  // A failed load is an error, never an empty book (design system: states).
+  const listFailed = !!listError && !loading && (!Array.isArray(clients) || clients.length === 0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Search, account and application filters live in the address (?q=, ?account=, ?application=).
+  const search = searchParams.get('q') ?? '';
+  const setSearch = useCallback(
+    (next: string) =>
+      setSearchParams(
+        (current) => {
+          const params = new URLSearchParams(current);
+          if (next) params.set('q', next);
+          else params.delete('q');
+          return params;
+        },
+        { replace: true },
+      ),
+    [setSearchParams],
+  );
+  const [accountFilter, setAccountFilter] = useUrlState<AccountFilter>(
+    'account',
+    'all',
+    ACCOUNT_FILTERS,
+  );
+  const [applicationFilter, setApplicationFilter] = useUrlState<ApplicationFilter>(
+    'application',
+    'all',
+    APPLICATION_FILTERS,
+  );
+  const filters: ClientFilters = useMemo(
+    () => ({ search, accountStatus: accountFilter }),
+    [search, accountFilter],
+  );
+  // Add client is a page of its own (?add=single|bulk). Opening it is a new
+  // history entry so Back returns to the list; switching views replaces it.
+  const [addView, setAddView] = useUrlState<AddParam>('add', '', ADD_VIEWS);
+  const openAddClient = (view: 'single' | 'bulk') =>
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      params.set('add', view);
+      return params;
+    });
+  // A group being created or edited is a page of its own (?group=<id|new>).
+  const openGroupId = searchParams.get('group');
+  const openGroup = (id: string) =>
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      params.set('group', id);
+      return params;
+    });
+  const closeGroup = () =>
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        params.delete('group');
+        params.delete('gview');
+        return params;
+      },
+      { replace: true },
+    );
   const [blockSearchAutofill, setBlockSearchAutofill] = useState(true);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showRepository, setShowRepository] = useState(false);
-  const [showAddClient, setShowAddClient] = useState(false);
   const [intakeHandoff, setIntakeHandoff] = useState<IntakeHandoffState | null>(null);
   // Set when a publish should open the drawer on that FNA's list; the nonce
   // remounts the drawer so it opens there even if it was already open.
@@ -132,8 +217,11 @@ export function ClientManagementModule() {
   // deep link, intake). The address sync below must not close a client that
   // was opened in the same update as the old one's address was cleared.
   const lastOpenedIdRef = useRef<string | null>(null);
+  // A client named in the address that is not in the list: an error page.
+  const [missingClientId, setMissingClientId] = useState<string | null>(null);
   const showClient = useCallback((target: Client) => {
     lastOpenedIdRef.current = target.id;
+    setMissingClientId(null);
     setSelectedClient(target);
     setDrawerOpen(true);
   }, []);
@@ -159,7 +247,7 @@ export function ClientManagementModule() {
       if (loading || safeClients.length === 0) return 'waiting';
       const target = safeClients.find((c) => c.id === id);
       if (!target) {
-        toast.error('Client not found');
+        setMissingClientId(id);
         return 'missing';
       }
       setDrawerFnaFocus(null);
@@ -206,7 +294,11 @@ export function ClientManagementModule() {
 
   // Filter clients, then alphabetical by first name → surname (en-ZA, case-insensitive)
   const filteredSortedClients = useMemo(() => {
-    const filtered = filterClients(safeClients, filters);
+    const filtered = filterClients(safeClients, filters).filter((c) => {
+      if (applicationFilter === 'all') return true;
+      const approved = c.applicationStatus === 'approved';
+      return applicationFilter === 'approved' ? approved : !approved;
+    });
     return [...filtered].sort((a, b) => {
       const fn = (a.firstName || '').trim().localeCompare((b.firstName || '').trim(), 'en-ZA', {
         sensitivity: 'base',
@@ -216,7 +308,7 @@ export function ClientManagementModule() {
         sensitivity: 'base',
       });
     });
-  }, [safeClients, filters]);
+  }, [safeClients, filters, applicationFilter]);
 
   const baseClients = filterClients(safeClients, {});
   const totalStats = calculateGrowthStats(baseClients);
@@ -224,11 +316,19 @@ export function ClientManagementModule() {
   // Status breakdown for stat cards
   const statusCounts = useMemo(() => countByStatus(baseClients), [baseClients]);
 
-  // Currently active filter label for the status dropdown
-  const activeStatusFilter = filters.accountStatus || 'all';
-  const activeStatusLabel =
-    ACCOUNT_STATUS_FILTER_OPTIONS.find((o) => o.value === activeStatusFilter)?.label ||
-    'All Statuses';
+  const anyFilter = accountFilter !== 'all' || applicationFilter !== 'all' || search !== '';
+  const clearFilters = () =>
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        ['q', 'account', 'application'].forEach((k) => params.delete(k));
+        return params;
+      },
+      { replace: true },
+    );
+  // A stat card filters the table; clicking the active one clears it.
+  const toggleAccount = (value: AccountFilter) =>
+    setAccountFilter(accountFilter === value ? 'all' : value);
 
   const handleExport = () => {
     generateClientCSV(filteredSortedClients);
@@ -278,7 +378,7 @@ export function ClientManagementModule() {
     },
     {
       key: 'idNumber',
-      title: 'ID or Passport',
+      title: 'ID or passport',
       render: (idNumber) => (
         <span className="font-mono text-sm">
           {idNumber && idNumber !== 'Not provided' ? (
@@ -292,7 +392,7 @@ export function ClientManagementModule() {
     },
     {
       key: 'createdAt',
-      title: 'Date Joined',
+      title: 'Date joined',
       render: (date) =>
         new Date(date as string).toLocaleDateString('en-ZA', {
           day: '2-digit',
@@ -355,8 +455,83 @@ export function ClientManagementModule() {
     );
   }
 
+  if (missingClientId) {
+    const retry = async () => {
+      const id = missingClientId;
+      await refetch();
+      setMissingClientId(null);
+      setSearchParams((current) => {
+        const params = new URLSearchParams(current);
+        params.set('client', id);
+        return params;
+      });
+    };
+    return (
+      <div className="flex flex-col gap-4 p-6 lg:p-8">
+        <Crumbs
+          trail={[
+            { label: 'Personal clients', onClick: () => setMissingClientId(null) },
+            { label: 'Client not found' },
+          ]}
+        />
+        <button
+          type="button"
+          onClick={() => setMissingClientId(null)}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Personal clients
+        </button>
+        <ErrorState
+          title="This client could not be opened"
+          description="It may have been deleted, or the link may be wrong."
+          onRetry={() => void retry()}
+          secondaryAction={
+            <Button variant="outline" onClick={() => setMissingClientId(null)}>
+              Back to clients
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  // Create / edit group is a page of its own.
+  if (clientType === 'groups' && openGroupId) {
+    return (
+      <div className="p-6 lg:p-8">
+        <Suspense fallback={<LazyFallback />}>
+          <GroupEditorRoute groupId={openGroupId} onClose={closeGroup} />
+        </Suspense>
+      </div>
+    );
+  }
+
+  // Add client is a page of its own.
+  if (addView && canCreate) {
+    return (
+      <div className="p-6 lg:p-8">
+        <Crumbs
+          trail={[
+            { label: 'Personal clients', onClick: () => setAddView('') },
+            { label: addView === 'bulk' ? 'Bulk import' : 'Add client' },
+          ]}
+        />
+        <Suspense fallback={<LazyFallback />}>
+          <AddClientPage
+            view={addView}
+            onViewChange={setAddView}
+            onClose={() => setAddView('')}
+            onClientAdded={refetch}
+          />
+        </Suspense>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <Crumbs trail={[{ label: TAB_LABELS[clientType] }]} />
       <PageHeader
         title="Client Management"
         description="Client profiles, policies and compliance documentation."
@@ -379,10 +554,19 @@ export function ClientManagementModule() {
                   <Database className="mr-2 h-4 w-4" aria-hidden="true" />
                   Field repository
                 </DropdownMenuItem>
+                {canCreate && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => openAddClient('bulk')}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Bulk import clients
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             {canCreate && (
-              <Button onClick={() => setShowAddClient(true)}>
+              <Button onClick={() => openAddClient('single')}>
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 Add client
               </Button>
@@ -391,50 +575,17 @@ export function ClientManagementModule() {
         }
       />
 
-      <Suspense fallback={<FNAIntakeQueueSkeleton />}>
-        <FNAIntakeQueue
-          onOpenClient={(clientId) => {
-            const match = safeClients.find((c) => c.id === clientId);
-            if (match) setSelectedClient(match);
-          }}
-          onAccept={(handoff) => {
-            const match = safeClients.find((c) => c.id === handoff.clientId);
-            setIntakeHandoff({
-              ...handoff,
-              clientName: match ? `${match.firstName} ${match.lastName}` : undefined,
-            });
-          }}
-        />
-      </Suspense>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          label="All clients"
-          value={baseClients.length}
-          meta={`+${totalStats.growthRate}% vs last month`}
-        />
-        <StatCard label="Active" value={statusCounts.active} meta="Active individual portfolios" />
-        <StatCard
-          label="Suspended"
-          value={statusCounts.suspended}
-          meta="Access temporarily suspended"
-          tone={statusCounts.suspended > 0 ? 'attention' : 'default'}
-        />
-        <StatCard
-          label="Closed"
-          value={statusCounts.closed}
-          meta="Soft-deleted or closed accounts"
-        />
-      </div>
-
       {/* MAIN TABS */}
       <Tabs
         value={clientType}
         onValueChange={(v) => setClientType(v as (typeof CLIENT_TABS)[number])}
-        className="gap-4"
+        className="gap-5"
       >
         <NavTabsList aria-label="Client Management">
-          <NavTabsTrigger value="personal" count={baseClients.length}>
+          <NavTabsTrigger
+            value="personal"
+            count={loading || listFailed ? undefined : baseClients.length}
+          >
             Personal clients
           </NavTabsTrigger>
           <NavTabsTrigger value="groups">Groups</NavTabsTrigger>
@@ -448,120 +599,212 @@ export function ClientManagementModule() {
           </NavTabsTrigger>
         </NavTabsList>
 
-        <TabsContent value="personal" className="mt-0 space-y-4">
-          {/* Filter bar */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search clients..."
-                className="pl-8"
-                value={filters.search || ''}
-                readOnly={blockSearchAutofill}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                name="nw-client-management-search"
-                id="nw-client-management-search"
-                type="text"
-                inputMode="search"
-                role="combobox"
-                aria-autocomplete="list"
-                data-1p-ignore="true"
-                data-lpignore="true"
-                data-form-type="other"
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                onFocus={() => setBlockSearchAutofill(false)}
-              />
-            </div>
+        <TabsContent value="personal" className="mt-0 flex flex-col gap-4">
+          {/* Attention banner: FNA intakes waiting for review (hidden when none). */}
+          <Suspense fallback={null}>
+            <FNAIntakeQueue
+              onOpenClient={(clientId) => {
+                const match = safeClients.find((c) => c.id === clientId);
+                if (match) openClientDrawer(match);
+              }}
+              onAccept={(handoff) => {
+                const match = safeClients.find((c) => c.id === handoff.clientId);
+                setIntakeHandoff({
+                  ...handoff,
+                  clientName: match ? `${match.firstName} ${match.lastName}` : undefined,
+                });
+              }}
+            />
+          </Suspense>
 
-            {/* Account status dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="min-w-[140px] justify-between">
-                  <div className="contents">
-                    <Filter className="mr-2 h-4 w-4" />
-                    {activeStatusLabel}
-                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[160px]">
-                <DropdownMenuRadioGroup
-                  value={activeStatusFilter}
-                  onValueChange={(v) =>
-                    setFilters({ ...filters, accountStatus: v as ClientFilters['accountStatus'] })
-                  }
+          {listFailed ? (
+            <ErrorState
+              title="Couldn't load clients"
+              description="The client list could not be loaded. Nothing has changed on the server."
+              onRetry={() => void retry()}
+              details={listError instanceof Error ? listError.message : String(listError)}
+            />
+          ) : (
+            <>
+              {/* The four figures filter the table (synced with the Account chip). */}
+              {loading ? (
+                <div
+                  className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+                  aria-busy="true"
+                  aria-label="Loading figures"
                 >
-                  {ACCOUNT_STATUS_FILTER_OPTIONS.map((opt) => (
-                    <DropdownMenuRadioItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </DropdownMenuRadioItem>
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-[92px] animate-pulse rounded-xl border border-nw-line bg-gray-50"
+                    />
                   ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <DataTable
-            columns={personalColumns as unknown as Column<Record<string, unknown>>[]}
-            data={filteredSortedClients as unknown as Record<string, unknown>[]}
-            onRowClick={handleRowClick as unknown as (row: Record<string, unknown>) => void}
-            loading={loading}
-            searchable={false}
-            exportable={false}
-            paginate={false}
-            getRowKey={(row) => row.id as React.Key}
-          />
+                </div>
+              ) : (
+                <div
+                  className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+                  aria-label="Filter by account"
+                >
+                  <FilterStatCard
+                    label="All clients"
+                    value={baseClients.length}
+                    meta={`+${totalStats.growthRate}% vs last month`}
+                    active={accountFilter === 'all'}
+                    onClick={() => setAccountFilter('all')}
+                  />
+                  <FilterStatCard
+                    label="Active"
+                    value={statusCounts.active}
+                    meta="Active individual portfolios"
+                    active={accountFilter === 'active'}
+                    onClick={() => toggleAccount('active')}
+                  />
+                  <FilterStatCard
+                    label="Suspended"
+                    value={statusCounts.suspended}
+                    meta="Access temporarily suspended"
+                    tone={statusCounts.suspended > 0 ? 'attention' : 'default'}
+                    active={accountFilter === 'suspended'}
+                    onClick={() => toggleAccount('suspended')}
+                  />
+                  <FilterStatCard
+                    label="Closed"
+                    value={statusCounts.closed}
+                    meta="Soft-deleted or closed accounts"
+                    active={accountFilter === 'closed'}
+                    onClick={() => toggleAccount('closed')}
+                  />
+                </div>
+              )}
+
+              <section
+                aria-label="Personal clients"
+                className="overflow-hidden rounded-xl border border-nw-line bg-white"
+              >
+                {/* Toolbar: search + filter chips */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-nw-line-2 px-4 py-3">
+                  <div className="relative w-full max-w-sm">
+                    <Search
+                      className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      placeholder="Search name, email or ID"
+                      aria-label="Search clients"
+                      className="pl-8"
+                      value={search}
+                      readOnly={blockSearchAutofill}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      name="nw-client-management-search"
+                      id="nw-client-management-search"
+                      type="text"
+                      inputMode="search"
+                      role="combobox"
+                      aria-autocomplete="list"
+                      aria-expanded={false}
+                      data-1p-ignore="true"
+                      data-lpignore="true"
+                      data-form-type="other"
+                      onChange={(e) => setSearch(e.target.value)}
+                      onFocus={() => setBlockSearchAutofill(false)}
+                    />
+                  </div>
+                  <FilterChipMenu
+                    field="Account"
+                    value={accountFilter}
+                    labels={ACCOUNT_LABELS}
+                    onChange={setAccountFilter}
+                  />
+                  <FilterChipMenu
+                    field="Application"
+                    value={applicationFilter}
+                    labels={APPLICATION_LABELS}
+                    onChange={setApplicationFilter}
+                  />
+                  {anyFilter && (
+                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  )}
+                  <span className="ml-auto text-sm text-nw-text-3">
+                    {filteredSortedClients.length.toLocaleString()}{' '}
+                    {filteredSortedClients.length === 1 ? 'client' : 'clients'} · A–Z by first name
+                  </span>
+                </div>
+                <DataTable
+                  columns={personalColumns as unknown as Column<Record<string, unknown>>[]}
+                  data={filteredSortedClients as unknown as Record<string, unknown>[]}
+                  onRowClick={handleRowClick as unknown as (row: Record<string, unknown>) => void}
+                  loading={loading}
+                  searchable={false}
+                  exportable={false}
+                  pageSize={25}
+                  getRowKey={(row) => row.id as React.Key}
+                  emptyState={
+                    anyFilter ? (
+                      <div className="py-10 text-center">
+                        <p className="text-sm font-medium text-nw-ink">
+                          No clients match your filters
+                        </p>
+                        <Button variant="link" onClick={clearFilters}>
+                          Clear filters
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="py-10 text-center">
+                        <p className="text-sm font-medium text-nw-ink">No clients yet</p>
+                        <p className="text-sm text-nw-text-3">
+                          Add your first client, or import many from a spreadsheet.
+                        </p>
+                        {canCreate && (
+                          <Button
+                            className="mt-3"
+                            size="sm"
+                            onClick={() => openAddClient('single')}
+                          >
+                            <Plus className="h-4 w-4" aria-hidden="true" />
+                            Add client
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  }
+                />
+              </section>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="groups" className="mt-0">
           <Suspense fallback={<LazyFallback />}>
-            <CustomGroupManager />
+            <ClientGroupsTab onOpenGroup={openGroup} />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="corporate" className="mt-0">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-              <Building className="h-10 w-10 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">Corporate Clients Module</h3>
-              <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                Employee benefits and corporate scheme management is currently under development.
-              </p>
-              <Button variant="outline" disabled>
-                Request early access <SoonBadge />
-              </Button>
-            </CardContent>
-          </Card>
+          <ComingSoonCard
+            icon={Building}
+            title="Corporate clients"
+            text="Employee benefits and corporate scheme management is currently under development."
+            action="Request early access"
+          />
         </TabsContent>
 
         <TabsContent value="adviser" className="mt-0">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-              <Users className="h-10 w-10 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">Adviser Clients</h3>
-              <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                Intermediary and adviser management portal is currently under development.
-              </p>
-              <Button variant="outline" disabled>
-                Notify me when available <SoonBadge />
-              </Button>
-            </CardContent>
-          </Card>
+          <ComingSoonCard
+            icon={Users}
+            title="Adviser clients"
+            text="The intermediary and adviser management portal is currently under development."
+            action="Notify me when available"
+          />
         </TabsContent>
       </Tabs>
 
       <Suspense fallback={<LazyFallback />}>
         <ClientFieldRepository open={showRepository} onOpenChange={setShowRepository} />
-      </Suspense>
-
-      <Suspense fallback={<LazyFallback />}>
-        <AddClientDialog
-          open={showAddClient}
-          onOpenChange={setShowAddClient}
-          onClientAdded={refetch}
-        />
       </Suspense>
 
       <Suspense fallback={<LazyFallback />}>
@@ -572,6 +815,31 @@ export function ClientManagementModule() {
         />
       </Suspense>
     </div>
+  );
+}
+
+function ComingSoonCard({
+  icon: Icon,
+  title,
+  text,
+  action,
+}: {
+  icon: React.ElementType;
+  title: string;
+  text: string;
+  action: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+        <Icon className="mb-4 h-10 w-10 text-muted-foreground" aria-hidden="true" />
+        <h2 className="text-lg font-medium text-nw-ink">{title}</h2>
+        <p className="mb-4 max-w-sm text-sm text-nw-text-3">{text}</p>
+        <Button variant="outline" disabled>
+          {action} <SoonBadge />
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

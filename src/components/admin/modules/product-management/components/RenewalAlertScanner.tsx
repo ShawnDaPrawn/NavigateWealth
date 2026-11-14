@@ -157,11 +157,15 @@ export function RenewalAlertScanner() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4 text-amber-600" />
-          <h3 className="text-sm font-semibold text-gray-800">Renewal Alert Scanner</h3>
+          <Bell className="h-4 w-4 text-amber-600" aria-hidden="true" />
+          <h2 className="text-base font-semibold text-nw-ink">Renewal alert scanner</h2>
         </div>
+        <p className="text-sm text-nw-text-3">
+          Scans policies for upcoming renewals and creates To-Do tasks for them. Preview first;
+          nothing is created until you confirm.
+        </p>
       </div>
 
       {/* Controls */}
@@ -169,7 +173,7 @@ export function RenewalAlertScanner() {
         <CardContent className="p-4">
           <div className="flex items-end gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs text-gray-600">Scan Window (days ahead)</Label>
+              <Label className="text-xs text-gray-600">Scan window (days ahead)</Label>
               <NumberInputField
                 value={daysAhead}
                 onValueChange={(v) => setDaysAhead(Math.min(v || 60, 365))}
@@ -190,7 +194,7 @@ export function RenewalAlertScanner() {
               ) : (
                 <div className="contents">
                   <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
-                  Preview Scan
+                  Preview scan
                 </div>
               )}
             </Button>
@@ -208,7 +212,7 @@ export function RenewalAlertScanner() {
                 ) : (
                   <div className="contents">
                     <ListTodo className="h-3.5 w-3.5 mr-1.5" />
-                    Create {scanResult.summary.tasksToCreate} Tasks
+                    Create {scanResult.summary.tasksToCreate} tasks
                   </div>
                 )}
               </Button>
@@ -412,10 +416,10 @@ export function RenewalAlertScanner() {
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Create Renewal Alert Tasks</AlertDialogTitle>
+            <AlertDialogTitle>Create renewal alert tasks</AlertDialogTitle>
             <AlertDialogDescription>
-              This will create <strong>{scanResult?.summary.tasksToCreate || 0}</strong> new tasks
-              in the Task Management board for upcoming policy renewals.
+              This creates <strong>{scanResult?.summary.tasksToCreate || 0}</strong> new tasks on
+              the To-Do board for upcoming policy renewals.
               {scanResult?.summary.skippedExisting ? (
                 <span className="block mt-1">
                   {scanResult.summary.skippedExisting} renewals already have tasks and will be
@@ -430,7 +434,7 @@ export function RenewalAlertScanner() {
               onClick={handleConfirmCreate}
               className="bg-amber-600 hover:bg-amber-700"
             >
-              Create Tasks
+              Create {scanResult?.summary.tasksToCreate || 0} tasks
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

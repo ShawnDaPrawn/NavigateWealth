@@ -7,6 +7,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import type { ComplianceDocumentType } from '../api';
 import { personnelApi } from '../api';
 import { personnelKeys } from './usePersonnel';
 import type {
@@ -285,6 +286,115 @@ export function useCancelPersonnelInvite() {
     onError: (error: Error) => {
       console.error('Failed to cancel invitation:', error);
       toast.error(`Failed to cancel invitation: ${error.message}`);
+    },
+  });
+}
+
+/** Suspend a staff member's sign-in (with a reason). */
+export function useSuspendPersonnelAccess() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) =>
+      personnelApi.suspendAccess(id, reason),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: personnelKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: personnelKeys.detail(variables.id) });
+      toast.success('Access suspended');
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not suspend access: ${error.message}`);
+    },
+  });
+}
+
+/** Restore a suspended staff member's sign-in. */
+export function useRestorePersonnelAccess() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => personnelApi.restoreAccess(id),
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({ queryKey: personnelKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: personnelKeys.detail(id) });
+      toast.success('Access restored');
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not restore access: ${error.message}`);
+    },
+  });
+}
+
+/** Email a staff member a single-use password reset link. */
+export function useSendPersonnelPasswordReset() {
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; email: string }) => personnelApi.sendPasswordReset(id),
+    onSuccess: (_data, variables) => {
+      toast.success(`Reset link sent to ${variables.email}`);
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not send the reset link: ${error.message}`);
+    },
+  });
+}
+
+/** Upload a compliance document file for a staff member. */
+export function useUploadPersonnelDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      personnelId,
+      file,
+      name,
+      type,
+    }: {
+      personnelId: string;
+      file: File;
+      name: string;
+      type: ComplianceDocumentType;
+    }) => personnelApi.uploadDocument(personnelId, file, { name, type }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: personnelKeys.lists() });
+      toast.success('Document uploaded');
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not upload the document: ${error.message}`);
+    },
+  });
+}
+
+/** Move clients between staff members (Client book › Bulk reassign). */
+export function useReassignPersonnelClients() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      fromId,
+      toId,
+      clientIds,
+    }: {
+      fromId: string;
+      toId: string;
+      clientIds: string[];
+    }) => personnelApi.reassignClients(fromId, toId, clientIds),
+    onSuccess: (result, variables) => {
+      queryClient.invalidateQueries({ queryKey: personnelKeys.clients(variables.fromId) });
+      queryClient.invalidateQueries({ queryKey: personnelKeys.clients(variables.toId) });
+      const moved = result.reassigned.length;
+      const skipped = result.skipped.length;
+      toast.success(`Reassigned ${moved} ${moved === 1 ? 'client' : 'clients'}`, {
+        description:
+          skipped > 0
+            ? `${skipped} ${skipped === 1 ? 'was' : 'were'} not moved: no longer assigned here.`
+            : undefined,
+      });
+    },
+    onError: (error: Error, variables) => {
+      // A large book moves in batches, so some clients may have moved already.
+      queryClient.invalidateQueries({ queryKey: personnelKeys.clients(variables.fromId) });
+      queryClient.invalidateQueries({ queryKey: personnelKeys.clients(variables.toId) });
+      toast.error(`Could not reassign clients: ${error.message}`);
     },
   });
 }

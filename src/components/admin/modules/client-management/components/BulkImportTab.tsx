@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
+import { Tabs } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
 import { Progress } from '../../../../ui/progress';
 import {
   Table,
@@ -17,14 +18,10 @@ import {
   Upload,
   FileSpreadsheet,
   CheckCircle2,
-  XCircle,
-  AlertTriangle,
   Loader2,
   Trash2,
   ArrowRight,
   RotateCcw,
-  PartyPopper,
-  Info,
 } from 'lucide-react';
 import { Checkbox } from '../../../../ui/checkbox';
 import { api } from '../../../../../utils/api/client';
@@ -90,6 +87,9 @@ const MAX_BULK_IMPORT_BYTES = MAX_BULK_IMPORT_FILE_MB * 1024 * 1024;
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+const ROWS_VIEWS = ['all', 'fix'] as const;
+type RowsView = (typeof ROWS_VIEWS)[number];
+
 interface ParsedRow {
   rowNum: number;
   data: Record<string, string>;
@@ -304,6 +304,13 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
   const [linkDuplicateEmails, setLinkDuplicateEmails] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [importResults, setImportResults] = useState<ImportResult[] | null>(null);
+  const [templateDownloaded, setTemplateDownloaded] = useState(false);
+  const [rowsView, setRowsView] = useUrlState<RowsView>('rows', 'all', ROWS_VIEWS);
+
+  const handleDownloadTemplate = () => {
+    downloadTemplate();
+    setTemplateDownloaded(true);
+  };
 
   const validCount = parsedRows.filter((r) => r.valid).length;
   const invalidCount = parsedRows.filter((r) => !r.valid).length;
@@ -384,6 +391,7 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
     setParsedRows([]);
     setFileName('');
     setImportResults(null);
+    setRowsView('all');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -397,97 +405,70 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
 
     return (
       <div className="space-y-5">
-        {/* Summary cards */}
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-          <div className="flex items-center gap-2.5 px-5 pt-4 pb-3 border-b border-gray-100">
-            <div className="h-7 w-7 rounded-lg bg-[#6d28d9]/10 flex items-center justify-center">
-              <PartyPopper className="h-3.5 w-3.5 text-[#6d28d9]" />
-            </div>
-            <h3 className="text-[13px] font-semibold text-gray-900">Import Complete</h3>
-          </div>
-          <div className="grid grid-cols-3 divide-x divide-gray-100">
-            <div className="p-5 text-center">
-              <div className="text-3xl font-bold text-green-600">{succeeded}</div>
-              <div className="text-xs text-gray-500 mt-1 font-medium">Imported</div>
-            </div>
-            <div className="p-5 text-center">
-              <div className="text-3xl font-bold text-red-500">{failed}</div>
-              <div className="text-xs text-gray-500 mt-1 font-medium">Failed</div>
-            </div>
-            <div className="p-5 text-center">
-              <div className="text-3xl font-bold text-amber-500">{skipped}</div>
-              <div className="text-xs text-gray-500 mt-1 font-medium">Skipped (Duplicates)</div>
+        <section className="rounded-xl border border-nw-line bg-white" aria-label="Import complete">
+          <div className="flex items-center gap-2.5 border-b border-nw-line-2 px-5 py-4">
+            <CheckCircle2 className="h-5 w-5 text-green-600" aria-hidden="true" />
+            <div>
+              <h3 className="text-[15px] font-semibold text-nw-ink">Import complete</h3>
+              <p className="text-sm text-nw-text-3">
+                {succeeded} {succeeded === 1 ? 'client' : 'clients'} added
+              </p>
             </div>
           </div>
-        </div>
+          <div className="grid grid-cols-3 divide-x divide-nw-line-2">
+            <ResultFigure label="Imported" value={succeeded} className="text-green-700" />
+            <ResultFigure label="Failed" value={failed} className="text-red-700" />
+            <ResultFigure
+              label="Skipped (duplicates)"
+              value={skipped}
+              className="text-nw-amber-700"
+            />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-nw-line-2 px-5 py-3">
+            <p className="text-sm text-nw-text-3">
+              Download the results to see each row’s outcome.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => downloadResults(importResults)}>
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              Download .xlsx
+            </Button>
+          </div>
+        </section>
 
-        {/* Results table */}
-        <div className="rounded-xl border border-gray-200 overflow-hidden">
-          <div className="max-h-60 overflow-auto">
+        <div className="overflow-hidden rounded-xl border border-nw-line bg-white">
+          <div className="max-h-80 overflow-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50/80">
-                  <TableHead className="w-14 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                    Row
-                  </TableHead>
-                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                    Name
-                  </TableHead>
-                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                    Email
-                  </TableHead>
-                  <TableHead className="w-28 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                    App #
-                  </TableHead>
+                <TableRow>
+                  <TableHead className="w-14">Row</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Result</TableHead>
+                  <TableHead>Application</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {importResults.map((r, i) => (
-                  <TableRow
-                    key={i}
-                    className={
-                      r.status === 'failed'
-                        ? 'bg-red-50/40'
-                        : r.status === 'skipped'
-                          ? 'bg-amber-50/40'
-                          : ''
-                    }
-                  >
-                    <TableCell className="text-xs text-gray-400 font-mono">{r.row}</TableCell>
-                    <TableCell className="text-sm font-medium text-gray-900">{r.name}</TableCell>
-                    <TableCell className="text-sm text-gray-500">{r.email}</TableCell>
-                    <TableCell>
-                      {r.status === 'success' && (
-                        <Badge className="bg-green-100 text-green-700 border-green-200 text-[10px] font-medium">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Success
-                        </Badge>
-                      )}
+                  <TableRow key={i}>
+                    <TableCell className="font-mono text-xs text-nw-text-3">{r.row}</TableCell>
+                    <TableCell className="text-sm font-medium text-nw-ink">{r.name}</TableCell>
+                    <TableCell className="text-sm text-nw-text-2">{r.email}</TableCell>
+                    <TableCell className="text-sm">
+                      {r.status === 'success' && <span className="text-green-700">Imported</span>}
                       {r.status === 'failed' && (
-                        <Badge
-                          variant="destructive"
-                          className="text-[10px] font-medium"
-                          title={r.error}
-                        >
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Failed
-                        </Badge>
+                        <span className="text-red-700">{r.error || 'Failed'}</span>
                       )}
                       {r.status === 'skipped' && (
-                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] font-medium">
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          Skipped
-                        </Badge>
+                        <span className="text-nw-amber-700">
+                          {r.error || 'Skipped — email already in use'}
+                        </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs font-mono text-[#6d28d9]">
+                    <TableCell className="font-mono text-xs text-nw-violet-600">
                       {r.applicationNumber || '—'}
                       {r.signInEmail && (
                         <span
-                          className="block text-[10px] font-normal text-gray-400"
+                          className="block text-[10px] font-normal text-nw-text-3"
                           title={`Signs in as ${r.signInEmail}; mail goes to ${r.email}`}
                         >
                           linked: {r.signInEmail}
@@ -501,262 +482,292 @@ export function BulkImportTab({ onSuccess, onClose }: BulkImportTabProps) {
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex justify-end gap-2.5 pt-1">
-          <Button variant="outline" onClick={handleClear} className="px-5">
-            <RotateCcw className="mr-2 h-3.5 w-3.5" />
-            Import More
+        <div className="flex justify-end gap-2.5">
+          <Button variant="outline" onClick={handleClear}>
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+            Import more
           </Button>
-          <Button onClick={onClose} className="px-6 bg-[#6d28d9] hover:bg-[#5b21b6]">
-            Done
-          </Button>
+          <Button onClick={onClose}>Done</Button>
         </div>
       </div>
     );
   }
 
   // =====================================================================
-  // UPLOAD FLOW
+  // UPLOAD FLOW: template → upload → check and import
   // =====================================================================
+  const step = hasPreview ? 3 : hasFile ? 2 : templateDownloaded ? 2 : 1;
+  const visibleRows = rowsView === 'fix' ? parsedRows.filter((r) => !r.valid) : parsedRows;
+
   return (
     <div className="space-y-5">
-      {/* Steps */}
-      <div className="space-y-3">
-        {/* Step 1 */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4">
-          <StepIndicator number={1} active={!hasFile} complete={hasFile} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900">Download the import template</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Pre-formatted Excel file with all supported fields. Required:{' '}
-              <span className="font-medium text-gray-600">
-                First Name, Last Name, Email, Cellphone
+      <ol className="flex flex-wrap items-center gap-3" aria-label="Import steps">
+        {[
+          { n: 1, label: 'Download template', done: templateDownloaded || hasFile },
+          { n: 2, label: 'Upload completed file', done: hasPreview },
+          { n: 3, label: 'Check and import', done: false },
+        ].map((s, i) => (
+          <li key={s.n} className="flex items-center gap-3">
+            {i > 0 && <span className="h-px w-8 bg-nw-line" aria-hidden="true" />}
+            <span
+              className="flex items-center gap-2 text-sm"
+              aria-current={step === s.n ? 'step' : undefined}
+            >
+              <StepIndicator number={s.n} active={step === s.n} complete={s.done} />
+              <span className={step === s.n ? 'font-medium text-nw-ink' : 'text-nw-text-2'}>
+                {s.label}
               </span>
-              .
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={downloadTemplate}
-            className="shrink-0 gap-1.5"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Download .xlsx
-          </Button>
-        </div>
+            </span>
+          </li>
+        ))}
+      </ol>
 
-        {/* Step 2 */}
-        <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-4">
-          <StepIndicator number={2} active={hasFile && !hasPreview} complete={hasPreview} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900">Upload your completed file</p>
+      {!hasPreview && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <section className="rounded-xl border border-nw-line bg-white p-5">
+            <h3 className="text-[15px] font-semibold text-nw-ink">1. Download the template</h3>
+            <p className="mt-1 text-sm text-nw-text-3">
+              Pre-formatted Excel file with all supported fields. Required: first name, last name,
+              email and cellphone.
+            </p>
+            <Button variant="outline" size="sm" className="mt-4" onClick={handleDownloadTemplate}>
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              Download template
+            </Button>
+          </section>
+          <section className="rounded-xl border border-nw-line bg-white p-5">
+            <h3 className="text-[15px] font-semibold text-nw-ink">2. Upload the completed file</h3>
             {fileName ? (
-              <div className="flex items-center gap-2 mt-1">
-                <FileSpreadsheet className="h-3.5 w-3.5 text-green-600 shrink-0" />
-                <span className="text-xs font-medium text-green-700 truncate">{fileName}</span>
-                {hasPreview && (
-                  <Badge variant="outline" className="text-[10px] ml-1">
-                    {parsedRows.length} row{parsedRows.length !== 1 ? 's' : ''} parsed
-                  </Badge>
-                )}
-              </div>
+              <p className="mt-1 flex items-center gap-2 text-sm text-green-700">
+                <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />
+                {fileName}
+              </p>
             ) : (
-              <p className="text-xs text-gray-400 mt-0.5">
-                Maximum {MAX_BULK_IMPORT_ROWS.toLocaleString()} clients per upload. Accepts{' '}
-                <code className="text-[10px] bg-gray-100 px-1 py-0.5 rounded">.xlsx</code> files
-                only.
+              <p className="mt-1 text-sm text-nw-text-3">
+                Up to {MAX_BULK_IMPORT_ROWS.toLocaleString()} clients per upload, .xlsx files only.
               </p>
             )}
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-            <Button
-              variant={hasFile ? 'outline' : 'default'}
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              className={!hasFile ? 'bg-[#6d28d9] hover:bg-[#5b21b6] gap-1.5' : 'gap-1.5'}
-            >
-              <Upload className="h-3.5 w-3.5" />
-              {hasFile ? 'Replace' : 'Upload File'}
+            <Button size="sm" className="mt-4" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+              {hasFile ? 'Replace file' : 'Upload file'}
             </Button>
-            {hasFile && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClear}
-                className="text-gray-400 hover:text-red-600"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
+          </section>
         </div>
+      )}
 
-        {/* Step 3 — Preview & Import */}
-        {hasPreview && (
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <div className="p-4 flex items-center gap-4 border-b border-gray-100">
-              <StepIndicator number={3} active={hasPreview} complete={false} />
-              <div className="flex-1 min-w-0 flex items-center gap-3">
-                <p className="text-sm font-medium text-gray-900">Review &amp; import</p>
-                {validCount > 0 && (
-                  <Badge className="bg-green-50 text-green-700 border-green-200 text-[10px] font-medium">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    {validCount} valid
-                  </Badge>
-                )}
-                {invalidCount > 0 && (
-                  <Badge variant="destructive" className="text-[10px] font-medium">
-                    <XCircle className="h-3 w-3 mr-1" />
-                    {invalidCount} error{invalidCount !== 1 ? 's' : ''}
-                  </Badge>
-                )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        className="hidden"
+        aria-label="Spreadsheet to import"
+        onChange={handleFileChange}
+      />
+
+      {hasPreview && (
+        <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+          <section className="overflow-hidden rounded-xl border border-nw-line bg-white">
+            <div className="flex flex-wrap items-center gap-3 border-b border-nw-line-2 px-4 py-3">
+              <FileSpreadsheet className="h-4 w-4 text-green-700" aria-hidden="true" />
+              <span className="text-sm font-medium text-nw-ink">{fileName}</span>
+              <span className="text-sm text-green-700">{validCount} ready</span>
+              {invalidCount > 0 && (
+                <span className="text-sm text-red-700">{invalidCount} need fixing</span>
+              )}
+              <div className="ml-auto flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isImporting}
+                >
+                  Replace file
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClear}
+                  disabled={isImporting}
+                  aria-label="Remove file"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
               </div>
             </div>
-
-            {/* Data preview table */}
-            <div className="max-h-52 overflow-auto">
+            <div className="px-4 pt-3">
+              <Tabs value={rowsView} onValueChange={(v) => setRowsView(v as RowsView)}>
+                <SegmentedList aria-label="Rows">
+                  <SegmentedTrigger value="all">All · {parsedRows.length}</SegmentedTrigger>
+                  <SegmentedTrigger value="fix">Need fixing · {invalidCount}</SegmentedTrigger>
+                </SegmentedList>
+              </Tabs>
+            </div>
+            <div className="max-h-96 overflow-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/80">
-                    <TableHead className="w-14 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                      Row
-                    </TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                      Name
-                    </TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                      Email
-                    </TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                      Phone
-                    </TableHead>
-                    <TableHead className="w-20 text-[11px] font-semibold uppercase tracking-wider text-gray-500 text-center">
-                      Valid
-                    </TableHead>
+                  <TableRow>
+                    <TableHead className="w-14">Row</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>ID number</TableHead>
+                    <TableHead>Result</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {parsedRows.map((row) => (
-                    <TableRow key={row.rowNum} className={row.valid ? '' : 'bg-red-50/40'}>
-                      <TableCell className="text-xs text-gray-400 font-mono">
-                        {row.rowNum}
-                      </TableCell>
-                      <TableCell className="text-sm font-medium text-gray-900">
-                        {row.data.firstName} {row.data.lastName}
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-500">
-                        {row.data.emailAddress}
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-500">
-                        {row.data.cellphoneNumber}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {row.valid ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
-                        ) : (
-                          <div
-                            className="flex items-center justify-center gap-1"
-                            title={row.errors.join('; ')}
-                          >
-                            <AlertTriangle className="h-4 w-4 text-red-500" />
-                            <span className="text-[10px] text-red-600 font-medium">
-                              {row.errors.length}
-                            </span>
-                          </div>
-                        )}
+                  {visibleRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-6 text-center text-sm text-nw-text-3">
+                        No rows need fixing.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    visibleRows.map((row) => (
+                      <TableRow key={row.rowNum}>
+                        <TableCell className="font-mono text-xs text-nw-text-3">
+                          {row.rowNum}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium text-nw-ink">
+                          {row.data.firstName} {row.data.lastName}
+                        </TableCell>
+                        <TableCell className="text-sm text-nw-text-2">
+                          {row.data.emailAddress || '—'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs text-nw-text-2">
+                          {maskId(row.data.idNumber)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {row.valid ? (
+                            <span className="text-green-700">Ready</span>
+                          ) : (
+                            <span className="text-red-700">{row.errors.join('; ')}</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
-
-            {/* Validation warning */}
             {invalidCount > 0 && (
-              <div className="mx-4 my-3 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <Info className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-red-700">
-                  <strong>
-                    {invalidCount} row{invalidCount !== 1 ? 's' : ''}
-                  </strong>{' '}
-                  with validation errors will be skipped. Only <strong>{validCount}</strong> valid
-                  row{validCount !== 1 ? 's' : ''} will be imported.
-                </p>
-              </div>
+              <p className="border-t border-nw-line-2 px-4 py-3 text-sm text-nw-text-3">
+                Rows that need fixing are skipped. Fix them in the file and import again.
+              </p>
             )}
-
-            {/* Shared-mailbox option */}
-            <div className="mx-4 mb-3 flex items-start gap-2.5 p-3 bg-blue-50/60 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-2.5 border-t border-nw-line-2 px-4 py-3">
               <Checkbox
                 id="link-duplicate-emails"
                 checked={linkDuplicateEmails}
                 onCheckedChange={(v) => setLinkDuplicateEmails(v === true)}
                 disabled={isImporting}
-                className="mt-0.5 border-blue-400 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                className="mt-0.5"
               />
-              <label
-                htmlFor="link-duplicate-emails"
-                className="text-xs leading-relaxed text-blue-900 cursor-pointer"
-              >
-                <strong>Link rows that share an existing email</strong> — for households where a
-                minor or a spouse uses another client&apos;s inbox. Each linked client gets a unique
-                sign-in alias and still receives mail at the shared address. Leave this off to skip
-                duplicates instead, which is the safer choice if the file may list the same client
-                twice.
+              <label htmlFor="link-duplicate-emails" className="cursor-pointer text-sm">
+                <span className="font-medium text-nw-ink">
+                  Link rows that share an existing email
+                </span>
+                <span className="block text-nw-text-3">
+                  Adds the person as a second client on that mailbox with a sign-in alias, instead
+                  of skipping the row. Leave this off if the file may list the same client twice.
+                </span>
               </label>
             </div>
+          </section>
 
-            {/* Import progress */}
-            {isImporting && (
-              <div className="px-4 pb-4 space-y-2">
-                <Progress value={importProgress} className="h-1.5" />
-                <p className="text-xs text-gray-400 text-center">Creating client accounts...</p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex justify-end gap-2.5 px-4 py-3 border-t border-gray-100 bg-gray-50/50">
-              <Button variant="outline" onClick={onClose} disabled={isImporting} className="px-5">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleImport}
-                disabled={isImporting || validCount === 0}
-                className="px-6 bg-[#6d28d9] hover:bg-[#5b21b6]"
-              >
-                {isImporting ? (
-                  <div className="contents">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Importing...
-                  </div>
-                ) : (
-                  <div className="contents">
-                    <ArrowRight className="mr-2 h-4 w-4" />
-                    Import {validCount} Client{validCount !== 1 ? 's' : ''}
-                  </div>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Empty state footer — no file uploaded */}
-      {!hasPreview && (
-        <div className="flex justify-end gap-2.5 pt-1">
-          <Button variant="outline" onClick={onClose} className="px-5">
-            Cancel
-          </Button>
+          <aside className="h-fit rounded-xl border border-nw-line bg-white p-4 text-sm">
+            <h3 className="font-semibold text-nw-ink">Before you import</h3>
+            <p className="mt-1 text-nw-text-3">
+              Every row needs a first name, last name, email address and cellphone number. Rows with
+              errors are skipped; the rest import in one go.
+            </p>
+            <Button variant="link" className="mt-2 h-auto p-0" onClick={handleDownloadTemplate}>
+              Download the template again
+            </Button>
+          </aside>
         </div>
       )}
+
+      {isImporting && (
+        <div className="space-y-2" role="status">
+          <Progress value={importProgress} className="h-1.5" />
+          <p className="text-center text-xs text-nw-text-3">Creating client accounts…</p>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-nw-line pt-4">
+        {hasPreview && (
+          <span className="mr-auto text-sm text-nw-text-3">
+            {validCount} of {parsedRows.length} rows will be imported
+          </span>
+        )}
+        <Button variant="outline" onClick={onClose} disabled={isImporting}>
+          Cancel
+        </Button>
+        {hasPreview && (
+          <Button onClick={handleImport} disabled={isImporting || validCount === 0}>
+            {isImporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            )}
+            {isImporting
+              ? 'Importing…'
+              : `Import ${validCount} ${validCount === 1 ? 'client' : 'clients'}`}
+          </Button>
+        )}
+      </div>
     </div>
   );
+}
+
+function ResultFigure({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: number;
+  className: string;
+}) {
+  return (
+    <div className="p-5 text-center">
+      <div className={`text-3xl font-semibold tabular-nums ${className}`}>{value}</div>
+      <div className="mt-1 text-xs text-nw-text-3">{label}</div>
+    </div>
+  );
+}
+
+/** "900118••••84" — the middle of an ID number is never shown in a preview. */
+function maskId(id?: string): string {
+  if (!id) return '—';
+  if (id.length <= 8) return id;
+  return `${id.slice(0, 6)}••••${id.slice(-2)}`;
+}
+
+/** Each row's outcome as a spreadsheet, so staff can fix and re-import failures. */
+function downloadResults(results: ImportResult[]) {
+  const rows = results.map((r) => ({
+    Row: r.row,
+    Name: r.name,
+    Email: r.email,
+    Result: r.status === 'success' ? 'Imported' : r.status === 'failed' ? 'Failed' : 'Skipped',
+    Reason: r.error ?? '',
+    'Application number': r.applicationNumber ?? '',
+    'Sign-in email': r.signInEmail ?? '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Import results');
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([buf], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'navigate_wealth_client_import_results.xlsx';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  toast.success('Results downloaded');
 }

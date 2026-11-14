@@ -141,3 +141,27 @@ describe('reportingApi', () => {
     });
   });
 });
+
+describe('custom reports', () => {
+  it('run their data source export and keep only the chosen columns, in order', async () => {
+    const { reportingApi } = await import('../api');
+    mockApiGet.mockResolvedValueOnce({
+      rows: [{ 'First Name': 'Elsa', Email: 'e@x.co', 'User ID': 'u1' }],
+      count: 1,
+    });
+    const rows = await reportingApi.getReportData({
+      id: 'd1',
+      name: 'Book',
+      description: '',
+      category: 'clients',
+      parameters: {},
+      outputs: [],
+      createdAt: '',
+      dataSource: 'personal-clients',
+      columns: ['Email', 'First Name', 'Phone'],
+      custom: true,
+    });
+    expect(mockApiGet).toHaveBeenLastCalledWith('/reporting/clients/personal-list');
+    expect(rows).toEqual([{ Email: 'e@x.co', 'First Name': 'Elsa', Phone: '' }]);
+  });
+});

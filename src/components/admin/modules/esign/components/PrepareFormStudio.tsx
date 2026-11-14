@@ -34,7 +34,8 @@ import { SignerLegend } from './studio/SignerLegend';
 import { BulkActionBar } from './studio/BulkActionBar';
 import { SettingsDialog } from './studio/SettingsDialog';
 import { ShortcutsDialog } from './studio/ShortcutsDialog';
-import { RecipientsSheet } from './studio/RecipientsSheet';
+import { cn } from '../../../../ui/utils';
+import { RecipientsPage } from './studio/RecipientsPage';
 import { StudioPreviewDialog } from './studio/StudioPreviewDialog';
 import type { SettingsDraft } from './studio/settingsDraft';
 import { useConfirm } from '../../../layout/page';
@@ -528,8 +529,8 @@ export function PrepareFormStudio({
   // ==================== RECIPIENTS QUICK-EDIT ====================
 
   const handleRecipientsSave = useCallback(
-    async (next: SignerFormData[]) => {
-      if (!envelope.id) return;
+    async (next: SignerFormData[]): Promise<boolean> => {
+      if (!envelope.id) return false;
       try {
         await esignApi.saveDraftSigners(
           envelope.id,
@@ -546,9 +547,11 @@ export function PrepareFormStudio({
         );
         onSignersChange?.(next);
         toast.success('Recipients updated');
+        return true;
       } catch (err) {
         logger.error('Failed to save recipients:', err);
         toast.error('Could not save recipient changes');
+        return false;
       }
     },
     [envelope.id, onSignersChange],
@@ -581,393 +584,397 @@ export function PrepareFormStudio({
   const totalSelected = selectedFieldIds.size;
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <StudioToolbar
-        autoSaving={autoSaving}
-        canRedo={canRedo}
-        canUndo={canUndo}
-        documentUrl={documentUrl}
-        envelope={envelope}
-        handleBack={handleBack}
-        handleSave={handleSave}
-        handleSend={handleSend}
-        hasUnsavedChanges={hasUnsavedChanges}
-        lastSavedAt={lastSavedAt}
-        redo={redo}
-        saving={saving}
-        sendActionBusyLabel={sendActionBusyLabel}
-        sendActionLabel={sendActionLabel}
-        sending={sending}
-        setShowPageManager={setShowPageManager}
-        setShowPreview={setShowPreview}
-        setShowRecipients={setShowRecipients}
-        setShowSettings={setShowSettings}
-        setShowShortcuts={setShowShortcuts}
-        setSnapEnabled={setSnapEnabled}
-        signers={signers}
-        snapEnabled={snapEnabled}
-        undo={undo}
-      />
+    <>
+      {/* Recipients open as a page of their own; the studio stays mounted
+          underneath so fields, zoom and history survive the round trip. */}
+      {showRecipients && (
+        <RecipientsPage
+          signers={signers}
+          onSave={handleRecipientsSave}
+          onClose={() => setShowRecipients(false)}
+        />
+      )}
+      <div className={cn('flex flex-col h-full bg-gray-50', showRecipients && 'hidden')}>
+        <StudioToolbar
+          autoSaving={autoSaving}
+          canRedo={canRedo}
+          canUndo={canUndo}
+          documentUrl={documentUrl}
+          envelope={envelope}
+          handleBack={handleBack}
+          handleSave={handleSave}
+          handleSend={handleSend}
+          hasUnsavedChanges={hasUnsavedChanges}
+          lastSavedAt={lastSavedAt}
+          redo={redo}
+          saving={saving}
+          sendActionBusyLabel={sendActionBusyLabel}
+          sendActionLabel={sendActionLabel}
+          sending={sending}
+          setShowPageManager={setShowPageManager}
+          setShowPreview={setShowPreview}
+          setShowRecipients={setShowRecipients}
+          setShowSettings={setShowSettings}
+          setShowShortcuts={setShowShortcuts}
+          setSnapEnabled={setSnapEnabled}
+          signers={signers}
+          snapEnabled={snapEnabled}
+          undo={undo}
+        />
 
-      <SignerLegend
-        clearSignerFilter={clearSignerFilter}
-        fieldCountsBySigner={fieldCountsBySigner}
-        selectedSignerId={selectedSignerId}
-        setSelectedSignerId={setSelectedSignerId}
-        signers={signers}
-        toggleSignerFilter={toggleSignerFilter}
-        visibleSignerIds={visibleSignerIds}
-      />
+        <SignerLegend
+          clearSignerFilter={clearSignerFilter}
+          fieldCountsBySigner={fieldCountsBySigner}
+          selectedSignerId={selectedSignerId}
+          setSelectedSignerId={setSelectedSignerId}
+          signers={signers}
+          toggleSignerFilter={toggleSignerFilter}
+          visibleSignerIds={visibleSignerIds}
+        />
 
-      <BulkActionBar
-        eligibleSigners={eligibleSigners}
-        handleApplyToAllPages={handleApplyToAllPages}
-        handleBulkDelete={handleBulkDelete}
-        handleBulkReassign={handleBulkReassign}
-        handleBulkRequired={handleBulkRequired}
-        handleDuplicate={handleDuplicate}
-        pageCount={pageCount}
-        totalSelected={totalSelected}
-      />
+        <BulkActionBar
+          eligibleSigners={eligibleSigners}
+          handleApplyToAllPages={handleApplyToAllPages}
+          handleBulkDelete={handleBulkDelete}
+          handleBulkReassign={handleBulkReassign}
+          handleBulkRequired={handleBulkRequired}
+          handleDuplicate={handleDuplicate}
+          pageCount={pageCount}
+          totalSelected={totalSelected}
+        />
 
-      {/* Main Studio Area */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
-        {/* Left Sidebar: Toolbox */}
-        <div className="w-64 bg-white border-r flex flex-col z-10 overflow-hidden">
-          <div className="p-4 border-b">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
-              Placing Fields For
-            </label>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
-                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                    <div
-                      className="w-3 h-3 rounded-full shrink-0"
-                      style={{
-                        backgroundColor: signerColorMap[selectedSignerId || ''] || '#6d28d9',
-                      }}
-                    />
-                    <span className="truncate text-sm">
-                      {eligibleSigners.find((s) => s.email === selectedSignerId)?.name ||
-                        'Select signer'}
-                    </span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="start">
-                {eligibleSigners.map((signer) => {
-                  const idx = signers.findIndex((s) => s.email === signer.email);
-                  const color = SIGNER_COLORS[idx % SIGNER_COLORS.length];
-                  return (
-                    <DropdownMenuItem
-                      key={signer.email}
-                      onClick={() => setSelectedSignerId(signer.email)}
-                      className="flex items-center gap-2"
-                    >
+        {/* Main Studio Area */}
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          {/* Left Sidebar: Toolbox */}
+          <div className="w-64 bg-white border-r flex flex-col z-10 overflow-hidden">
+            <div className="p-4 border-b">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">
+                Placing Fields For
+              </label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                       <div
                         className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: color.hex }}
+                        style={{
+                          backgroundColor: signerColorMap[selectedSignerId || ''] || '#6d28d9',
+                        }}
                       />
-                      <span className="flex-1 truncate">{signer.name}</span>
-                      <span className="text-xs text-gray-400">
-                        {signer.kind === 'witness' ? 'Witness' : signer.role || 'Signer'}
+                      <span className="truncate text-sm">
+                        {eligibleSigners.find((s) => s.email === selectedSignerId)?.name ||
+                          'Select signer'}
                       </span>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    </div>
+                    <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="start">
+                  {eligibleSigners.map((signer) => {
+                    const idx = signers.findIndex((s) => s.email === signer.email);
+                    const color = SIGNER_COLORS[idx % SIGNER_COLORS.length];
+                    return (
+                      <DropdownMenuItem
+                        key={signer.email}
+                        onClick={() => setSelectedSignerId(signer.email)}
+                        className="flex items-center gap-2"
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full shrink-0"
+                          style={{ backgroundColor: color.hex }}
+                        />
+                        <span className="flex-1 truncate">{signer.name}</span>
+                        <span className="text-xs text-gray-400">
+                          {signer.kind === 'witness' ? 'Witness' : signer.role || 'Signer'}
+                        </span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              <FieldPalette
+                signers={eligibleSigners}
+                fields={fields}
+                onAddField={handleFieldPlace}
+                onUpdateField={handleFieldUpdate}
+                onDeleteField={handleFieldDelete}
+                selectedSignerId={selectedSignerId}
+              />
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
-            <FieldPalette
-              signers={eligibleSigners}
-              fields={fields}
-              onAddField={handleFieldPlace}
-              onUpdateField={handleFieldUpdate}
-              onDeleteField={handleFieldDelete}
-              selectedSignerId={selectedSignerId}
-            />
-          </div>
-        </div>
-
-        {/* Center: Canvas — independent scroll area for the document */}
-        <div
-          className="flex-1 bg-gray-100/50 relative min-h-0 min-w-0 overflow-hidden"
-          data-esign-canvas
-        >
-          {/* P3.1 + P3.2 — Suggested-fields banner. Shows once after upload
+          {/* Center: Canvas — independent scroll area for the document */}
+          <div
+            className="flex-1 bg-gray-100/50 relative min-h-0 min-w-0 overflow-hidden"
+            data-esign-canvas
+          >
+            {/* P3.1 + P3.2 — Suggested-fields banner. Shows once after upload
               when the backend's PDF analysis pipeline returned candidates.
               The sender accepts/dismisses individually or in bulk; once
               empty (or explicitly dismissed) the banner disappears. */}
-          {showCandidatesPanel && candidates.length > 0 && (
-            <div className="absolute top-0 left-0 right-0 z-20 bg-amber-50 border-b border-amber-200 px-4 py-2 shadow-sm">
-              <div className="flex items-center gap-3 text-sm">
-                <Magnet className="h-4 w-4 text-amber-700 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-amber-900">
-                    {candidates.length} suggested field{candidates.length === 1 ? '' : 's'} from
-                    this PDF
+            {showCandidatesPanel && candidates.length > 0 && (
+              <div className="absolute top-0 left-0 right-0 z-20 bg-amber-50 border-b border-amber-200 px-4 py-2 shadow-sm">
+                <div className="flex items-center gap-3 text-sm">
+                  <Magnet className="h-4 w-4 text-amber-700 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-amber-900">
+                      {candidates.length} suggested field{candidates.length === 1 ? '' : 's'} from
+                      this PDF
+                    </div>
+                    <div className="text-xs text-amber-700/80 truncate">
+                      {candidates.filter((c) => c.source === 'acroform').length} from PDF form
+                      {' · '}
+                      {candidates.filter((c) => c.source === 'anchor').length} from text anchors
+                      {selectedSignerId && (
+                        <>
+                          {' · will be assigned to '}
+                          <span className="font-medium">{selectedSignerId}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-xs text-amber-700/80 truncate">
-                    {candidates.filter((c) => c.source === 'acroform').length} from PDF form
-                    {' · '}
-                    {candidates.filter((c) => c.source === 'anchor').length} from text anchors
-                    {selectedSignerId && (
-                      <>
-                        {' · will be assigned to '}
-                        <span className="font-medium">{selectedSignerId}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={acceptAllCandidates}
-                  className="px-3 py-1 text-xs font-medium bg-amber-600 text-white rounded hover:bg-amber-700"
-                  disabled={!selectedSignerId && eligibleSigners.length === 0}
-                  title={
-                    !selectedSignerId && eligibleSigners.length === 0
-                      ? 'Add a recipient before accepting suggestions'
-                      : 'Accept every suggestion'
-                  }
-                >
-                  Accept all
-                </button>
-                <button
-                  type="button"
-                  onClick={dismissAllCandidates}
-                  className="px-3 py-1 text-xs text-amber-800 hover:bg-amber-100 rounded"
-                >
-                  Dismiss
-                </button>
-              </div>
-
-              {/* Per-candidate list, capped at 6 rows visible to keep the
-                  banner compact; the rest scroll inside. */}
-              <div className="mt-2 max-h-36 overflow-y-auto border-t border-amber-200/70 pt-2 space-y-1">
-                {candidates.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center gap-2 text-xs bg-white/60 hover:bg-white rounded px-2 py-1"
+                  <button
+                    type="button"
+                    onClick={acceptAllCandidates}
+                    className="px-3 py-1 text-xs font-medium bg-amber-600 text-white rounded hover:bg-amber-700"
+                    disabled={!selectedSignerId && eligibleSigners.length === 0}
+                    title={
+                      !selectedSignerId && eligibleSigners.length === 0
+                        ? 'Add a recipient before accepting suggestions'
+                        : 'Accept every suggestion'
+                    }
                   >
-                    <span
-                      className={`inline-block w-2 h-2 rounded-full ${
-                        c.source === 'acroform' ? 'bg-emerald-500' : 'bg-blue-500'
-                      }`}
-                    />
-                    <span className="font-medium capitalize w-16 shrink-0">{c.type}</span>
-                    <span className="text-amber-700/80 shrink-0">p.{c.page}</span>
-                    <span className="flex-1 truncate text-gray-700">
-                      {c.label ||
-                        c.anchorText ||
-                        (c.source === 'acroform' ? 'PDF form widget' : 'Text anchor')}
-                    </span>
-                    {/* Candidates the analyzer bound to a CRM token fill
-                        themselves from the client record at send time. */}
-                    {c.prefill_token && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-800 rounded shrink-0">
-                        auto-fills
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => acceptCandidate(c.id)}
-                      className="px-2 py-0.5 text-xs bg-amber-600 text-white rounded hover:bg-amber-700"
-                    >
-                      Accept
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => dismissCandidate(c.id)}
-                      className="px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-100 rounded"
-                      aria-label="Dismiss suggestion"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+                    Accept all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dismissAllCandidates}
+                    className="px-3 py-1 text-xs text-amber-800 hover:bg-amber-100 rounded"
+                  >
+                    Dismiss
+                  </button>
+                </div>
 
-          {/* P3.4 — Multi-document tab bar.
+                {/* Per-candidate list, capped at 6 rows visible to keep the
+                  banner compact; the rest scroll inside. */}
+                <div className="mt-2 max-h-36 overflow-y-auto border-t border-amber-200/70 pt-2 space-y-1">
+                  {candidates.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center gap-2 text-xs bg-white/60 hover:bg-white rounded px-2 py-1"
+                    >
+                      <span
+                        className={`inline-block w-2 h-2 rounded-full ${
+                          c.source === 'acroform' ? 'bg-emerald-500' : 'bg-blue-500'
+                        }`}
+                      />
+                      <span className="font-medium capitalize w-16 shrink-0">{c.type}</span>
+                      <span className="text-amber-700/80 shrink-0">p.{c.page}</span>
+                      <span className="flex-1 truncate text-gray-700">
+                        {c.label ||
+                          c.anchorText ||
+                          (c.source === 'acroform' ? 'PDF form widget' : 'Text anchor')}
+                      </span>
+                      {/* Candidates the analyzer bound to a CRM token fill
+                        themselves from the client record at send time. */}
+                      {c.prefill_token && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-100 text-blue-800 rounded shrink-0">
+                          auto-fills
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => acceptCandidate(c.id)}
+                        className="px-2 py-0.5 text-xs bg-amber-600 text-white rounded hover:bg-amber-700"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => dismissCandidate(c.id)}
+                        className="px-2 py-0.5 text-xs text-amber-700 hover:bg-amber-100 rounded"
+                        aria-label="Dismiss suggestion"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* P3.4 — Multi-document tab bar.
               Always render at least one tab (the active document). The
               "+" button opens a hidden file input that uploads a new
               PDF and switches to it. Hidden when only one document
               exists AND we're not in draft (to keep the chrome lean
               for read-only views). */}
-          {(envelopeDocuments.length > 1 || envelope.status === 'draft') && (
-            <div className="absolute top-0 left-0 right-0 z-10 bg-white/95 backdrop-blur border-b border-gray-200 px-2 py-1.5 flex items-center gap-1 overflow-x-auto">
-              <FileText className="h-3.5 w-3.5 text-gray-400 shrink-0 ml-1" />
-              {envelopeDocuments.map((d) => {
-                const isActive = d.document_id === activeDocumentId;
-                const fieldCount = fieldCountsByDocument[d.document_id] ?? 0;
-                const canRemove = envelope.status === 'draft' && envelopeDocuments.length > 1;
-                return (
-                  <div
-                    key={d.document_id}
-                    className={`group flex items-center gap-1 rounded-md text-xs whitespace-nowrap shrink-0 ${
-                      isActive
-                        ? 'bg-blue-50 border border-blue-200 text-blue-900'
-                        : 'border border-transparent hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      className="px-2 py-1 flex items-center gap-1.5"
-                      onClick={() => setActiveDocumentId(d.document_id)}
-                      title={d.original_filename}
+            {(envelopeDocuments.length > 1 || envelope.status === 'draft') && (
+              <div className="absolute top-0 left-0 right-0 z-10 bg-white/95 backdrop-blur border-b border-gray-200 px-2 py-1.5 flex items-center gap-1 overflow-x-auto">
+                <FileText className="h-3.5 w-3.5 text-gray-400 shrink-0 ml-1" />
+                {envelopeDocuments.map((d) => {
+                  const isActive = d.document_id === activeDocumentId;
+                  const fieldCount = fieldCountsByDocument[d.document_id] ?? 0;
+                  const canRemove = envelope.status === 'draft' && envelopeDocuments.length > 1;
+                  return (
+                    <div
+                      key={d.document_id}
+                      className={`group flex items-center gap-1 rounded-md text-xs whitespace-nowrap shrink-0 ${
+                        isActive
+                          ? 'bg-blue-50 border border-blue-200 text-blue-900'
+                          : 'border border-transparent hover:bg-gray-100 text-gray-700'
+                      }`}
                     >
-                      <span className="max-w-[160px] truncate">{d.display_name}</span>
-                      {fieldCount > 0 && (
-                        <span
-                          className={`text-[10px] px-1 py-px rounded ${
-                            isActive ? 'bg-blue-200 text-blue-900' : 'bg-gray-200 text-gray-700'
-                          }`}
-                        >
-                          {fieldCount}
-                        </span>
-                      )}
-                    </button>
-                    {canRemove && (
                       <button
                         type="button"
-                        onClick={() => handleRemoveDocument(d.document_id)}
-                        className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100"
-                        title="Remove document"
-                        aria-label={`Remove ${d.display_name}`}
+                        className="px-2 py-1 flex items-center gap-1.5"
+                        onClick={() => setActiveDocumentId(d.document_id)}
+                        title={d.original_filename}
                       >
-                        <X className="h-3 w-3" />
+                        <span className="max-w-[160px] truncate">{d.display_name}</span>
+                        {fieldCount > 0 && (
+                          <span
+                            className={`text-[10px] px-1 py-px rounded ${
+                              isActive ? 'bg-blue-200 text-blue-900' : 'bg-gray-200 text-gray-700'
+                            }`}
+                          >
+                            {fieldCount}
+                          </span>
+                        )}
                       </button>
-                    )}
-                  </div>
-                );
-              })}
-              {envelope.status === 'draft' && (
-                <>
-                  <button
-                    type="button"
-                    disabled={addingDoc || docsLoading}
-                    onClick={() => addDocInputRef.current?.click()}
-                    className="ml-1 px-2 py-1 text-xs flex items-center gap-1 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Add another PDF to this envelope"
-                  >
-                    {addingDoc ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Plus className="h-3 w-3" />
-                    )}
-                    <span>Add document</span>
-                  </button>
-                  <input
-                    ref={addDocInputRef}
-                    type="file"
-                    accept="application/pdf"
-                    className="sr-only"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      e.target.value = '';
-                      if (f) void handleAddDocument(f);
-                    }}
-                  />
-                </>
-              )}
+                      {canRemove && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDocument(d.document_id)}
+                          className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100"
+                          title="Remove document"
+                          aria-label={`Remove ${d.display_name}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                {envelope.status === 'draft' && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={addingDoc || docsLoading}
+                      onClick={() => addDocInputRef.current?.click()}
+                      className="ml-1 px-2 py-1 text-xs flex items-center gap-1 rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Add another PDF to this envelope"
+                    >
+                      {addingDoc ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Plus className="h-3 w-3" />
+                      )}
+                      <span>Add document</span>
+                    </button>
+                    <input
+                      ref={addDocInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = '';
+                        if (f) void handleAddDocument(f);
+                      }}
+                    />
+                  </>
+                )}
+              </div>
+            )}
+            <div
+              className={`absolute inset-0 ${envelopeDocuments.length > 1 || envelope.status === 'draft' ? 'top-[40px]' : ''}`}
+            >
+              <PDFViewer
+                documentUrl={activeDocumentUrl}
+                documentName={envelope.title}
+                fields={visibleFields}
+                signers={signers}
+                onFieldPlace={handleFieldPlace}
+                onFieldUpdate={handleFieldUpdate}
+                onFieldDelete={handleFieldDelete}
+                onFieldClick={handleFieldClick}
+                onPageCount={setPageCount}
+                onMarqueeSelect={handleMarqueeSelect}
+                selectedSignerId={selectedSignerId}
+                selectedFieldId={primarySelectedId}
+                selectedFieldIds={selectedFieldIds}
+                visibleSignerIds={visibleSignerIds ?? undefined}
+                snapToGrid={snapEnabled}
+                showFields={true}
+              />
             </div>
-          )}
-          <div
-            className={`absolute inset-0 ${envelopeDocuments.length > 1 || envelope.status === 'draft' ? 'top-[40px]' : ''}`}
-          >
-            <PDFViewer
-              documentUrl={activeDocumentUrl}
-              documentName={envelope.title}
-              fields={visibleFields}
+          </div>
+
+          {/* Right Sidebar: Properties */}
+          <div className="w-72 bg-white border-l z-10 overflow-y-auto">
+            <FieldPropertiesPanel
+              field={propertiesField}
               signers={signers}
-              onFieldPlace={handleFieldPlace}
-              onFieldUpdate={handleFieldUpdate}
-              onFieldDelete={handleFieldDelete}
-              onFieldClick={handleFieldClick}
-              onPageCount={setPageCount}
-              onMarqueeSelect={handleMarqueeSelect}
-              selectedSignerId={selectedSignerId}
-              selectedFieldId={primarySelectedId}
-              selectedFieldIds={selectedFieldIds}
-              visibleSignerIds={visibleSignerIds ?? undefined}
-              snapToGrid={snapEnabled}
-              showFields={true}
+              allFields={fields}
+              onUpdate={handleFieldUpdate}
+              onDelete={handleFieldDelete}
             />
           </div>
         </div>
 
-        {/* Right Sidebar: Properties */}
-        <div className="w-72 bg-white border-l z-10 overflow-y-auto">
-          <FieldPropertiesPanel
-            field={propertiesField}
-            signers={signers}
-            allFields={fields}
-            onUpdate={handleFieldUpdate}
-            onDelete={handleFieldDelete}
-          />
-        </div>
+        <SettingsDialog
+          handleSaveSettings={handleSaveSettings}
+          savingSettings={savingSettings}
+          setSettingsDraft={setSettingsDraft}
+          setShowSettings={setShowSettings}
+          settingsDraft={settingsDraft}
+          showSettings={showSettings}
+        />
+
+        {/* ====================== P3.3 — PAGE MANAGER ====================== */}
+        <PageManagerDialog
+          open={showPageManager}
+          onClose={() => setShowPageManager(false)}
+          envelopeId={envelope.id}
+          documentUrl={documentUrl || envelope.document?.url || envelope.documentUrl || ''}
+          sourcePageCount={envelope.document?.page_count ?? pageCount}
+          onApplied={(_newPageCount, pageMap) => {
+            // Drop placed fields whose source page no longer exists; remap
+            // surviving fields to their new page index. Wrap in a history
+            // push so undo works after page edits.
+            setFields((prev) => {
+              const remapped: EsignField[] = [];
+              for (const f of prev) {
+                const newPage = pageMap[f.page];
+                if (newPage == null) continue;
+                remapped.push({ ...f, page: newPage });
+              }
+              return remapped;
+            });
+          }}
+        />
+
+        <ShortcutsDialog setShowShortcuts={setShowShortcuts} showShortcuts={showShortcuts} />
+
+        <StudioPreviewDialog
+          documentUrl={documentUrl}
+          eligibleSigners={eligibleSigners}
+          envelope={envelope}
+          fields={fields}
+          previewMode={previewMode}
+          previewSignerEmail={previewSignerEmail}
+          setPreviewMode={setPreviewMode}
+          setPreviewSignerEmail={setPreviewSignerEmail}
+          setShowPreview={setShowPreview}
+          showPreview={showPreview}
+          signers={signers}
+        />
+        {confirmDialog}
       </div>
-
-      <SettingsDialog
-        handleSaveSettings={handleSaveSettings}
-        savingSettings={savingSettings}
-        setSettingsDraft={setSettingsDraft}
-        setShowSettings={setShowSettings}
-        settingsDraft={settingsDraft}
-        showSettings={showSettings}
-      />
-
-      {/* ====================== P3.3 — PAGE MANAGER ====================== */}
-      <PageManagerDialog
-        open={showPageManager}
-        onClose={() => setShowPageManager(false)}
-        envelopeId={envelope.id}
-        documentUrl={documentUrl || envelope.document?.url || envelope.documentUrl || ''}
-        sourcePageCount={envelope.document?.page_count ?? pageCount}
-        onApplied={(_newPageCount, pageMap) => {
-          // Drop placed fields whose source page no longer exists; remap
-          // surviving fields to their new page index. Wrap in a history
-          // push so undo works after page edits.
-          setFields((prev) => {
-            const remapped: EsignField[] = [];
-            for (const f of prev) {
-              const newPage = pageMap[f.page];
-              if (newPage == null) continue;
-              remapped.push({ ...f, page: newPage });
-            }
-            return remapped;
-          });
-        }}
-      />
-
-      <ShortcutsDialog setShowShortcuts={setShowShortcuts} showShortcuts={showShortcuts} />
-
-      <RecipientsSheet
-        handleRecipientsSave={handleRecipientsSave}
-        setShowRecipients={setShowRecipients}
-        showRecipients={showRecipients}
-        signers={signers}
-      />
-
-      <StudioPreviewDialog
-        documentUrl={documentUrl}
-        eligibleSigners={eligibleSigners}
-        envelope={envelope}
-        fields={fields}
-        previewMode={previewMode}
-        previewSignerEmail={previewSignerEmail}
-        setPreviewMode={setPreviewMode}
-        setPreviewSignerEmail={setPreviewSignerEmail}
-        setShowPreview={setShowPreview}
-        showPreview={showPreview}
-        signers={signers}
-      />
-      {confirmDialog}
-    </div>
+    </>
   );
 }

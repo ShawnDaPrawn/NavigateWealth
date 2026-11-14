@@ -12,8 +12,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Sparkles,
-  X,
+  ChevronLeft,
   Loader2,
   Users,
   BookOpen,
@@ -24,6 +23,7 @@ import {
   Zap,
   AlertCircle,
 } from 'lucide-react';
+import { PageHeader } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { cn } from '../../../../ui/utils';
 import { PublicationsAPI } from '../api';
@@ -265,38 +265,56 @@ export function AIArticleGenerator({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-              <Sparkles className="h-4.5 w-4.5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Generate Article with AI</h2>
-              <p className="text-xs text-gray-500">
-                Describe your article — AI generates a complete first draft
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            disabled={isGenerating}
-            className="h-8 w-8 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Body — scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+    <div className="space-y-6" data-testid="ai-article-generator-page">
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={isGenerating}
+        className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+      >
+        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        New article
+      </button>
+      <PageHeader
+        title="Generate article with AI"
+        description="Creates a draft for you to edit"
+        actions={
+          <>
+            <Button variant="outline" onClick={onClose} disabled={isGenerating}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={!canGenerate || isGenerating}
+              className="gap-1.5"
+            >
+              {isGenerating ? (
+                <div className="contents">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Generating…
+                </div>
+              ) : (
+                <div className="contents">
+                  <Zap className="h-3.5 w-3.5" />
+                  Generate article
+                </div>
+              )}
+            </Button>
+          </>
+        }
+      />
+      {isGenerating && progress && (
+        <p className="flex items-center gap-2 text-sm text-nw-violet-600" role="status">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          {progress}
+        </p>
+      )}
+      <div className="max-w-3xl rounded-xl border border-nw-line bg-white">
+        <div className="space-y-5 p-6">
           {/* Topic */}
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1.5">
-              Topic / Working Title <span className="text-red-500">*</span>
+              Topic <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -338,7 +356,7 @@ export function AIArticleGenerator({
           {/* Audience */}
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1.5">
-              Target Audience
+              Target audience
             </label>
             <div className="grid grid-cols-3 gap-2">
               {AUDIENCE_OPTIONS.map((opt) => (
@@ -391,7 +409,7 @@ export function AIArticleGenerator({
             {/* Length */}
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1.5">
-                Article Length
+                Article length
               </label>
               <div className="space-y-1.5">
                 {LENGTH_OPTIONS.map((opt) => (
@@ -416,7 +434,7 @@ export function AIArticleGenerator({
               {/* Template (optional) */}
               <div className="mt-4">
                 <label className="text-sm font-medium text-gray-700 block mb-1.5">
-                  Structure Template
+                  Structure template
                   <span className="text-gray-400 font-normal ml-1">(optional)</span>
                 </label>
                 <div className="relative">
@@ -443,7 +461,7 @@ export function AIArticleGenerator({
           {/* Key Points */}
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1.5">
-              Key Points to Cover
+              Key points to cover
               <span className="text-gray-400 font-normal ml-1">(optional, up to 8)</span>
             </label>
             {keyPoints.length > 0 && (
@@ -492,10 +510,10 @@ export function AIArticleGenerator({
             )}
           </div>
 
-          {/* Additional Instructions */}
+          {/* Additional instructions */}
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1.5">
-              Additional Instructions
+              Additional instructions
               <span className="text-gray-400 font-normal ml-1">(optional)</span>
             </label>
             <textarea
@@ -525,41 +543,6 @@ export function AIArticleGenerator({
               </div>
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50/50 rounded-b-2xl">
-          <div className="flex items-center gap-2">
-            {isGenerating && progress && (
-              <div className="flex items-center gap-2 text-purple-600">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-xs font-medium">{progress}</span>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={onClose} disabled={isGenerating}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleGenerate}
-              disabled={!canGenerate || isGenerating}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white gap-1.5"
-            >
-              {isGenerating ? (
-                <div className="contents">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Generating...
-                </div>
-              ) : (
-                <div className="contents">
-                  <Zap className="h-3.5 w-3.5" />
-                  Generate Article
-                </div>
-              )}
-            </Button>
-          </div>
         </div>
       </div>
     </div>

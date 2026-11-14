@@ -10,7 +10,7 @@
  * jsPDF canvas usage (which jsdom does not implement).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { fireEvent, render, screen } from '@/test/utils';
 
 const { mockApiGet } = vi.hoisted(() => ({ mockApiGet: vi.fn() }));
 vi.mock('@/utils/api', () => ({
@@ -52,13 +52,17 @@ describe('WillPdfView', () => {
     expect(screen.getByText(/Last Will and Testament/i)).toBeTruthy();
   });
 
-  it('renders the Print / Save PDF and Download PDF buttons when open', () => {
+  it('opens as a page with Will management back, Download PDF and Print', () => {
     mockApiGet.mockReturnValue(new Promise(() => {}));
+    const onClose = vi.fn();
 
-    render(<WillPdfView open={true} onClose={noop} willId="will-1" clientName="Test Client" />);
+    render(<WillPdfView open={true} onClose={onClose} willId="will-1" clientName="Test Client" />);
 
-    expect(screen.getByRole('button', { name: /print \/ save pdf/i })).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: /^print$/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /download pdf/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /will management/i }));
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('shows the loading text while the will document is being fetched', () => {

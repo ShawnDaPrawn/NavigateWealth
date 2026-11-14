@@ -31,9 +31,16 @@ const ALL_MODULES: AdminModule[] = [
   'ai-management',
 ];
 
+/** A badge count; `failed` is set when its request failed (the count is then 0). */
+// A type alias (not an interface) so it fits the sidebar's indexed PendingCounts.
+export type PendingCount = {
+  count: number;
+  failed?: boolean;
+};
+
 /** Build a zeroed-out counts record — used as placeholder and fallback */
-function buildEmptyCounts(): Record<AdminModule, { count: number }> {
-  const result = {} as Record<AdminModule, { count: number }>;
+function buildEmptyCounts(): Record<AdminModule, PendingCount> {
+  const result = {} as Record<AdminModule, PendingCount>;
   for (const mod of ALL_MODULES) {
     result[mod] = { count: 0 };
   }
@@ -64,7 +71,7 @@ function safeCount(value: unknown): number {
  */
 async function fetchPendingCounts(
   queryClient: QueryClient,
-): Promise<Record<AdminModule, { count: number }>> {
+): Promise<Record<AdminModule, PendingCount>> {
   const session = await getSession();
   if (!session?.access_token) {
     // Silently return empty counts if not authenticated
@@ -111,18 +118,21 @@ async function fetchPendingCounts(
   // Initialize all modules with 0 count
   const result = buildEmptyCounts();
 
-  // Set actual counts for operations modules
-  result.applications = { count: applicationsPending };
-  result.tasks = { count: tasksPending };
-  result.submissions = { count: submissionsNew };
+  // Set actual counts for operations modules. `failed` marks a count whose
+  // request failed, so a page can show "—" instead of a misleading 0.
+  const failed = (r: PromiseSettledResult<unknown>) =>
+    r.status === 'rejected' ? { failed: true } : {};
+  result.applications = { count: applicationsPending, ...failed(statsResult) };
+  result.tasks = { count: tasksPending, ...failed(tasksResult) };
+  result.submissions = { count: submissionsNew, ...failed(submissionsResult) };
   result.calendar = { count: 0 }; // TODO: Implement calendar counting
-  result.issues = { count: issuesOpen };
+  result.issues = { count: issuesOpen, ...failed(issuesResult) };
 
   return result;
 }
 
 // Hook for fetching pending counts with React Query
-export function usePendingCounts(): Record<AdminModule, { count: number }> {
+export function usePendingCounts(): Record<AdminModule, PendingCount> {
   const queryClient = useQueryClient();
   const { data } = useQuery({
     queryKey: pendingCountsKeys.all,

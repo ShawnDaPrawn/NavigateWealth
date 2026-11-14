@@ -68,7 +68,6 @@ const NOT_FETCHED: Record<string, string> = {
   // Self. Canonical URLs, sitemap entries, structured data.
   'www.navigatewealth.co': 'own origin — canonical/OG/sitemap URLs, covered by self',
   'navigatewealth.co': 'own origin, apex form used in redirect config and copy',
-  'navigatewealth.com': 'the .com typo-domain, referenced in copy only',
 
   // Issue labels (shared/quality/issueLabels.ts): a docs link inside a
   // "likely cause" hint shown to admins, and the dummy base used to parse a

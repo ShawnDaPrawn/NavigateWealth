@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, User, Users, CheckCircle2, Filter, ArrowRight } from 'lucide-react';
+import { Search, Users, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Input } from '../../../../../ui/input';
 import { Button } from '../../../../../ui/button';
-import { Tabs, TabsList, TabsTrigger } from '../../../../../ui/tabs';
+import { Tabs } from '../../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../../layout/page';
 import { Checkbox } from '../../../../../ui/checkbox';
 import { Badge } from '../../../../../ui/badge';
 import { CommunicationDraft, Client, ClientGroup, RecipientType } from '../../types';
@@ -159,21 +160,19 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle>Who are you sending this to?</CardTitle>
-          <CardDescription>Select individual clients or target specific groups</CardDescription>
+          <CardDescription>
+            Pick individual clients, several clients, or a saved group.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-12 mb-6 bg-muted/50 p-1">
-              <TabsTrigger value="single" className="flex items-center gap-2">
-                <User className="h-4 w-4" /> Single Client
-              </TabsTrigger>
-              <TabsTrigger value="multiple" className="flex items-center gap-2">
-                <Users className="h-4 w-4" /> Multiple Clients
-              </TabsTrigger>
-              <TabsTrigger value="group" className="flex items-center gap-2">
-                <Filter className="h-4 w-4" /> Client Groups
-              </TabsTrigger>
-            </TabsList>
+            <div className="mb-6 flex flex-wrap items-center gap-3">
+              <SegmentedList aria-label="Recipients">
+                <SegmentedTrigger value="single">Single client</SegmentedTrigger>
+                <SegmentedTrigger value="multiple">Multiple clients</SegmentedTrigger>
+                <SegmentedTrigger value="group">Client groups</SegmentedTrigger>
+              </SegmentedList>
+            </div>
 
             {/* Single & Multiple Selection UI */}
             {(activeTab === 'single' || activeTab === 'multiple') && (
@@ -344,8 +343,17 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
         </CardContent>
       </Card>
 
-      {/* Footer Actions */}
-      <div className="flex justify-end pt-4">
+      {/* Continue stays pinned to the bottom of the page */}
+      <div className="sticky bottom-0 z-10 flex items-center justify-end gap-4 border-t border-nw-line bg-white/95 py-3 backdrop-blur">
+        <span className="text-sm text-nw-text-2">
+          {activeTab === 'group'
+            ? draft.selectedGroup
+              ? `${draft.selectedGroup.clientCount} recipients`
+              : 'No group selected'
+            : `${draft.selectedRecipients.length} ${
+                draft.selectedRecipients.length === 1 ? 'recipient' : 'recipients'
+              }`}
+        </span>
         <Button
           onClick={() => {
             updateDraft({ recipientType: activeTab });
@@ -354,8 +362,8 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
           disabled={!canProceed()}
           className="w-full sm:w-auto gap-2"
         >
-          Continue to Compose
-          <ArrowRight className="h-4 w-4" />
+          Continue to message
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     </div>

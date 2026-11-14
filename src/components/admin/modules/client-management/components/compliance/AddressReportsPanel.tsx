@@ -2,24 +2,17 @@
  * Address Panel
  *
  * Phase 2 endpoint:
- * - Best Known Address: POST /natural-person-address
+ * - Best known address: POST /natural-person-address
  *
  * Retrieves the client's best known address from credit bureau records.
  */
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
-import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
-import {
-  MapPin,
-  Loader2,
-  CheckCircle,
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  Home,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { Notice } from '../../../../layout/page';
+import { ClientIdentificationCard } from './CheckBlocks';
+import { PanelCard, StatusPill } from './ComplianceShared';
 import { toast } from 'sonner';
 import { api } from '../../../../../../utils/api';
 
@@ -111,133 +104,112 @@ export function AddressReportsPanel({
 
   return (
     <div className="space-y-4">
-      {/* Best Known Address */}
-      <Card className="bg-green-50/50 border-green-200">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-md font-medium flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-green-600" />
-            Best Known Address
-          </CardTitle>
-          <CardDescription>
-            Retrieve the client's known addresses from credit bureau records. This creates a matter
-            and queries address data linked to their ID number.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {!hasIdentification && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-amber-700">
-                Client ID/passport required for address lookup.
-              </p>
-            </div>
-          )}
-
+      {/* Design CM-K-Address: identification with the lookup action, then the addresses. */}
+      <ClientIdentificationCard
+        idNumber={idNumber}
+        passport={passport}
+        matterId={addressResult?.matterId ?? null}
+        aside={
           <Button
-            className="w-full"
-            variant="secondary"
+            size="sm"
             onClick={handleAddressLookup}
             disabled={isAddressLoading || !hasIdentification}
           >
-            {isAddressLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            <Home className="mr-2 h-4 w-4" />
-            Look Up Address
+            {isAddressLoading && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+            )}
+            Run address lookup
           </Button>
+        }
+      />
 
-          {/* Address results */}
-          {addressResult && (
-            <div
-              className={`rounded-lg p-3 text-sm ${
-                addressResult.success
-                  ? 'bg-green-50 border border-green-200'
-                  : 'bg-red-50 border border-red-200'
-              }`}
-            >
-              {!addressResult.success && (
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <span className="text-red-800 font-medium">Lookup Failed</span>
-                  <p className="text-red-700 text-xs mt-1">{addressResult.error}</p>
-                </div>
-              )}
+      {!hasIdentification && (
+        <Notice kind="attention" title="No ID or passport number on file.">
+          It is needed for the address lookup.
+        </Notice>
+      )}
 
-              {addressResult.success && (
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-green-800 font-medium">Address Lookup Complete</span>
-                  </div>
-
-                  {addressResult.matterId && (
-                    <div className="flex items-center gap-1 text-xs text-gray-600 mb-3">
-                      <span>Matter ID:</span>
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {addressResult.matterId}
-                      </Badge>
-                    </div>
-                  )}
-
-                  {/* Render addresses if found */}
-                  {addresses.length > 0 ? (
-                    <div className="space-y-2">
+      {addressResult && (
+        <PanelCard
+          title={addressResult.success ? 'Address lookup complete' : 'Address lookup'}
+          aside={
+            addressResult.success ? (
+              <button
+                type="button"
+                onClick={() => setShowRawAddress(!showRawAddress)}
+                className="text-xs font-medium text-nw-text-2 hover:text-nw-ink"
+              >
+                {showRawAddress ? 'Hide' : 'Show'} raw response
+              </button>
+            ) : (
+              <StatusPill tone="bad">Lookup failed</StatusPill>
+            )
+          }
+        >
+          {!addressResult.success ? (
+            <p className="text-sm text-red-700">{addressResult.error}</p>
+          ) : (
+            <div className="space-y-3">
+              {addresses.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-nw-bg text-left text-xs font-medium text-nw-text-3">
+                        <th scope="col" className="px-3 py-2.5">
+                          Address
+                        </th>
+                        <th scope="col" className="px-3 py-2.5">
+                          Source
+                        </th>
+                        <th scope="col" className="px-3 py-2.5">
+                          Last reported
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
                       {addresses.map((addr, idx) => (
-                        <div key={idx} className="bg-white rounded-lg p-3 border border-gray-200">
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                            <div className="text-sm">
-                              {addr.line1 && <div>{addr.line1}</div>}
-                              {addr.line2 && <div>{addr.line2}</div>}
-                              <div>
-                                {[addr.suburb, addr.city, addr.province].filter(Boolean).join(', ')}
-                              </div>
-                              {addr.postalCode && <div>{addr.postalCode}</div>}
-                              {addr.country && <div className="text-gray-500">{addr.country}</div>}
-                              {addr.source && (
-                                <Badge variant="outline" className="mt-1 text-xs">
-                                  {addr.source}
-                                </Badge>
-                              )}
-                              {addr.lastReported && (
-                                <span className="text-xs text-gray-400 ml-2">
-                                  Last reported:{' '}
-                                  {new Date(addr.lastReported).toLocaleDateString('en-ZA')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                        <tr key={idx} className="border-t border-nw-line">
+                          <td className="px-3 py-3 text-nw-ink">
+                            {[
+                              addr.line1,
+                              addr.line2,
+                              addr.suburb,
+                              addr.city,
+                              addr.province,
+                              addr.postalCode,
+                              addr.country,
+                            ]
+                              .filter(Boolean)
+                              .join(', ')}
+                          </td>
+                          <td className="px-3 py-3 text-nw-text-2">{addr.source || '—'}</td>
+                          <td className="px-3 py-3 whitespace-nowrap text-nw-text-2">
+                            {addr.lastReported
+                              ? new Date(addr.lastReported).toLocaleDateString('en-ZA', {
+                                  month: 'short',
+                                  year: 'numeric',
+                                })
+                              : '—'}
+                          </td>
+                        </tr>
                       ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-500">
-                      No structured address data returned. Check the raw response for details.
-                    </p>
-                  )}
-
-                  {/* Toggle raw response */}
-                  <button
-                    onClick={() => setShowRawAddress(!showRawAddress)}
-                    className="flex items-center gap-1 mt-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                  >
-                    {showRawAddress ? (
-                      <ChevronUp className="h-3 w-3" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3" />
-                    )}
-                    {showRawAddress ? 'Hide' : 'Show'} full response
-                  </button>
-
-                  {showRawAddress && (
-                    <pre className="mt-2 p-2 bg-gray-900 text-gray-100 text-xs rounded overflow-auto max-h-48 font-mono">
-                      {JSON.stringify(addressResult.data, null, 2)}
-                    </pre>
-                  )}
+                    </tbody>
+                  </table>
                 </div>
+              ) : (
+                <p className="text-sm text-nw-text-3">
+                  The bureau returned no structured addresses. The raw response has the details.
+                </p>
+              )}
+              {showRawAddress && (
+                <pre className="max-h-48 overflow-auto rounded bg-gray-900 p-2 font-mono text-xs text-gray-100">
+                  {JSON.stringify(addressResult.data, null, 2)}
+                </pre>
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </PanelCard>
+      )}
     </div>
   );
 }

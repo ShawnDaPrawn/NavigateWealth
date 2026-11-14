@@ -11,7 +11,6 @@
  * What replaces it answers one question — can we get in? — and puts the one
  * action that would change the answer next to it.
  */
-import { Card, CardHeader, CardTitle, CardDescription } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
 import { AlertCircle, CheckCircle2, Loader2, Plug, Trash2 } from 'lucide-react';
@@ -32,7 +31,7 @@ import { useConfirm } from '../../../../layout/page';
 interface ProviderConnectionListProps {
   providers: IntegrationProvider[];
   connections: PortalProviderConnection[];
-  selectedProviderId: string | null;
+  /** Opens the provider's integration page. */
   onSelect: (id: string) => void;
   onConnect: (connection: PortalProviderConnection) => void;
   onDelete?: (id: string) => void;
@@ -49,7 +48,6 @@ const TONE_CLASS = {
 export function ProviderConnectionList({
   providers,
   connections,
-  selectedProviderId,
   onSelect,
   onConnect,
   onDelete,
@@ -71,110 +69,107 @@ export function ProviderConnectionList({
   });
 
   return (
-    <Card className="w-1/3 min-w-[300px] flex flex-col h-full overflow-hidden">
-      <CardHeader className="pb-4 border-b bg-gray-50/50">
-        <CardTitle className="text-lg">Connections</CardTitle>
-        <CardDescription>
-          Which providers we can sign in to, and which need attention
-        </CardDescription>
-      </CardHeader>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+    <section className="overflow-hidden rounded-xl border border-nw-line bg-white">
+      <div className="border-b border-nw-line px-5 py-4">
+        <h2 className="text-base font-semibold text-nw-ink">Connections</h2>
+        <p className="mt-0.5 text-sm text-nw-text-3">
+          Which providers we can sign in to, and which need attention.
+        </p>
+      </div>
+      <ul className="divide-y divide-nw-line">
         {ordered.map((provider) => {
           const connection = connectionByProvider.get(provider.id);
           const presentation = connection ? describeConnection(connection.state) : null;
           const automationCategories = getPortalAutomationCategoryOptions(provider.categoryIds);
 
           return (
-            <div
+            <li
               key={provider.id}
-              onClick={() => onSelect(provider.id)}
-              className={cn(
-                'relative p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md group',
-                selectedProviderId === provider.id
-                  ? 'border-purple-500 bg-purple-50/50 ring-1 ring-purple-200'
-                  : 'border-gray-200 bg-white hover:border-purple-200',
-              )}
+              className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center"
             >
-              <div className="flex justify-between items-start mb-2 pr-6">
-                <h3 className="font-semibold text-gray-900">{provider.name}</h3>
+              <span
+                aria-hidden="true"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs font-semibold text-nw-text-2"
+              >
+                {(provider.name || '?').slice(0, 2).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-medium text-nw-ink">{provider.name}</h3>
+                  {automationCategories.slice(0, 3).map((cat) => (
+                    <span
+                      key={cat}
+                      className="rounded-full border border-gray-200 bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600"
+                    >
+                      {getProductCategoryLabel(cat)}
+                    </span>
+                  ))}
+                  {automationCategories.length > 3 && (
+                    <span className="text-[10px] text-gray-500">
+                      + {automationCategories.length - 3} more
+                    </span>
+                  )}
+                </div>
+                {connection ? (
+                  <p className="mt-0.5 line-clamp-2 text-xs text-gray-600">
+                    {connectionDetailLine(connection)}
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    {automationCategories.length === 0
+                      ? 'No automation category on this provider, so there is no portal to connect to.'
+                      : 'Spreadsheet sync only.'}
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
                 {presentation && (
                   <Badge variant="outline" className={cn('gap-1', TONE_CLASS[presentation.tone])}>
-                    {presentation.tone === 'good' && <CheckCircle2 className="w-3 h-3" />}
-                    {presentation.tone === 'bad' && <AlertCircle className="w-3 h-3" />}
-                    {presentation.tone === 'busy' && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {presentation.tone === 'good' && <CheckCircle2 className="h-3 w-3" />}
+                    {presentation.tone === 'bad' && <AlertCircle className="h-3 w-3" />}
+                    {presentation.tone === 'busy' && <Loader2 className="h-3 w-3 animate-spin" />}
                     {presentation.label}
                   </Badge>
                 )}
-              </div>
-
-              {connection ? (
-                <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-                  {connectionDetailLine(connection)}
-                </p>
-              ) : (
-                <p className="text-xs text-gray-500 mb-3">
-                  {automationCategories.length === 0
-                    ? 'No automation category on this provider, so there is no portal to connect to.'
-                    : 'Spreadsheet sync only.'}
-                </p>
-              )}
-
-              <div className="flex flex-wrap gap-1 mb-3">
-                {automationCategories.slice(0, 3).map((cat) => (
-                  <span
-                    key={cat}
-                    className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full border border-gray-200"
+                {connection && presentation?.action && (
+                  <Button variant="outline" size="sm" onClick={() => onConnect(connection)}>
+                    <Plug className="mr-1.5 h-3 w-3" />
+                    {presentation.action}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Open ${provider.name} integration`}
+                  onClick={() => onSelect(provider.id)}
+                >
+                  Open
+                </Button>
+                {onDelete && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Delete provider ${provider.name}`}
+                    className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                    onClick={async () => {
+                      const ok = await askConfirm({
+                        title: `Delete ${provider.name}?`,
+                        description: 'This removes the provider and its connection settings.',
+                        confirmLabel: 'Delete provider',
+                        destructive: true,
+                      });
+                      if (ok) onDelete(provider.id);
+                    }}
                   >
-                    {getProductCategoryLabel(cat)}
-                  </span>
-                ))}
-                {automationCategories.length > 3 && (
-                  <span className="text-[10px] px-1.5 py-0.5 text-gray-500">
-                    + {automationCategories.length - 3} more
-                  </span>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 )}
               </div>
-
-              {connection && presentation?.action && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-8 text-xs"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onConnect(connection);
-                  }}
-                >
-                  <Plug className="w-3 h-3 mr-1.5" />
-                  {presentation.action}
-                </Button>
-              )}
-
-              {onDelete && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Delete provider ${provider.name}`}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 h-6 w-6 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    const ok = await askConfirm({
-                      title: `Delete ${provider.name}?`,
-                      description: 'This removes the provider and its connection settings.',
-                      confirmLabel: 'Delete provider',
-                      destructive: true,
-                    });
-                    if (ok) onDelete(provider.id);
-                  }}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              )}
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
       {confirmDialog}
-    </Card>
+    </section>
   );
 }

@@ -13,7 +13,7 @@
  * nothing to do.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { fireEvent, render, screen } from '@/test/utils';
 import { Tabs } from '@/components/ui/tabs';
 import { IntegrationHeader } from '@/components/admin/modules/product-management/integrations/IntegrationHeader';
 import type { IntegrationProvider } from '@/components/admin/modules/product-management/types';
@@ -26,7 +26,7 @@ const provider: IntegrationProvider = {
 
 function renderHeader(pendingReviewCount?: number) {
   return render(
-    <Tabs value="upload">
+    <Tabs value="review">
       <IntegrationHeader
         provider={provider}
         selectedCategoryId="retirement_pre"
@@ -62,9 +62,30 @@ describe('IntegrationHeader — the Review tab', () => {
   it('keeps the other destinations intact', () => {
     renderHeader();
     expect(screen.getByText('Portfolio')).toBeDefined();
-    expect(screen.getByText('Provider Setup')).toBeDefined();
-    expect(screen.getByText('Mapping Configuration')).toBeDefined();
-    expect(screen.getByText('Portal Automation')).toBeDefined();
+    expect(screen.getByText('Provider setup')).toBeDefined();
+    expect(screen.getByText('Mapping configuration')).toBeDefined();
+    expect(screen.getByText('Portal automation')).toBeDefined();
+  });
+
+  it('is a page: provider title, back link and Advanced & diagnostics in the header', () => {
+    const onBack = vi.fn();
+    const onOpenAdvanced = vi.fn();
+    render(
+      <Tabs value="review">
+        <IntegrationHeader
+          provider={provider}
+          selectedCategoryId="retirement_pre"
+          onCategoryChange={vi.fn()}
+          onBack={onBack}
+          onOpenAdvanced={onOpenAdvanced}
+        />
+      </Tabs>,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: 'Allan Gray integration' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Integrations' }));
+    expect(onBack).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: /Advanced & diagnostics/ }));
+    expect(onOpenAdvanced).toHaveBeenCalled();
   });
 
   it('no longer offers the History control that did nothing', () => {

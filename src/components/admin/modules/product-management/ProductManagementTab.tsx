@@ -14,11 +14,13 @@ import { useProductSchema } from './hooks/useProductSchema';
 import { SchemaEditor } from './components/SchemaEditor';
 import { SchemaLivePreview } from './components/SchemaLivePreview';
 
+import { ErrorState, useBreadcrumbTrail } from '../../layout/page';
+
 export function ProductManagementTab() {
   const [selectedCategory, setSelectedCategory] = useState<ProductCategoryId | ''>('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const { currentFields, hasUnsavedChanges, saveSchema, updateFields } =
+  const { currentFields, hasUnsavedChanges, saveSchema, updateFields, error, refetch } =
     useProductSchema(selectedCategory);
 
   const handleSaveWrapper = async () => {
@@ -30,6 +32,11 @@ export function ProductManagementTab() {
   };
 
   const selectedCategoryName = PRODUCT_CATEGORIES.find((c) => c.id === selectedCategory)?.name;
+  useBreadcrumbTrail(
+    selectedCategoryName
+      ? [{ label: 'Product structure' }, { label: selectedCategoryName }]
+      : [{ label: 'Product structure' }],
+  );
 
   return (
     <div className="space-y-8">
@@ -49,22 +56,22 @@ export function ProductManagementTab() {
             </SelectTrigger>
             <SelectContent>
               {/* Standalone Categories */}
-              <SelectItem value="risk_planning">Risk Planning</SelectItem>
-              <SelectItem value="medical_aid">Medical Aid</SelectItem>
+              <SelectItem value="risk_planning">Risk planning</SelectItem>
+              <SelectItem value="medical_aid">Medical aid</SelectItem>
 
               {/* Retirement Group */}
               <SelectGroup>
                 <SelectLabel className="pl-2 font-semibold text-gray-900">
-                  Retirement Planning
+                  Retirement planning
                 </SelectLabel>
                 <SelectItem value="retirement_pre" className="pl-6">
-                  Pre-Retirement
+                  Pre-retirement
                 </SelectItem>
                 <SelectItem value="retirement_post" className="pl-6">
-                  Post-Retirement (Living Annuity)
+                  Post-retirement (living annuity)
                 </SelectItem>
                 <SelectItem value="retirement_post_fixed" className="pl-6">
-                  Post-Retirement (Fixed Annuity)
+                  Post-retirement (fixed annuity)
                 </SelectItem>
               </SelectGroup>
 
@@ -72,17 +79,17 @@ export function ProductManagementTab() {
               <SelectGroup>
                 <SelectLabel className="pl-2 font-semibold text-gray-900">Investments</SelectLabel>
                 <SelectItem value="investments_voluntary" className="pl-6">
-                  Voluntary Investments
+                  Voluntary investments
                 </SelectItem>
                 <SelectItem value="investments_guaranteed" className="pl-6">
-                  Guaranteed Investments
+                  Guaranteed investments
                 </SelectItem>
               </SelectGroup>
 
               {/* Other Standalone Categories */}
               <SelectGroup>
                 <SelectLabel className="pl-2 font-semibold text-gray-900">
-                  Employee Benefits
+                  Employee benefits
                 </SelectLabel>
                 <SelectItem value="employee_benefits_risk" className="pl-6">
                   Risk
@@ -92,15 +99,23 @@ export function ProductManagementTab() {
                 </SelectItem>
               </SelectGroup>
 
-              <SelectItem value="tax_planning">Tax Planning</SelectItem>
-              <SelectItem value="estate_planning">Estate Planning</SelectItem>
+              <SelectItem value="tax_planning">Tax planning</SelectItem>
+              <SelectItem value="estate_planning">Estate planning</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {selectedCategory && (
-        <div className="space-y-8">
+      {selectedCategory && error && (
+        <ErrorState
+          title={`Unable to load the ${selectedCategoryName ?? 'product'} structure`}
+          onRetry={() => void refetch()}
+          details={error.message}
+        />
+      )}
+
+      {selectedCategory && !error && (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
           {/* Schema Builder */}
           <SchemaEditor
             currentFields={currentFields}

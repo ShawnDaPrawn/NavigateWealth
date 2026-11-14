@@ -18,14 +18,6 @@ import { NumberInputField } from '../../../../ui/number-input';
 import { Textarea } from '../../../../ui/textarea';
 import { Skeleton } from '../../../../ui/skeleton';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../ui/dialog';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -35,10 +27,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../../../ui/alert-dialog';
-import { Users, Plus, Pencil, Trash2, Loader2, Save, X, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, Users, Plus, Trash2, Loader2, Save, X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { projectId, publicAnonKey } from '../../../../../utils/supabase/info';
 import { createClient } from '../../../../../utils/supabase/client';
+import { ErrorState, FormErrorBanner, PageHeader } from '../../../layout/page';
+import { Switch } from '../../../../ui/switch';
+import { useSubPage } from '../hooks/useSubPage';
 
 // ============================================================================
 // TYPES
@@ -114,10 +109,14 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 export function TeamManager() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Dialog state
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // The form is a page with its own address: ?page=team-new / team-<id>.
+  const [pageId, setPageId] = useSubPage('team');
+  const dialogOpen = pageId !== null;
+  const [submitted, setSubmitted] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM });
   const [specialtyInput, setSpecialtyInput] = useState('');
@@ -128,12 +127,13 @@ export function TeamManager() {
   // ── Load ─────────────────────────────────────────────────────────────
   const loadMembers = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await apiFetch('/team/admin');
       setMembers(data.data || []);
     } catch (err) {
       console.error('Failed to load team members:', err);
-      toast.error('Failed to load team members');
+      setLoadError(err instanceof Error ? err.message : 'Failed to load team members');
     } finally {
       setLoading(false);
     }
@@ -175,10 +175,11 @@ export function TeamManager() {
     setEditingId(null);
     setForm({ ...EMPTY_FORM, sortOrder: members.length + 1 });
     setSpecialtyInput('');
-    setDialogOpen(true);
+    setSubmitted(false);
+    setPageId('new');
   };
 
-  const openEdit = (member: TeamMember) => {
+  const fillEdit = (member: TeamMember) => {
     setEditingId(member.id);
     setForm({
       name: member.name,
@@ -193,13 +194,37 @@ export function TeamManager() {
       active: member.active,
     });
     setSpecialtyInput('');
-    setDialogOpen(true);
+    setSubmitted(false);
   };
+
+  const openEdit = (member: Parameters<typeof fillEdit>[0]) => {
+    fillEdit(member);
+    setPageId(member.id);
+  };
+
+  // A reload or pasted link names a record: fill the form once the list is in.
+  useEffect(() => {
+    if (!pageId || editingId === pageId) return;
+    if (pageId === 'new') {
+      // Back/Forward onto the new-record address: start a blank form, so it
+      // cannot save over the record that was open before.
+      if (editingId !== null) {
+        setEditingId(null);
+        setForm({ ...EMPTY_FORM, sortOrder: members.length + 1 });
+        setSpecialtyInput('');
+        setSubmitted(false);
+      }
+      return;
+    }
+    const match = members.find((x) => x.id === pageId);
+    if (match) fillEdit(match);
+  }, [pageId, members, editingId]);
 
   // ── Save ────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (!form.name.trim() || !form.title.trim()) {
-      toast.error('Name and title are required');
+    setSubmitted(true);
+    if (!form.name.trim() || !String(form.title).trim()) {
+      document.getElementById(!form.name.trim() ? 'tm-name' : 'tm-title')?.focus();
       return;
     }
     setSaving(true);
@@ -217,7 +242,7 @@ export function TeamManager() {
         });
         toast.success(`${form.name} added to team`);
       }
-      setDialogOpen(false);
+      setPageId(null);
       loadMembers();
     } catch (err) {
       console.error('Save failed:', err);
@@ -259,221 +284,62 @@ export function TeamManager() {
   // ── Render ──────────────────────────────────────────────────────────
   const activeCount = members.filter((m) => m.active).length;
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold">Team Members</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage the team displayed on the public Team page.
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate} className="bg-purple-600 hover:bg-purple-700">
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Add Member
-        </Button>
-      </div>
+  // ── Create / edit form — a page of its own ──────────────────────────
+  const nameError = submitted && !form.name.trim() ? 'Add the full name' : null;
+  const secondError = submitted && !String(form.title).trim() ? 'Add a title' : null;
+  const formErrorCount = (nameError ? 1 : 0) + (secondError ? 1 : 0);
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <Users className="h-4 w-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{members.length}</p>
-                <p className="text-xs text-muted-foreground">Total Members</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-50 rounded-lg">
-                <Eye className="h-4 w-4 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{activeCount}</p>
-                <p className="text-xs text-muted-foreground">Visible on Page</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <EyeOff className="h-4 w-4 text-gray-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{members.length - activeCount}</p>
-                <p className="text-xs text-muted-foreground">Hidden</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+  if (
+    pageId !== null &&
+    pageId !== 'new' &&
+    !loading &&
+    !loadError &&
+    !members.some((x) => x.id === pageId)
+  ) {
+    return (
+      <ErrorState
+        title="Not found"
+        description="It may have been removed."
+        onRetry={() => setPageId(null)}
+        retryLabel="Back to team"
+      />
+    );
+  }
 
-      {/* Members list */}
-      {loading ? (
-        <Card>
-          <CardContent className="pt-4 pb-4 space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-                <Skeleton className="h-8 w-20" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ) : members.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="font-medium text-sm">No team members yet</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Add team members to display on the public Team page.
-            </p>
-            <Button
-              size="sm"
-              className="mt-4 bg-purple-600 hover:bg-purple-700"
-              onClick={openCreate}
-            >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Add First Member
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <div className="divide-y">
-            {members.map((member) => (
-              <div
-                key={member.id}
-                className={`flex items-center gap-4 p-4 transition-colors ${!member.active ? 'opacity-50 bg-muted/20' : 'hover:bg-muted/10'}`}
-              >
-                {/* Avatar */}
-                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
-                  {member.image ? (
-                    <img
-                      src={member.image}
-                      alt={member.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <Users className="h-5 w-5" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-sm truncate">{member.name}</p>
-                    {member.credentials && (
-                      <span className="text-[10px] text-muted-foreground">
-                        {member.credentials}
-                      </span>
-                    )}
-                    {!member.active && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] border-gray-300 text-gray-500"
-                      >
-                        Hidden
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-purple-600">{member.title}</p>
-                  {member.specialties.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {member.specialties.slice(0, 3).map((s) => (
-                        <Badge
-                          key={s}
-                          variant="secondary"
-                          className="text-[10px] px-1.5 py-0 h-4 bg-purple-50 text-purple-600"
-                        >
-                          {s}
-                        </Badge>
-                      ))}
-                      {member.specialties.length > 3 && (
-                        <span className="text-[10px] text-muted-foreground">
-                          +{member.specialties.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Sort order */}
-                <span className="text-[10px] text-muted-foreground w-6 text-center">
-                  #{member.sortOrder}
-                </span>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0"
-                    onClick={() => handleToggleActive(member)}
-                    title={member.active ? 'Hide from team page' : 'Show on team page'}
-                  >
-                    {member.active ? (
-                      <Eye className="h-3.5 w-3.5 text-green-600" />
-                    ) : (
-                      <EyeOff className="h-3.5 w-3.5 text-gray-400" />
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0"
-                    onClick={() => openEdit(member)}
-                  >
-                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0"
-                    onClick={() => setDeleteTarget(member)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="border-t px-4 py-2.5 text-xs text-muted-foreground bg-muted/20">
-            {members.length} member(s) — {activeCount} visible on the public Team page
-          </div>
-        </Card>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════ */}
-      {/* CREATE / EDIT DIALOG                                             */}
-      {/* ══════════════════════════════════════════════════════════════════ */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Team Member' : 'Add Team Member'}</DialogTitle>
-            <DialogDescription>
-              {editingId
-                ? "Update this team member's details."
-                : 'Add a new member to the public Team page.'}
-            </DialogDescription>
-          </DialogHeader>
-
+  if (dialogOpen) {
+    return (
+      <div className="space-y-6">
+        <button
+          type="button"
+          onClick={() => setPageId(null)}
+          className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          Team
+        </button>
+        <PageHeader
+          title={editingId ? 'Edit team member' : 'Add team member'}
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setPageId(null)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                )}
+                {editingId ? 'Save changes' : 'Add member'}
+              </Button>
+            </>
+          }
+        />
+        <FormErrorBanner
+          count={formErrorCount}
+          action={editingId ? 'save the changes' : 'add member'}
+        />
+        <div className="max-w-3xl rounded-xl border border-nw-line bg-white p-6">
           <div className="space-y-4 py-2">
             {/* Name & Title */}
             <div className="grid grid-cols-2 gap-3">
@@ -483,10 +349,18 @@ export function TeamManager() {
                 </Label>
                 <Input
                   id="tm-name"
+                  aria-invalid={Boolean(nameError)}
+                  aria-describedby={nameError ? 'tm-name-error' : undefined}
+                  className={nameError ? 'border-red-500' : undefined}
                   value={form.name}
                   onChange={(e) => updateForm('name', e.target.value)}
                   placeholder="Full name"
                 />
+                {nameError && (
+                  <p id="tm-name-error" className="text-xs text-red-600">
+                    {nameError}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="tm-title">
@@ -494,10 +368,18 @@ export function TeamManager() {
                 </Label>
                 <Input
                   id="tm-title"
+                  aria-invalid={Boolean(secondError)}
+                  aria-describedby={secondError ? 'tm-title-error' : undefined}
+                  className={secondError ? 'border-red-500' : undefined}
                   value={form.title}
                   onChange={(e) => updateForm('title', e.target.value)}
                   placeholder="e.g. Senior Wealth Advisor"
                 />
+                {secondError && (
+                  <p id="tm-title-error" className="text-xs text-red-600">
+                    {secondError}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -632,26 +514,218 @@ export function TeamManager() {
               </div>
             </div>
           </div>
+        </div>
+        {nameError || secondError ? (
+          <p className="sr-only" role="alert">
+            {[nameError, secondError].filter(Boolean).join('. ')}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold">Team Members</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage the team displayed on the public Team page.
+          </p>
+        </div>
+        <Button size="sm" onClick={openCreate} className="bg-purple-600 hover:bg-purple-700">
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add Member
+        </Button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-50 rounded-lg">
+                <Users className="h-4 w-4 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{members.length}</p>
+                <p className="text-xs text-muted-foreground">Total Members</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg">
+                <Eye className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{activeCount}</p>
+                <p className="text-xs text-muted-foreground">Visible on Page</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <EyeOff className="h-4 w-4 text-gray-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{members.length - activeCount}</p>
+                <p className="text-xs text-muted-foreground">Hidden</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Members list */}
+      {loading ? (
+        <Card>
+          <CardContent className="pt-4 pb-4 space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="h-8 w-20" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : loadError ? (
+        <ErrorState
+          title="Unable to load team members"
+          onRetry={() => void loadMembers()}
+          details={loadError}
+        />
+      ) : members.length === 0 ? (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="font-medium text-sm">No team members yet</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Add team members to display on the public Team page.
+            </p>
             <Button
-              onClick={handleSave}
-              disabled={saving || !form.name.trim() || !form.title.trim()}
-              className="bg-purple-600 hover:bg-purple-700"
+              size="sm"
+              className="mt-4 bg-purple-600 hover:bg-purple-700"
+              onClick={openCreate}
             >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-1.5" />
-              )}
-              {editingId ? 'Save Changes' : 'Add Member'}
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Add First Member
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <div className="divide-y">
+            {members.map((member) => (
+              <div
+                key={member.id}
+                className={`flex items-center gap-4 p-4 transition-colors ${!member.active ? 'opacity-50 bg-muted/20' : 'hover:bg-muted/10'}`}
+              >
+                {/* Avatar */}
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                  {member.image ? (
+                    <img
+                      src={member.image}
+                      alt={member.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <Users className="h-5 w-5" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm truncate">{member.name}</p>
+                    {member.credentials && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {member.credentials}
+                      </span>
+                    )}
+                    {!member.active && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] border-gray-300 text-gray-500"
+                      >
+                        Hidden
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-purple-600">{member.title}</p>
+                  {member.specialties.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {member.specialties.slice(0, 3).map((s) => (
+                        <Badge
+                          key={s}
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 h-4 bg-purple-50 text-purple-600"
+                        >
+                          {s}
+                        </Badge>
+                      ))}
+                      {member.specialties.length > 3 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          +{member.specialties.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sort order */}
+                <span className="text-[10px] text-muted-foreground w-6 text-center">
+                  #{member.sortOrder}
+                </span>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1">
+                  <Switch
+                    checked={member.active}
+                    onCheckedChange={() => handleToggleActive(member)}
+                    aria-label={`Show ${member.name} on the team page`}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    onClick={() => openEdit(member)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-red-600 hover:text-red-700"
+                    onClick={() => setDeleteTarget(member)}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="border-t px-4 py-2.5 text-xs text-muted-foreground bg-muted/20">
+            {members.length} member(s) — {activeCount} visible on the public Team page
+          </div>
+        </Card>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      {/* CREATE / EDIT DIALOG                                             */}
+      {/* ══════════════════════════════════════════════════════════════════ */}
 
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* DELETE CONFIRMATION                                              */}

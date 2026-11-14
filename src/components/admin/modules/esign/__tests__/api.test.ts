@@ -96,10 +96,9 @@ describe('esignApi envelope operations', () => {
     expect(result.envelopes.length).toBe(1);
   });
 
-  it('getAllEnvelopes returns empty list on error', async () => {
+  it('getAllEnvelopes rethrows a failed load so the list can show an error', async () => {
     mockApiGet.mockRejectedValue(new Error('Server error'));
-    const result = await esignApi.getAllEnvelopes();
-    expect(result.envelopes).toEqual([]);
+    await expect(esignApi.getAllEnvelopes()).rejects.toThrow('Server error');
   });
 
   it('getAllEnvelopes adds status query param when provided', async () => {

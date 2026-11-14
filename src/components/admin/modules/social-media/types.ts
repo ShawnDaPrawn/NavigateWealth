@@ -610,6 +610,35 @@ export interface BufferStatus {
   error?: string;
 }
 
+// ── Partner advertisers ────────────────────────────────────────────────────
+
+export type PartnerStatus = 'active' | 'paused' | 'ended';
+
+export interface SocialPartner {
+  id: string;
+  name: string;
+  contactName: string;
+  contactEmail: string;
+  website: string;
+  referralCode: string;
+  /** Site link with UTM tags (utm_source=partner … utm_content=<code>). */
+  referralLink: string;
+  status: PartnerStatus;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartnerInput {
+  name: string;
+  contactName: string;
+  contactEmail: string;
+  website: string;
+  referralCode: string;
+  status: PartnerStatus;
+  notes: string;
+}
+
 export interface SocialAnalyticsSummary {
   from: string;
   to: string;

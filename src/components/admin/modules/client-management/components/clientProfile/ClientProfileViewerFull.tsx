@@ -25,6 +25,7 @@ import {
   Wallet,
   Loader2,
   AlertCircle,
+  Plus,
 } from 'lucide-react';
 import { AddressSection } from '../../../../profile-sections/AddressSection';
 import { EmploymentSection } from '../../../../profile-sections/EmploymentSection';
@@ -51,6 +52,47 @@ import {
 } from '../../../../../../utils/derivedPolicyAssets';
 
 import { ClientProfilePersonalCard } from './ClientProfilePersonalCard';
+import { ProfileSectionView } from './ProfileSectionView';
+import {
+  addressGroups,
+  assetsView,
+  bankingTable,
+  contactGroups,
+  employmentView,
+  familyTable,
+  healthView,
+  kycTable,
+  personalGroups,
+} from './profileSectionRows';
+import { useUrlState } from '../../../../layout/page';
+import { useClientSubCrumbs } from '../../../../layout/page';
+
+const PROFILE_SECTIONS = [
+  'personal',
+  'contact',
+  'kyc',
+  'address',
+  'employment',
+  'health',
+  'family',
+  'banking',
+  'risk',
+  'assets',
+  'budgeting',
+] as const;
+type ProfileSection = (typeof PROFILE_SECTIONS)[number];
+/** Sections whose card has a view mode and an Edit button. */
+const VIEW_EDIT_SECTIONS: ReadonlySet<ProfileSection> = new Set([
+  'personal',
+  'contact',
+  'kyc',
+  'address',
+  'employment',
+  'health',
+  'family',
+  'banking',
+  'assets',
+]);
 import { ClientProfileContactCard } from './ClientProfileContactCard';
 
 interface ClientProfileViewerFullProps {
@@ -61,7 +103,13 @@ interface ClientProfileViewerFullProps {
 const ADMIN_CLIENT_PROFILE_REGISTRY_ID = 'admin-client-profile';
 
 export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileViewerFullProps) {
-  const [activeSection, setActiveSection] = useState('personal');
+  // The open section is in the address (?psec=).
+  const [activeSection, setActiveSection] = useUrlState<ProfileSection>(
+    'psec',
+    'personal',
+    PROFILE_SECTIONS,
+  );
+  const [editing, setEditing] = useState(false);
   const { state, actions } = useClientProfile(clientData, onSave);
   // The profile-section child components declare looser prop contracts
   // (profileData: Record<string, unknown>; handleInputChange: (field: string,
@@ -95,9 +143,12 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
   const handleSectionChange = useCallback(
     (sectionId: string) => {
       if (sectionId === activeSection) return;
-      unsavedChangesGuard.tryAction(() => setActiveSection(sectionId));
+      unsavedChangesGuard.tryAction(() => {
+        setEditing(false);
+        setActiveSection(sectionId as ProfileSection);
+      });
     },
-    [activeSection, unsavedChangesGuard],
+    [activeSection, unsavedChangesGuard, setActiveSection],
   );
   const [policyRecords, setPolicyRecords] = useState<PolicyAssetSourceRecord[]>([]);
   const [policyAssetsLoading, setPolicyAssetsLoading] = useState(false);
@@ -143,18 +194,36 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
   );
 
   const sections = [
-    { id: 'personal', label: 'Personal Info', icon: User },
-    { id: 'contact', label: 'Contact Details', icon: Mail },
+    { id: 'personal', label: 'Personal info', icon: User },
+    { id: 'contact', label: 'Contact details', icon: Mail },
     { id: 'kyc', label: 'KYC', icon: Shield },
     { id: 'address', label: 'Address', icon: MapPin },
     { id: 'employment', label: 'Employment', icon: Briefcase },
-    { id: 'health', label: 'Health Info', icon: Heart },
+    { id: 'health', label: 'Health info', icon: Heart },
     { id: 'family', label: 'Family', icon: Users },
     { id: 'banking', label: 'Banking', icon: CreditCard },
-    { id: 'risk', label: 'Risk Profile', icon: Target },
-    { id: 'assets', label: 'Assets & Liabilities', icon: PieChart },
+    { id: 'risk', label: 'Risk profile', icon: Target },
+    { id: 'assets', label: 'Assets & liabilities', icon: PieChart },
     { id: 'budgeting', label: 'Budgeting', icon: Wallet },
   ];
+  const activeLabel = sections.find((x) => x.id === activeSection)?.label ?? '';
+  useClientSubCrumbs(activeLabel ? [{ label: activeLabel }] : []);
+  const viewOnly = VIEW_EDIT_SECTIONS.has(activeSection) && !editing && !state.hasChanges;
+
+  // Edit (or an Add button) swaps the view card for the section's form; an
+  // Add also starts the new row there.
+  const startEditing = (add?: () => void) => {
+    setEditing(true);
+    if (typeof add === 'function') add();
+  };
+
+  const handleSaveAll = async () => {
+    if (await actions.handleSave()) setEditing(false);
+  };
+  const handleCancelAll = () => {
+    actions.handleDiscard();
+    setEditing(false);
+  };
 
   // Show loading state while fetching data
   if (state.loading) {
@@ -169,253 +238,365 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* SUBTABS - Level 2: Secondary Navigation within Personal Details tab */}
-      <div className="mb-6 pb-4 border-b border-gray-200">
-        <div className="flex items-center gap-2 overflow-x-auto">
+    <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
+      {/* Section rail */}
+      <nav aria-label="Personal details sections" className="lg:sticky lg:top-4 lg:self-start">
+        <ul className="flex gap-1 overflow-x-auto lg:flex-col">
           {sections.map((section) => {
             const Icon = section.icon;
+            const active = activeSection === section.id;
             return (
-              <button
-                key={section.id}
-                onClick={() => handleSectionChange(section.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                  activeSection === section.id
-                    ? 'bg-white text-[#6d28d9] border-2 border-[#6d28d9] shadow-sm'
-                    : 'bg-transparent text-gray-600 hover:bg-gray-100 border border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{section.label}</span>
-              </button>
+              <li key={section.id}>
+                <button
+                  type="button"
+                  onClick={() => handleSectionChange(section.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex w-full items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 ${
+                    active
+                      ? 'bg-nw-violet-50 font-medium text-nw-violet-600'
+                      : 'text-nw-text-2 hover:bg-gray-50 hover:text-nw-ink'
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {section.label}
+                </button>
+              </li>
             );
           })}
-        </div>
-      </div>
+        </ul>
+      </nav>
 
-      {state.error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{state.error}</AlertDescription>
-        </Alert>
-      )}
-
-      {state.hasChanges && (
-        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-yellow-500 animate-pulse"></div>
-            <span className="text-sm font-medium text-yellow-900">You have unsaved changes</span>
-          </div>
-          <Button
-            onClick={actions.handleSave}
-            disabled={state.saving}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {state.saving ? (
-              <div className="contents">
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Saving...
-              </div>
-            ) : (
-              <div className="contents">
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </div>
-            )}
-          </Button>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto pr-2">
-        {/* Personal Information Section */}
-        {activeSection === 'personal' && (
-          <ClientProfilePersonalCard state={state} actions={actions} />
+      <div className="flex min-w-0 flex-col gap-4">
+        {state.error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
         )}
 
-        {/* Contact Details Section */}
-        {activeSection === 'contact' && (
-          <ClientProfileContactCard state={state} actions={actions} />
-        )}
-
-        {/* KYC Section */}
-        {activeSection === 'kyc' && (
-          <IdentitySection
-            profileData={profileDataLoose}
-            identityDocsInEditMode={state.identityDocsInEditMode}
-            hasDocumentType={actions.hasDocumentType}
-            addIdentityDocument={actions.addIdentityDocument}
-            handleDocumentUpload={actions.handleDocumentUpload}
-            updateIdentityDocument={actions.updateIdentityDocument}
-            confirmDeleteIdentityDocument={actions.confirmDeleteIdentityDocument}
-            removeIdentityDocument={actions.removeIdentityDocument}
-            saveIdentityDocument={actions.saveIdentityDocument}
-            cancelEditIdentityDocument={actions.cancelEditIdentityDocument}
-            editIdentityDocument={actions.editIdentityDocument}
-            getDocumentTypeLabel={actions.getDocumentTypeLabel}
-            getDocumentTypeIcon={actions.getDocumentTypeIcon}
-            identityDocToDelete={state.identityDocToDelete}
-            setIdentityDocToDelete={actions.setIdentityDocToDelete}
-            userId={clientData.id}
-          />
-        )}
-
-        {/* Address Section */}
-        {activeSection === 'address' && (
-          <AddressSection
-            profileData={profileDataLoose}
-            handleInputChange={handleInputChangeLoose}
-            proofOfResidenceInEditMode={state.proofOfResidenceInEditMode}
-            handleProofOfResidenceUpload={actions.handleProofOfResidenceUpload}
-            saveProofOfResidence={actions.saveProofOfResidence}
-            editProofOfResidence={actions.editProofOfResidence}
-            confirmDeleteProofOfResidence={actions.confirmDeleteProofOfResidence}
-            removeProofOfResidence={actions.removeProofOfResidence}
-            proofOfResidenceToDelete={state.proofOfResidenceToDelete}
-            setProofOfResidenceToDelete={actions.setProofOfResidenceToDelete}
-            copyToClipboard={(text: string, _fieldName: string) => copyToClipboard(text)}
-          />
-        )}
-
-        {/* Employment Section */}
-        {activeSection === 'employment' && (
-          <EmploymentSection
-            profileData={profileDataLoose}
-            handleInputChange={handleInputChangeLoose}
-            employersInEditMode={state.employersInEditMode}
-            selfEmployedInEditMode={state.selfEmployedInEditMode}
-            addEmployer={actions.addEmployer}
-            updateEmployer={actions.updateEmployer}
-            saveEmployer={actions.saveEmployer}
-            editEmployer={actions.editEmployer}
-            cancelEditEmployer={actions.cancelEditEmployer}
-            confirmDeleteEmployer={actions.confirmDeleteEmployer}
-            removeEmployer={actions.removeEmployer}
-            saveSelfEmployed={actions.saveSelfEmployed}
-            editSelfEmployed={actions.editSelfEmployed}
-            cancelEditSelfEmployed={actions.cancelEditSelfEmployed}
-            employerToDelete={state.employerToDelete}
-            setEmployerToDelete={actions.setEmployerToDelete}
-            copyToClipboard={(text: string, _fieldName: string) => copyToClipboard(text)}
-          />
-        )}
-
-        {/* Health Section */}
-        {activeSection === 'health' && (
-          <HealthSection
-            profileData={profileDataLoose}
-            handleInputChange={handleInputChangeLoose}
-            chronicConditionsInEditMode={state.chronicConditionsInEditMode}
-            addChronicCondition={actions.addChronicCondition}
-            updateChronicCondition={actions.updateChronicCondition}
-            saveChronicCondition={actions.saveChronicCondition}
-            editChronicCondition={actions.editChronicCondition}
-            cancelEditChronicCondition={actions.cancelEditChronicCondition}
-            confirmDeleteChronicCondition={actions.confirmDeleteChronicCondition}
-            removeChronicCondition={actions.removeChronicCondition}
-            chronicConditionToDelete={state.chronicConditionToDelete}
-            setChronicConditionToDelete={actions.setChronicConditionToDelete}
-          />
-        )}
-
-        {/* Family Section */}
-        {activeSection === 'family' && (
-          <FamilySection
-            profileData={profileDataLoose}
-            familyMembersInEditMode={state.familyMembersInEditMode}
-            addFamilyMember={actions.addFamilyMember}
-            updateFamilyMember={actions.updateFamilyMember}
-            saveFamilyMember={actions.saveFamilyMember}
-            editFamilyMember={actions.editFamilyMember}
-            cancelEditFamilyMember={actions.cancelEditFamilyMember}
-            confirmDeleteFamilyMember={actions.confirmDeleteFamilyMember}
-            removeFamilyMember={actions.removeFamilyMember}
-            familyMemberToDelete={state.familyMemberToDelete}
-            setFamilyMemberToDelete={actions.setFamilyMemberToDelete}
-          />
-        )}
-
-        {/* Banking Section */}
-        {activeSection === 'banking' && (
-          <BankingSection
-            profileData={profileDataLoose}
-            bankAccountsInEditMode={state.bankAccountsInEditMode}
-            addBankAccount={actions.addBankAccount}
-            updateBankAccount={actions.updateBankAccount}
-            saveBankAccount={actions.saveBankAccount}
-            editBankAccount={actions.editBankAccount}
-            cancelEditBankAccount={actions.cancelEditBankAccount}
-            confirmDeleteBankAccount={actions.confirmDeleteBankAccount}
-            removeBankAccount={actions.removeBankAccount}
-            handleProofOfBankUpload={actions.handleProofOfBankUpload}
-            confirmDeleteProofOfBank={actions.confirmDeleteProofOfBank}
-            removeProofOfBank={actions.removeProofOfBank}
-            bankAccountToDelete={state.bankAccountToDelete}
-            setBankAccountToDelete={actions.setBankAccountToDelete}
-            proofOfBankToDelete={state.proofOfBankToDelete}
-            setProofOfBankToDelete={actions.setProofOfBankToDelete}
-            copyToClipboard={(text: string, _fieldName: string) => copyToClipboard(text)}
-          />
-        )}
-
-        {/* Risk Profile Section */}
-        {activeSection === 'risk' && (
-          <RiskProfileSection
-            profileData={state.profileData}
-            updateRiskQuestion={actions.updateRiskQuestion}
-            resetRiskAssessment={actions.resetRiskAssessment}
-            assessmentStarted={state.assessmentStarted}
-            setAssessmentStarted={actions.setAssessmentStarted}
-            allQuestionsAnswered={actions.allQuestionsAnswered}
-          />
-        )}
-
-        {/* Assets & Liabilities Section */}
-        {activeSection === 'assets' && (
-          <AssetsLiabilitiesSection
-            assets={state.profileData.assets || []}
-            liabilities={state.profileData.liabilities || []}
-            derivedPolicyAssets={derivedPolicyAssets}
-            linkedPolicyAssetsLoading={policyAssetsLoading}
-            linkedPolicyAssetsError={policyAssetsError}
-            assetsInEditMode={state.assetsInEditMode}
-            liabilitiesInEditMode={state.liabilitiesInEditMode}
-            addAsset={actions.addAsset}
-            updateAsset={actions.updateAsset}
-            saveAsset={actions.saveAsset}
-            editAsset={actions.editAsset}
-            cancelEditAsset={actions.cancelEditAsset}
-            confirmDeleteAsset={actions.confirmDeleteAsset}
-            removeAsset={actions.removeAsset}
-            addLiability={actions.addLiability}
-            updateLiability={actions.updateLiability}
-            saveLiability={actions.saveLiability}
-            editLiability={actions.editLiability}
-            cancelEditLiability={actions.cancelEditLiability}
-            confirmDeleteLiability={actions.confirmDeleteLiability}
-            removeLiability={actions.removeLiability}
-            assetToDelete={state.assetToDelete}
-            setAssetToDelete={actions.setAssetToDelete}
-            liabilityToDelete={state.liabilityToDelete}
-            setLiabilityToDelete={actions.setLiabilityToDelete}
-            formatCurrency={formatCurrency}
-          />
-        )}
-
-        {/* Budgeting Section - Reusing the BudgetingPage component */}
-        {activeSection === 'budgeting' && (
-          <div className="h-full">
-            <BudgetingPage
-              userId={clientData.id}
-              embedded={true}
-              onEmptyStateAction={() => handleSectionChange('personal')}
-              incomeValidationError={state.incomeValidationError}
-              setIncomeValidationError={
-                actions.setIncomeValidationError as (error: string | null) => void
+        <div className="min-w-0">
+          {viewOnly && activeSection === 'personal' && (
+            <ProfileSectionView
+              title="Personal info"
+              groups={personalGroups(state.profileData)}
+              onEdit={() => setEditing(true)}
+            />
+          )}
+          {viewOnly && activeSection === 'contact' && (
+            <ProfileSectionView
+              title="Contact details"
+              groups={contactGroups(state.profileData)}
+              onEdit={() => setEditing(true)}
+            />
+          )}
+          {/* Personal Information Section */}
+          {viewOnly && activeSection === 'kyc' && (
+            <ProfileSectionView
+              title="KYC documents"
+              tables={[kycTable(state.profileData)]}
+              onEdit={startEditing}
+              actions={
+                <Button size="sm" onClick={() => startEditing()}>
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add document
+                </Button>
               }
+            />
+          )}
+          {viewOnly && activeSection === 'address' && (
+            <ProfileSectionView
+              title="Address"
+              groups={addressGroups(state.profileData)}
+              onEdit={startEditing}
+            />
+          )}
+          {viewOnly && activeSection === 'employment' && (
+            <ProfileSectionView
+              title="Employment information"
+              {...employmentView(state.profileData)}
+              onEdit={startEditing}
+              actions={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => startEditing(actions.addEmployer)}
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add employer
+                </Button>
+              }
+            />
+          )}
+          {viewOnly && activeSection === 'health' && (
+            <ProfileSectionView
+              title="Health information"
+              {...healthView(state.profileData)}
+              onEdit={startEditing}
+              actions={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => startEditing(actions.addChronicCondition)}
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add condition
+                </Button>
+              }
+            />
+          )}
+          {viewOnly && activeSection === 'family' && (
+            <ProfileSectionView
+              title="Family members"
+              tables={[familyTable(state.profileData)]}
+              onEdit={startEditing}
+              actions={
+                <Button size="sm" onClick={() => startEditing(actions.addFamilyMember)}>
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add family member
+                </Button>
+              }
+            />
+          )}
+          {viewOnly && activeSection === 'banking' && (
+            <ProfileSectionView
+              title="Banking details"
+              tables={[bankingTable(state.profileData)]}
+              onEdit={startEditing}
+              actions={
+                <Button size="sm" onClick={() => startEditing(actions.addBankAccount)}>
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Add bank account
+                </Button>
+              }
+            />
+          )}
+          {viewOnly && activeSection === 'assets' && (
+            <ProfileSectionView
+              title="Assets & liabilities"
+              {...assetsView(state.profileData)}
+              onEdit={startEditing}
+            />
+          )}
+          {activeSection === 'personal' && !viewOnly && (
+            <ClientProfilePersonalCard state={state} actions={actions} />
+          )}
+
+          {/* Contact Details Section */}
+          {activeSection === 'contact' && !viewOnly && (
+            <ClientProfileContactCard state={state} actions={actions} />
+          )}
+
+          {/* KYC Section */}
+          {activeSection === 'kyc' && !viewOnly && (
+            <IdentitySection
+              profileData={profileDataLoose}
+              identityDocsInEditMode={state.identityDocsInEditMode}
+              hasDocumentType={actions.hasDocumentType}
+              addIdentityDocument={actions.addIdentityDocument}
+              handleDocumentUpload={actions.handleDocumentUpload}
+              updateIdentityDocument={actions.updateIdentityDocument}
+              confirmDeleteIdentityDocument={actions.confirmDeleteIdentityDocument}
+              removeIdentityDocument={actions.removeIdentityDocument}
+              saveIdentityDocument={actions.saveIdentityDocument}
+              cancelEditIdentityDocument={actions.cancelEditIdentityDocument}
+              editIdentityDocument={actions.editIdentityDocument}
+              getDocumentTypeLabel={actions.getDocumentTypeLabel}
+              getDocumentTypeIcon={actions.getDocumentTypeIcon}
+              identityDocToDelete={state.identityDocToDelete}
+              setIdentityDocToDelete={actions.setIdentityDocToDelete}
+              userId={clientData.id}
+            />
+          )}
+
+          {/* Address Section */}
+          {activeSection === 'address' && !viewOnly && (
+            <AddressSection
               profileData={profileDataLoose}
               handleInputChange={handleInputChangeLoose}
+              proofOfResidenceInEditMode={state.proofOfResidenceInEditMode}
+              handleProofOfResidenceUpload={actions.handleProofOfResidenceUpload}
+              saveProofOfResidence={actions.saveProofOfResidence}
+              editProofOfResidence={actions.editProofOfResidence}
+              confirmDeleteProofOfResidence={actions.confirmDeleteProofOfResidence}
+              removeProofOfResidence={actions.removeProofOfResidence}
+              proofOfResidenceToDelete={state.proofOfResidenceToDelete}
+              setProofOfResidenceToDelete={actions.setProofOfResidenceToDelete}
+              copyToClipboard={(text: string, _fieldName: string) => copyToClipboard(text)}
             />
+          )}
+
+          {/* Employment Section */}
+          {activeSection === 'employment' && !viewOnly && (
+            <EmploymentSection
+              profileData={profileDataLoose}
+              handleInputChange={handleInputChangeLoose}
+              employersInEditMode={state.employersInEditMode}
+              selfEmployedInEditMode={state.selfEmployedInEditMode}
+              addEmployer={actions.addEmployer}
+              updateEmployer={actions.updateEmployer}
+              saveEmployer={actions.saveEmployer}
+              editEmployer={actions.editEmployer}
+              cancelEditEmployer={actions.cancelEditEmployer}
+              confirmDeleteEmployer={actions.confirmDeleteEmployer}
+              removeEmployer={actions.removeEmployer}
+              saveSelfEmployed={actions.saveSelfEmployed}
+              editSelfEmployed={actions.editSelfEmployed}
+              cancelEditSelfEmployed={actions.cancelEditSelfEmployed}
+              employerToDelete={state.employerToDelete}
+              setEmployerToDelete={actions.setEmployerToDelete}
+              copyToClipboard={(text: string, _fieldName: string) => copyToClipboard(text)}
+            />
+          )}
+
+          {/* Health Section */}
+          {activeSection === 'health' && !viewOnly && (
+            <HealthSection
+              profileData={profileDataLoose}
+              handleInputChange={handleInputChangeLoose}
+              chronicConditionsInEditMode={state.chronicConditionsInEditMode}
+              addChronicCondition={actions.addChronicCondition}
+              updateChronicCondition={actions.updateChronicCondition}
+              saveChronicCondition={actions.saveChronicCondition}
+              editChronicCondition={actions.editChronicCondition}
+              cancelEditChronicCondition={actions.cancelEditChronicCondition}
+              confirmDeleteChronicCondition={actions.confirmDeleteChronicCondition}
+              removeChronicCondition={actions.removeChronicCondition}
+              chronicConditionToDelete={state.chronicConditionToDelete}
+              setChronicConditionToDelete={actions.setChronicConditionToDelete}
+            />
+          )}
+
+          {/* Family Section */}
+          {activeSection === 'family' && !viewOnly && (
+            <FamilySection
+              profileData={profileDataLoose}
+              familyMembersInEditMode={state.familyMembersInEditMode}
+              addFamilyMember={actions.addFamilyMember}
+              updateFamilyMember={actions.updateFamilyMember}
+              saveFamilyMember={actions.saveFamilyMember}
+              editFamilyMember={actions.editFamilyMember}
+              cancelEditFamilyMember={actions.cancelEditFamilyMember}
+              confirmDeleteFamilyMember={actions.confirmDeleteFamilyMember}
+              removeFamilyMember={actions.removeFamilyMember}
+              familyMemberToDelete={state.familyMemberToDelete}
+              setFamilyMemberToDelete={actions.setFamilyMemberToDelete}
+            />
+          )}
+
+          {/* Banking Section */}
+          {activeSection === 'banking' && !viewOnly && (
+            <BankingSection
+              profileData={profileDataLoose}
+              bankAccountsInEditMode={state.bankAccountsInEditMode}
+              addBankAccount={actions.addBankAccount}
+              updateBankAccount={actions.updateBankAccount}
+              saveBankAccount={actions.saveBankAccount}
+              editBankAccount={actions.editBankAccount}
+              cancelEditBankAccount={actions.cancelEditBankAccount}
+              confirmDeleteBankAccount={actions.confirmDeleteBankAccount}
+              removeBankAccount={actions.removeBankAccount}
+              handleProofOfBankUpload={actions.handleProofOfBankUpload}
+              confirmDeleteProofOfBank={actions.confirmDeleteProofOfBank}
+              removeProofOfBank={actions.removeProofOfBank}
+              bankAccountToDelete={state.bankAccountToDelete}
+              setBankAccountToDelete={actions.setBankAccountToDelete}
+              proofOfBankToDelete={state.proofOfBankToDelete}
+              setProofOfBankToDelete={actions.setProofOfBankToDelete}
+              copyToClipboard={(text: string, _fieldName: string) => copyToClipboard(text)}
+            />
+          )}
+
+          {/* Risk Profile Section */}
+          {activeSection === 'risk' && (
+            <RiskProfileSection
+              profileData={state.profileData}
+              updateRiskQuestion={actions.updateRiskQuestion}
+              resetRiskAssessment={actions.resetRiskAssessment}
+              assessmentStarted={state.assessmentStarted}
+              setAssessmentStarted={actions.setAssessmentStarted}
+              allQuestionsAnswered={actions.allQuestionsAnswered}
+            />
+          )}
+
+          {/* Assets & Liabilities Section */}
+          {activeSection === 'assets' && !viewOnly && (
+            <AssetsLiabilitiesSection
+              assets={state.profileData.assets || []}
+              liabilities={state.profileData.liabilities || []}
+              derivedPolicyAssets={derivedPolicyAssets}
+              linkedPolicyAssetsLoading={policyAssetsLoading}
+              linkedPolicyAssetsError={policyAssetsError}
+              assetsInEditMode={state.assetsInEditMode}
+              liabilitiesInEditMode={state.liabilitiesInEditMode}
+              addAsset={actions.addAsset}
+              updateAsset={actions.updateAsset}
+              saveAsset={actions.saveAsset}
+              editAsset={actions.editAsset}
+              cancelEditAsset={actions.cancelEditAsset}
+              confirmDeleteAsset={actions.confirmDeleteAsset}
+              removeAsset={actions.removeAsset}
+              addLiability={actions.addLiability}
+              updateLiability={actions.updateLiability}
+              saveLiability={actions.saveLiability}
+              editLiability={actions.editLiability}
+              cancelEditLiability={actions.cancelEditLiability}
+              confirmDeleteLiability={actions.confirmDeleteLiability}
+              removeLiability={actions.removeLiability}
+              assetToDelete={state.assetToDelete}
+              setAssetToDelete={actions.setAssetToDelete}
+              liabilityToDelete={state.liabilityToDelete}
+              setLiabilityToDelete={actions.setLiabilityToDelete}
+              formatCurrency={formatCurrency}
+            />
+          )}
+
+          {/* Budgeting Section - Reusing the BudgetingPage component */}
+          {activeSection === 'budgeting' && (
+            <div className="h-full">
+              <BudgetingPage
+                userId={clientData.id}
+                embedded={true}
+                onEmptyStateAction={() => handleSectionChange('personal')}
+                incomeValidationError={state.incomeValidationError}
+                setIncomeValidationError={
+                  actions.setIncomeValidationError as (error: string | null) => void
+                }
+                profileData={profileDataLoose}
+                handleInputChange={handleInputChangeLoose}
+              />
+            </div>
+          )}
+        </div>
+
+        {(state.hasChanges || (editing && VIEW_EDIT_SECTIONS.has(activeSection))) && (
+          <div
+            className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-nw-line bg-white px-5 py-3 shadow-sm"
+            role="region"
+            aria-label="Unsaved changes"
+          >
+            <span className="flex items-center gap-2 text-sm text-nw-text-2">
+              {state.hasChanges && (
+                <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
+              )}
+              {state.hasChanges ? 'You have unsaved changes' : 'Editing'}
+            </span>
+            <div className="ml-auto flex gap-2">
+              <Button variant="outline" onClick={handleCancelAll} disabled={state.saving}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleSaveAll()}
+                disabled={state.saving || !state.hasChanges}
+              >
+                {state.saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                )}
+                {state.saving ? 'Saving…' : 'Save changes'}
+              </Button>
+            </div>
           </div>
         )}
       </div>

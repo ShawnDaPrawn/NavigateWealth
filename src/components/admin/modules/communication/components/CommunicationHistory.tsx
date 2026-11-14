@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
@@ -42,7 +43,8 @@ import {
   RecipientType,
 } from '../types';
 import { communicationApi } from '../api';
-import { useRecordInUrl } from '../../../layout/page';
+import { ErrorState, useRecordInUrl } from '../../../layout/page';
+import { Crumbs } from './Crumbs';
 import { toast } from 'sonner';
 
 const SENDER_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -82,14 +84,41 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [channelFilter, setChannelFilter] = useState<string>('all');
-  const [recipientFilter, setRecipientFilter] = useState<string>('all');
-  const [userFilter, setUserFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [originFilter, setOriginFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
+  // Search, every filter and the page are in the address (?channel=email&page=2),
+  // so a reload, Back from a message or a pasted link lands on the same list.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const param = (key: string) => searchParams.get(key) ?? 'all';
+  const debouncedSearch = searchParams.get('q') ?? '';
+  const channelFilter = param('channel');
+  const recipientFilter = param('recipient');
+  const userFilter = param('sender');
+  const statusFilter = param('status');
+  const originFilter = param('source');
+  const currentPage = Math.max(1, Number(searchParams.get('page')) || 1);
+  const [searchTerm, setSearchTerm] = useState(debouncedSearch);
+
+  /** One address change for several filters ('all', '' and page 1 are left out). */
+  const updateFilters = useCallback(
+    (patch: Record<string, string | number | null>) =>
+      setSearchParams(
+        (current) => {
+          const params = new URLSearchParams(current);
+          for (const [key, value] of Object.entries(patch)) {
+            if (
+              value === null ||
+              value === 'all' ||
+              value === '' ||
+              (key === 'page' && value === 1)
+            )
+              params.delete(key);
+            else params.set(key, String(value));
+          }
+          return params;
+        },
+        { replace: true },
+      ),
+    [setSearchParams],
+  );
   const [refreshToken, setRefreshToken] = useState(0);
   const [detailLog, setDetailLog] = useState<ActivityLogEntry | null>(null);
 
@@ -98,12 +127,12 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
 
   useEffect(() => {
     const t = window.setTimeout(() => {
-      setDebouncedSearch(searchTerm.trim());
-      if (searchDebounceReady.current) setCurrentPage(1);
+      // The first run is the value read from the address: nothing to write.
+      if (searchDebounceReady.current) updateFilters({ q: searchTerm.trim(), page: null });
       else searchDebounceReady.current = true;
     }, 350);
     return () => window.clearTimeout(t);
-  }, [searchTerm]);
+  }, [searchTerm, updateFilters]);
 
   useEffect(() => {
     let cancelled = false;
@@ -301,19 +330,28 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
   // never side panels). The list keeps its filters and page underneath.
   if (detailLog) {
     return (
-      <HistoryMessagePage
-        log={detailLog}
-        onBack={() => setDetailLog(null)}
-        formatTimestamp={formatTimestamp}
-        statusBadge={getStatusBadge(detailLog.status)}
-        deliveryLine={formatDeliveryLine(detailLog)}
-        channelLabel={CHANNEL_LABEL[detailLog.channel] ?? detailLog.channel}
-      />
+      <>
+        <Crumbs
+          trail={[
+            { label: 'History', onClick: () => setDetailLog(null) },
+            { label: detailLog.subject || 'Message' },
+          ]}
+        />
+        <HistoryMessagePage
+          log={detailLog}
+          onBack={() => setDetailLog(null)}
+          formatTimestamp={formatTimestamp}
+          statusBadge={getStatusBadge(detailLog.status)}
+          deliveryLine={formatDeliveryLine(detailLog)}
+          channelLabel={CHANNEL_LABEL[detailLog.channel] ?? detailLog.channel}
+        />
+      </>
     );
   }
 
   return (
     <Card className="w-full">
+      <Crumbs trail={[{ label: 'History' }]} />
       <CardContent className="space-y-4 pt-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex-1 min-w-[200px]">
@@ -338,8 +376,7 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={channelFilter}
             onValueChange={(v) => {
-              setChannelFilter(v);
-              setCurrentPage(1);
+              updateFilters({ channel: v, page: null });
             }}
           >
             <SelectTrigger className="w-full sm:w-[160px]" aria-label="Filter by channel">
@@ -356,8 +393,7 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={statusFilter}
             onValueChange={(v) => {
-              setStatusFilter(v);
-              setCurrentPage(1);
+              updateFilters({ status: v, page: null });
             }}
           >
             <SelectTrigger className="w-full sm:w-[190px]" aria-label="Filter by status">
@@ -376,8 +412,7 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={originFilter}
             onValueChange={(v) => {
-              setOriginFilter(v);
-              setCurrentPage(1);
+              updateFilters({ source: v, page: null });
             }}
           >
             <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by source">
@@ -393,8 +428,7 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={recipientFilter}
             onValueChange={(v) => {
-              setRecipientFilter(v);
-              setCurrentPage(1);
+              updateFilters({ recipient: v, page: null });
             }}
           >
             <SelectTrigger className="w-full sm:w-[160px]" aria-label="Filter by recipient type">
@@ -411,8 +445,7 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           <Select
             value={userFilter}
             onValueChange={(v) => {
-              setUserFilter(v);
-              setCurrentPage(1);
+              updateFilters({ sender: v, page: null });
             }}
           >
             <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by sender">
@@ -435,9 +468,11 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-          <span>
-            {total} communication{total !== 1 ? 's' : ''} found
-          </span>
+          {!error && (
+            <span>
+              {total} communication{total !== 1 ? 's' : ''} found
+            </span>
+          )}
           {(searchTerm ||
             channelFilter !== 'all' ||
             recipientFilter !== 'all' ||
@@ -449,13 +484,15 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
               size="sm"
               onClick={() => {
                 setSearchTerm('');
-                setDebouncedSearch('');
-                setChannelFilter('all');
-                setRecipientFilter('all');
-                setUserFilter('all');
-                setStatusFilter('all');
-                setOriginFilter('all');
-                setCurrentPage(1);
+                updateFilters({
+                  q: null,
+                  channel: null,
+                  recipient: null,
+                  sender: null,
+                  status: null,
+                  source: null,
+                  page: null,
+                });
               }}
             >
               Clear filters
@@ -488,7 +525,11 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     {error ? (
-                      <span className="text-red-600">{error}</span>
+                      <ErrorState
+                        title="Couldn't load the history"
+                        description="Something went wrong while loading. Nothing has changed."
+                        onRetry={triggerRefresh}
+                      />
                     ) : (
                       'No communications match your filters.'
                     )}
@@ -608,7 +649,7 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentPage((p) => p - 1)}
+              onClick={() => updateFilters({ page: currentPage - 1 })}
               disabled={currentPage <= 1 || loading}
             >
               <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -623,7 +664,7 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentPage((p) => p + 1)}
+              onClick={() => updateFilters({ page: currentPage + 1 })}
               disabled={currentPage >= totalPages || loading}
             >
               Next

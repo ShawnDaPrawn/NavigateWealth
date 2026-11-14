@@ -1,8 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../../layout/page';
 import { RoADraft } from '../DraftRoAInterface';
-import { Search, Plus, UserCheck } from 'lucide-react';
+import { UserCheck } from 'lucide-react';
 import { useClientSearch } from '../../hooks/useClientSearch';
 import { useClient } from '../../hooks/useClient';
 import { useRoAClientContext } from '../../hooks/useRoAClientContext';
@@ -15,7 +16,16 @@ interface RoAStepClientProps {
   onUpdate: (updates: Partial<RoADraft>) => void;
 }
 
+const CLIENT_MODES = ['existing', 'new'] as const;
+type ClientMode = (typeof CLIENT_MODES)[number];
+
 export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
+  // Existing or new client, in the address (?roaClient=new).
+  const [clientMode, setClientMode] = useUrlState<ClientMode>(
+    'roaClient',
+    'existing',
+    CLIENT_MODES,
+  );
   const { searchTerm, setSearchTerm, results: searchResults, isSearching } = useClientSearch();
 
   // Fetch full client details for selected client
@@ -124,7 +134,7 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold mb-2">Select Client</h2>
+        <h2 className="text-xl font-semibold mb-2">Select client</h2>
         <p className="text-muted-foreground">
           Choose an existing client or create a new client profile for this Record of Advice
         </p>
@@ -136,7 +146,7 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-green-800">
               <UserCheck className="h-5 w-5" />
-              Selected Client
+              Selected client
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -148,7 +158,7 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
                 <p className="text-sm text-muted-foreground">{selectedClient.email}</p>
                 <p className="text-sm text-muted-foreground">{selectedClient.mobile}</p>
                 <p className="text-sm text-muted-foreground">
-                  Risk Profile: {selectedClient.riskProfile}
+                  Risk profile: {selectedClient.riskProfile}
                 </p>
               </div>
             ) : (
@@ -168,23 +178,21 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
       )}
 
       {/* Client Selection Interface */}
-      <Tabs defaultValue="existing" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="existing" className="flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            Select Existing Client
-          </TabsTrigger>
-          <TabsTrigger value="new" className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Create New Client
-          </TabsTrigger>
-        </TabsList>
+      <Tabs
+        value={clientMode}
+        onValueChange={(v) => setClientMode(v as ClientMode)}
+        className="space-y-6"
+      >
+        <SegmentedList aria-label="Client">
+          <SegmentedTrigger value="existing">Select existing client</SegmentedTrigger>
+          <SegmentedTrigger value="new">Create new client</SegmentedTrigger>
+        </SegmentedList>
 
         {/* Existing Client Tab */}
         <TabsContent value="existing" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Search Existing Clients</CardTitle>
+              <CardTitle>Search existing clients</CardTitle>
             </CardHeader>
             <ClientSearchPanel
               searchTerm={searchTerm}

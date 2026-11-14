@@ -77,7 +77,7 @@ export function RiskProfileSection({
               <Target className="h-5 w-5 text-[#6d28d9]" />
             </div>
             <div>
-              <CardTitle>Risk Profile Assessment</CardTitle>
+              <CardTitle>Risk profile</CardTitle>
               <CardDescription>
                 Complete the questionnaire to determine risk tolerance
               </CardDescription>
@@ -165,7 +165,7 @@ export function RiskProfileSection({
               <div className="rounded-lg border-2 border-[#6d28d9]/30 bg-gradient-to-br from-[#6d28d9]/5 to-transparent p-6">
                 <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
-                    <h3 className="mb-1 text-lg text-gray-900">Risk Profile Results</h3>
+                    <h3 className="mb-1 text-lg text-gray-900">Risk profile results</h3>
                     <p className="text-sm text-gray-600">Based on the responses</p>
                   </div>
 
@@ -208,7 +208,7 @@ export function RiskProfileSection({
                 </div>
 
                 <div className="rounded-lg border border-gray-200 bg-white p-4">
-                  <h4 className="mb-2 text-sm text-gray-900">What This Means</h4>
+                  <h4 className="mb-2 text-sm text-gray-900">What this means</h4>
                   <p className="text-sm text-gray-700">
                     <strong>{categorySummary?.label || 'Risk profile pending'}:</strong>{' '}
                     {categorySummary?.body ||

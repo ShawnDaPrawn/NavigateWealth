@@ -108,11 +108,9 @@ describe('vascoConfigApi', () => {
     expect(mockApiGet).toHaveBeenCalledWith('/vasco/config');
   });
 
-  it('getConfig returns disabled default on error', async () => {
+  it('getConfig rethrows a failed read instead of reporting Vasco as off', async () => {
     mockApiGet.mockRejectedValue(new Error('Config unavailable'));
-    const result = await vascoConfigApi.getConfig();
-    expect(result.enabled).toBe(false);
-    expect(result.updatedBy).toBe('system');
+    await expect(vascoConfigApi.getConfig()).rejects.toThrow('Config unavailable');
   });
 
   it('updateConfig puts enabled state', async () => {
