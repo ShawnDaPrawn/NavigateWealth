@@ -21,7 +21,7 @@ import {
 } from './integrations/integrationSections';
 import { describeConnection } from './integrations/connections/connectionPresentation';
 import { useSearchParams } from 'react-router';
-import { useBreadcrumbTrail, useUrlState } from '../../layout/page';
+import { ErrorState, useBreadcrumbTrail, useUrlState } from '../../layout/page';
 import { UploadTab } from './integrations/UploadTab';
 import { MappingTab } from './integrations/MappingTab';
 import { ProviderSetupTab } from './integrations/ProviderSetupTab';
@@ -82,7 +82,12 @@ export function IntegrationsTab() {
   // --- Queries ---
 
   // 1. Fetch Providers
-  const { data: providers = [], isLoading: isLoadingProviders } = useQuery({
+  const {
+    data: providers = [],
+    isLoading: isLoadingProviders,
+    error: providersError,
+    refetch: refetchProviders,
+  } = useQuery({
     queryKey: integrationsKeys.providers(),
     queryFn: () => productManagementApi.fetchIntegrationProviders(),
   });
@@ -90,7 +95,11 @@ export function IntegrationsTab() {
   // 1b. Sign-in state for every provider at once. This is the first thing an
   // adviser looks at ("which of these actually work?"), so it is one request
   // for the whole list rather than N requests assembled in the client.
-  const { data: portalConnections = [] } = useQuery<PortalProviderConnection[]>({
+  const {
+    data: portalConnections = [],
+    error: connectionsError,
+    refetch: refetchConnections,
+  } = useQuery<PortalProviderConnection[]>({
     queryKey: integrationsKeys.portalConnections(),
     queryFn: () => productManagementApi.fetchPortalConnections(),
   });
@@ -632,6 +641,24 @@ export function IntegrationsTab() {
       isSubmittingOtp={submitPortalOtpMutation.isPending}
     />
   );
+
+  // A failed load is an error, never "no providers" / "integration not found".
+  const loadError = (providersError || connectionsError) as Error | null;
+  if (loadError) {
+    return (
+      <div className="flex flex-col gap-4">
+        {openProviderId && <BackToIntegrations onClick={closeIntegration} />}
+        <ErrorState
+          title={openProviderId ? 'Unable to load this integration' : 'Unable to load integrations'}
+          onRetry={() => {
+            void refetchProviders();
+            void refetchConnections();
+          }}
+          details={loadError.message}
+        />
+      </div>
+    );
+  }
 
   // --- Integration page (?integration=<id>) ---
   if (openProviderId) {

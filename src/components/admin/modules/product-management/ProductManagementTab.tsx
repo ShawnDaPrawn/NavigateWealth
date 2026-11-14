@@ -14,13 +14,13 @@ import { useProductSchema } from './hooks/useProductSchema';
 import { SchemaEditor } from './components/SchemaEditor';
 import { SchemaLivePreview } from './components/SchemaLivePreview';
 
-import { useBreadcrumbTrail } from '../../layout/page';
+import { ErrorState, useBreadcrumbTrail } from '../../layout/page';
 
 export function ProductManagementTab() {
   const [selectedCategory, setSelectedCategory] = useState<ProductCategoryId | ''>('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const { currentFields, hasUnsavedChanges, saveSchema, updateFields } =
+  const { currentFields, hasUnsavedChanges, saveSchema, updateFields, error, refetch } =
     useProductSchema(selectedCategory);
 
   const handleSaveWrapper = async () => {
@@ -106,7 +106,15 @@ export function ProductManagementTab() {
         </div>
       </div>
 
-      {selectedCategory && (
+      {selectedCategory && error && (
+        <ErrorState
+          title={`Unable to load the ${selectedCategoryName ?? 'product'} structure`}
+          onRetry={() => void refetch()}
+          details={error.message}
+        />
+      )}
+
+      {selectedCategory && !error && (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
           {/* Schema Builder */}
           <SchemaEditor
