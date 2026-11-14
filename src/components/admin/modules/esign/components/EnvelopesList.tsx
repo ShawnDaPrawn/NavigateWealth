@@ -24,7 +24,6 @@ import {
   PenTool,
   Loader2,
   Send,
-  CheckCircle2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -47,7 +46,6 @@ import { DateRange } from 'react-day-picker';
 import { VoidEnvelopeDialog } from './VoidEnvelopeDialog';
 import { DiscardEnvelopeDialog } from './DiscardEnvelopeDialog';
 import { BulkRemindDialog, BulkVoidDialog } from './BulkActionDialogs';
-import { EnvelopeThumbnail } from './EnvelopeThumbnail';
 import { ErrorState } from '../../../layout/page';
 import { toast } from 'sonner';
 
@@ -60,6 +58,13 @@ interface EnvelopesListProps {
 }
 
 /** Statuses eligible for bulk actions */
+/** "1 of 2 signed", or "Not sent" for a draft (ES-Envelopes). */
+function signedLine(envelope: { status: string; signedCount?: number; totalSigners?: number }) {
+  if (envelope.status === 'draft') return 'Not sent';
+  const total = envelope.totalSigners ?? 0;
+  return total > 0 ? `${envelope.signedCount ?? 0} of ${total} signed` : '—';
+}
+
 const REMINDABLE_STATUSES = ['sent', 'viewed', 'partially_signed'];
 const VOIDABLE_STATUSES = ['sent', 'viewed', 'partially_signed'];
 
@@ -392,8 +397,10 @@ export function EnvelopesList({
               <TableHead>Envelope</TableHead>
               <TableHead className="hidden sm:table-cell">Status</TableHead>
               <TableHead className="hidden sm:table-cell">Recipients</TableHead>
-              <TableHead className="hidden sm:table-cell">Last Updated</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="hidden sm:table-cell">Last updated</TableHead>
+              <TableHead className="w-12">
+                <span className="sr-only">Actions</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -424,74 +431,26 @@ export function EnvelopesList({
                       aria-label={`Select envelope ${envelope.title}`}
                     />
                   </TableCell>
-                  <TableCell className="max-w-[calc(100vw-12rem)] whitespace-normal sm:max-w-[340px] sm:whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      {/* P8.1 — page-1 PDF thumbnail (60x80, lazy + cached). */}
-                      <div className="hidden shrink-0 sm:block">
-                        <EnvelopeThumbnail envelopeId={envelope.id} version={envelope.updated_at} />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-medium truncate" title={envelope.title}>
-                          {envelope.title}
-                        </span>
-                        <span className="hidden text-xs text-muted-foreground sm:inline">
-                          ID: {envelope.id.slice(0, 8)}...
-                        </span>
-                        {/* On a phone the status, signers and date columns are hidden,
-                            so their essentials sit under the title. */}
-                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
-                          <StatusBadge status={envelope.status} type="envelope" size="sm" />
-                          {envelope.signedCount != null && (envelope.totalSigners ?? 0) > 0 && (
-                            <span>
-                              {envelope.signedCount}/{envelope.totalSigners} signed
-                            </span>
-                          )}
-                          <span>
-                            {format(
-                              new Date(envelope.updated_at || envelope.created_at),
-                              'd MMM yyyy',
-                            )}
-                          </span>
-                        </div>
-                      </div>
+                  <TableCell className="max-w-[calc(100vw-12rem)] whitespace-normal sm:max-w-[380px]">
+                    <b className="block truncate font-medium" title={envelope.title}>
+                      {envelope.title}
+                    </b>
+                    <span className="ds-meta block truncate">
+                      {envelope.signers?.[0]?.name ?? 'No recipients yet'}
+                    </span>
+                    {/* On a phone the status, signers and date columns are hidden,
+                        so their essentials sit under the title. */}
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
+                      <StatusBadge status={envelope.status} type="envelope" />
+                      <span className="ds-meta">{signedLine(envelope)}</span>
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <StatusBadge status={envelope.status} type="envelope" showIcon size="sm" />
+                    <StatusBadge status={envelope.status} type="envelope" />
                   </TableCell>
+                  <TableCell className="hidden sm:table-cell">{signedLine(envelope)}</TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    <div className="flex flex-col gap-1">
-                      {envelope.signers?.slice(0, 2).map((r) => (
-                        <div key={r.id} className="text-sm flex items-center gap-1">
-                          <span
-                            className={r.status === 'signed' ? 'text-green-600 font-medium' : ''}
-                          >
-                            {r.name}
-                          </span>
-                          {r.status === 'signed' && (
-                            <CheckCircle2 className="h-3 w-3 text-green-500" />
-                          )}
-                        </div>
-                      ))}
-                      {(envelope.signers?.length || 0) > 2 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{envelope.signers!.length - 2} more
-                        </span>
-                      )}
-                      {envelope.signedCount != null && (envelope.totalSigners ?? 0) > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          {envelope.signedCount}/{envelope.totalSigners} signed
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    <div className="text-sm">
-                      {format(
-                        new Date(envelope.updated_at || envelope.created_at),
-                        'MMM d, yyyy HH:mm',
-                      )}
-                    </div>
+                    {format(new Date(envelope.updated_at || envelope.created_at), 'd MMM yyyy')}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

@@ -1081,7 +1081,7 @@ export function EsignModule() {
           />
         </EsignWizardShell>
       ) : (
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto">
           {view === 'dashboard' && (
             <>
               {detailsDialogOpen && selectedEnvelope && (

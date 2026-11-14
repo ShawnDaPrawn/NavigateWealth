@@ -373,7 +373,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px 24px;
   }
-  .ds-dl > div > span {
+  .ds-dl > div > span:first-child {
     display: block;
     font-size: 12px;
     font-weight: 600;
@@ -820,6 +820,54 @@
     .ds-step.on .label {
       display: inline;
     }
+  }
+
+
+  /* ---------- notice (.notice) ---------- */
+  .ds-notice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid var(--nw-line);
+    font-size: 13.5px;
+  }
+  .ds-notice .grow {
+    flex: 1;
+  }
+  .ds-notice.attn {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: var(--nw-amber-700);
+  }
+  .ds-notice.dark {
+    background: var(--nw-ink);
+    border-color: var(--nw-ink);
+    color: #fff;
+  }
+
+
+  /* ---------- timeline (.tl) ---------- */
+  .ds-tl {
+    display: flex;
+    flex-direction: column;
+  }
+  .ds-tl-i {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+  }
+  .ds-tl-i .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    background: var(--nw-violet);
+    margin-top: 5px;
+    flex: 0 0 auto;
+    box-shadow: 0 0 0 4px var(--nw-violet-50);
   }
 
   /* ---------- phone ---------- */
