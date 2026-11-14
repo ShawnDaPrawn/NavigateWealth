@@ -196,3 +196,42 @@ describe('NoteCard', () => {
     expect(text).toBeDefined();
   });
 });
+
+describe('NoteCard keyboard', () => {
+  it('Enter on the ⋯ button does not open the note', () => {
+    const onOpen = vi.fn();
+    render(
+      <NoteCard
+        note={mockNote}
+        onOpen={onOpen}
+        onPin={noop}
+        onArchive={noop}
+        onDelete={noop}
+        onConvertToTask={noop}
+        viewMode="grid"
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions for Test Note' }), {
+      key: 'Enter',
+    });
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('Enter on the card itself still opens the note', () => {
+    const onOpen = vi.fn();
+    render(
+      <NoteCard
+        note={mockNote}
+        onOpen={onOpen}
+        onPin={noop}
+        onArchive={noop}
+        onDelete={noop}
+        onConvertToTask={noop}
+        viewMode="grid"
+      />,
+    );
+    const card = screen.getByText('Test Note').closest('[role="button"]') as HTMLElement;
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+});
