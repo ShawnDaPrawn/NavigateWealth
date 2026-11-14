@@ -7,7 +7,10 @@ const logout = vi.fn();
 
 vi.mock('react-router', () => ({ useNavigate: () => navigate }));
 vi.mock('../../../auth/AuthContext', () => ({
-  useAuth: () => ({ user: { name: 'Erica', role: 'super_admin' }, logout }),
+  useAuth: () => ({
+    user: { name: 'Erica', role: 'super_admin', email: 'erica@example.com' },
+    logout,
+  }),
 }));
 vi.mock('../../modules/personnel/shell', () => ({
   useCurrentUserPermissions: () => ({ can: () => true }),
@@ -74,7 +77,7 @@ describe('admin Sidebar', () => {
   });
 
   it('shows waiting counts, and an amber dot when their group is closed', () => {
-    renderSidebar({ pendingCounts: { tasks: { count: 4 } } });
+    renderSidebar({ pendingCounts: { submissions: { count: 4 } } });
     const nav = within(desktopNav());
     expect(nav.getByText('4')).toBeDefined();
 
@@ -84,6 +87,15 @@ describe('admin Sidebar', () => {
     expect(work.getAttribute('aria-expanded')).toBe('false');
     expect(nav.queryByRole('button', { name: 'To-Do' })).toBeNull();
     expect(nav.getByRole('img', { name: 'Items waiting' })).toBeDefined();
+  });
+
+  it('shows the To-Do count grey: it is a backlog, not a new arrival', () => {
+    renderSidebar({ pendingCounts: { tasks: { count: 4 } } });
+    const nav = within(desktopNav());
+    const badge = nav.getByText('4');
+    expect(badge.className).not.toContain('amber');
+    fireEvent.click(nav.getByRole('button', { name: 'Work' }));
+    expect(nav.queryByRole('img', { name: 'Items waiting' })).toBeNull();
   });
 
   it('remembers closed groups across renders', () => {
@@ -124,5 +136,16 @@ describe('admin Sidebar', () => {
     expect(formatRole(undefined)).toBe('Administrator');
     renderSidebar();
     expect(within(desktopNav()).getByText('Super admin')).toBeDefined();
+  });
+
+  it('account menu shows who is signed in and opens account settings', async () => {
+    renderSidebar();
+    const trigger = within(desktopNav()).getByRole('button', { name: /Erica/ });
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+    const settings = await screen.findByRole('menuitem', { name: 'Account settings' });
+    expect(screen.getByText('Super admin · erica@example.com')).toBeDefined();
+    expect(screen.getByRole('menuitem', { name: 'Log out' })).toBeDefined();
+    fireEvent.click(settings);
+    expect(navigate).toHaveBeenCalledWith('/admin?module=personnel&profile=me');
   });
 });

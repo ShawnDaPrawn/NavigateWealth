@@ -35,12 +35,13 @@ import { toast } from 'sonner';
 import { brandApi, COLLATERAL_CATEGORIES } from './brand-api';
 import type { CollateralItem } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
-import { useConfirm } from '../../../layout/page';
+import { useConfirm, ErrorState } from '../../../layout/page';
 
 export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [items, setItems] = useState<CollateralItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', category: 'other', description: '' });
@@ -52,7 +53,9 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
     try {
       const data = await brandApi.getCollateral();
       setItems(data);
+      setLoadError(null);
     } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
       console.error('Failed to load collateral:', err);
     } finally {
       setLoading(false);
@@ -122,6 +125,15 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
   const isImage = (mime: string) => mime.startsWith('image/');
 
   if (loading) return <SectionSkeleton rows={4} />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load collateral"
+        onRetry={() => void loadItems()}
+        details={loadError}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

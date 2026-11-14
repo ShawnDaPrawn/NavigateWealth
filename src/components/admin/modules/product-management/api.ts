@@ -1,4 +1,4 @@
-import { api } from '../../../../utils/api/client';
+import { api, APIError } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
 import type {
   PortfolioAgent,
@@ -270,9 +270,14 @@ export const productManagementApi = {
       }
       return null;
     } catch (error) {
-      // Return null to indicate not found/error, allowing fallback to default
-      logger.warn('Error fetching schema, falling back to default', { error, categoryId });
-      return null;
+      // A 404 means no schema has been saved yet, so the default applies. Any
+      // other failure is a failed load: rethrow so the screen says so instead
+      // of offering the default as if it were the saved structure.
+      if (error instanceof APIError && error.statusCode === 404) {
+        logger.warn('No saved schema, falling back to default', { categoryId });
+        return null;
+      }
+      throw error;
     }
   },
 

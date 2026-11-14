@@ -21,7 +21,8 @@ import type { ApiKeyWarningProps } from '../types';
  * />
  */
 export function ApiKeyWarning({ status }: ApiKeyWarningProps) {
-  // Don't show if API key is configured
+  // Only for a key the server reports as missing or invalid (a successful
+  // status response). A failed status request is shown as an error instead.
   if (!status || status.configured) {
     return null;
   }
@@ -32,7 +33,7 @@ export function ApiKeyWarning({ status }: ApiKeyWarningProps) {
       <Alert className="border-amber-200 bg-amber-50">
         <AlertCircle className="h-4 w-4 text-amber-600" />
         <AlertDescription className="text-amber-900 text-sm">
-          <strong>Action Required:</strong> OpenAI API key needs to be updated.
+          <strong>Action required:</strong> OpenAI API key needs to be updated.
           {status.error && <span className="block mt-1 text-xs">Error: {status.error}</span>}
         </AlertDescription>
       </Alert>

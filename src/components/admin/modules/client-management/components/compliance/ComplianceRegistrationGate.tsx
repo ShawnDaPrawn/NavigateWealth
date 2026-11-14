@@ -1,6 +1,8 @@
 import { Card, CardContent } from '../../../../../ui/card';
 import { Button } from '../../../../../ui/button';
-import { Shield, AlertTriangle, Loader2, Link as LinkIcon } from 'lucide-react';
+import { Shield, Loader2, Link as LinkIcon } from 'lucide-react';
+import { useSearchParams } from 'react-router';
+import { Notice } from '../../../../layout/page';
 
 interface ComplianceRegistrationGateProps {
   clientFirstName: string;
@@ -19,29 +21,33 @@ export function ComplianceRegistrationGate({
   isRegistering,
   onRegister,
 }: ComplianceRegistrationGateProps) {
+  const [, setSearchParams] = useSearchParams();
+  const openPersonalDetails = () =>
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        params.set('ctab', 'personal');
+        params.delete('ksec');
+        return params;
+      },
+      { replace: true },
+    );
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Compliance Management</h3>
-          <p className="text-sm text-muted-foreground">
-            Integration with Beeswax/Honeycomb for KYC and Sanctions Screening
-          </p>
-        </div>
-      </div>
-
       {!hasIdentification && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-amber-800">ID Number Required</p>
-            <p className="text-sm text-amber-700 mt-1">
-              This client does not have a valid ID number or passport number on their profile.
-              Please update their profile with a South African ID number or passport number before
-              registering with Beeswax.
-            </p>
-          </div>
-        </div>
+        <Notice
+          kind="attention"
+          title="ID number required."
+          action={
+            <Button variant="outline" size="sm" className="bg-white" onClick={openPersonalDetails}>
+              Open personal details
+            </Button>
+          }
+        >
+          No valid ID number or passport is on file. Add one to the client&apos;s profile before
+          registering them for compliance checks.
+        </Notice>
       )}
 
       <Card className="border-dashed border-2">
@@ -50,10 +56,10 @@ export function ComplianceRegistrationGate({
             <Shield className="h-12 w-12 text-purple-600" />
           </div>
           <div>
-            <h4 className="text-xl font-semibold mb-2">Registration Required</h4>
+            <h4 className="text-xl font-semibold mb-2">Registration required</h4>
             <p className="text-gray-500 max-w-md mx-auto">
-              To perform compliance checks, this client must first be registered with the
-              Beeswax/Honeycomb external compliance service.
+              Register this client with Honeycomb (Beeswax) to run KYC and sanctions checks. Their
+              SA ID or passport number is needed.
             </p>
           </div>
           <div className="flex gap-4 pt-4">
@@ -65,12 +71,12 @@ export function ComplianceRegistrationGate({
               {isRegistering ? (
                 <div className="contents">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Registering...
+                  Registering…
                 </div>
               ) : (
                 <div className="contents">
                   <LinkIcon className="mr-2 h-4 w-4" />
-                  Register Client on Beeswax
+                  Register client
                 </div>
               )}
             </Button>

@@ -58,17 +58,17 @@ export const SUBMISSION_TYPE_CONFIG: Record<
   { label: string; shortLabel: string; iconName: string }
 > = {
   quote: {
-    label: 'Quote Request',
+    label: 'Quote request',
     shortLabel: 'Quote',
     iconName: 'MessageSquare',
   },
   will_draft: {
-    label: 'Will Draft',
+    label: 'Will draft',
     shortLabel: 'Will',
     iconName: 'FileText',
   },
   tax_planning: {
-    label: 'Tax Planning',
+    label: 'Tax planning',
     shortLabel: 'Tax',
     iconName: 'Calculator',
   },
@@ -78,17 +78,17 @@ export const SUBMISSION_TYPE_CONFIG: Record<
     iconName: 'Calendar',
   },
   contact: {
-    label: 'Contact Enquiry',
+    label: 'Contact enquiry',
     shortLabel: 'Contact',
     iconName: 'Mail',
   },
   client_signup: {
-    label: 'New Client Signup',
+    label: 'New client signup',
     shortLabel: 'Signup',
     iconName: 'UserPlus',
   },
   change_request: {
-    label: 'Change Request',
+    label: 'Change request',
     shortLabel: 'Change',
     iconName: 'ClipboardList',
   },
@@ -176,7 +176,7 @@ export interface SubmissionInviteType {
 export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
   {
     id: 'get-quote',
-    label: 'Get a Quote',
+    label: 'Get a quote',
     shortLabel: 'Quote',
     description: 'Request a personalised quote across any of our financial services',
     iconName: 'MessageSquare',
@@ -191,7 +191,7 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
   },
   {
     id: 'schedule-consultation',
-    label: 'Schedule a Meeting',
+    label: 'Schedule a meeting',
     shortLabel: 'Meeting',
     description: 'Book a consultation with one of our financial advisers',
     iconName: 'Calendar',
@@ -206,7 +206,7 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
   },
   {
     id: 'estate-planning-quote',
-    label: 'Estate Planning Quote',
+    label: 'Estate planning quote',
     shortLabel: 'Estate Quote',
     description: 'Request an estate planning consultation — trusts, succession, estate duty',
     iconName: 'Landmark',
@@ -221,7 +221,7 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
   },
   {
     id: 'ai-will-drafting',
-    label: 'AI Will Drafting',
+    label: 'AI will drafting',
     shortLabel: 'Will Drafting',
     description: 'Draft your will with our AI-powered will drafting agent — guided, step by step',
     iconName: 'FileText',
@@ -236,7 +236,7 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
   },
   {
     id: 'contact-us',
-    label: 'Contact Us',
+    label: 'Contact us',
     shortLabel: 'Contact',
     description: 'Send a general enquiry or request a callback',
     iconName: 'Mail',
@@ -254,7 +254,7 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
   // dedicated quote wizard; see ServicesPage.tsx comment near line 389).
   {
     id: 'tax-planning',
-    label: 'Tax Planning',
+    label: 'Tax planning',
     shortLabel: 'Tax',
     description: 'Expert tax-efficient strategies and optimisation',
     iconName: 'Calculator',
@@ -269,7 +269,7 @@ export const SUBMISSION_INVITE_TYPES: SubmissionInviteType[] = [
   },
   {
     id: 'retirement-planning',
-    label: 'Retirement Planning',
+    label: 'Retirement planning',
     shortLabel: 'Retirement',
     description: 'Plan for a comfortable and secure retirement',
     iconName: 'TrendingUp',

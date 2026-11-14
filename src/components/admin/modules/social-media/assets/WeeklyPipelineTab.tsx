@@ -28,9 +28,7 @@ import {
   useSocialAutomationSettings,
   useSocialBatch,
   useSocialBatches,
-  useSocialPlaybooks,
   useUpdateSocialAsset,
-  useUpdateSocialPlaybook,
   useUpdateSocialSettings,
 } from '../hooks/useSocialAssets';
 import type { SocialChannel, SocialJobName } from './assetsTypes';
@@ -46,7 +44,7 @@ import {
 } from './assetsModel';
 import { AssetCard } from './AssetCard';
 import { AutomationStrip } from './AutomationStrip';
-import { AutomationSettingsDialog } from './AutomationSettingsDialog';
+import { ErrorState } from '../../../layout/page';
 
 const CHANNEL_ICON: Record<SocialChannel, typeof Linkedin> = {
   linkedin: Linkedin,
@@ -54,16 +52,18 @@ const CHANNEL_ICON: Record<SocialChannel, typeof Linkedin> = {
   x: Twitter,
 };
 
-export function WeeklyPipelineTab() {
+interface WeeklyPipelineTabProps {
+  /** Opens "Automation settings & playbooks" as a page of its own. */
+  onOpenSettings?: () => void;
+}
+
+export function WeeklyPipelineTab({ onOpenSettings }: WeeklyPipelineTabProps = {}) {
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
 
   const batchesQuery = useSocialBatches(16);
   const settingsQuery = useSocialAutomationSettings();
-  const playbooksQuery = useSocialPlaybooks(settingsOpen);
   const updateSettings = useUpdateSocialSettings();
-  const updatePlaybook = useUpdateSocialPlaybook();
   const updateAsset = useUpdateSocialAsset();
   const runJob = useRunSocialJob();
 
@@ -96,7 +96,7 @@ export function WeeklyPipelineTab() {
         toggling={updateSettings.isPending}
         runningJob={runningJob}
         onToggleEnabled={(enabled) => updateSettings.mutate({ enabled })}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => onOpenSettings?.()}
         onRunJob={(job) => runJob.mutate(job)}
       />
 
@@ -107,12 +107,11 @@ export function WeeklyPipelineTab() {
           ))}
         </div>
       ) : batchesQuery.error ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Could not load the automation batches:{' '}
-            {batchesQuery.error instanceof Error ? batchesQuery.error.message : 'unknown error'}
-          </CardContent>
-        </Card>
+        <ErrorState
+          title="Unable to load the weekly pipeline"
+          onRetry={() => void batchesQuery.refetch()}
+          details={batchesQuery.error instanceof Error ? batchesQuery.error.message : undefined}
+        />
       ) : batches.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center space-y-2">
@@ -200,6 +199,12 @@ export function WeeklyPipelineTab() {
                 <Skeleton key={c} className="h-64 w-full rounded-lg" />
               ))}
             </div>
+          ) : batchQuery.error ? (
+            <ErrorState
+              title="Unable to load this week’s assets"
+              onRetry={() => void batchQuery.refetch()}
+              details={batchQuery.error instanceof Error ? batchQuery.error.message : undefined}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
               {CHANNEL_ORDER.map((channel) => {
@@ -248,16 +253,6 @@ export function WeeklyPipelineTab() {
           )}
         </>
       )}
-
-      <AutomationSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        playbooks={playbooksQuery.data ?? []}
-        saving={updateSettings.isPending || updatePlaybook.isPending}
-        onSaveSettings={(patch) => updateSettings.mutateAsync(patch)}
-        onSavePlaybook={(id, patch) => updatePlaybook.mutateAsync({ id, patch })}
-      />
     </div>
   );
 }

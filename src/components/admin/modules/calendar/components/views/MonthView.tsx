@@ -91,7 +91,7 @@ export function MonthView({
               }`}
               onClick={() => {
                 onDateChange(day);
-                onViewChange('agenda');
+                onViewChange('day');
               }}
             >
               <div className="flex items-center justify-between mb-2">

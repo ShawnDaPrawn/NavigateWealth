@@ -6,12 +6,37 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../ui/card';
 import { Badge } from '../../../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../ui/tabs';
-import { Info, Key, Database, Workflow, Calculator, UserCircle, Target } from 'lucide-react';
+import { Tabs, TabsContent } from '../../../ui/tabs';
+import {
+  SegmentedList,
+  SegmentedTrigger,
+  useBreadcrumbTrail,
+  useUrlState,
+} from '../../layout/page';
+import { Info, Workflow, Target } from 'lucide-react';
 import type { ProductKeyCategory } from '@/shared/types/product-keys';
 import { KeyAPI, KeyList, CategoryFilter, SearchFilters, CATEGORY_ICONS } from './key-manager';
 
+const KEY_VIEWS = [
+  'client-keys',
+  'product-keys',
+  'calculated-keys',
+  'fna-recommendations',
+  'key-usage',
+] as const;
+type KeyView = (typeof KEY_VIEWS)[number];
+const KEY_VIEW_LABELS: Record<KeyView, string> = {
+  'client-keys': 'Client keys',
+  'product-keys': 'Product keys',
+  'calculated-keys': 'Calculated keys',
+  'fna-recommendations': 'FNA recommendations',
+  'key-usage': 'Key usage',
+};
+
 export function UniversalKeyManager() {
+  // The key type is part of where you are, so it lives in the address (?keys=key-usage).
+  const [keyView, setKeyView] = useUrlState<KeyView>('keys', 'client-keys', KEY_VIEWS);
+  useBreadcrumbTrail([{ label: 'Key manager' }, { label: KEY_VIEW_LABELS[keyView] }]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductKeyCategory | 'all'>('all');
   const [selectedDataType, setSelectedDataType] = useState<string>('all');
@@ -110,96 +135,31 @@ export function UniversalKeyManager() {
         </Card>
       )}
 
-      {/* Header */}
-      <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Database className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="flex-1">
-              <CardTitle className="text-2xl">Universal Key Manager</CardTitle>
-              <CardDescription className="mt-2 text-base">
-                Centralized reference for all keys in the Navigate Wealth platform. Keys are the
-                standardized data points used throughout FNAs, dashboards, reports, and
-                calculations.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Info Alert */}
-      <Card className="border-blue-200 bg-blue-50/50">
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="space-y-2 text-sm text-blue-900">
-              <p className="font-medium">Understanding Client Keys:</p>
-              <ul className="list-disc list-inside space-y-1 text-blue-800">
-                <li>
-                  <strong>Product Keys</strong> - Individual data points mapped from product fields
-                  (e.g., &quot;Life Cover&quot; for a specific policy)
-                </li>
-                <li>
-                  <strong>Calculated Keys</strong> - Automatically computed totals by summing
-                  related product keys (e.g., &quot;Life Cover Total&quot; across all policies)
-                </li>
-                <li>
-                  <strong>Client Key Values</strong> - Stored per client in KV store (e.g.,{' '}
-                  <code className="bg-blue-100 px-1 rounded">user_profile:shawn:client_keys</code>)
-                </li>
-                <li>
-                  <strong>Usage</strong> - Keys power FNAs, dashboards, AI advice engine, reports,
-                  and compliance tracking
-                </li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Search and Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Search & Filter Keys</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SearchFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-            selectedDataType={selectedDataType}
-            onDataTypeChange={setSelectedDataType}
-          />
-        </CardContent>
-      </Card>
+      <p className="text-sm text-nw-text-3">
+        The shared dictionary of data keys used by forms, FNAs, documents and product fields.
+        Product keys come from product fields; calculated keys total them across a client&apos;s
+        policies.
+      </p>
 
       {/* Main Tabs */}
-      <Tabs defaultValue="client-keys" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 h-12">
-          <TabsTrigger value="client-keys" className="flex items-center gap-2 text-base">
-            <UserCircle className="h-4 w-4" />
-            Client Keys
-          </TabsTrigger>
-          <TabsTrigger value="product-keys" className="flex items-center gap-2 text-base">
-            <Key className="h-4 w-4" />
-            Product Keys
-          </TabsTrigger>
-          <TabsTrigger value="calculated-keys" className="flex items-center gap-2 text-base">
-            <Calculator className="h-4 w-4" />
-            Calculated Keys
-          </TabsTrigger>
-          <TabsTrigger value="fna-recommendations" className="flex items-center gap-2 text-base">
-            <Target className="h-4 w-4" />
-            FNA Recommendations
-          </TabsTrigger>
-          <TabsTrigger value="key-usage" className="flex items-center gap-2 text-base">
-            <Workflow className="h-4 w-4" />
-            Key Usage
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={keyView} onValueChange={(v) => setKeyView(v as KeyView)} className="space-y-5">
+        <SegmentedList aria-label="Key types">
+          <SegmentedTrigger value="client-keys">Client keys</SegmentedTrigger>
+          <SegmentedTrigger value="product-keys">Product keys</SegmentedTrigger>
+          <SegmentedTrigger value="calculated-keys">Calculated keys</SegmentedTrigger>
+          <SegmentedTrigger value="fna-recommendations">FNA recommendations</SegmentedTrigger>
+          <SegmentedTrigger value="key-usage">Key usage</SegmentedTrigger>
+        </SegmentedList>
+
+        {/* Search and Filters */}
+        <SearchFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          selectedDataType={selectedDataType}
+          onDataTypeChange={setSelectedDataType}
+        />
 
         {/* Client Keys Tab */}
         <TabsContent value="client-keys">

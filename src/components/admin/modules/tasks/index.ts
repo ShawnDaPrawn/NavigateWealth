@@ -9,6 +9,7 @@
 
 // Main Component
 export { TaskManagementModule } from './TaskManagementModule';
+export { taskAddress } from './taskLink';
 
 // Types
 export type {

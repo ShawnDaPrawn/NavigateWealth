@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
+
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
-import { Progress } from '../../../../ui/progress';
+
 import { RoAStepStart } from './roa-steps/RoAStepStart';
 import { RoAStepClient } from './roa-steps/RoAStepClient';
 import { RoAStepModules } from './roa-steps/RoAStepModules';
 import { RoAStepModuleConversation } from './roa-steps/RoAStepModuleConversation';
 import { RoAStepReview } from './roa-steps/RoAStepReview';
-import { ChevronLeft, ChevronRight, FileText, Save } from 'lucide-react';
+import { Check, Save } from 'lucide-react';
 import { RoADraft, RoAModule, RoAField, RoAEvidenceItem } from '../types';
 import type { RoAModuleConversationStatus } from '../types';
 import { roaApi } from '../api';
@@ -20,7 +20,7 @@ import {
   getModuleRuntimeStatus,
   moduleContractToRuntimeModule,
 } from '../roaModuleRuntime';
-import { useConfirm } from '../../../layout/page';
+import { ErrorState, useBreadcrumbTrail, useConfirm } from '../../../layout/page';
 
 export type { RoADraft, RoAModule, RoAField, RoAEvidenceItem };
 
@@ -38,15 +38,26 @@ const STEPS = [
   { id: 'modules', title: 'Modules', description: 'Choose advice modules' },
   {
     id: 'details',
-    title: 'Conversation',
+    title: 'Module details',
     description: 'Complete each module with the AI assistant',
   },
-  { id: 'review', title: 'Review', description: 'Compile and export' },
+  { id: 'review', title: 'Review & compile', description: 'Compile and export' },
 ];
 
 export function DraftRoAInterface() {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [currentStep, setCurrentStep] = useState(0);
+  // The top-bar trail follows the wizard: "Draft RoA / Client", "/ Modules"…
+  // (Advice Engine sets "Draft RoA" when the tab opens; this component is only
+  // mounted on that tab, so it owns the trail from here.)
+  useBreadcrumbTrail(
+    currentStep === 0
+      ? [{ label: 'Draft RoA' }]
+      : [
+          { label: 'Draft RoA', onClick: () => setCurrentStep(0) },
+          { label: STEPS[currentStep].title },
+        ],
+  );
   const [roaDraft, setRoaDraft] = useState<RoADraft | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [discardingDraftId, setDiscardingDraftId] = useState<string | null>(null);
@@ -54,12 +65,21 @@ export function DraftRoAInterface() {
   // two concurrent creates (each POST would spawn a separate empty draft).
   const creatingDraftRef = useRef(false);
   const queryClient = useQueryClient();
-  const { data: activeContracts = [] } = useQuery({
+  const {
+    data: activeContracts = [],
+    error: contractsError,
+    refetch: refetchContracts,
+  } = useQuery({
     queryKey: adviceEngineKeys.roa.moduleContracts({ status: 'active' }),
     queryFn: () => roaApi.getModuleContracts({ status: 'active' }),
     staleTime: 5 * 60 * 1000,
   });
-  const { data: allDrafts = [], isLoading: isLoadingDrafts } = useQuery({
+  const {
+    data: allDrafts = [],
+    isLoading: isLoadingDrafts,
+    error: draftsError,
+    refetch: refetchDrafts,
+  } = useQuery({
     queryKey: adviceEngineKeys.roa.drafts(),
     queryFn: () => roaApi.listDrafts(),
     staleTime: 30 * 1000,
@@ -104,9 +124,6 @@ export function DraftRoAInterface() {
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, roaDraft?.id]);
-
-  const currentStepData = STEPS[currentStep];
-  const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   const handleNext = async () => {
     if (currentStep < STEPS.length - 1) {
@@ -280,12 +297,24 @@ export function DraftRoAInterface() {
             existingDrafts={existingDrafts}
             finalisedDrafts={finalisedDrafts}
             isLoadingDrafts={isLoadingDrafts}
+            draftsError={draftsError as Error | null}
+            onRetryDrafts={() => void refetchDrafts()}
             isCreating={isAutoSaving}
           />
         );
       case 1:
         return <RoAStepClient draft={roaDraft} onUpdate={updateDraft} />;
       case 2:
+        // A failed contracts load is an error, not the built-in fallback list.
+        if (contractsError) {
+          return (
+            <ErrorState
+              title="Unable to load advice modules"
+              onRetry={() => void refetchContracts()}
+              details={(contractsError as Error).message}
+            />
+          );
+        }
         return (
           <RoAStepModules draft={roaDraft} onUpdate={updateDraft} modules={availableModules} />
         );
@@ -317,106 +346,83 @@ export function DraftRoAInterface() {
     }
   };
 
+  const WIZARD_STEPS = STEPS.slice(1);
+  const continueLabel =
+    currentStep === 1
+      ? 'Continue to modules'
+      : currentStep === 3
+        ? 'Continue to review'
+        : 'Continue';
+
+  if (currentStep === 0) {
+    return (
+      <div className="space-y-6">
+        {renderStepContent()}
+        {confirmDialog}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Progress Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Record of Advice Draft
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Step {currentStep + 1} of {STEPS.length}: {currentStepData.title}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {isAutoSaving && (
-                <Badge variant="outline" className="text-blue-600 border-blue-200">
-                  <Save className="h-3 w-3 mr-1" />
-                  Saving...
-                </Badge>
-              )}
-              {roaDraft && <Badge variant="secondary">Draft v{roaDraft.version}</Badge>}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Progress Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>{currentStepData.description}</span>
-                <span>{Math.round(progress)}% complete</span>
-              </div>
-              <Progress value={progress} className="w-full" />
-            </div>
-
-            {/* Step Indicators */}
-            <div className="flex items-center justify-between">
-              {STEPS.map((step, index) => (
-                <div key={step.id} className="flex items-center">
-                  <div
-                    className={`
-                    w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                    ${
-                      index <= currentStep
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
-                    }
-                  `}
-                  >
-                    {index + 1}
-                  </div>
-                  <div className="ml-2 hidden sm:block">
-                    <p
-                      className={`text-sm font-medium ${
-                        index <= currentStep ? 'text-foreground' : 'text-muted-foreground'
-                      }`}
-                    >
-                      {step.title}
-                    </p>
-                  </div>
-                  {index < STEPS.length - 1 && (
-                    <div
-                      className={`h-px w-8 mx-4 ${index < currentStep ? 'bg-primary' : 'bg-muted'}`}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Step progress */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ol aria-label="Record of Advice steps" className="flex flex-wrap items-center gap-2">
+          {WIZARD_STEPS.map((step, offset) => {
+            const index = offset + 1;
+            const done = index < currentStep;
+            const current = index === currentStep;
+            return (
+              <li key={step.id} className="flex items-center gap-2">
+                <span
+                  aria-current={current ? 'step' : undefined}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+                    done
+                      ? 'bg-nw-violet text-white'
+                      : current
+                        ? 'border-2 border-nw-violet text-nw-violet'
+                        : 'bg-gray-100 text-nw-text-3'
+                  }`}
+                >
+                  {done ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : index}
+                </span>
+                <span
+                  className={`text-sm ${current ? 'font-semibold text-nw-ink' : 'text-nw-text-2'}`}
+                >
+                  {step.title}
+                </span>
+                {offset < WIZARD_STEPS.length - 1 && (
+                  <span aria-hidden="true" className="mx-1 h-px w-6 bg-nw-line" />
+                )}
+              </li>
+            );
+          })}
+        </ol>
+        <div className="flex items-center gap-2">
+          {isAutoSaving && (
+            <Badge variant="outline" className="border-blue-200 text-blue-600">
+              <Save className="mr-1 h-3 w-3" aria-hidden="true" />
+              Saving...
+            </Badge>
+          )}
+          {roaDraft && <Badge variant="secondary">Draft v{roaDraft.version}</Badge>}
+        </div>
+      </div>
 
       {/* Step Content */}
-      <Card>
-        <CardContent className="p-6">{renderStepContent()}</CardContent>
-      </Card>
+      <div className="rounded-xl border border-nw-line bg-white p-6">{renderStepContent()}</div>
 
       {/* Navigation */}
-      {currentStep > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <Button variant="outline" onClick={handlePrevious} disabled={currentStep === 0}>
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                Previous
-              </Button>
-
-              <Button
-                onClick={handleNext}
-                disabled={currentStep === STEPS.length - 1 || !canProceed()}
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="flex items-center justify-between">
+        <Button variant="outline" onClick={handlePrevious}>
+          Back
+        </Button>
+        {currentStep < STEPS.length - 1 && (
+          <Button onClick={handleNext} disabled={!canProceed()}>
+            {continueLabel}
+          </Button>
+        )}
+      </div>
       {confirmDialog}
     </div>
   );

@@ -13,7 +13,7 @@ export function AddressSection({ isEditing, fv, updateField, data }: SectionProp
   ].filter(Boolean);
 
   return (
-    <ReviewSection icon={MapPin} title="Residential Address">
+    <ReviewSection icon={MapPin} title="Residential address">
       {isEditing ? (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">

@@ -34,6 +34,8 @@ import { Badge } from '../../../../ui/badge';
 import { Card, CardContent } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { cn } from '../../../../ui/utils';
+import { Skeleton } from '../../../../ui/skeleton';
+import { ErrorState } from '../../../layout/page';
 import { PublicationsAPI } from '../api';
 import type { ContentSource, CreateContentSourceInput, PipelineId, DiscoveredFeed } from '../types';
 import { toast } from 'sonner';
@@ -77,13 +79,15 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
   const [discoveryDone, setDiscoveryDone] = useState(false);
 
   // Load sources
+  const [loadError, setLoadError] = useState<string | null>(null);
   const loadSources = useCallback(async () => {
+    setLoadError(null);
     try {
       const data = await PublicationsAPI.AutoContent.getContentSources();
       setSources(data);
     } catch (err) {
       console.error('Failed to load content sources:', err);
-      toast.error('Failed to load content sources');
+      setLoadError(err instanceof Error ? err.message : 'Failed to load content sources');
     } finally {
       setLoading(false);
     }
@@ -334,10 +338,24 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-8 justify-center text-sm text-gray-500">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Loading content sources...
+      <div aria-busy="true" aria-label="Loading content sources" className="space-y-2">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-14 w-full rounded-lg" />
+        ))}
       </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load content sources"
+        onRetry={() => {
+          setLoading(true);
+          void loadSources();
+        }}
+        details={loadError}
+      />
     );
   }
 
@@ -413,8 +431,16 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
 
           if (filteredSources.length === 0 && query) {
             return (
-              <div className="text-center py-6 text-sm text-gray-400">
-                No sources match &ldquo;{searchQuery}&rdquo;
+              <div className="py-6 text-center text-sm text-nw-text-3">
+                <p className="font-medium text-nw-ink">No sources match your filters</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setSearchQuery('')}
+                >
+                  Clear filters
+                </Button>
               </div>
             );
           }

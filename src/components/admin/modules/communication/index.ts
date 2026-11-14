@@ -17,6 +17,9 @@ export type {
   Client,
   ClientGroup,
   CommunicationLog,
+  ExternalContact,
+  GroupFilterConfig,
+  GroupPreview,
   SendMessageResponse,
 } from './types';
 
@@ -26,6 +29,15 @@ export type {
  * it here means that consumer makes an ordinary import of this barrel while
  * the chunk still loads on demand. Render it inside a <Suspense>.
  */
+// The group-building blocks Client Management's group editor uses
+// (client groups are managed there). Lazy for the same reason as below.
+export const FilterBuilder = lazy(() =>
+  import('./components/groups/FilterBuilder').then((m) => ({ default: m.FilterBuilder })),
+);
+export const ManualSelection = lazy(() =>
+  import('./components/groups/ManualSelection').then((m) => ({ default: m.ManualSelection })),
+);
+
 export const CustomGroupManager = lazy(() =>
   import('./components/CustomGroupManager').then((m) => ({ default: m.CustomGroupManager })),
 );

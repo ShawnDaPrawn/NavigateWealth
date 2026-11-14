@@ -20,7 +20,7 @@ import { formatCurrency } from '../utils';
 import { COMPLIANCE_DISCLAIMERS } from '../constants';
 import type { RiskCalculations, Adjustments, FinalRiskNeed } from '../types';
 import { RiskPlanningFNAPdfExport } from './RiskPlanningFNAPdfExport';
-import { exportComponentToPdf } from '../utils/pdfExport';
+import { exportComponentToPdf } from '../../../../shared/pdf/exportComponentToPdf';
 import { toast } from 'sonner';
 import { FNAStepNavigation } from '../../fna';
 

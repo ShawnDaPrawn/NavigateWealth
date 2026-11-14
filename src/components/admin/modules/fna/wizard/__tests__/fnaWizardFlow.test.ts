@@ -11,10 +11,10 @@ import {
 describe('FNA wizard flow', () => {
   it('is the same four steps, in order, for every wizard', () => {
     expect(FNA_WIZARD_FLOW.map((s) => s.title)).toEqual([
-      'Information Gathering',
-      'System Auto-Calculation',
-      'Adviser Manual Adjustment',
-      'Finalise & Publish',
+      'Information gathering',
+      'System auto-calculation',
+      'Adviser manual adjustment',
+      'Finalise & publish',
     ]);
     expect(FNA_WIZARD_FLOW.map((s) => s.step)).toEqual([1, 2, 3, 4]);
   });
@@ -27,12 +27,12 @@ describe('FNA wizard flow', () => {
   });
 
   it('labels navigation identically everywhere', () => {
-    expect(FNA_WIZARD_NEXT_LABELS[1]).toBe('Run Calculation');
+    expect(FNA_WIZARD_NEXT_LABELS[1]).toBe('Next: System auto-calculation');
     expect(FNA_WIZARD_NEXT_LABELS[4]).toBe('Publish FNA');
     expect(backLabelFor(1)).toBeNull();
-    expect(backLabelFor(2)).toBe('Back to Information');
-    expect(backLabelFor(3)).toBe('Back to Calculation');
-    expect(backLabelFor(4)).toBe('Back to Adjustments');
+    expect(backLabelFor(2)).toBe('Back');
+    expect(backLabelFor(3)).toBe('Back');
+    expect(backLabelFor(4)).toBe('Back');
   });
 
   it('has a title for every FNA registry type', () => {

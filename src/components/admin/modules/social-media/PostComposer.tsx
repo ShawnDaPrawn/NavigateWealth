@@ -357,45 +357,43 @@ export function PostComposer({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="pt-6">
-          {blocker && (
-            <p className="text-sm text-muted-foreground flex items-center gap-2 mb-4">
-              <AlertCircle className="h-4 w-4" />
-              {blocker}
-            </p>
-          )}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex gap-2">
-              <Button variant="outline" disabled={!canSubmit} onClick={() => submit('draft')}>
-                <Save className="h-4 w-4 mr-2" />
-                Save as Buffer draft
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowPreview(true)}
-                disabled={!text.trim()}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Preview
-              </Button>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" disabled={!canSubmit} onClick={() => submit('queue')}>
-                Add to queue
-              </Button>
-              <Button variant="outline" disabled={!canSubmit} onClick={() => setShowSchedule(true)}>
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                Schedule
-              </Button>
-              <Button disabled={!canSubmit} onClick={() => submit('now')}>
-                <Send className="h-4 w-4 mr-2" />
-                {busy ? 'Sending…' : 'Publish now'}
-              </Button>
-            </div>
+      {/* Actions stay in reach while the form scrolls (sticky footer). */}
+      <div
+        className="sticky bottom-0 z-10 -mx-1 space-y-2 rounded-t-xl border-t border-nw-line bg-white/95 px-4 py-3 backdrop-blur"
+        data-testid="composer-footer"
+      >
+        {blocker && (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <AlertCircle className="h-4 w-4" />
+            {blocker}
+          </p>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex gap-2">
+            <Button variant="outline" disabled={!canSubmit} onClick={() => submit('draft')}>
+              <Save className="h-4 w-4 mr-2" />
+              Save as Buffer draft
+            </Button>
+            <Button variant="outline" onClick={() => setShowPreview(true)} disabled={!text.trim()}>
+              <Eye className="h-4 w-4 mr-2" />
+              Preview
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex gap-2">
+            <Button variant="outline" disabled={!canSubmit} onClick={() => submit('queue')}>
+              Add to queue
+            </Button>
+            <Button variant="outline" disabled={!canSubmit} onClick={() => setShowSchedule(true)}>
+              <CalendarIcon className="h-4 w-4 mr-2" />
+              Schedule…
+            </Button>
+            <Button disabled={!canSubmit} onClick={() => submit('now')}>
+              <Send className="h-4 w-4 mr-2" />
+              {busy ? 'Sending…' : 'Publish now'}
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <ChannelAssetPickerDialog
         open={showPicker}

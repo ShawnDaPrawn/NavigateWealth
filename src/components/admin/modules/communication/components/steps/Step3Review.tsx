@@ -30,6 +30,15 @@ interface Step3Props {
   canSend?: boolean;
 }
 
+/** "Send now", "Schedule for 16 Nov, 08:00" or "Schedule repeating send". */
+function sendLabel(scheduling: CommunicationDraft['scheduling']): string {
+  if (scheduling.type === 'immediate') return 'Send now';
+  if (scheduling.isRecurring) return 'Schedule repeating send';
+  if (!scheduling.startDate) return 'Schedule';
+  const day = scheduling.startDate.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+  return `Schedule for ${day}${scheduling.time ? `, ${scheduling.time}` : ''}`;
+}
+
 export function Step3Review({
   draft,
   updateDraft,
@@ -313,7 +322,7 @@ export function Step3Review({
         <div className="space-y-6">
           <Card className="h-fit">
             <CardHeader>
-              <CardTitle>Sending Options</CardTitle>
+              <CardTitle>When to send</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <SchedulingOptions config={draft.scheduling} onChange={handleSchedulingChange} />
@@ -322,43 +331,35 @@ export function Step3Review({
 
               <div className="space-y-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Estimated Recipients</span>
+                  <span className="text-muted-foreground">Estimated recipients</span>
                   <span className="font-medium">
                     {draft.recipientType === 'group'
                       ? draft.selectedGroup?.clientCount
                       : draft.selectedRecipients.length}
                   </span>
                 </div>
-
-                <Button
-                  className="w-full h-12 text-lg font-semibold"
-                  size="lg"
-                  onClick={handleSend}
-                  disabled={
-                    isSending ||
-                    (draft.scheduling.type === 'scheduled' && !draft.scheduling.startDate) ||
-                    !canSend
-                  }
-                >
-                  {isSending ? (
-                    <div className="contents">
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Processing...
-                    </div>
-                  ) : (
-                    <span>
-                      {draft.scheduling.type === 'immediate' ? 'Send Now' : 'Schedule Campaign'}
-                    </span>
-                  )}
-                </Button>
-
-                <Button variant="ghost" className="w-full" onClick={onBack}>
-                  <ArrowLeft className="h-4 w-4 mr-2" /> Back to Edit
-                </Button>
               </div>
             </CardContent>
           </Card>
         </div>
+      </div>
+      {/* Back / Send stay pinned to the bottom of the page */}
+      <div className="sticky bottom-0 z-10 flex justify-between border-t border-nw-line bg-white/95 py-3 backdrop-blur">
+        <Button variant="outline" onClick={onBack} disabled={isSending} className="gap-2">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back
+        </Button>
+        <Button
+          onClick={handleSend}
+          disabled={
+            isSending ||
+            (draft.scheduling.type === 'scheduled' && !draft.scheduling.startDate) ||
+            !canSend
+          }
+          className="gap-2"
+        >
+          {isSending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+          {isSending ? 'Processing…' : sendLabel(draft.scheduling)}
+        </Button>
       </div>
     </div>
   );

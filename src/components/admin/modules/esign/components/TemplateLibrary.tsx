@@ -48,7 +48,6 @@ import {
   FileText,
   LayoutGrid,
   List,
-  Clock,
   TrendingUp,
   Loader2,
   FolderOpen,
@@ -258,7 +257,8 @@ export function TemplateLibrary({
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search templates..."
+              placeholder="Search templates…"
+              aria-label="Search templates"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-9"
@@ -273,7 +273,7 @@ export function TemplateLibrary({
             onClick={() => setCreateDialogOpen(true)}
           >
             <Plus className="h-3.5 w-3.5" />
-            Create Template
+            Create template
           </Button>
 
           {/* Category filter */}
@@ -281,14 +281,14 @@ export function TemplateLibrary({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-9 gap-1.5">
                 <FolderOpen className="h-3.5 w-3.5" />
-                {categoryFilter === 'all' ? 'All Categories' : categoryFilter}
+                {categoryFilter === 'all' ? 'Category' : categoryFilter}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel>Category</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setCategoryFilter('all')}>
-                All Categories
+                All categories
                 <Badge variant="secondary" className="ml-auto text-[10px]">
                   {templates.length}
                 </Badge>
@@ -313,6 +313,8 @@ export function TemplateLibrary({
               size="icon"
               className="h-9 w-9 rounded-r-none"
               onClick={() => setViewMode('grid')}
+              aria-label="Show as cards"
+              aria-pressed={viewMode === 'grid'}
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -321,12 +323,20 @@ export function TemplateLibrary({
               size="icon"
               className="h-9 w-9 rounded-l-none"
               onClick={() => setViewMode('list')}
+              aria-label="Show as a list"
+              aria-pressed={viewMode === 'list'}
             >
               <List className="h-4 w-4" />
             </Button>
           </div>
 
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={fetchTemplates}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={fetchTemplates}
+            aria-label="Refresh templates"
+          >
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
@@ -356,7 +366,7 @@ export function TemplateLibrary({
               onClick={() => setCreateDialogOpen(true)}
             >
               <Plus className="h-4 w-4 mr-1" />
-              Create Template
+              Create template
             </Button>
           )}
           {(searchQuery || categoryFilter !== 'all') && (
@@ -429,7 +439,7 @@ export function TemplateLibrary({
       >
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Create Template</DialogTitle>
+            <DialogTitle>Create template</DialogTitle>
             <DialogDescription>
               Start a reusable template from the Templates tab, then refine it for your e-sign
               workflow.
@@ -504,7 +514,7 @@ export function TemplateLibrary({
               ) : (
                 <Plus className="h-4 w-4 mr-1" />
               )}
-              Create Template
+              Create template
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -580,36 +590,61 @@ function TemplateCard({
   onDuplicate,
   onDelete,
 }: TemplateItemProps) {
+  const docs = template.documents?.length ?? 0;
+  const signers = template.recipients.length;
   return (
-    <Card className="group hover:shadow-md transition-shadow relative">
-      <CardContent className="p-5">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-sm text-gray-900 truncate" title={template.name}>
-              {template.name}
-            </h3>
-            {template.description && (
-              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                {template.description}
-              </p>
+    <Card className="transition-shadow hover:shadow-md" data-testid="template-card">
+      <CardContent className="flex h-full flex-col gap-2 p-5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {template.category && (
+            <Badge className="h-5 border-transparent bg-nw-violet-50 px-2 text-[11px] font-medium text-nw-violet-600">
+              {template.category}
+            </Badge>
+          )}
+          <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-normal text-nw-text-2">
+            {template.signingMode === 'sequential' ? (
+              <ListOrdered className="h-3 w-3 mr-0.5" aria-hidden="true" />
+            ) : (
+              <Shuffle className="h-3 w-3 mr-0.5" aria-hidden="true" />
             )}
-          </div>
-
+            {template.signingMode === 'sequential' ? 'Sequential' : 'Parallel'}
+          </Badge>
+        </div>
+        <h3 className="truncate text-sm font-semibold text-nw-ink" title={template.name}>
+          {template.name}
+        </h3>
+        {template.description && (
+          <p className="line-clamp-2 text-xs text-nw-text-3">{template.description}</p>
+        )}
+        <p className="text-xs text-nw-text-3">
+          {docs} document{docs === 1 ? '' : 's'} · {signers} signer{signers === 1 ? '' : 's'} · used{' '}
+          {template.usageCount || 0}× · {template.fields.length} field
+          {template.fields.length === 1 ? '' : 's'}
+          <span className="sr-only"> · created {formatDate(template.createdAt)}</span>
+        </p>
+        <div className="mt-auto flex items-center gap-1.5 pt-2">
+          <Button
+            size="sm"
+            className="h-8 bg-purple-600 text-white hover:bg-purple-700"
+            onClick={onUse}
+          >
+            Use
+          </Button>
+          <Button size="sm" variant="outline" className="h-8" onClick={onEdit}>
+            Edit
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity -mr-1 -mt-1"
+                className="h-8 w-8"
+                aria-label={`More actions for ${template.name}`}
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem onClick={onEdit}>
-                <Edit3 className="h-3.5 w-3.5 mr-2" /> Edit
-              </DropdownMenuItem>
+            <DropdownMenuContent align="start" className="w-44">
               {onConfigure && (
                 <DropdownMenuItem onClick={onConfigure}>
                   <FileText className="h-3.5 w-3.5 mr-2" /> Configure form
@@ -620,69 +655,10 @@ function TemplateCard({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onDelete} className="text-red-600 focus:text-red-600">
-                <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete…
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-
-        {/* Meta Badges */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {template.category && (
-            <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal">
-              {template.category}
-            </Badge>
-          )}
-          <Badge
-            variant="outline"
-            className={cn(
-              'text-[10px] h-5 px-1.5 font-normal',
-              template.signingMode === 'sequential'
-                ? 'border-purple-200 bg-purple-50 text-purple-700'
-                : 'border-blue-200 bg-blue-50 text-blue-700',
-            )}
-          >
-            {template.signingMode === 'sequential' ? (
-              <ListOrdered className="h-3 w-3 mr-0.5" />
-            ) : (
-              <Shuffle className="h-3 w-3 mr-0.5" />
-            )}
-            {template.signingMode === 'sequential' ? 'Sequential' : 'Parallel'}
-          </Badge>
-          {template.recipients.length > 0 && (
-            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal gap-0.5">
-              <Users className="h-3 w-3" />
-              {template.recipients.length}
-            </Badge>
-          )}
-          {template.fields.length > 0 && (
-            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal gap-0.5">
-              <FileText className="h-3 w-3" />
-              {template.fields.length} fields
-            </Badge>
-          )}
-        </div>
-
-        {/* Footer Stats */}
-        <div className="flex items-center justify-between pt-3 border-t">
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1" title="Times used">
-              <TrendingUp className="h-3 w-3" />
-              {template.usageCount || 0} uses
-            </span>
-            <span className="flex items-center gap-1" title="Created">
-              <Clock className="h-3 w-3" />
-              {formatDate(template.createdAt)}
-            </span>
-          </div>
-
-          <Button
-            size="sm"
-            className="h-7 text-xs bg-purple-600 hover:bg-purple-700 text-white"
-            onClick={onUse}
-          >
-            Use Template
-          </Button>
         </div>
       </CardContent>
     </Card>

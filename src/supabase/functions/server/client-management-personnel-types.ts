@@ -8,6 +8,8 @@ export interface PersonnelDocument {
   name: string;
   type: 'qualification' | 'cpd' | 'identification' | 'other';
   url: string;
+  /** Storage path in the private personnel-documents bucket (uploaded files). */
+  path?: string;
   uploadedAt: string;
   expiryDate?: string;
 }
@@ -23,7 +25,7 @@ export interface PersonnelProfile {
   // Professional Details
   jobTitle?: string;
   branch?: string;
-  managerId?: string; // Reporting line
+  managerId?: string | null; // Reporting line (null: none)
 
   // Compliance & Regulatory
   fspReference?: string;

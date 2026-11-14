@@ -29,15 +29,16 @@ import { Badge } from '../../../../ui/badge';
 import { Separator } from '../../../../ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../../ui/alert-dialog';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../../../ui/dropdown-menu';
+import { Label } from '../../../../ui/label';
+import { FormErrorBanner, useConfirm } from '../../../layout/page';
+import { BackLink } from '../../../layout/page/FilterControls';
+import { cn } from '../../../../ui/utils';
 import {
   Save,
   ListTodo,
@@ -50,6 +51,7 @@ import {
   RotateCcw,
   FileText,
   AlertCircle,
+  MoreHorizontal,
 } from 'lucide-react';
 import { VoiceRecorderButton } from './VoiceRecorderButton';
 
@@ -82,6 +84,17 @@ interface NoteEditorModalProps {
   onConvertToTask?: (noteId: string) => void;
   /** Custom colour labels for tooltip display */
   customColourLabels?: CustomColourLabels;
+  /**
+   * 'dialog' (default) for editors opened over another page; 'page' for the
+   * Notes module, where a note is a page of its own (design system).
+   */
+  variant?: 'dialog' | 'page';
+  /** Page variant: where "Back to …" goes. */
+  backLabel?: string;
+  /** Page variant: Pin / Unpin under ⋯. */
+  onTogglePin?: (note: Note) => void;
+  /** Page variant: Archive / Unarchive under ⋯. */
+  onToggleArchive?: (note: Note) => void;
 }
 
 // ============================================================================
@@ -104,8 +117,15 @@ export function NoteEditorModal({
   onDelete,
   onConvertToTask,
   customColourLabels = {},
+  variant = 'dialog',
+  backLabel = 'notes',
+  onTogglePin,
+  onToggleArchive,
 }: NoteEditorModalProps) {
   const isEditing = !!note;
+  const isPage = variant === 'page';
+  const { confirm, confirmDialog } = useConfirm();
+  const [titleError, setTitleError] = useState<string | null>(null);
 
   // ── Form state ──────────────────────────────────────────────────────────
   const [title, setTitle] = useState('');
@@ -115,7 +135,6 @@ export function NoteEditorModal({
   const [clientId, setClientId] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isTitleEditing, setIsTitleEditing] = useState(false);
   const [editorMode, setEditorMode] = useState<EditorMode>('write');
   const [clientPickerOpen, setClientPickerOpen] = useState(false);
@@ -154,9 +173,16 @@ export function NoteEditorModal({
   // object's identity changes every render, which re-ran this effect on each
   // keystroke and wiped the form.
   const resetAutoSaveStatus = autoSave.reset;
+  // Load the form when a different note opens, not every time the same note
+  // is refreshed (pin, archive, a list refetch): that would replace an
+  // unsaved draft with the older server copy.
+  const latestNote = useRef(note);
+  latestNote.current = note;
+  const noteId = note?.id ?? null;
   useEffect(() => {
     if (!isOpen) return;
 
+    const note = latestNote.current;
     if (note) {
       setTitle(note.title);
       setContent(note.content);
@@ -177,8 +203,9 @@ export function NoteEditorModal({
       setLocalSummary(null);
     }
     setEditorMode('write');
+    setTitleError(null);
     resetAutoSaveStatus();
-  }, [note, isOpen, defaultClientId, defaultClientName, resetAutoSaveStatus]);
+  }, [noteId, isOpen, defaultClientId, defaultClientName, resetAutoSaveStatus]);
 
   // ── Summarise handler ──────────────────────────────────────────────────
   const handleSummarise = useCallback(async () => {
@@ -227,7 +254,12 @@ export function NoteEditorModal({
 
   // ── Explicit save ───────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      setTitleError('Give the note a title');
+      document.getElementById('note-title')?.focus();
+      return;
+    }
+    setTitleError(null);
 
     setIsSaving(true);
     try {
@@ -299,6 +331,7 @@ export function NoteEditorModal({
   // ── Change handlers (with auto-save trigger) ───────────────────────────
   const handleTitleChange = (val: string) => {
     setTitle(val);
+    if (titleError && val.trim()) setTitleError(null);
   };
 
   const handleTitleBlur = () => {
@@ -375,6 +408,20 @@ export function NoteEditorModal({
     onClose();
   }, [autoSave, onClose]);
 
+  // ── Delete (asks first) ─────────────────────────────────────────────────
+  const handleDelete = useCallback(async () => {
+    if (!note || !onDelete) return;
+    const ok = await confirm({
+      title: 'Delete note',
+      description: `Delete “${note.title || 'Untitled note'}”? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (!ok) return;
+    onDelete(note.id);
+    onClose();
+  }, [note, onDelete, confirm, onClose]);
+
   // ── Derived ─────────────────────────────────────────────────────────────
   const colorCfg = NOTE_COLOR_CONFIG[color];
   const isConverted = isEditing && !!note?.convertedToTaskId;
@@ -403,6 +450,407 @@ export function NoteEditorModal({
   const isSummarising = summariseMutation.isPending;
 
   if (!isOpen) return null;
+
+  const editorToolbar = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center rounded-md border border-gray-200 bg-white/80">
+          <button
+            type="button"
+            onClick={() => setEditorMode('write')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-l-md transition-colors ${
+              editorMode === 'write'
+                ? 'bg-purple-100 text-purple-700'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <PenLine className="h-3.5 w-3.5" />
+            Write
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditorMode('summarise')}
+            disabled={!isEditing}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-r-md transition-colors ${
+              editorMode === 'summarise'
+                ? 'bg-purple-100 text-purple-700'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            } ${!isEditing ? 'opacity-40 cursor-not-allowed' : ''}`}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Summarise
+          </button>
+        </div>
+        {editorMode === 'write' && (
+          <VoiceRecorderButton onInsertText={handleTranscriptionInsert} disabled={isSaving} />
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] text-gray-400">
+          {wordCount} {wordCount === 1 ? 'word' : 'words'}
+        </span>
+        <MarkdownHelpTooltip />
+      </div>
+    </div>
+  );
+
+  const contentArea = (
+    <div className="flex-1">
+      {editorMode === 'write' ? (
+        <Textarea
+          ref={textareaRef}
+          value={content}
+          onChange={(e) => handleContentChange(e.target.value)}
+          placeholder={
+            'Write your note here...\n\nSupports **bold**, *italic*, # headings, - lists, - [ ] checklists, `code`, > quotes, and [links](url).'
+          }
+          className="min-h-[280px] resize-y text-sm leading-relaxed border border-gray-200 rounded-lg bg-white/60 p-4 focus-visible:ring-1 focus-visible:ring-purple-300 placeholder:text-gray-400"
+        />
+      ) : (
+        /* ── Summarise panel ─────────────────────────────────── */
+        <div className="min-h-[280px] border border-gray-200 rounded-lg bg-white/60 overflow-hidden">
+          {/* Summarise toolbar */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50/50">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-purple-500" />
+              <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                AI Summary
+              </span>
+              {localSummary && (
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 border-green-200"
+                >
+                  <CheckCircle2 className="h-3 w-3 mr-0.5" /> Generated
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              {localSummary && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearSummary}
+                        className="h-7 px-2 text-xs text-gray-500 hover:text-red-600"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Clear
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      Remove the AI summary
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSummarise}
+                disabled={!canSummarise || isSummarising}
+                className="h-7 px-3 text-xs border-purple-200 text-purple-700 hover:bg-purple-50 disabled:opacity-50"
+              >
+                {isSummarising ? (
+                  <div className="contents">
+                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                    Summarising...
+                  </div>
+                ) : localSummary ? (
+                  <div className="contents">
+                    <RotateCcw className="h-3 w-3 mr-1.5" />
+                    Re-summarise
+                  </div>
+                ) : (
+                  <div className="contents">
+                    <Sparkles className="h-3 w-3 mr-1.5" />
+                    Generate Summary
+                  </div>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Summary content area */}
+          <div className="p-4">
+            {isSummarising ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="relative mb-4">
+                  <Sparkles className="h-8 w-8 text-purple-400 animate-pulse" />
+                </div>
+                <p className="text-sm font-medium text-gray-700 mb-1">Summarising your note...</p>
+                <p className="text-xs text-gray-400">
+                  AI is organising and structuring your content
+                </p>
+              </div>
+            ) : localSummary ? (
+              <div>
+                <MarkdownPreview content={localSummary} />
+                <div className="mt-4 pt-3 border-t border-gray-100">
+                  <div className="flex items-start gap-2 text-[11px] text-gray-400">
+                    <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    <p>
+                      This summary will be used when converting to a task. If you edit the note
+                      content, the summary will be cleared and can be regenerated.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : !content.trim() ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <AlertCircle className="h-8 w-8 text-gray-300 mb-3" />
+                <p className="text-sm font-medium text-gray-500 mb-1">No content to summarise</p>
+                <p className="text-xs text-gray-400">
+                  Switch to Write mode and add some content first
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Sparkles className="h-8 w-8 text-purple-300 mb-3" />
+                <p className="text-sm font-medium text-gray-700 mb-1">Ready to summarise</p>
+                <p className="text-xs text-gray-400 mb-4 max-w-sm">
+                  AI will organise your note into a structured summary with key points, action
+                  items, and follow-ups — perfect for converting to tasks.
+                </p>
+                <Button
+                  type="button"
+                  onClick={handleSummarise}
+                  disabled={isSummarising}
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Summary
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const metadataBlock = (
+    <NoteEditorMetadata
+      tagsInput={tagsInput}
+      handleTagsChange={handleTagsChange}
+      handleTagsBlur={handleTagsBlur}
+      clientId={clientId}
+      clientName={clientName}
+      clients={clients}
+      clientPickerOpen={clientPickerOpen}
+      setClientPickerOpen={setClientPickerOpen}
+      handleClientChange={handleClientChange}
+      editorMode={editorMode}
+      setEditorMode={setEditorMode}
+      localSummary={localSummary}
+      isConverted={isConverted}
+    />
+  );
+
+  const colourName = (c: NoteColor) => getColourTooltipLabel(c, customColourLabels);
+
+  if (isPage) {
+    const isPinned = !!note?.isPinned;
+    const isArchived = !!note?.isArchived;
+    const showMenu = isEditing && !!(onTogglePin || onToggleArchive || onDelete);
+    return (
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-4 p-6 lg:p-8">
+        <BackLink label={`Back to ${backLabel}`} onClick={() => void handleClose()} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-[26px] leading-tight font-semibold tracking-tight break-words text-nw-ink">
+              {isEditing ? note?.title || 'Untitled note' : 'New note'}
+            </h1>
+            <div className="mt-1 flex items-center gap-3 text-sm text-nw-text-3">
+              <span>
+                Note{isPinned ? ' · Pinned' : ''}
+                {isArchived ? ' · Archived' : ''}
+              </span>
+              <AutoSaveIndicator status={autoSave.status} />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            {isEditing && !isConverted && onConvertToTask && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  onConvertToTask(note!.id);
+                  onClose();
+                }}
+                title={
+                  localSummary
+                    ? 'Task description will use the AI summary'
+                    : 'Task description will use the note content'
+                }
+              >
+                <ListTodo className="h-4 w-4" aria-hidden="true" />
+                Convert to task
+              </Button>
+            )}
+            <Button type="button" variant="outline" onClick={() => void handleClose()}>
+              Cancel
+            </Button>
+            {showMenu && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="More note actions">
+                    <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {onTogglePin && (
+                    <DropdownMenuItem onSelect={() => onTogglePin(note!)}>
+                      {isPinned ? 'Unpin' : 'Pin'}
+                    </DropdownMenuItem>
+                  )}
+                  {onToggleArchive && (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        onToggleArchive(note!);
+                        onClose();
+                      }}
+                    >
+                      {isArchived ? 'Unarchive' : 'Archive'}
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={() => void handleDelete()}
+                        className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                      >
+                        Delete…
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <Button type="button" onClick={() => void handleSave()} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Saving…
+                </>
+              ) : isEditing ? (
+                'Save changes'
+              ) : (
+                'Create note'
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div
+          className={cn(
+            'flex max-w-[880px] flex-col gap-6 rounded-xl border p-6',
+            colorCfg.bg,
+            colorCfg.border,
+          )}
+        >
+          {titleError && (
+            <FormErrorBanner count={1} action={isEditing ? 'save the note' : 'create the note'} />
+          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="note-title">
+              Title <span className="text-red-600">*</span>
+            </Label>
+            <Input
+              id="note-title"
+              value={title}
+              onChange={(e) => handleTitleChange(e.target.value)}
+              onBlur={handleTitleBlur}
+              autoFocus={!isEditing}
+              placeholder="Note title"
+              aria-invalid={!!titleError}
+              aria-describedby={titleError ? 'note-title-error' : undefined}
+              className="bg-white"
+            />
+            {titleError && (
+              <p id="note-title-error" className="text-xs text-red-600">
+                {titleError}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Note</Label>
+            {editorToolbar}
+            {contentArea}
+          </div>
+
+          <fieldset className="space-y-1.5">
+            <legend className="text-sm font-medium text-nw-ink">Colour</legend>
+            <div
+              role="radiogroup"
+              aria-label="Colour"
+              className="inline-flex w-fit flex-wrap items-center gap-0.5 rounded-[10px] bg-gray-100 p-1"
+            >
+              {NOTE_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  role="radio"
+                  aria-checked={color === c}
+                  onClick={() => handleColorChange(c)}
+                  className={cn(
+                    'inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium whitespace-nowrap transition-colors',
+                    color === c
+                      ? 'bg-white text-nw-ink shadow-sm'
+                      : 'text-nw-text-2 hover:text-nw-ink',
+                  )}
+                >
+                  <span
+                    className={cn('h-3 w-3 rounded-full', NOTE_COLOR_CONFIG[c].dot)}
+                    aria-hidden="true"
+                  />
+                  {colourName(c)}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          {metadataBlock}
+
+          {isEditing && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-nw-line bg-white px-4 py-3">
+              <p className="text-sm text-nw-text-2">
+                <span className="font-medium text-nw-ink">AI summary</span> ·{' '}
+                {localSummary ? 'generated' : 'not generated yet'}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canSummarise || isSummarising}
+                onClick={() => {
+                  setEditorMode('summarise');
+                  void handleSummarise();
+                }}
+              >
+                {isSummarising ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    Summarising…
+                  </>
+                ) : localSummary ? (
+                  'Re-summarise'
+                ) : (
+                  'Generate summary'
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+        {confirmDialog}
+      </div>
+    );
+  }
 
   return (
     <div className="contents">
@@ -472,212 +920,16 @@ export function NoteEditorModal({
                   className="text-xl font-bold border-0 border-b rounded-none px-0 h-auto py-2 focus-visible:ring-0 focus-visible:border-gray-400 bg-transparent placeholder:text-gray-400 placeholder:font-normal"
                 />
               )}
+              {titleError && <p className="mt-1 text-xs text-red-600">{titleError}</p>}
             </div>
 
-            {/* Editor toolbar */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center rounded-md border border-gray-200 bg-white/80">
-                  <button
-                    type="button"
-                    onClick={() => setEditorMode('write')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-l-md transition-colors ${
-                      editorMode === 'write'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <PenLine className="h-3.5 w-3.5" />
-                    Write
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditorMode('summarise')}
-                    disabled={!isEditing}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-r-md transition-colors ${
-                      editorMode === 'summarise'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                    } ${!isEditing ? 'opacity-40 cursor-not-allowed' : ''}`}
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Summarise
-                  </button>
-                </div>
-                {editorMode === 'write' && (
-                  <VoiceRecorderButton
-                    onInsertText={handleTranscriptionInsert}
-                    disabled={isSaving}
-                  />
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-gray-400">
-                  {wordCount} {wordCount === 1 ? 'word' : 'words'}
-                </span>
-                <MarkdownHelpTooltip />
-              </div>
-            </div>
+            {editorToolbar}
 
-            {/* Content area — Write or Summarise */}
-            <div className="flex-1">
-              {editorMode === 'write' ? (
-                <Textarea
-                  ref={textareaRef}
-                  value={content}
-                  onChange={(e) => handleContentChange(e.target.value)}
-                  placeholder={
-                    'Write your note here...\n\nSupports **bold**, *italic*, # headings, - lists, - [ ] checklists, `code`, > quotes, and [links](url).'
-                  }
-                  className="min-h-[280px] resize-y text-sm leading-relaxed border border-gray-200 rounded-lg bg-white/60 p-4 focus-visible:ring-1 focus-visible:ring-purple-300 placeholder:text-gray-400"
-                />
-              ) : (
-                /* ── Summarise panel ─────────────────────────────────── */
-                <div className="min-h-[280px] border border-gray-200 rounded-lg bg-white/60 overflow-hidden">
-                  {/* Summarise toolbar */}
-                  <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50/50">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-purple-500" />
-                      <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                        AI Summary
-                      </span>
-                      {localSummary && (
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700 border-green-200"
-                        >
-                          <CheckCircle2 className="h-3 w-3 mr-0.5" /> Generated
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {localSummary && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleClearSummary}
-                                className="h-7 px-2 text-xs text-gray-500 hover:text-red-600"
-                              >
-                                <Trash2 className="h-3 w-3 mr-1" />
-                                Clear
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" className="text-xs">
-                              Remove the AI summary
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSummarise}
-                        disabled={!canSummarise || isSummarising}
-                        className="h-7 px-3 text-xs border-purple-200 text-purple-700 hover:bg-purple-50 disabled:opacity-50"
-                      >
-                        {isSummarising ? (
-                          <div className="contents">
-                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                            Summarising...
-                          </div>
-                        ) : localSummary ? (
-                          <div className="contents">
-                            <RotateCcw className="h-3 w-3 mr-1.5" />
-                            Re-summarise
-                          </div>
-                        ) : (
-                          <div className="contents">
-                            <Sparkles className="h-3 w-3 mr-1.5" />
-                            Generate Summary
-                          </div>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Summary content area */}
-                  <div className="p-4">
-                    {isSummarising ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="relative mb-4">
-                          <Sparkles className="h-8 w-8 text-purple-400 animate-pulse" />
-                        </div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">
-                          Summarising your note...
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          AI is organising and structuring your content
-                        </p>
-                      </div>
-                    ) : localSummary ? (
-                      <div>
-                        <MarkdownPreview content={localSummary} />
-                        <div className="mt-4 pt-3 border-t border-gray-100">
-                          <div className="flex items-start gap-2 text-[11px] text-gray-400">
-                            <FileText className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                            <p>
-                              This summary will be used when converting to a task. If you edit the
-                              note content, the summary will be cleared and can be regenerated.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : !content.trim() ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <AlertCircle className="h-8 w-8 text-gray-300 mb-3" />
-                        <p className="text-sm font-medium text-gray-500 mb-1">
-                          No content to summarise
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Switch to Write mode and add some content first
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <Sparkles className="h-8 w-8 text-purple-300 mb-3" />
-                        <p className="text-sm font-medium text-gray-700 mb-1">Ready to summarise</p>
-                        <p className="text-xs text-gray-400 mb-4 max-w-sm">
-                          AI will organise your note into a structured summary with key points,
-                          action items, and follow-ups — perfect for converting to tasks.
-                        </p>
-                        <Button
-                          type="button"
-                          onClick={handleSummarise}
-                          disabled={isSummarising}
-                          className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4"
-                        >
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          Generate Summary
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            {contentArea}
 
             <Separator />
 
-            <NoteEditorMetadata
-              tagsInput={tagsInput}
-              handleTagsChange={handleTagsChange}
-              handleTagsBlur={handleTagsBlur}
-              clientId={clientId}
-              clientName={clientName}
-              clients={clients}
-              clientPickerOpen={clientPickerOpen}
-              setClientPickerOpen={setClientPickerOpen}
-              handleClientChange={handleClientChange}
-              editorMode={editorMode}
-              setEditorMode={setEditorMode}
-              localSummary={localSummary}
-              isConverted={isConverted}
-            />
+            {metadataBlock}
           </div>
 
           {/* ── Footer ─────────────────────────────────────────────────── */}
@@ -691,7 +943,7 @@ export function NoteEditorModal({
                   variant="outline"
                   size="sm"
                   className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                  onClick={() => setShowDeleteDialog(true)}
+                  onClick={() => void handleDelete()}
                 >
                   <Trash2 className="h-4 w-4 mr-1" /> Delete
                 </Button>
@@ -732,7 +984,7 @@ export function NoteEditorModal({
               <Button
                 type="button"
                 onClick={handleSave}
-                disabled={!title.trim() || isSaving}
+                disabled={isSaving}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
               >
                 {isSaving ? (
@@ -750,31 +1002,7 @@ export function NoteEditorModal({
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Note</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this note? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
-              onClick={() => {
-                if (note && onDelete) {
-                  onDelete(note.id);
-                  onClose();
-                }
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {confirmDialog}
     </div>
   );
 }

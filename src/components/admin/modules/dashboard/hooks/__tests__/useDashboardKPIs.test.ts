@@ -77,15 +77,10 @@ describe('useDashboardKPIs', () => {
       expect(result.current.kpis).toHaveLength(4);
     });
 
-    it('KPI titles are always Total Clients, New Applications, Pending Tasks, Active Policies', () => {
+    it('KPI titles are always Total clients, New applications, Tasks, Active policies', () => {
       const { result } = renderHook(() => useDashboardKPIs({ stats: null, metrics: null }));
       const titles = result.current.kpis.map((k) => k.title);
-      expect(titles).toEqual([
-        'Total Clients',
-        'New Applications',
-        'Pending Tasks',
-        'Active Policies',
-      ]);
+      expect(titles).toEqual(['Total clients', 'New applications', 'Tasks', 'Active policies']);
     });
   });
 
@@ -359,5 +354,30 @@ describe('useDashboardKPIs', () => {
         expect(kpi.format).toBe('number');
       }
     });
+  });
+});
+
+describe('useDashboardKPIs — Tasks figure', () => {
+  it('shows open tasks with completed tasks as its second line, without a % change', async () => {
+    const { renderHook } = await import('@testing-library/react');
+    const { useDashboardKPIs } = await import('../useDashboardKPIs');
+    const { result } = renderHook(() =>
+      useDashboardKPIs({
+        stats: {
+          total_clients: 1,
+          pending_applications: 0,
+          pending_tasks: 203,
+          new_this_month: 0,
+          new_last_month: 0,
+        },
+        metrics: null,
+        taskTotals: { open: 203, completed: 27 },
+      }),
+    );
+    const tasks = result.current.kpis[2];
+    expect(tasks.title).toBe('Tasks');
+    expect(tasks.value).toBe(203);
+    expect(tasks.subtitle).toBe('open · 27 completed');
+    expect(tasks.hideChange).toBe(true);
   });
 });

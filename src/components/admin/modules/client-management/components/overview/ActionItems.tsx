@@ -77,12 +77,17 @@ const CLIENT_CATEGORY_LABELS: Record<ActionItem['category'], string> = {
 
 // ── ActionItemRow component ──────────────────────────────────────────────
 
+/** A direct action for an item: a label and what it does. */
+export type ActionItemAction = { label: string; run: () => void };
+
 export function ActionItemRow({
   item,
   mode = 'adviser',
+  action,
 }: {
   item: ActionItem;
   mode?: DashboardMode;
+  action?: ActionItemAction;
 }) {
   const style = PRIORITY_STYLES[item.priority];
   const ItemIcon = item.icon;
@@ -117,7 +122,18 @@ export function ActionItemRow({
           <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{item.detail}</p>
         )}
       </div>
-      <ArrowRight className="h-4 w-4 text-gray-300 flex-shrink-0 mt-1.5 print:hidden" />
+      {action ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 bg-white print:hidden"
+          onClick={action.run}
+        >
+          {action.label}
+        </Button>
+      ) : (
+        <ArrowRight className="h-4 w-4 text-gray-300 flex-shrink-0 mt-1.5 print:hidden" />
+      )}
     </div>
   );
 }
@@ -128,10 +144,13 @@ export function UnifiedActionItems({
   items,
   mode = 'adviser',
   actionDistribution,
+  actionFor,
 }: {
   items: ActionItem[];
   mode?: DashboardMode;
   actionDistribution?: ActionDistribution;
+  /** The direct action offered on each item, if any. */
+  actionFor?: (item: ActionItem) => ActionItemAction | undefined;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const isClientMode = mode === 'client';
@@ -167,7 +186,7 @@ export function UnifiedActionItems({
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-gray-500" />
             <CardTitle className="text-sm font-semibold text-gray-800">
-              {isClientMode ? 'Things to Check' : 'What Needs Doing'}
+              {isClientMode ? 'Things to Check' : 'What needs doing'}
             </CardTitle>
             <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5 ml-1">
               {items.length}
@@ -203,7 +222,7 @@ export function UnifiedActionItems({
       </CardHeader>
       <CardContent className="pt-4 space-y-2">
         {(collapsed ? items.slice(0, 5) : items).map((item) => (
-          <ActionItemRow key={item.id} item={item} mode={mode} />
+          <ActionItemRow key={item.id} item={item} mode={mode} action={actionFor?.(item)} />
         ))}
         {collapsed && items.length > 5 && (
           <button

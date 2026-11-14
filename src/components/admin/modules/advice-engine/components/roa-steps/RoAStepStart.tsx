@@ -1,4 +1,5 @@
 import { Button } from '../../../../../ui/button';
+import { ErrorState } from '../../../../layout/page';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { RoADraft } from '../DraftRoAInterface';
@@ -14,6 +15,9 @@ interface RoAStepStartProps {
   existingDrafts?: RoADraft[];
   finalisedDrafts?: RoADraft[];
   isLoadingDrafts?: boolean;
+  /** Saved drafts failed to load: shown as an error, not as "no drafts". */
+  draftsError?: Error | null;
+  onRetryDrafts?: () => void;
   /** True while a new draft is being created server-side (disables the button). */
   isCreating?: boolean;
 }
@@ -28,6 +32,8 @@ export function RoAStepStart({
   existingDrafts = [],
   finalisedDrafts = [],
   isLoadingDrafts = false,
+  draftsError = null,
+  onRetryDrafts,
   isCreating = false,
 }: RoAStepStartProps) {
   const getClientName = (draft: RoADraft): string => {
@@ -77,14 +83,14 @@ export function RoAStepStart({
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Plus className="h-8 w-8 text-primary" />
           </div>
-          <h3 className="font-semibold mb-2">Start New RoA</h3>
+          <h3 className="font-semibold mb-2">Start new RoA</h3>
           <p className="text-sm text-muted-foreground text-center mb-6 max-w-md">
             Begin a new Record of Advice from scratch. Our guided process ensures compliance and
             completeness.
           </p>
           <Button onClick={onCreateNew} size="lg" className="px-8" disabled={isCreating}>
             <Plus className="h-4 w-4 mr-2" />
-            {isCreating ? 'Creating…' : 'Begin RoA Draft'}
+            {isCreating ? 'Creating…' : 'Begin RoA draft'}
           </Button>
         </CardContent>
       </Card>
@@ -98,11 +104,20 @@ export function RoAStepStart({
         </Card>
       )}
 
+      {draftsError && (
+        <ErrorState
+          title="Unable to load saved RoA drafts"
+          description="You can still begin a new RoA draft. Nothing you entered was lost."
+          onRetry={onRetryDrafts}
+          details={draftsError.message}
+        />
+      )}
+
       {existingDrafts.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-muted-foreground" />
-            <h3 className="font-semibold">Resume Existing Drafts</h3>
+            <h3 className="font-semibold">Resume existing drafts</h3>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -176,7 +191,7 @@ export function RoAStepStart({
 
                     {/* Resume Button */}
                     <Button variant="outline" className="w-full" onClick={() => onResume(draft)}>
-                      Resume Draft
+                      Resume
                     </Button>
                     {onDiscardDraft && (
                       <Button

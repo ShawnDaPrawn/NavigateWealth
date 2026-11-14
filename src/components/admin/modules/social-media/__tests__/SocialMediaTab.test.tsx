@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router';
 import type { ComposeRequest } from '../types';
 
 const posts = vi.hoisted(() => ({ createPost: vi.fn() }));
@@ -70,6 +71,36 @@ vi.mock('../assets/WeeklyPipelineTab', () => ({
   WeeklyPipelineTab: () => <div>Weekly pipeline body</div>,
 }));
 
+vi.mock('../assets/AutomationSettingsPage', () => ({
+  AutomationSettingsPage: (props: { onBack: () => void }) => (
+    <div>
+      <h1>Automation settings &amp; playbooks</h1>
+      <button onClick={props.onBack}>back-to-weekly</button>
+    </div>
+  ),
+}));
+vi.mock('../components/AIContentGenerator', () => ({
+  AIContentGenerator: () => <div>AI text</div>,
+}));
+vi.mock('../components/AIImageGenerator', () => ({ AIImageGenerator: () => <div>AI image</div> }));
+vi.mock('../components/AIBundleGenerator', () => ({
+  AIBundleGenerator: () => <div>AI bundle</div>,
+}));
+vi.mock('../components/AIArticleRepurposer', () => ({
+  AIArticleRepurposer: () => <div>AI repurpose</div>,
+}));
+vi.mock('../components/AIBrandTemplates', () => ({
+  AIBrandTemplates: () => <div>AI templates</div>,
+}));
+vi.mock('../components/AIGenerationHistory', () => ({
+  AIGenerationHistory: () => <div>AI history</div>,
+}));
+vi.mock('../components/AIAnalyticsDashboard', () => ({
+  AIAnalyticsDashboard: () => <div>AI analytics</div>,
+}));
+vi.mock('../LinktreeTab', () => ({ LinktreeTab: () => <div>Link in bio body</div> }));
+vi.mock('../ChannelsPanel', () => ({ ChannelsPanel: () => <div>Channels body</div> }));
+
 vi.mock('../PostComposer', () => ({
   PostComposer: (props: {
     onSubmit: (request: ComposeRequest, assetIds: string[]) => Promise<unknown> | unknown;
@@ -87,9 +118,30 @@ vi.mock('../PostComposer', () => ({
 
 import { SocialMediaTab } from '../SocialMediaTab';
 
+function Location() {
+  const location = useLocation();
+  return <div data-testid="location">{location.search}</div>;
+}
+
+function renderTab(search = '') {
+  return render(
+    <MemoryRouter initialEntries={[`/admin${search}`]}>
+      <SocialMediaTab />
+      <Location />
+    </MemoryRouter>,
+  );
+}
+
+function clickTab(name: string) {
+  const tab = screen.getByRole('tab', { name });
+  tab.focus();
+  fireEvent.mouseDown(tab);
+  fireEvent.click(tab);
+}
+
 describe('SocialMediaTab', () => {
   it('renders real stat cards and lands on the Assets tab', () => {
-    render(<SocialMediaTab />);
+    renderTab();
     expect(screen.getByText('Assets this week')).toBeDefined();
     expect(screen.getByText('Queued in Buffer')).toBeDefined();
     expect(screen.getByText('1')).toBeDefined();
@@ -97,6 +149,51 @@ describe('SocialMediaTab', () => {
     expect(screen.getByText('7')).toBeDefined();
     expect(screen.getByText('Assets tab body')).toBeDefined();
     expect(screen.getByRole('tab', { name: 'Channels' })).toBeDefined();
+  });
+
+  it('has the module header with one primary button and a single row of seven tabs', () => {
+    renderTab();
+    expect(screen.getByRole('heading', { level: 1, name: 'Social & Marketing' })).toBeDefined();
+    expect(screen.getByRole('button', { name: /compose post/i })).toBeDefined();
+    const tabs = screen.getAllByRole('tab').map((t) => t.textContent);
+    expect(tabs).toEqual([
+      'Assets',
+      'Weekly pipeline',
+      'Calendar',
+      'Compose',
+      'AI generator',
+      'Channels',
+      'Link in bio',
+    ]);
+    expect(screen.queryByRole('tab', { name: 'Publications' })).toBeNull();
+  });
+
+  it('keeps the tab in the address and opens on it', () => {
+    renderTab('?tab=linktree');
+    expect(screen.getByText('Link in bio body')).toBeDefined();
+    // Tiles belong to Assets, Weekly pipeline and Calendar only.
+    expect(screen.queryByText('Assets this week')).toBeNull();
+    clickTab('Channels');
+    expect(screen.getByTestId('location').textContent).toContain('tab=channels');
+  });
+
+  it('shows the AI generator views as a segmented control kept in the address', () => {
+    renderTab('?tab=ai-generator&ai=history');
+    const history = screen.getByRole('tab', { name: 'History' });
+    expect(history.getAttribute('aria-selected')).toBe('true');
+    clickTab('Branded image');
+    expect(screen.getByTestId('location').textContent).toContain('ai=image');
+  });
+
+  it('opens automation settings as a page and comes back to the weekly pipeline', () => {
+    renderTab('?tab=weekly&page=automation');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Automation settings & playbooks' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('tab', { name: 'Assets' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'back-to-weekly' }));
+    expect(screen.getByText('Weekly pipeline body')).toBeDefined();
+    expect(screen.getByTestId('location').textContent).not.toContain('page=');
   });
 
   describe('starting a post from an asset', () => {
@@ -124,7 +221,7 @@ describe('SocialMediaTab', () => {
     it('carries the asset, its caption and its channel into Compose', async () => {
       // The whole point: the draft opens written, on the right channel, rather
       // than blank with the asset still to be hunted down in a picker.
-      render(<SocialMediaTab />);
+      renderTab();
       await waitFor(() => expect(assetsTab.onCreatePost).not.toBeNull());
       act(() => assetsTab.onCreatePost!(libraryAsset));
 
@@ -144,7 +241,7 @@ describe('SocialMediaTab', () => {
     it('leaves the channel alone when none is connected for it', async () => {
       // X is not connected in Buffer yet; clearing the selection would be worse
       // than leaving whatever the person already chose.
-      render(<SocialMediaTab />);
+      renderTab();
       await waitFor(() => expect(assetsTab.onCreatePost).not.toBeNull());
       act(() => assetsTab.onCreatePost!({ ...libraryAsset, channel: 'x' }));
 
@@ -168,7 +265,7 @@ describe('SocialMediaTab', () => {
         created: [{ channelId: 'li', platform: 'linkedin', postId: 'buf1', status: 'scheduled' }],
         failed: [],
       });
-      render(<SocialMediaTab />);
+      renderTab();
       // Radix activates a tab on focus in its default automatic mode, so a
       // bare click does not switch panels under jsdom.
       const tab = screen.getByRole('tab', { name: 'Compose' });
@@ -188,7 +285,7 @@ describe('SocialMediaTab', () => {
         created: [],
         failed: [{ channelId: 'li', platform: 'linkedin', error: 'rejected' }],
       });
-      render(<SocialMediaTab />);
+      renderTab();
       // Radix activates a tab on focus in its default automatic mode, so a
       // bare click does not switch panels under jsdom.
       const tab = screen.getByRole('tab', { name: 'Compose' });
@@ -205,7 +302,7 @@ describe('SocialMediaTab', () => {
         created: [{ channelId: 'li', platform: 'linkedin', postId: 'buf2', status: 'sent' }],
         failed: [],
       });
-      render(<SocialMediaTab />);
+      renderTab();
       // Radix activates a tab on focus in its default automatic mode, so a
       // bare click does not switch panels under jsdom.
       const tab = screen.getByRole('tab', { name: 'Compose' });

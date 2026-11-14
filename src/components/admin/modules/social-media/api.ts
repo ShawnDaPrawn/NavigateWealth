@@ -16,6 +16,7 @@ import { profilesApi } from './api/profilesApi';
 import { postsApi } from './api/postsApi';
 import { channelAssetsApi } from './api/channelAssetsApi';
 import { analyticsApi } from './api/analyticsApi';
+import { partnersApi } from './api/partnersApi';
 import { socialAssetsApi } from './api/socialAssetsApi';
 import { socialMediaAIApi } from './api/socialMediaAIApi';
 import { linkedinApi } from './api/linkedinApi';
@@ -25,6 +26,7 @@ export {
   postsApi,
   channelAssetsApi,
   analyticsApi,
+  partnersApi,
   socialAssetsApi,
   socialMediaAIApi,
   linkedinApi,

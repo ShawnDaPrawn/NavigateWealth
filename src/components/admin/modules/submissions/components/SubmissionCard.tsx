@@ -43,6 +43,8 @@ interface SubmissionCardProps {
   index: number;
   onView: (submission: Submission) => void;
   onStatusChange: (id: string, status: SubmissionStatus) => void;
+  /** Delete (the board asks first). */
+  onDelete?: (submission: Submission) => void;
 }
 
 // ── Left strip colour per type (restrained, single accent) ────────────────────
@@ -206,7 +208,13 @@ function extractPreview(submission: Submission): CardPreview {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function SubmissionCard({ submission, index, onView, onStatusChange }: SubmissionCardProps) {
+export function SubmissionCard({
+  submission,
+  index,
+  onView,
+  onStatusChange,
+  onDelete,
+}: SubmissionCardProps) {
   const typeCfg = SUBMISSION_TYPE_CONFIG[submission.type];
   const preview = extractPreview(submission);
   const stripColor = TYPE_STRIP_COLOR[submission.type];
@@ -272,7 +280,8 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-6 w-6 p-0 -mr-2 text-gray-400 hover:text-gray-600 no-drag opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label={`More actions for ${submission.submitterName || 'this submission'}`}
+                      className="h-6 w-6 p-0 -mr-2 text-gray-400 hover:text-gray-600 no-drag opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 transition-opacity"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
@@ -285,7 +294,7 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
                       }}
                     >
                       <Eye className="mr-2 h-4 w-4" />
-                      View Details
+                      View
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     {submission.status !== 'new' && (
@@ -328,6 +337,17 @@ export function SubmissionCard({ submission, index, onView, onStatusChange }: Su
                       <Archive className="mr-2 h-4 w-4" />
                       Archive
                     </DropdownMenuItem>
+                    {onDelete && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(submission);
+                        }}
+                        className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                      >
+                        Delete…
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

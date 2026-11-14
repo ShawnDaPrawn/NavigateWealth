@@ -7,7 +7,7 @@
  * eventual extraction fails CI.
  *
  * Contract pinned here:
- *   • mounts and renders the "Corporate Identity" header + the six brand
+ *   • mounts and renders the six brand
  *     section tab triggers (Logos / Colours / Typography / Collateral /
  *     Signatures / Guidelines);
  *   • calls brandApi.getSummary() once on mount and renders the stat cards;
@@ -23,7 +23,12 @@
  *     real Supabase client; sonner is stubbed (no Toaster DOM needed).
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render as rtlRender, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
+import type { ReactElement } from 'react';
+
+const render = (ui: ReactElement, initial = '/') =>
+  rtlRender(<MemoryRouter initialEntries={[initial]}>{ui}</MemoryRouter>);
 
 vi.mock('@/utils/api/client', () => ({
   api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
@@ -82,10 +87,10 @@ beforeEach(() => {
 });
 
 describe('CorporateIdentityTab', () => {
-  it('renders the Corporate Identity header and the brand section tabs', () => {
+  it('renders the brand sections as a segmented control', () => {
     render(<CorporateIdentityTab />);
 
-    expect(screen.getByText('Corporate Identity')).toBeTruthy();
+    expect(screen.getByRole('tablist', { name: 'Corporate identity sections' })).toBeTruthy();
     // Tab triggers whose labels are unique (not shared with a stat-card label).
     expect(screen.getByText('Logos')).toBeTruthy();
     expect(screen.getByText('Typography')).toBeTruthy();
@@ -102,9 +107,9 @@ describe('CorporateIdentityTab', () => {
 
     // After the summary resolves, the stat cards (skeletons → values) render.
     await waitFor(() => {
-      expect(screen.getByText('Logo Assets')).toBeTruthy();
-      expect(screen.getByText('Brand Colours')).toBeTruthy();
-      expect(screen.getByText('Last Updated')).toBeTruthy();
+      expect(screen.getByText('Logo assets')).toBeTruthy();
+      expect(screen.getByText('Brand colours')).toBeTruthy();
+      expect(screen.getByText('Last updated')).toBeTruthy();
     });
   });
 
@@ -121,5 +126,14 @@ describe('CorporateIdentityTab', () => {
     expect(getTypography).not.toHaveBeenCalled();
     expect(getCollateral).not.toHaveBeenCalled();
     expect(getGuidelines).not.toHaveBeenCalled();
+  });
+
+  it('opens the section named in the address', async () => {
+    render(<CorporateIdentityTab />, '/?brandSection=colours');
+
+    await waitFor(() => {
+      expect(getColourPalette).toHaveBeenCalledTimes(1);
+    });
+    expect(getLogos).not.toHaveBeenCalled();
   });
 });

@@ -14,7 +14,8 @@
  * @module notes
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router';
 import { useAuth } from '../../../auth/AuthContext';
 import type {
   Note,
@@ -34,7 +35,6 @@ import {
   useColourLabels,
 } from './hooks';
 import { NoteEditorModal } from './components/NoteEditorModal';
-import { NotesSkeleton } from './components/NotesSkeleton';
 import { BulkActionsBar } from './components/BulkActionsBar';
 import type { CurrentFilterState } from './components/FilterPresetBar';
 import { DraggablePinnedGrid } from './components/DraggablePinnedGrid';
@@ -46,25 +46,33 @@ import { NotesAPI } from './api';
 import { toast } from 'sonner';
 
 import { Button } from '../../../ui/button';
-import {
-  Plus,
-  StickyNote,
-  Pin,
-  CheckCircle2,
-  User,
-  FolderOpen,
-  CheckSquare,
-  GripVertical,
-} from 'lucide-react';
+import { Skeleton } from '../../../ui/skeleton';
+import { Tabs } from '../../../ui/tabs';
+import { Plus, CheckSquare, GripVertical } from 'lucide-react';
 
 // ============================================================================
 // SORT UTILITY (§7.1 — pure utility, no UI coupling)
 // ============================================================================
 
-import { EmptyState, NoteGrid, StatCard } from './notesModuleParts';
+import { EmptyState, NoteGrid } from './notesModuleParts';
 import { sortNotes } from './notesSort';
 import { NotesToolbar } from './NotesToolbar';
-import { PageHeader } from '../../layout/page';
+import {
+  ErrorState,
+  NavTabsList,
+  NavTabsTrigger,
+  PageHeader,
+  StatCard,
+  useBreadcrumbTrail,
+  useRecordInUrl,
+  useUrlState,
+} from '../../layout/page';
+import { taskAddress } from '../tasks/shell';
+
+const NOTE_TABS = ['active', 'archived', 'all'] as const;
+const NOTE_LAYOUTS = ['grid', 'list'] as const;
+/** The address names a new note with this id. */
+const NEW_NOTE = 'new';
 
 export function NotesModule() {
   const { user } = useAuth();
@@ -73,11 +81,19 @@ export function NotesModule() {
   const queryClient = useQueryClient();
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { data: notes = [], isLoading } = useNotes(personnelId);
+  const { data: notes = [], isLoading, error, refetch } = useNotes(personnelId);
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
-  const convertToTask = useConvertNoteToTask();
+  const [, setSearchParams] = useSearchParams();
+  // "Open task" on the conversion toast goes to the task's page in To-Do.
+  const openTask = useCallback(
+    (taskId: string) => {
+      setSearchParams(taskAddress(taskId));
+    },
+    [setSearchParams],
+  );
+  const convertToTask = useConvertNoteToTask({ onOpenTask: openTask });
 
   // ── Colour Labels (personnel-scoped custom descriptions) ─────────────────
   const colourLabels = useColourLabels(personnelId);
@@ -87,7 +103,15 @@ export function NotesModule() {
   // (backed by the single-request profile/all-users endpoint) rather than
   // paging /clients — that route re-scans the full client set on every page,
   // so paging it would trigger one full scan per page.
-  const { data: linkableClients } = useClients();
+  const { data: linkableClients, isError: clientsFailed } = useClients();
+  // The client picker is secondary data: say so once, the notes still work.
+  useEffect(() => {
+    if (clientsFailed) {
+      toast.error("Couldn't load clients for linking", {
+        description: 'You can still write notes; try linking a client again later.',
+      });
+    }
+  }, [clientsFailed]);
 
   const clientOptions = useMemo(() => {
     if (!Array.isArray(linkableClients)) return [];
@@ -101,9 +125,15 @@ export function NotesModule() {
   }, [linkableClients]);
 
   // ── UI State: Filters ────────────────────────────────────────────────────
+  // Active / Archived / All are tabs and Grid | List is a segmented control;
+  // both are kept in the address (?tab=archived, ?layout=list).
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<NoteViewMode>('grid');
-  const [archiveFilter, setArchiveFilter] = useState<NoteArchiveFilter>('active');
+  const [viewMode, setViewMode] = useUrlState<NoteViewMode>('layout', 'grid', NOTE_LAYOUTS);
+  const [archiveFilter, setArchiveFilter] = useUrlState<NoteArchiveFilter>(
+    'tab',
+    'active',
+    NOTE_TABS,
+  );
   const [colorFilter, setColorFilter] = useState<NoteColor | 'all'>('all');
   const [sortBy, setSortBy] = useState<NoteSortBy>('updatedAt');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -138,15 +168,12 @@ export function NotesModule() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [notes]);
 
-  // ── Derived: Active filter count ──────────────────────────────────────────
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (colorFilter !== 'all') count++;
-    if (archiveFilter !== 'active') count++;
-    if (selectedTags.length > 0) count++;
-    if (clientFilter !== 'all') count++;
-    return count;
-  }, [colorFilter, archiveFilter, selectedTags, clientFilter]);
+  // ── Derived: are any filters set (the tab is not a filter) ────────────────
+  const filtersActive =
+    colorFilter !== 'all' ||
+    selectedTags.length > 0 ||
+    clientFilter !== 'all' ||
+    search.trim() !== '';
 
   // ── Derived: Current filter state (for presets) ───────────────────────────
   const currentFilters: CurrentFilterState = useMemo(
@@ -222,6 +249,8 @@ export function NotesModule() {
       pinned: active.filter((n) => n.isPinned).length,
       linked: active.filter((n) => !!n.clientId).length,
       converted: notes.filter((n) => !!n.convertedToTaskId).length,
+      archived: notes.filter((n) => n.isArchived).length,
+      all: notes.length,
     };
   }, [notes]);
 
@@ -302,21 +331,23 @@ export function NotesModule() {
 
   const handleClearFilters = useCallback(() => {
     setColorFilter('all');
-    setArchiveFilter('active');
     setSelectedTags([]);
     setClientFilter('all');
     setSearch('');
   }, []);
 
   // ── Handlers: Filter Presets ──────────────────────────────────────────────
-  const handleApplyPreset = useCallback((filters: CurrentFilterState) => {
-    setSearch(filters.search);
-    setArchiveFilter(filters.archiveFilter);
-    setColorFilter(filters.colorFilter);
-    setSortBy(filters.sortBy);
-    setSelectedTags(filters.selectedTags);
-    setClientFilter(filters.clientFilter);
-  }, []);
+  const handleApplyPreset = useCallback(
+    (filters: CurrentFilterState) => {
+      setSearch(filters.search);
+      if (filters.archiveFilter !== archiveFilter) setArchiveFilter(filters.archiveFilter);
+      setColorFilter(filters.colorFilter);
+      setSortBy(filters.sortBy);
+      setSelectedTags(filters.selectedTags);
+      setClientFilter(filters.clientFilter);
+    },
+    [archiveFilter, setArchiveFilter],
+  );
 
   // ── Handlers: Selection ───────────────────────────────────────────────────
   const handleToggleSelecting = useCallback(() => {
@@ -493,186 +524,66 @@ export function NotesModule() {
     [handleOpenNote, handlePin, handleArchive, handleDelete, handleConvertToTask],
   );
 
-  // ── Loading state ─────────────────────────────────────────────────────────
-  if (isLoading) {
-    return <NotesSkeleton />;
-  }
+  // ── The open note (or a new one) lives in the address (?note=<id>) ────────
+  const openNoteId = editorOpen ? (selectedNote ? selectedNote.id : NEW_NOTE) : null;
+  const lastOpened = useRef<string | null>(null);
+  lastOpened.current = openNoteId;
+  useRecordInUrl('note', openNoteId, {
+    ready: !isLoading && !error,
+    openFromUrl: (id) => {
+      if (id === NEW_NOTE) {
+        setSelectedNote(null);
+        setEditorOpen(true);
+        return 'opened';
+      }
+      if (isLoading || error) return 'waiting';
+      const note = notes.find((n) => n.id === id);
+      if (!note) {
+        toast.error('Note not found', {
+          description: 'It may have been deleted, or it belongs to someone else.',
+        });
+        return 'missing';
+      }
+      setSelectedNote(note);
+      setEditorOpen(true);
+      return 'opened';
+    },
+    closeFromUrl: (previousId) => {
+      if (previousId && lastOpened.current && lastOpened.current !== previousId) return;
+      setEditorOpen(false);
+      setSelectedNote(null);
+    },
+  });
 
-  return (
-    <div className="space-y-6 p-6 lg:p-8">
-      <PageHeader
-        title="Notes"
-        description="Your personal notes. Link them to clients, turn them into tasks, stay organised."
-        actions={
-          <>
-            <Button variant={isSelecting ? 'default' : 'outline'} onClick={handleToggleSelecting}>
-              <CheckSquare className="h-4 w-4" aria-hidden="true" />
-              {isSelecting ? 'Exit select' : 'Select'}
-            </Button>
-            <Button onClick={handleNewNote}>
-              <Plus className="h-4 w-4" aria-hidden="true" /> New note
-            </Button>
-          </>
-        }
-      />
+  const closeEditor = useCallback(() => {
+    setEditorOpen(false);
+    setSelectedNote(null);
+  }, []);
 
-      {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard
-          icon={StickyNote}
-          label="Total Notes"
-          value={stats.total}
-          iconBg="bg-gray-50"
-          iconColor="text-gray-500"
-        />
-        <StatCard
-          icon={Pin}
-          label="Pinned"
-          value={stats.pinned}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-500"
-        />
-        <StatCard
-          icon={User}
-          label="Client Linked"
-          value={stats.linked}
-          iconBg="bg-purple-50"
-          iconColor="text-purple-500"
-        />
-        <StatCard
-          icon={CheckCircle2}
-          label="Converted"
-          value={stats.converted}
-          iconBg="bg-green-50"
-          iconColor="text-green-500"
-        />
-      </div>
+  // Top-bar breadcrumb: Work / Notes / Active (/ the open note).
+  const tabLabel =
+    archiveFilter === 'archived' ? 'Archived' : archiveFilter === 'all' ? 'All' : 'Active';
+  useBreadcrumbTrail(
+    editorOpen
+      ? [
+          { label: tabLabel, onClick: closeEditor },
+          { label: selectedNote ? selectedNote.title || 'Untitled note' : 'New note' },
+        ]
+      : [{ label: tabLabel }],
+  );
 
-      {/* ── Toolbar ────────────────────────────────────────────────────────── */}
-      <NotesToolbar
-        search={search}
-        setSearch={setSearch}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        archiveFilter={archiveFilter}
-        setArchiveFilter={setArchiveFilter}
-        colorFilter={colorFilter}
-        setColorFilter={setColorFilter}
-        clientFilter={clientFilter}
-        setClientFilter={setClientFilter}
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        selectedTags={selectedTags}
-        setSelectedTags={setSelectedTags}
-        setColourLabelsOpen={setColourLabelsOpen}
-        colourLabels={colourLabels}
-        allTags={allTags}
-        linkedClients={linkedClients}
-        filteredNotes={filteredNotes}
-        activeFilterCount={activeFilterCount}
-        currentFilters={currentFilters}
-        personnelId={personnelId}
-        handleToggleTag={handleToggleTag}
-        handleClearFilters={handleClearFilters}
-        handleApplyPreset={handleApplyPreset}
-      />
-
-      {/* ── Notes Content ──────────────────────────────────────────────────── */}
-      {filteredNotes.length === 0 ? (
-        <EmptyState
-          isSearch={
-            !!search.trim() ||
-            colorFilter !== 'all' ||
-            archiveFilter !== 'active' ||
-            selectedTags.length > 0 ||
-            clientFilter !== 'all'
-          }
-          onNewNote={handleNewNote}
-        />
-      ) : (
-        <div className="space-y-6">
-          {/* Pinned section — with drag-and-drop reordering */}
-          {pinnedNotes.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Pin className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Pinned
-                </h2>
-                <span className="text-[10px] text-gray-400">({pinnedNotes.length})</span>
-                {!isSelecting && pinnedNotes.length > 1 && (
-                  <span className="text-[10px] text-gray-400 flex items-center gap-1 ml-2">
-                    <GripVertical className="h-3 w-3" /> Drag to reorder
-                  </span>
-                )}
-              </div>
-              <DraggablePinnedGrid
-                notes={pinnedNotes}
-                viewMode={viewMode}
-                handlers={cardHandlers}
-                personnelId={personnelId}
-                isSelecting={isSelecting}
-                selectedIds={selectedIds}
-                onToggleSelect={handleToggleSelect}
-              />
-            </div>
-          )}
-
-          {/* Unpinned notes section */}
-          {unpinnedNotes.length > 0 && (
-            <div className="space-y-3">
-              {pinnedNotes.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <FolderOpen className="h-3.5 w-3.5 text-gray-400" />
-                  <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    All Notes
-                  </h2>
-                  <span className="text-[10px] text-gray-400">({unpinnedNotes.length})</span>
-                </div>
-              )}
-              <NoteGrid
-                notes={unpinnedNotes}
-                viewMode={viewMode}
-                handlers={cardHandlers}
-                isSelecting={isSelecting}
-                selectedIds={selectedIds}
-                onToggleSelect={handleToggleSelect}
-              />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Bulk Actions Bar (floating) ────────────────────────────────────── */}
-      {isSelecting && selectedIds.size > 0 && (
-        <BulkActionsBar
-          selectedCount={selectedIds.size}
-          hasArchivedSelected={hasArchivedSelected}
-          hasActiveSelected={hasActiveSelected}
-          selectedNoteTags={selectedNoteTags}
-          allTags={allTags}
-          isBusy={isBulkBusy}
-          onArchive={handleBulkArchive}
-          onUnarchive={handleBulkUnarchive}
-          onDelete={handleBulkDelete}
-          onAddTag={handleBulkAddTag}
-          onRemoveTag={handleBulkRemoveTag}
-          onSetColor={handleBulkSetColor}
-          onClearSelection={handleClearSelection}
-          onSelectAll={handleSelectAll}
-          totalCount={filteredNotes.length}
-          getColourLabel={colourLabels.getLabel}
-        />
-      )}
-
-      {/* ── Editor Modal ───────────────────────────────────────────────────── */}
+  if (editorOpen) {
+    // Keep the open note current as the list refetches (pin, archive, save).
+    const current = selectedNote
+      ? (notes.find((n) => n.id === selectedNote.id) ?? selectedNote)
+      : null;
+    return (
       <NoteEditorModal
-        isOpen={editorOpen}
-        onClose={() => {
-          setEditorOpen(false);
-          setSelectedNote(null);
-        }}
-        note={selectedNote}
+        variant="page"
+        isOpen
+        backLabel="notes"
+        onClose={closeEditor}
+        note={current}
         personnelId={personnelId}
         personnelName={personnelName}
         clients={clientOptions}
@@ -684,10 +595,197 @@ export function NotesModule() {
         onConvertToTask={(id) => {
           convertToTask.mutate(id);
         }}
+        onTogglePin={handlePin}
+        onToggleArchive={handleArchive}
         customColourLabels={colourLabels.customLabels}
       />
+    );
+  }
 
-      {/* ── Colour Labels Dialog ───────────────────────────────────────────── */}
+  const isArchivedTab = archiveFilter === 'archived';
+
+  return (
+    <div className="space-y-5 p-6 lg:p-8">
+      <PageHeader
+        title="Notes"
+        description="Your notes — link them to clients, turn them into tasks, keep them organised."
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={handleToggleSelecting}
+              aria-pressed={isSelecting}
+              disabled={isLoading || !!error}
+            >
+              <CheckSquare className="h-4 w-4" aria-hidden="true" />
+              {isSelecting ? 'Exit select' : 'Select'}
+            </Button>
+            <Button onClick={handleNewNote}>
+              <Plus className="h-4 w-4" aria-hidden="true" /> New note
+            </Button>
+          </>
+        }
+      />
+
+      <Tabs
+        value={archiveFilter}
+        onValueChange={(v) => {
+          setArchiveFilter(v as NoteArchiveFilter);
+          setSelectedIds(new Set());
+        }}
+      >
+        <NavTabsList aria-label="Notes views">
+          <NavTabsTrigger value="active" count={isLoading || error ? undefined : stats.total}>
+            Active
+          </NavTabsTrigger>
+          <NavTabsTrigger value="archived" count={isLoading || error ? undefined : stats.archived}>
+            Archived
+          </NavTabsTrigger>
+          <NavTabsTrigger value="all" count={isLoading || error ? undefined : stats.all}>
+            All
+          </NavTabsTrigger>
+        </NavTabsList>
+      </Tabs>
+
+      {isLoading ? (
+        <div role="status" aria-label="Loading notes" className="space-y-5">
+          <span className="sr-only">Loading notes…</span>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[92px] rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-9 w-full max-w-md rounded-md" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-36 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      ) : error ? (
+        <ErrorState
+          title="Unable to load notes"
+          description="Something went wrong while loading your notes. Nothing you entered was lost."
+          onRetry={() => void refetch()}
+          details={error instanceof Error ? error.message : undefined}
+        />
+      ) : (
+        <>
+          {archiveFilter === 'active' && (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <StatCard label="Total notes" value={stats.total} />
+              <StatCard label="Pinned" value={stats.pinned} />
+              <StatCard label="Client-linked" value={stats.linked} />
+              <StatCard label="Converted to tasks" value={stats.converted} />
+            </div>
+          )}
+
+          <NotesToolbar
+            search={search}
+            setSearch={setSearch}
+            searchPlaceholder={isArchivedTab ? 'Search archived notes…' : 'Search notes…'}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            colorFilter={colorFilter}
+            setColorFilter={setColorFilter}
+            clientFilter={clientFilter}
+            setClientFilter={setClientFilter}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            selectedTags={selectedTags}
+            setSelectedTags={setSelectedTags}
+            setColourLabelsOpen={setColourLabelsOpen}
+            colourLabels={colourLabels}
+            allTags={allTags}
+            linkedClients={linkedClients}
+            filtersActive={filtersActive}
+            currentFilters={currentFilters}
+            personnelId={personnelId}
+            handleToggleTag={handleToggleTag}
+            handleClearFilters={handleClearFilters}
+            handleApplyPreset={handleApplyPreset}
+          />
+
+          {isSelecting && (
+            <BulkActionsBar
+              selectedCount={selectedIds.size}
+              hasArchivedSelected={hasArchivedSelected}
+              hasActiveSelected={hasActiveSelected}
+              selectedNoteTags={selectedNoteTags}
+              allTags={allTags}
+              isBusy={isBulkBusy}
+              onArchive={handleBulkArchive}
+              onUnarchive={handleBulkUnarchive}
+              onDelete={handleBulkDelete}
+              onAddTag={handleBulkAddTag}
+              onRemoveTag={handleBulkRemoveTag}
+              onSetColor={handleBulkSetColor}
+              onClearSelection={handleClearSelection}
+              onSelectAll={handleSelectAll}
+              totalCount={filteredNotes.length}
+              getColourLabel={colourLabels.getLabel}
+            />
+          )}
+
+          {filteredNotes.length === 0 ? (
+            <EmptyState
+              isSearch={filtersActive}
+              isArchived={isArchivedTab}
+              onNewNote={handleNewNote}
+              onClearFilters={handleClearFilters}
+            />
+          ) : (
+            <div className="space-y-6">
+              {pinnedNotes.length > 0 && (
+                <section aria-labelledby="notes-pinned" className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <h2 id="notes-pinned" className="text-sm font-semibold text-nw-ink">
+                      Pinned
+                    </h2>
+                    <span className="text-xs text-nw-text-3">{pinnedNotes.length}</span>
+                    {!isSelecting && pinnedNotes.length > 1 && (
+                      <span className="ml-2 flex items-center gap-1 text-xs text-nw-text-3">
+                        <GripVertical className="h-3 w-3" aria-hidden="true" /> Drag to reorder
+                      </span>
+                    )}
+                  </div>
+                  <DraggablePinnedGrid
+                    notes={pinnedNotes}
+                    viewMode={viewMode}
+                    handlers={cardHandlers}
+                    personnelId={personnelId}
+                    isSelecting={isSelecting}
+                    selectedIds={selectedIds}
+                    onToggleSelect={handleToggleSelect}
+                  />
+                </section>
+              )}
+
+              {unpinnedNotes.length > 0 && (
+                <section aria-labelledby="notes-all" className="space-y-3">
+                  {pinnedNotes.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <h2 id="notes-all" className="text-sm font-semibold text-nw-ink">
+                        All notes
+                      </h2>
+                      <span className="text-xs text-nw-text-3">{unpinnedNotes.length}</span>
+                    </div>
+                  )}
+                  <NoteGrid
+                    notes={unpinnedNotes}
+                    viewMode={viewMode}
+                    handlers={cardHandlers}
+                    isSelecting={isSelecting}
+                    selectedIds={selectedIds}
+                    onToggleSelect={handleToggleSelect}
+                  />
+                </section>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
       <ColourLabelsDialog
         isOpen={colourLabelsOpen}
         onClose={() => setColourLabelsOpen(false)}

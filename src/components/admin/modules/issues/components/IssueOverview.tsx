@@ -1,12 +1,14 @@
 /**
  * The top of the Issue Manager page: when the CI checks last reported, the
- * four summary cards that switch the list between views, and the banner that
+ * four view tabs (with counts) that switch the list, and the notice that
  * appears only when something needs escalating. Pure views — IssuesModule
  * owns the state and handlers.
  */
 import { AlertTriangle, ArrowUpRight, Loader2 } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { cn } from '../../../../ui/utils';
+import { Tabs } from '../../../../ui/tabs';
+import { NavTabsList, NavTabsTrigger, Notice } from '../../../layout/page';
 import {
   describeReportSource,
   formatDate,
@@ -55,7 +57,12 @@ export function ReportFreshness({ snapshot }: { snapshot: QualityIssueSnapshot }
   );
 }
 
-export function IssueViewCards({
+/**
+ * The four views as underline tabs with counts; the active view's caption
+ * sits under the tabs. The tab content is the list below (one TabsContent is
+ * not needed: the list re-renders for the active view).
+ */
+export function IssueViewTabs({
   counts,
   activeView,
   onSelect,
@@ -65,40 +72,17 @@ export function IssueViewCards({
   onSelect: (view: IssueView) => void;
 }) {
   return (
-    <div
-      role="group"
-      aria-label="Filter issues by view"
-      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-    >
-      {ISSUE_VIEWS.map((view) => {
-        const config = issueViewConfig[view];
-        const Icon = config.icon;
-        const isActive = view === activeView;
-
-        return (
-          <button
-            key={view}
-            type="button"
-            aria-pressed={isActive}
-            onClick={() => onSelect(view)}
-            className={cn(
-              'flex flex-col rounded-xl border bg-white p-5 text-left shadow-sm transition focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:outline-none',
-              isActive
-                ? 'border-purple-300 ring-2 ring-purple-100'
-                : 'border-gray-100 hover:border-gray-200 hover:shadow-md',
-            )}
-          >
-            <span className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500">{config.label}</span>
-              <span className={cn('rounded-lg p-2', config.iconTone)}>
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </span>
-            </span>
-            <span className="block text-3xl font-bold text-gray-900">{counts[view]}</span>
-            <span className="mt-1 block text-xs text-muted-foreground">{config.description}</span>
-          </button>
-        );
-      })}
+    <div className="space-y-2">
+      <Tabs value={activeView} onValueChange={(value) => onSelect(value as IssueView)}>
+        <NavTabsList aria-label="Issue views">
+          {ISSUE_VIEWS.map((view) => (
+            <NavTabsTrigger key={view} value={view} count={counts[view]}>
+              {issueViewConfig[view].label}
+            </NavTabsTrigger>
+          ))}
+        </NavTabsList>
+      </Tabs>
+      <p className="text-sm text-nw-text-3">{issueViewConfig[activeView].description}</p>
     </div>
   );
 }
@@ -127,39 +111,22 @@ export function AttentionBanner({
   ].filter(Boolean);
 
   return (
-    <div
-      role="status"
-      className={cn(
-        'flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between',
-        summary.hasCritical ? 'border-red-200 bg-red-50/70' : 'border-amber-200 bg-amber-50/70',
-      )}
+    <Notice
+      kind={summary.hasCritical ? 'error' : 'attention'}
+      title={`${pluralize(summary.issues, 'issue')} ${summary.issues === 1 ? 'needs' : 'need'} attention —`}
+      action={
+        summary.withoutTask > 0 ? (
+          <Button type="button" size="sm" onClick={onCreateTasks} disabled={isRunning}>
+            {isRunning ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+            Create {pluralize(summary.withoutTask, 'task')}
+          </Button>
+        ) : null
+      }
     >
-      <div className="flex items-start gap-3">
-        <AlertTriangle
-          className={cn(
-            'mt-0.5 h-5 w-5 shrink-0',
-            summary.hasCritical ? 'text-red-600' : 'text-amber-600',
-          )}
-          aria-hidden="true"
-        />
-        <div>
-          <p className="text-sm font-semibold text-gray-900">
-            {pluralize(summary.issues, 'issue')} {summary.issues === 1 ? 'needs' : 'need'} attention
-          </p>
-          <p className="mt-0.5 text-sm text-gray-700">
-            {reasons.join(' · ')}.{' '}
-            {summary.withoutTask > 0
-              ? `${summary.withoutTask} ${summary.withoutTask === 1 ? 'has' : 'have'} no remediation task yet.`
-              : 'Each one already has a remediation task.'}
-          </p>
-        </div>
-      </div>
-      {summary.withoutTask > 0 ? (
-        <Button type="button" onClick={onCreateTasks} disabled={isRunning} className="shrink-0">
-          {isRunning ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-          Create {pluralize(summary.withoutTask, 'task')}
-        </Button>
-      ) : null}
-    </div>
+      {reasons.join(', ')}.{' '}
+      {summary.withoutTask > 0
+        ? `${summary.withoutTask} ${summary.withoutTask === 1 ? 'has' : 'have'} no remediation task yet.`
+        : 'Each one already has a remediation task.'}
+    </Notice>
   );
 }

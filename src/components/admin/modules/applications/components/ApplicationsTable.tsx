@@ -1,22 +1,17 @@
 /**
- * Applications Table
+ * Applications table (design system: list with toolbar).
  *
- * Data table for listing client applications with search, status filtering,
- * and row-level actions. Follows admin panel table conventions (consistent
- * column sizing, hover states, action visibility).
- *
- * §8.3 — Matches existing table patterns across the admin panel.
+ * Toolbar: search, Origin and Submitted chips, result count and Refresh.
+ * Each row has one main action for its status (Review, Complete on behalf,
+ * Open client, View) and the rest under ⋯. 25 rows a page.
  */
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Application, TabStatus } from '../types';
 import { formatDate, normalizeApplicationData } from '../utils';
 import { StatusBadge } from './StatusBadge';
-import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
-import { Card, CardContent, CardHeader } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
-import { Avatar, AvatarFallback } from '../../../../ui/avatar';
 import { Skeleton } from '../../../../ui/skeleton';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 import {
@@ -27,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/table';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,26 +29,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
-import {
-  Search,
-  RefreshCw,
-  Loader2,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  Mail,
-  Phone,
-  Clock,
-  Fingerprint,
-  Send,
-  MoreHorizontal,
-  Hash,
-  Inbox,
-  RotateCw,
-  Target,
-  Package,
-  ClipboardEdit,
-} from 'lucide-react';
+import { Search, RefreshCw, Loader2, MoreHorizontal } from 'lucide-react';
+import { ClearFiltersButton, FilterChip } from '../../../layout/page/FilterControls';
+
+const PAGE_SIZE = 25;
+
+type OriginFilter = 'all' | 'admin_invite' | 'admin_import' | 'self';
+type SubmittedFilter = 'all' | '7' | '30' | '90' | '365';
 
 interface ApplicationsTableProps {
   loading: boolean;
@@ -69,39 +50,65 @@ interface ApplicationsTableProps {
   onDecline: (app: Application) => void;
   onResendInvite?: (app: Application) => void;
   onCompleteOnBehalf?: (app: Application) => void;
+  onOpenClient?: (app: Application) => void;
+  /** Incomplete: email the applicant to finish their application. */
+  onSendReminder?: (app: Application) => void;
+  /** Approved / rejected: the application as a PDF. */
+  onDownloadPdf?: (app: Application) => void;
+  onInvite?: () => void;
   resendingInviteId?: string | null;
+  /** Approve / Reject show only with the approve permission. */
+  canApprove?: boolean;
+  canInvite?: boolean;
 }
 
-/** Tab-specific empty state configuration */
-const EMPTY_STATE_CONFIG: Record<
-  TabStatus,
-  { icon: React.ElementType; title: string; description: string }
-> = {
+/** Tab-specific empty state (design system: one per tab). */
+const EMPTY_STATE: Record<TabStatus, { title: string; description: string; invite?: boolean }> = {
   incomplete: {
-    icon: Inbox,
     title: 'No incomplete applications',
-    description: 'Clients who sign up but don\u2019t finish their application will appear here.',
+    description: 'Clients who sign up but don’t finish their application will appear here.',
   },
   pending: {
-    icon: Inbox,
     title: 'No pending applications',
-    description: 'New client applications will appear here for your review.',
+    description:
+      'New applications waiting for review appear here. Use Invite applicant to start one.',
   },
   invited: {
-    icon: Send,
     title: 'No invited applicants',
-    description: 'Use "Invite Applicant" to send an invitation to a prospective client.',
+    description: 'People you invite appear here until they submit their application.',
+    invite: true,
   },
   approved: {
-    icon: CheckCircle2,
     title: 'No approved applications yet',
-    description: 'Approved applications will appear here after review.',
+    description: 'Approved applications move here once the client profile is created.',
   },
   rejected: {
-    icon: XCircle,
     title: 'No rejected applications',
     description: 'Rejected applications will be listed here for reference.',
   },
+  all: {
+    title: 'No applications',
+    description: 'New applications appear here when clients sign up or you invite them.',
+    invite: true,
+  },
+};
+
+const ORIGIN_LABEL: Record<Exclude<OriginFilter, 'all'>, string> = {
+  admin_invite: 'Invited',
+  admin_import: 'Import',
+  self: 'Self-service',
+};
+
+function originOf(app: Application): Exclude<OriginFilter, 'all'> {
+  if (app.origin === 'admin_invite') return 'admin_invite';
+  if (app.origin === 'admin_import') return 'admin_import';
+  return 'self';
+}
+
+const ORIGIN_PILL: Record<Exclude<OriginFilter, 'all'>, string> = {
+  admin_invite: 'bg-indigo-50 text-indigo-700',
+  admin_import: 'bg-blue-50 text-blue-700',
+  self: 'bg-gray-100 text-gray-700',
 };
 
 export function ApplicationsTable({
@@ -117,40 +124,66 @@ export function ApplicationsTable({
   onDecline,
   onResendInvite,
   onCompleteOnBehalf,
+  onOpenClient,
+  onSendReminder,
+  onDownloadPdf,
+  onInvite,
   resendingInviteId,
+  canApprove = true,
+  canInvite = true,
 }: ApplicationsTableProps) {
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'applications-table-search' });
-  // Filter applications by tab status
-  const statusMap: Record<TabStatus, string[]> = {
+  const [origin, setOrigin] = useState<OriginFilter>('all');
+  const [submitted, setSubmitted] = useState<SubmittedFilter>('all');
+  const [page, setPage] = useState(0);
+
+  // Rows belong to the open tab (the list may still hold the previous one
+  // for a moment while the next loads).
+  const statusMap: Record<TabStatus, string[] | null> = {
     incomplete: ['draft', 'in_progress'],
     pending: ['submitted'],
     approved: ['approved'],
     rejected: ['declined'],
     invited: ['invited'],
+    all: null,
   };
 
-  const filteredApplications = applications.filter((app) => {
-    const matchesStatus = statusMap[activeTab]?.includes(app.status);
-    if (!matchesStatus) return false;
+  const filtered = useMemo(() => {
+    const statuses = statusMap[activeTab];
+    const since = submitted === 'all' ? null : Date.now() - Number(submitted) * 24 * 60 * 60 * 1000;
+    const q = searchQuery.trim().toLowerCase();
+    return applications.filter((app) => {
+      if (statuses && !statuses.includes(app.status)) return false;
+      if (origin !== 'all' && originOf(app) !== origin) return false;
+      if (since !== null) {
+        const when = new Date(app.submitted_at || app.created_at).getTime();
+        if (!(when >= since)) return false;
+      }
+      if (!q) return true;
+      const data = normalizeApplicationData(app.application_data);
+      const fullName = `${data.firstName || ''} ${data.lastName || ''}`.toLowerCase();
+      const email = (data.emailAddress || app.user_email || '').toLowerCase();
+      const phone = (data.cellphoneNumber || '').toLowerCase();
+      const id = (data.idNumber || '').toLowerCase();
+      const appNumber = (app.application_number || '').toLowerCase();
+      return (
+        fullName.includes(q) ||
+        email.includes(q) ||
+        phone.includes(q) ||
+        id.includes(q) ||
+        appNumber.includes(q)
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- statusMap is constant
+  }, [applications, activeTab, origin, submitted, searchQuery]);
 
-    if (!searchQuery.trim()) return true;
+  useEffect(() => {
+    setPage(0);
+  }, [activeTab, origin, submitted, searchQuery]);
 
-    const q = searchQuery.toLowerCase();
-    const data = normalizeApplicationData(app.application_data);
-    const fullName = `${data.firstName || ''} ${data.lastName || ''}`.toLowerCase();
-    const email = (data.emailAddress || app.user_email || '').toLowerCase();
-    const phone = (data.cellphoneNumber || '').toLowerCase();
-    const id = (data.idNumber || '').toLowerCase();
-    const appNumber = (app.application_number || '').toLowerCase();
-
-    return (
-      fullName.includes(q) ||
-      email.includes(q) ||
-      phone.includes(q) ||
-      id.includes(q) ||
-      appNumber.includes(q)
-    );
-  });
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageRows = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+  const filtersActive = origin !== 'all' || submitted !== 'all' || searchQuery.trim() !== '';
 
   const getInitials = (app: Application) => {
     const first = app.application_data.firstName?.[0] || '';
@@ -167,393 +200,375 @@ export function ApplicationsTable({
     return parts.join(' ') || app.user_name || 'Unknown';
   };
 
-  const getOriginBadge = (app: Application) => {
-    if (app.origin === 'admin_invite') {
-      return { label: 'Invited', className: 'bg-indigo-50 text-indigo-700 border-indigo-200/60' };
+  /** The one main action for a row, by its status. */
+  const rowActions = (app: Application) => {
+    const name = getFullName(app);
+    const isSubmitted = app.status === 'submitted';
+    const isInvited = app.status === 'invited';
+    const isIncomplete = app.status === 'draft' || app.status === 'in_progress';
+    const isApproved = app.status === 'approved';
+    const isRejected = app.status === 'declined';
+
+    let main: React.ReactNode;
+    if (isIncomplete && onCompleteOnBehalf) {
+      main = (
+        <Button size="sm" variant="outline" onClick={() => onCompleteOnBehalf(app)}>
+          Complete on behalf
+        </Button>
+      );
+    } else if (isApproved && onOpenClient && app.user_id) {
+      main = (
+        <Button size="sm" variant="outline" onClick={() => onOpenClient(app)}>
+          Open client
+        </Button>
+      );
+    } else if (isApproved || isRejected) {
+      main = (
+        <Button size="sm" variant="outline" onClick={() => onReview(app)}>
+          View
+        </Button>
+      );
+    } else {
+      main = (
+        <Button size="sm" variant="outline" onClick={() => onReview(app)}>
+          Review
+        </Button>
+      );
     }
-    if (app.origin === 'admin_import') {
-      return { label: 'Import', className: 'bg-blue-50 text-blue-700 border-blue-200/60' };
+
+    const items: React.ReactNode[] = [];
+    if (isIncomplete || (isApproved && onOpenClient && app.user_id)) {
+      items.push(
+        <DropdownMenuItem key="view" onSelect={() => onReview(app)}>
+          {isApproved ? 'View application' : 'Review details'}
+        </DropdownMenuItem>,
+      );
     }
-    return { label: 'Self-service', className: 'bg-gray-50 text-gray-600 border-gray-200/60' };
+    if ((isSubmitted || isInvited || isIncomplete) && canApprove) {
+      items.push(
+        <DropdownMenuItem key="approve" onSelect={() => onApprove(app)}>
+          Approve
+        </DropdownMenuItem>,
+      );
+    }
+    if ((isSubmitted || isInvited) && onCompleteOnBehalf) {
+      items.push(
+        <DropdownMenuItem key="behalf" onSelect={() => onCompleteOnBehalf(app)}>
+          Complete on behalf
+        </DropdownMenuItem>,
+      );
+    }
+    if (isInvited && onResendInvite) {
+      items.push(
+        <DropdownMenuItem
+          key="resend"
+          onSelect={() => onResendInvite(app)}
+          disabled={resendingInviteId === app.id}
+        >
+          {resendingInviteId === app.id && (
+            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          )}
+          Resend invite
+        </DropdownMenuItem>,
+      );
+    }
+    if (isIncomplete && onSendReminder) {
+      items.push(
+        <DropdownMenuItem key="remind" onSelect={() => onSendReminder(app)}>
+          Send reminder
+        </DropdownMenuItem>,
+      );
+    }
+    if (isRejected && app.review_notes) {
+      items.push(
+        <DropdownMenuItem key="reason" disabled className="max-w-64 whitespace-normal">
+          Reason: {app.review_notes}
+        </DropdownMenuItem>,
+      );
+    }
+    if ((isApproved || isRejected) && onDownloadPdf) {
+      items.push(
+        <DropdownMenuItem key="pdf" onSelect={() => onDownloadPdf(app)}>
+          Download PDF
+        </DropdownMenuItem>,
+      );
+    }
+    if ((isSubmitted || isInvited || isIncomplete) && canApprove) {
+      items.push(<DropdownMenuSeparator key="sep" />);
+      items.push(
+        <DropdownMenuItem
+          key="reject"
+          onSelect={() => onDecline(app)}
+          className="text-red-600 focus:bg-red-50 focus:text-red-700"
+        >
+          Reject…
+        </DropdownMenuItem>,
+      );
+    }
+
+    return (
+      <div className="flex items-center justify-end gap-1">
+        {main}
+        {items.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label={`More actions for ${name}`}
+              >
+                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              {items}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    );
   };
 
-  const getServicesCount = (app: Application) => {
-    return normalizeApplicationData(app.application_data).accountReasons.length;
-  };
-
-  const getExistingProductsCount = (app: Application) => {
-    return (normalizeApplicationData(app.application_data).existingProducts ?? []).filter(
-      (p) => p !== 'None of the above',
-    ).length;
-  };
-
-  const isPendingLike =
-    activeTab === 'pending' || activeTab === 'invited' || activeTab === 'incomplete';
+  const toolbar = (
+    <div className="flex flex-wrap items-center gap-2 border-b border-nw-line p-3">
+      <div className="relative w-full sm:w-80">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+          aria-hidden="true"
+        />
+        <Input
+          {...searchInputGuard}
+          aria-label="Search applications"
+          placeholder="Search name, email, phone or APP-number…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-9 pl-9 text-sm"
+        />
+      </div>
+      <FilterChip
+        label="Origin"
+        value={origin}
+        allValue="all"
+        onChange={setOrigin}
+        options={(Object.keys(ORIGIN_LABEL) as Exclude<OriginFilter, 'all'>[]).map((o) => ({
+          value: o,
+          label: ORIGIN_LABEL[o],
+        }))}
+      />
+      <FilterChip
+        label="Submitted"
+        value={submitted}
+        allValue="all"
+        allLabel="Any time"
+        onChange={setSubmitted}
+        options={[
+          { value: '7', label: 'Last 7 days' },
+          { value: '30', label: 'Last 30 days' },
+          { value: '90', label: 'Last 90 days' },
+          { value: '365', label: 'Last 12 months' },
+        ]}
+      />
+      {filtersActive && (
+        <ClearFiltersButton
+          onClick={() => {
+            setOrigin('all');
+            setSubmitted('all');
+            setSearchQuery('');
+          }}
+        />
+      )}
+      <div className="ml-auto flex items-center gap-2">
+        <span className="text-sm text-nw-text-3">
+          {filtered.length} {filtered.length === 1 ? 'result' : 'results'}
+        </span>
+        <Button
+          onClick={onRefresh}
+          variant="ghost"
+          size="icon"
+          disabled={refreshing}
+          aria-label="Refresh"
+          title="Refresh"
+          className="h-8 w-8"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
+        </Button>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
-      <Card className="overflow-hidden border-gray-200">
-        <CardHeader className="border-b border-gray-200 bg-gray-50/50 p-4">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-9 w-72 rounded-md" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-6 w-20 rounded-full" />
-              <Skeleton className="h-8 w-8 rounded-md" />
-            </div>
+      <section
+        className="overflow-hidden rounded-xl border border-nw-line bg-white"
+        aria-busy="true"
+      >
+        <p className="sr-only" role="status">
+          Loading applications, please wait…
+        </p>
+        <div className="border-b border-nw-line p-3">
+          <Skeleton className="h-9 w-80 rounded-md" />
+        </div>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 border-b border-nw-line-2 px-4 py-4">
+            <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="ml-auto h-8 w-20 rounded-md" />
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="flex items-center gap-4 px-4 py-3 border-b bg-gray-50/30">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <Skeleton
-                key={i}
-                className={`h-3 ${i === 0 ? 'w-32' : i === 6 ? 'w-16 ml-auto' : 'w-20'}`}
-              />
-            ))}
-          </div>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-3 w-[260px]">
-                <Skeleton className="h-9 w-9 rounded-full shrink-0" />
-                <div className="space-y-1.5 min-w-0">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Skeleton className="h-3.5 w-36" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-              <Skeleton className="h-3.5 w-24 font-mono" />
-              <Skeleton className="h-5 w-20 rounded-full" />
-              <Skeleton className="h-3.5 w-20" />
-              <Skeleton className="h-5 w-20 rounded-full" />
-              <div className="ml-auto flex gap-1">
-                <Skeleton className="h-8 w-8 rounded-md" />
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+        ))}
+      </section>
     );
   }
 
-  const emptyConfig = EMPTY_STATE_CONFIG[activeTab];
-  const EmptyIcon = emptyConfig.icon;
+  const empty = EMPTY_STATE[activeTab];
 
   return (
-    <Card className="overflow-hidden border-gray-200">
-      {/* Table Toolbar */}
-      <CardHeader className="border-b border-gray-200 bg-white p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                {...searchInputGuard}
-                placeholder="Search by name, email, phone, or application #..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 bg-gray-50 border-gray-200 text-sm focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="secondary"
-              className="font-medium text-xs px-2.5 py-1 bg-gray-100 text-gray-600 border border-gray-200"
+    <section className="overflow-hidden rounded-xl border border-nw-line bg-white">
+      {toolbar}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
+          <h3 className="text-base font-semibold text-nw-ink">
+            {filtersActive ? 'No applications match your filters' : empty.title}
+          </h3>
+          <p className="max-w-sm text-sm text-nw-text-3">
+            {filtersActive ? 'Try a different search or clear the filters.' : empty.description}
+          </p>
+          {filtersActive && (
+            <Button
+              variant="outline"
+              className="mt-2"
+              onClick={() => {
+                setOrigin('all');
+                setSubmitted('all');
+                setSearchQuery('');
+              }}
             >
-              {filteredApplications.length}{' '}
-              {filteredApplications.length === 1 ? 'result' : 'results'}
-            </Badge>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={onRefresh}
-                    variant="outline"
-                    size="sm"
-                    disabled={refreshing}
-                    className="h-8 w-8 p-0 border-gray-200"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Refresh data</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+              Clear filters
+            </Button>
+          )}
+          {!filtersActive && empty.invite && onInvite && canInvite && (
+            <Button className="mt-2" onClick={onInvite}>
+              Invite applicant
+            </Button>
+          )}
         </div>
-      </CardHeader>
-
-      {/* Table */}
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50/60 hover:bg-gray-50/60 border-b border-gray-200">
-              <TableHead className="w-[240px] font-semibold text-[11px] uppercase tracking-wider text-gray-500 pl-4 py-3">
-                Applicant
-              </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
-                Contact
-              </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
-                ID Number
-              </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
-                Status
-              </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
-                {activeTab === 'invited'
-                  ? 'Invited'
-                  : activeTab === 'incomplete'
-                    ? 'Signed Up'
-                    : 'Submitted'}
-              </TableHead>
-              <TableHead className="font-semibold text-[11px] uppercase tracking-wider text-gray-500 py-3">
-                Origin
-              </TableHead>
-              <TableHead className="text-right font-semibold text-[11px] uppercase tracking-wider text-gray-500 pr-4 py-3">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredApplications.length === 0 ? (
+      ) : (
+        <>
+          <Table>
+            <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={7} className="text-center py-16">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center">
-                      <EmptyIcon className="h-6 w-6 text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-700 text-sm">
-                        {searchQuery ? 'No matching applications' : emptyConfig.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                        {searchQuery
-                          ? 'Try adjusting your search query or clearing the filter.'
-                          : emptyConfig.description}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
+                <TableHead className="pl-4">Applicant</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>ID number</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>
+                  {activeTab === 'invited'
+                    ? 'Invited'
+                    : activeTab === 'incomplete'
+                      ? 'Signed up'
+                      : 'Submitted'}
+                </TableHead>
+                <TableHead>Origin</TableHead>
+                <TableHead className="pr-4 text-right">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
-            ) : (
-              filteredApplications.map((app) => {
+            </TableHeader>
+            <TableBody>
+              {pageRows.map((app) => {
                 const data = normalizeApplicationData(app.application_data);
-                const originBadge = getOriginBadge(app);
-                const servicesCount = getServicesCount(app);
-                const productsCount = getExistingProductsCount(app);
-
+                const o = originOf(app);
                 return (
-                  <TableRow
-                    key={app.id}
-                    className="group hover:bg-purple-50/30 transition-colors cursor-pointer border-b border-gray-100"
-                    onClick={() => onReview(app)}
-                  >
-                    {/* Applicant */}
-                    <TableCell className="pl-4 py-3">
+                  <TableRow key={app.id} className="cursor-pointer" onClick={() => onReview(app)}>
+                    <TableCell className="py-3 pl-4">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 shrink-0">
-                          <AvatarFallback className="text-xs font-semibold bg-gradient-to-br from-[#6d28d9]/10 to-purple-100 text-[#6d28d9]">
-                            {getInitials(app)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <span
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-nw-violet-50 text-xs font-semibold text-nw-violet-600"
+                          aria-hidden="true"
+                        >
+                          {getInitials(app)}
+                        </span>
                         <div className="min-w-0">
-                          <p className="font-medium text-sm text-gray-900 truncate">
+                          <p className="truncate text-sm font-medium text-nw-ink">
                             {getFullName(app)}
                           </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {app.application_number && (
-                              <span className="text-[11px] text-gray-400 flex items-center gap-0.5 font-mono">
-                                <Hash className="h-2.5 w-2.5" />
-                                {app.application_number}
-                              </span>
-                            )}
-                            {servicesCount > 0 && (
-                              <TooltipProvider delayDuration={200}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="text-[10px] text-purple-600 bg-purple-50 border border-purple-200/60 rounded px-1 py-px flex items-center gap-0.5">
-                                      <Target className="h-2.5 w-2.5" />
-                                      {servicesCount}
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="text-xs">
-                                    {servicesCount} service{servicesCount !== 1 ? 's' : ''}{' '}
-                                    requested
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            {productsCount > 0 && (
-                              <TooltipProvider delayDuration={200}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="text-[10px] text-orange-600 bg-orange-50 border border-orange-200/60 rounded px-1 py-px flex items-center gap-0.5">
-                                      <Package className="h-2.5 w-2.5" />
-                                      {productsCount}
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="text-xs">
-                                    {productsCount} existing product{productsCount !== 1 ? 's' : ''}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </div>
+                          {app.application_number && (
+                            <p className="font-mono text-[11px] text-nw-text-3">
+                              {app.application_number}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </TableCell>
-
-                    {/* Contact */}
                     <TableCell className="py-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                          <Mail className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                          <span className="truncate max-w-[180px]">
-                            {data.emailAddress || app.user_email || '\u2014'}
-                          </span>
-                        </div>
-                        {data.cellphoneNumber && (
-                          <div className="flex items-center gap-1.5 text-[13px] text-gray-500">
-                            <Phone className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                            <span>{data.cellphoneNumber}</span>
-                          </div>
-                        )}
-                      </div>
+                      <p className="max-w-[200px] truncate text-sm text-nw-text-2">
+                        {data.emailAddress || app.user_email || '—'}
+                      </p>
+                      {data.cellphoneNumber && (
+                        <p className="text-xs text-nw-text-3">{data.cellphoneNumber}</p>
+                      )}
                     </TableCell>
-
-                    {/* ID Number */}
                     <TableCell className="py-3">
                       {data.idNumber ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                                <Fingerprint className="h-3.5 w-3.5 text-gray-400" />
-                                <span className="font-mono text-xs">
-                                  {data.idNumber.slice(0, 6)}••••{data.idNumber.slice(-2)}
-                                </span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {data.idType === 'passport' ? 'Passport' : 'SA ID'}: Partially masked
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <span
+                          className="font-mono text-xs text-nw-text-2"
+                          title={`${data.idType === 'passport' ? 'Passport' : 'SA ID'}, partly hidden`}
+                        >
+                          {data.idNumber.slice(0, 6)}••••{data.idNumber.slice(-2)}
+                        </span>
                       ) : (
                         <span className="text-sm text-gray-300">&mdash;</span>
                       )}
                     </TableCell>
-
-                    {/* Status */}
                     <TableCell className="py-3">
                       <StatusBadge status={app.status} />
                     </TableCell>
-
-                    {/* Date */}
-                    <TableCell className="py-3">
-                      <div className="flex items-center gap-1.5 text-[13px] text-gray-500">
-                        <Clock className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                        <span>{formatDate(app.submitted_at || app.created_at)}</span>
-                      </div>
+                    <TableCell className="py-3 text-[13px] whitespace-nowrap text-nw-text-2">
+                      {formatDate(app.submitted_at || app.created_at)}
                     </TableCell>
-
-                    {/* Origin */}
                     <TableCell className="py-3">
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] font-medium border ${originBadge.className}`}
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${ORIGIN_PILL[o]}`}
                       >
-                        {originBadge.label}
-                      </Badge>
+                        {ORIGIN_LABEL[o]}
+                      </span>
                     </TableCell>
-
-                    {/* Actions */}
-                    <TableCell
-                      className="text-right pr-4 py-3"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
-                          <DropdownMenuItem onClick={() => onReview(app)} className="text-xs">
-                            <Eye className="h-3.5 w-3.5 mr-2" />
-                            Review Details
-                          </DropdownMenuItem>
-
-                          {isPendingLike && (
-                            <div className="contents">
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => onApprove(app)}
-                                className="text-xs text-emerald-700 focus:text-emerald-700 focus:bg-emerald-50"
-                              >
-                                <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
-                                Approve
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => onDecline(app)}
-                                className="text-xs text-red-700 focus:text-red-700 focus:bg-red-50"
-                              >
-                                <XCircle className="h-3.5 w-3.5 mr-2" />
-                                Reject
-                              </DropdownMenuItem>
-                            </div>
-                          )}
-
-                          {activeTab === 'invited' && onResendInvite && (
-                            <div className="contents">
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => onResendInvite(app)}
-                                disabled={resendingInviteId === app.id}
-                                className="text-xs"
-                              >
-                                {resendingInviteId === app.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                                ) : (
-                                  <RotateCw className="h-3.5 w-3.5 mr-2" />
-                                )}
-                                Resend Invite
-                              </DropdownMenuItem>
-                            </div>
-                          )}
-
-                          {(activeTab === 'pending' || activeTab === 'incomplete') &&
-                            onCompleteOnBehalf && (
-                              <div className="contents">
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => onCompleteOnBehalf(app)}
-                                  className="text-xs"
-                                >
-                                  <ClipboardEdit className="h-3.5 w-3.5 mr-2" />
-                                  Complete on Behalf
-                                </DropdownMenuItem>
-                              </div>
-                            )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="py-3 pr-4" onClick={(e) => e.stopPropagation()}>
+                      {rowActions(app)}
                     </TableCell>
                   </TableRow>
                 );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+              })}
+            </TableBody>
+          </Table>
+          <div className="flex items-center justify-between gap-2 border-t border-nw-line px-4 py-3 text-sm text-nw-text-3">
+            <span>
+              Showing {page * PAGE_SIZE + 1}–{Math.min(filtered.length, (page + 1) * PAGE_SIZE)} of{' '}
+              {filtered.length}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+              >
+                Previous
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                disabled={page >= pageCount - 1}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+    </section>
   );
 }

@@ -12,11 +12,12 @@ export function KPICard({
   format = 'number',
   subtitle,
   onClick,
+  hideChange = false,
   loading = false,
 }: KPICardProps) {
-  const isPositive = change > 0;
-  const isNegative = change < 0;
-  const isNeutral = change === 0;
+  const isPositive = !hideChange && change > 0;
+  const isNegative = !hideChange && change < 0;
+  const isNeutral = !hideChange && change === 0;
 
   if (loading) {
     return (
@@ -42,9 +43,7 @@ export function KPICard({
       onClick={onClick}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          {title}
-        </CardTitle>
+        <CardTitle className="text-sm font-medium text-nw-text-2">{title}</CardTitle>
         <div className="p-2.5 bg-primary/10 rounded-full">
           <Icon className="h-4 w-4 text-primary" />
         </div>
@@ -73,7 +72,11 @@ export function KPICard({
             </span>
           )}
 
-          {subtitle && <span className="text-muted-foreground ml-2 truncate">{subtitle}</span>}
+          {subtitle && (
+            <span className={`truncate text-muted-foreground ${hideChange ? '' : 'ml-2'}`}>
+              {hideChange ? subtitle : `· ${subtitle}`}
+            </span>
+          )}
         </div>
       </CardContent>
     </Card>

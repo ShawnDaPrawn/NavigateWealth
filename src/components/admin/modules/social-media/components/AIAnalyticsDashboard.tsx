@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import {
-  Loader2,
   BarChart3,
   Type,
   Image as ImageIcon,
@@ -26,7 +25,6 @@ import {
   Facebook,
   Twitter,
   RefreshCw,
-  AlertCircle,
   Activity,
   TrendingUp,
 } from 'lucide-react';
@@ -42,6 +40,8 @@ import {
 } from 'recharts';
 import { useAIAnalytics } from '../hooks/useAIAnalytics';
 import { BRAND } from '../constants';
+import { Skeleton } from '../../../../ui/skeleton';
+import { ErrorState } from '../../../layout/page';
 
 // ============================================================================
 // Constants
@@ -149,26 +149,24 @@ export function AIAnalyticsDashboard() {
 
   if (analyticsLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Loading analytics...</span>
-        </CardContent>
-      </Card>
+      <div aria-busy="true" aria-label="Loading analytics" className="space-y-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
     );
   }
 
   if (analyticsError) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
-          <p className="text-sm text-muted-foreground mb-3">{analyticsError}</p>
-          <Button variant="outline" size="sm" onClick={() => refetchAnalytics()}>
-            <RefreshCw className="h-3 w-3 mr-1.5" /> Retry
-          </Button>
-        </CardContent>
-      </Card>
+      <ErrorState
+        title="Unable to load AI analytics"
+        onRetry={() => void refetchAnalytics()}
+        details={String(analyticsError)}
+      />
     );
   }
 

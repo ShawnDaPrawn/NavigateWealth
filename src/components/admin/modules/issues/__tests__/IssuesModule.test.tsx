@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, screen, waitFor, within, renderWithQueryClient } from '@/test/utils';
 import { summarizeQualityIssues } from '@/shared/quality/qualityIssues';
 import type { QualityIssue, QualityIssueSnapshot } from '../types';
+import { BreadcrumbContext } from '../../../layout/page/breadcrumbContext';
 
 vi.mock('@/components/admin/modules/issues/api', () => ({
   fetchQualityIssuesSnapshot: vi.fn(),
@@ -113,25 +114,38 @@ describe('IssuesModule', () => {
     expect(screen.queryByText('Old date bug')).toBeNull();
   });
 
-  it('shows a count on each view card that matches the list it opens', async () => {
+  it('shows the views as tabs with counts that match the list each opens', async () => {
     await renderLoaded();
 
-    const cards = screen.getByRole('group', { name: 'Filter issues by view' });
-    const unresolved = within(cards).getByRole('button', { name: /^Unresolved/ });
-    const unassigned = within(cards).getByRole('button', { name: /^Unassigned/ });
-    const resolved = within(cards).getByRole('button', { name: /^Resolved/ });
+    const tabs = screen.getByRole('tablist', { name: 'Issue views' });
+    const unresolved = within(tabs).getByRole('tab', { name: /^Unresolved/ });
+    const unassigned = within(tabs).getByRole('tab', { name: /^Unassigned/ });
+    const resolved = within(tabs).getByRole('tab', { name: /^Resolved/ });
 
-    expect(unresolved.getAttribute('aria-pressed')).toBe('true');
+    expect(unresolved.getAttribute('aria-selected')).toBe('true');
     expect(within(unresolved).getByText('2')).toBeTruthy();
     expect(within(unassigned).getByText('1')).toBeTruthy();
     expect(within(resolved).getByText('1')).toBeTruthy();
+    // The active view's caption sits under the tabs.
+    expect(screen.getByText('Open or acknowledged')).toBeTruthy();
 
-    fireEvent.click(resolved);
+    fireEvent.mouseDown(resolved);
 
-    expect(resolved.getAttribute('aria-pressed')).toBe('true');
+    await waitFor(() => expect(resolved.getAttribute('aria-selected')).toBe('true'));
     expect(screen.getByRole('heading', { name: /Resolved issues/ })).toBeTruthy();
     expect(screen.getByText('Old date bug')).toBeTruthy();
     expect(screen.queryByText('Calendar crashed')).toBeNull();
+  });
+
+  it('keeps the source and priority filters in the address', async () => {
+    renderWithQueryClient(
+      <MemoryRouter initialEntries={['/admin?module=issues&priority=critical']}>
+        <IssuesModule />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('No issues match your filters')).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]);
+    expect(await screen.findByText('Calendar crashed')).toBeTruthy();
   });
 
   it('filters the list by search and offers to clear it when nothing matches', async () => {
@@ -178,7 +192,7 @@ describe('IssuesModule', () => {
 
     await renderLoaded();
 
-    expect(screen.getByText('1 issue needs attention')).toBeTruthy();
+    expect(screen.getByText(/1 issue needs attention/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Create 1 task' }));
 
     await waitFor(() => expect(runQualityIssueAutomation).toHaveBeenCalledTimes(1));
@@ -255,7 +269,9 @@ describe('IssuesModule', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Gateway timeout')).toBeTruthy();
+    expect(await screen.findByText("Couldn't load issues")).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Show details' }));
+    expect(screen.getByText('Gateway timeout')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByRole('heading', { name: /Unresolved issues/ })).toBeTruthy();
   });
@@ -276,5 +292,17 @@ describe('IssuesModule', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByRole('heading', { level: 1, name: 'Calendar crashed' })).toBeTruthy();
+  });
+
+  it('sets the top-bar breadcrumb to the view', async () => {
+    const setTrail = vi.fn();
+    renderWithQueryClient(
+      <BreadcrumbContext.Provider value={{ trail: [], setTrail }}>
+        <MemoryRouter initialEntries={['/admin?module=issues&view=overdue']}>
+          <IssuesModule />
+        </MemoryRouter>
+      </BreadcrumbContext.Provider>,
+    );
+    await waitFor(() => expect(setTrail).toHaveBeenLastCalledWith([{ label: 'Overdue' }]));
   });
 });

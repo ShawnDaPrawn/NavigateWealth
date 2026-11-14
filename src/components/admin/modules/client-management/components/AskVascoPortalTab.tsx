@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Bot, Eraser, Maximize2, Minimize2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../../../ui/alert';
+import { ErrorState } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Dialog, DialogContent } from '../../../../ui/dialog';
@@ -200,9 +201,10 @@ function InlineChatCard({
             variant="ghost"
             size="sm"
             className="h-9 w-9 p-0 text-gray-500 hover:bg-purple-50 hover:text-[#6d28d9]"
-            title="Expand"
+            title="Full screen"
+            aria-label="Full screen"
           >
-            <Maximize2 className="h-4 w-4" />
+            <Maximize2 className="h-4 w-4" aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -501,6 +503,22 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
 
   const loadError = sessionsQuery.error || sessionDetailQuery.error;
 
+  // The chat list itself failed: the shared error state instead of an empty list.
+  if (sessionsQuery.error && !sessionsQuery.isFetching && sessions.length === 0) {
+    return (
+      <ErrorState
+        title="Couldn't load Ask Vasco chats"
+        description="This client's Vasco conversations could not be loaded."
+        onRetry={() => void sessionsQuery.refetch()}
+        details={
+          sessionsQuery.error instanceof APIError
+            ? sessionsQuery.error.message
+            : String(sessionsQuery.error)
+        }
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Alert className="border-purple-100 bg-purple-50/80">
@@ -521,26 +539,67 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
         </Alert>
       )}
 
-      {loadError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            {loadError instanceof APIError
-              ? loadError.message
-              : "Could not load this client's Ask Vasco chats. Check your permissions or try again."}
-          </AlertDescription>
-        </Alert>
-      )}
-
       <Card className="border-gray-200 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Ask Vasco</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Review, continue, clear, or remove chats from this client&apos;s shared portal
-            workspace.
+            The client&apos;s own Vasco conversations from their portal. You can read them and reply
+            as Vasco.
           </p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="grid gap-4 lg:grid-cols-[240px_1fr]">
+          <nav aria-label="Chats" className="min-w-0">
+            <p className="mb-2 text-xs font-medium text-nw-text-3">Chats · {sessions.length}</p>
+            {sessions.length === 0 ? (
+              <p className="text-sm text-nw-text-3">No saved chats yet.</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {sessions.map((session) => {
+                  const active = session.id === activeSessionId;
+                  return (
+                    <li key={session.id}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSessionId(session.id)}
+                        aria-current={active ? 'true' : undefined}
+                        disabled={isStreaming}
+                        className={`w-full rounded-lg px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 ${
+                          active ? 'bg-nw-violet-50' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <span
+                          className={`block truncate text-sm ${active ? 'font-medium text-nw-violet-600' : 'text-nw-ink'}`}
+                        >
+                          {session.title || 'Untitled chat'}
+                        </span>
+                        <span className="text-xs text-nw-text-3">
+                          {new Date(session.updatedAt || session.createdAt).toLocaleDateString(
+                            'en-ZA',
+                            { day: 'numeric', month: 'short' },
+                          )}{' '}
+                          · {session.messageCount}{' '}
+                          {session.messageCount === 1 ? 'message' : 'messages'}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </nav>
+          {loadError && !sessionsQuery.error && (
+            <p className="text-sm text-red-700 lg:col-start-2">
+              Couldn&apos;t load this chat.{' '}
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                onClick={() => void sessionDetailQuery.refetch()}
+              >
+                Try again
+              </Button>
+            </p>
+          )}
           <InlineChatCard
             clientLabel={clientLabel}
             activeSession={activeSession}

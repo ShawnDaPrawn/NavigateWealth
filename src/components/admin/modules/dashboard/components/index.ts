@@ -1,10 +1,11 @@
 export { DashboardHeader } from './DashboardHeader';
+export { AuditTrailPage } from './AuditTrailPage';
+export { NeedsAttentionCard } from './NeedsAttentionCard';
 export { KPICard } from './KPICard';
 export { KPIGrid } from './KPIGrid';
 export { PlatformFeaturesCard } from './PlatformFeaturesCard';
 export { PublicationsCard } from './PublicationsCard';
 export { QuickActionsCard } from './QuickActionsCard';
-export { SystemActivityCard } from './SystemActivityCard';
 export { SystemHealthCard, SystemHealthPanel } from './SystemHealthCard';
 export { SystemHealthDialog } from './SystemHealthDialog';
 export { TasksWidget } from './TasksWidget';

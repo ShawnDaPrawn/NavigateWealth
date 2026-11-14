@@ -27,8 +27,6 @@ const policy: PolicyRecord = {
   data: { current_value: 125000 },
 };
 
-const REFRESH_TITLE = "Refresh this policy's values from the provider portal";
-
 function makeProps(over: Partial<Parameters<typeof PolicyTable>[0]> = {}) {
   return {
     title: 'Pre-Retirement',
@@ -160,28 +158,39 @@ describe('PolicyTable — provenance on the row', () => {
   });
 });
 
+// Refresh from provider sits in each row's ⋯ menu (design: CM 7, less-used actions in row ⋯).
+async function openRowMenu(index = 0) {
+  fireEvent.pointerDown(screen.getAllByRole('button', { name: 'More policy actions' })[index], {
+    button: 0,
+    ctrlKey: false,
+  });
+  await screen.findByRole('menu');
+}
+const refreshItem = () => screen.queryByRole('menuitem', { name: 'Refresh from provider' });
+
 describe('PolicyTable — refresh from provider', () => {
-  it('shows no refresh control when no handler is supplied', () => {
+  it('shows no refresh control when no handler is supplied', async () => {
     render(<PolicyTable {...makeProps()} />);
-    expect(screen.queryByTitle(REFRESH_TITLE)).toBeNull();
+    await openRowMenu();
+    expect(refreshItem()).toBeNull();
   });
 
-  it('shows the control once a handler is supplied', () => {
+  it('shows the control once a handler is supplied', async () => {
     render(<PolicyTable {...makeProps({ onRefreshFromProvider: vi.fn() })} />);
-    expect(screen.getByTitle(REFRESH_TITLE)).toBeDefined();
+    await openRowMenu();
+    expect(refreshItem()).not.toBeNull();
   });
 
-  it('hands back the policy the row belongs to', () => {
+  it('hands back the policy the row belongs to', async () => {
     const onRefreshFromProvider = vi.fn();
     render(<PolicyTable {...makeProps({ onRefreshFromProvider })} />);
-
-    fireEvent.click(screen.getByTitle(REFRESH_TITLE));
-
+    await openRowMenu();
+    fireEvent.click(refreshItem()!);
     expect(onRefreshFromProvider).toHaveBeenCalledTimes(1);
     expect(onRefreshFromProvider.mock.calls[0][0].id).toBe('pol-1');
   });
 
-  it('offers no refresh on an archived policy, which the server will not queue either', () => {
+  it('offers no refresh on an archived policy, which the server will not queue either', async () => {
     render(
       <PolicyTable
         {...makeProps({
@@ -190,21 +199,21 @@ describe('PolicyTable — refresh from provider', () => {
         })}
       />,
     );
-    expect(screen.queryByTitle(REFRESH_TITLE)).toBeNull();
+    await openRowMenu();
+    expect(refreshItem()).toBeNull();
   });
 
-  it('cannot be fired again while that policy is already refreshing', () => {
+  it('cannot be fired again while that policy is already refreshing', async () => {
     const onRefreshFromProvider = vi.fn();
     render(<PolicyTable {...makeProps({ onRefreshFromProvider, refreshingPolicyId: 'pol-1' })} />);
-
-    const button = screen.getByTitle(REFRESH_TITLE) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-
-    fireEvent.click(button);
+    await openRowMenu();
+    const item = refreshItem()!;
+    expect(item.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(item);
     expect(onRefreshFromProvider).not.toHaveBeenCalled();
   });
 
-  it('leaves other rows clickable while one is refreshing', () => {
+  it('leaves other rows clickable while one is refreshing', async () => {
     const onRefreshFromProvider = vi.fn();
     render(
       <PolicyTable
@@ -215,13 +224,10 @@ describe('PolicyTable — refresh from provider', () => {
         })}
       />,
     );
-
-    const buttons = screen.getAllByTitle(REFRESH_TITLE) as HTMLButtonElement[];
-    expect(buttons).toHaveLength(2);
-    expect(buttons[0].disabled).toBe(true);
-    expect(buttons[1].disabled).toBe(false);
-
-    fireEvent.click(buttons[1]);
+    await openRowMenu(1);
+    const item = refreshItem()!;
+    expect(item.getAttribute('aria-disabled')).toBeNull();
+    fireEvent.click(item);
     expect(onRefreshFromProvider.mock.calls[0][0].id).toBe('pol-2');
   });
 });

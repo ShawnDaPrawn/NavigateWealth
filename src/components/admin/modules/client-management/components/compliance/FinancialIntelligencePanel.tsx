@@ -2,8 +2,8 @@
  * Financial Intelligence Panel
  *
  * Phase 1 endpoints:
- * - Bank Account Verification (real-time): POST /natural-person-account-verification-real-time
- * - Consumer Credit Check: POST /natural-person-consumer-credit
+ * - Bank account verification (real-time): POST /natural-person-account-verification-real-time
+ * - Consumer credit check: POST /natural-person-consumer-credit
  *
  * Bank verification pre-populates from the client's profile bank accounts.
  * Credit check requires explicit consent acknowledgement.
@@ -204,12 +204,12 @@ export function FinancialIntelligencePanel({
 
   return (
     <div className="space-y-4">
-      {/* ──── Bank Account Verification ──── */}
+      {/* ──── Bank account verification ──── */}
       <Card className="bg-blue-50/50 border-blue-200">
         <CardHeader className="pb-3">
           <CardTitle className="text-md font-medium flex items-center gap-2">
             <Landmark className="h-5 w-5 text-blue-600" />
-            Bank Account Verification
+            Bank account verification
           </CardTitle>
           <CardDescription>
             Real-time bank account verification via the credit bureau. Confirms the account exists,
@@ -220,7 +220,7 @@ export function FinancialIntelligencePanel({
           {/* Bank account selector */}
           {bankAccounts.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-600">Select Bank Account</Label>
+              <Label className="text-xs font-medium text-gray-600">Select bank account</Label>
               <div className="space-y-1">
                 {bankAccounts.map((ba, idx) => (
                   <label
@@ -273,7 +273,7 @@ export function FinancialIntelligencePanel({
           {(bankAccounts.length === 0 || useCustomBank) && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Bank Name</Label>
+                <Label className="text-xs">Bank name</Label>
                 <Input
                   value={customBank.bankName}
                   onChange={(e) => setCustomBank({ ...customBank, bankName: e.target.value })}
@@ -282,7 +282,7 @@ export function FinancialIntelligencePanel({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Account Number</Label>
+                <Label className="text-xs">Account number</Label>
                 <Input
                   value={customBank.accountNumber}
                   onChange={(e) => setCustomBank({ ...customBank, accountNumber: e.target.value })}
@@ -291,7 +291,7 @@ export function FinancialIntelligencePanel({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Branch Code</Label>
+                <Label className="text-xs">Branch code</Label>
                 <Input
                   value={customBank.branchCode}
                   onChange={(e) => setCustomBank({ ...customBank, branchCode: e.target.value })}
@@ -300,7 +300,7 @@ export function FinancialIntelligencePanel({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Account Type</Label>
+                <Label className="text-xs">Account type</Label>
                 <select
                   value={customBank.accountType}
                   onChange={(e) => setCustomBank({ ...customBank, accountType: e.target.value })}
@@ -336,7 +336,7 @@ export function FinancialIntelligencePanel({
           >
             {isBankVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <ShieldCheck className="mr-2 h-4 w-4" />
-            Verify Bank Account
+            Verify bank account
           </Button>
 
           {/* Bank Result */}
@@ -350,12 +350,12 @@ export function FinancialIntelligencePanel({
         </CardContent>
       </Card>
 
-      {/* ──── Consumer Credit Check ──── */}
+      {/* ──── Consumer credit check ──── */}
       <Card className="bg-green-50/50 border-green-200">
         <CardHeader className="pb-3">
           <CardTitle className="text-md font-medium flex items-center gap-2">
             <CreditCard className="h-5 w-5 text-green-600" />
-            Consumer Credit Check
+            Consumer credit check
           </CardTitle>
           <CardDescription>
             Performs a consumer credit check via the XDS credit bureau. Returns credit score, active
@@ -373,7 +373,7 @@ export function FinancialIntelligencePanel({
                 className="rounded border-gray-300 mt-0.5"
               />
               <div>
-                <p className="text-sm font-medium text-amber-800">Client Consent Required</p>
+                <p className="text-sm font-medium text-amber-800">Client consent required</p>
                 <p className="text-xs text-amber-700 mt-0.5">
                   I confirm that the client ({firstName} {lastName}) has provided explicit consent
                   for a credit bureau enquiry to be performed on their behalf. This enquiry will
@@ -400,7 +400,7 @@ export function FinancialIntelligencePanel({
           >
             {isCreditRunning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <CreditCard className="mr-2 h-4 w-4" />
-            Run Credit Check
+            Run credit check
           </Button>
 
           {!consentGiven && (
