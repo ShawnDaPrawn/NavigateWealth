@@ -8,7 +8,7 @@
  * stays available underneath.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle,
@@ -26,7 +26,8 @@ import { Button } from '../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../ui/card';
 import { Skeleton } from '../../../ui/skeleton';
 import { LinkedInConnector } from './components/LinkedInConnector';
-import { SoonBadge } from '../../layout/page';
+import { PartnersPanel } from './partners/PartnersPanel';
+import { SocialAnalyticsPanel } from './analytics/SocialAnalyticsPanel';
 import { useBufferStatus, useSocialProfiles } from './hooks/useSocialProfiles';
 import type { SocialPlatform, SocialProfile } from './types';
 
@@ -109,6 +110,7 @@ function ChannelCard({ profile }: { profile: SocialProfile }) {
 }
 
 export function ChannelsPanel() {
+  const analyticsRef = useRef<HTMLElement>(null);
   const status = useBufferStatus();
   const { profiles, loading, error } = useSocialProfiles({
     fetchOnMount: status.data?.configured !== false,
@@ -215,37 +217,14 @@ export function ChannelsPanel() {
         )}
       </div>
 
-      {/* Designed on the Channels board (SM 32). Neither has a backend yet:
-          PartnersTab and SocialAnalytics run on placeholder data, so they stay
-          switched off rather than showing invented numbers. */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-            <div>
-              <CardTitle className="text-base">Partner advertisers</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Referral links for partner businesses and the clicks they bring in.
-              </p>
-            </div>
-            <Button size="sm" disabled>
-              Add partner <SoonBadge />
-            </Button>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-            <div>
-              <CardTitle className="text-base">Social analytics</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Impressions, engagements, link clicks and followers across connected platforms.
-              </p>
-            </div>
-            <Button size="sm" variant="outline" disabled>
-              View analytics <SoonBadge />
-            </Button>
-          </CardHeader>
-        </Card>
-      </div>
+      {/* SM 32: partner advertisers (own backend) and Buffer analytics. */}
+      <PartnersPanel
+        onViewAnalytics={() => {
+          analyticsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          analyticsRef.current?.focus({ preventScroll: true });
+        }}
+      />
+      <SocialAnalyticsPanel ref={analyticsRef} />
     </div>
   );
 }
