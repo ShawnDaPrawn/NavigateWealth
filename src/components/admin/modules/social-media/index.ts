@@ -20,7 +20,8 @@ export { PostCalendar } from './PostCalendar';
 export { ChannelsPanel } from './ChannelsPanel';
 export { WeeklyPipelineTab } from './assets/WeeklyPipelineTab';
 export { ChannelAssetsTab } from './channel-assets/ChannelAssetsTab';
-export { SocialAnalytics } from './SocialAnalytics';
+export { PartnersPanel } from './partners/PartnersPanel';
+export { SocialAnalyticsPanel } from './analytics/SocialAnalyticsPanel';
 
 // --- public API used by other modules and by code outside admin/modules ---
 export { linkedinApi } from './api';
