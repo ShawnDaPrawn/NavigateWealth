@@ -14,7 +14,7 @@ import {
 import { Button } from '../../../../ui/button';
 import { Mail, Plus, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
-import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
+import { ErrorState, SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
 import { useClientSubCrumbs } from '../../../layout/page';
 
 const DOCUMENTS_VIEWS = ['docs', 'timeline'] as const;
@@ -70,6 +70,8 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
+  /** The list failed to load: an error state, not "No documents yet". */
+  const [loadError, setLoadError] = useState<string | null>(null);
   // Documents chosen in "Email documents to client" (the latest upload is preselected).
   const [emailDocIds, setEmailDocIds] = useState<string[]>([]);
   // Documents & links | Activity timeline, in the address (?dview=).
@@ -99,6 +101,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         );
 
         setDocuments(sortedDocs);
+        setLoadError(null);
         return; // Success — exit retry loop
       } catch (error) {
         if (attempt < maxRetries) {
@@ -107,7 +110,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
           continue;
         }
         console.error('Error fetching documents after retries:', error);
-        toast.error('Failed to load documents');
+        setLoadError(error instanceof Error ? error.message : String(error));
       } finally {
         setLoading(false);
       }
@@ -395,41 +398,52 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         </div>
 
         <TabsContent value="docs" className="mt-0 space-y-4">
-          <DocumentFiltersBar
-            searchInputGuard={searchInputGuard}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            filterCategory={filterCategory}
-            setFilterCategory={setFilterCategory}
-            filterDateStart={filterDateStart}
-            setFilterDateStart={setFilterDateStart}
-            filterDateEnd={filterDateEnd}
-            setFilterDateEnd={setFilterDateEnd}
-          />
+          {loadError && !loading ? (
+            <ErrorState
+              title="Couldn't load documents"
+              description="This client's documents could not be loaded."
+              onRetry={() => void fetchDocuments()}
+              details={loadError}
+            />
+          ) : (
+            <>
+              <DocumentFiltersBar
+                searchInputGuard={searchInputGuard}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                filterCategory={filterCategory}
+                setFilterCategory={setFilterCategory}
+                filterDateStart={filterDateStart}
+                setFilterDateStart={setFilterDateStart}
+                filterDateEnd={filterDateEnd}
+                setFilterDateEnd={setFilterDateEnd}
+              />
 
-          <DocumentList
-            loading={loading}
-            documents={documents}
-            filteredDocuments={filteredDocuments}
-            groupedItems={groupedItems}
-            expandedPacks={expandedPacks}
-            onTogglePack={togglePack}
-            onDownload={handleDownload}
-            onDeleteDocument={(doc) => {
-              setDocumentToDelete(doc);
-              setDeleteDialogOpen(true);
-            }}
-            onDeletePack={(id, count) => {
-              setPackToDelete({ id, count });
-              setPackDeleteDialogOpen(true);
-            }}
-            onResendPack={(pack) => {
-              setPackToResend(pack);
-              setResendMessage('Please find attached the documents you requested.');
-              setResendDialogOpen(true);
-            }}
-            onUploadClick={() => setUploadDialogOpen(true)}
-          />
+              <DocumentList
+                loading={loading}
+                documents={documents}
+                filteredDocuments={filteredDocuments}
+                groupedItems={groupedItems}
+                expandedPacks={expandedPacks}
+                onTogglePack={togglePack}
+                onDownload={handleDownload}
+                onDeleteDocument={(doc) => {
+                  setDocumentToDelete(doc);
+                  setDeleteDialogOpen(true);
+                }}
+                onDeletePack={(id, count) => {
+                  setPackToDelete({ id, count });
+                  setPackDeleteDialogOpen(true);
+                }}
+                onResendPack={(pack) => {
+                  setPackToResend(pack);
+                  setResendMessage('Please find attached the documents you requested.');
+                  setResendDialogOpen(true);
+                }}
+                onUploadClick={() => setUploadDialogOpen(true)}
+              />
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-0">

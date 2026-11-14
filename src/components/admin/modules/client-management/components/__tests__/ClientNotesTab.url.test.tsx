@@ -14,12 +14,16 @@ const notes = [
   },
 ];
 const mutation = { mutate: vi.fn(), mutateAsync: vi.fn() };
+const notesState = vi.hoisted(() => ({ error: null as Error | null, refetch: () => undefined }));
 
 vi.mock('../../../../../auth/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'u1', firstName: 'Shawn', lastName: 'F' } }),
 }));
 vi.mock('../../../notes', () => ({
-  useClientNotes: () => ({ data: notes, isLoading: false }),
+  useClientNotes: () =>
+    notesState.error
+      ? { data: undefined, isLoading: false, error: notesState.error, refetch: notesState.refetch }
+      : { data: notes, isLoading: false, error: null, refetch: vi.fn() },
   useCreateNote: () => mutation,
   useUpdateNote: () => mutation,
   useDeleteNote: () => mutation,
@@ -80,5 +84,20 @@ describe('Client notes tab', () => {
   it('says so when the note in the address does not exist', () => {
     renderTab('/?note=gone');
     expect(screen.getByText('This note could not be opened.')).toBeTruthy();
+  });
+
+  it('shows an error, not "No notes", when notes fail to load', () => {
+    const refetch = vi.fn();
+    notesState.error = new Error('400');
+    notesState.refetch = refetch;
+    try {
+      renderTab();
+      expect(screen.getByText("Couldn't load notes")).toBeTruthy();
+      expect(screen.queryByText(/No notes for this client/)).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(refetch).toHaveBeenCalled();
+    } finally {
+      notesState.error = null;
+    }
   });
 });

@@ -182,4 +182,11 @@ describe('Group editor page', () => {
     expect(await screen.findByText('This group could not be opened')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Back to groups' })).toBeDefined();
   });
+
+  it('shows an error, not "No groups yet", when groups fail to load', async () => {
+    api.getGroups.mockRejectedValue(new Error('400'));
+    wrap(<ClientGroupsTab onOpenGroup={vi.fn()} />);
+    expect(await screen.findByText("Couldn't load groups")).toBeTruthy();
+    expect(screen.queryByText('No groups yet')).toBeNull();
+  });
 });

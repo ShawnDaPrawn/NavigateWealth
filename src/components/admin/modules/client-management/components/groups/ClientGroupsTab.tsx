@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../../ui/dropdown-menu';
-import { useConfirm, useUrlState } from '../../../../layout/page';
+import { ErrorState, useConfirm, useUrlState } from '../../../../layout/page';
 import { communicationApi, type ClientGroup } from '../../../communication';
 import { FilterChipMenu } from '../ListFilters';
 import {
@@ -44,7 +44,7 @@ interface ClientGroupsTabProps {
 
 /** Client Management › Groups (design: CM 2, CM 19–20). */
 export function ClientGroupsTab({ onOpenGroup }: ClientGroupsTabProps) {
-  const { groups, loading, refresh } = useClientGroups();
+  const { groups, loading, error, refresh } = useClientGroups();
   const { confirm, confirmDialog } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get('gq') ?? '';
@@ -96,6 +96,18 @@ export function ClientGroupsTab({ onOpenGroup }: ClientGroupsTabProps) {
       toast.error('Could not delete the group');
     }
   };
+
+  // A failed load is an error, never "No groups yet".
+  if (error && !loading && groups.length === 0) {
+    return (
+      <ErrorState
+        title="Couldn't load groups"
+        description="The groups could not be loaded. Nothing has changed on the server."
+        onRetry={() => void refresh()}
+        details={error instanceof Error ? error.message : String(error)}
+      />
+    );
+  }
 
   if (!loading && groups.length === 0) {
     return (

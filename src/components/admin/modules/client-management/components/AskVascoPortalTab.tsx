@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Bot, Eraser, Maximize2, Minimize2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '../../../../ui/alert';
+import { ErrorState } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Dialog, DialogContent } from '../../../../ui/dialog';
@@ -502,6 +503,22 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
 
   const loadError = sessionsQuery.error || sessionDetailQuery.error;
 
+  // The chat list itself failed: the shared error state instead of an empty list.
+  if (sessionsQuery.error && !sessionsQuery.isFetching && sessions.length === 0) {
+    return (
+      <ErrorState
+        title="Couldn't load Ask Vasco chats"
+        description="This client's Vasco conversations could not be loaded."
+        onRetry={() => void sessionsQuery.refetch()}
+        details={
+          sessionsQuery.error instanceof APIError
+            ? sessionsQuery.error.message
+            : String(sessionsQuery.error)
+        }
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Alert className="border-purple-100 bg-purple-50/80">
@@ -518,17 +535,6 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-sm">
             Ask Vasco is not available for staff accounts. Open it from a client profile instead.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {loadError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            {loadError instanceof APIError
-              ? loadError.message
-              : "Could not load this client's Ask Vasco chats. Check your permissions or try again."}
           </AlertDescription>
         </Alert>
       )}
@@ -581,6 +587,19 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
               </ul>
             )}
           </nav>
+          {loadError && !sessionsQuery.error && (
+            <p className="text-sm text-red-700 lg:col-start-2">
+              Couldn&apos;t load this chat.{' '}
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                onClick={() => void sessionDetailQuery.refetch()}
+              >
+                Try again
+              </Button>
+            </p>
+          )}
           <InlineChatCard
             clientLabel={clientLabel}
             activeSession={activeSession}

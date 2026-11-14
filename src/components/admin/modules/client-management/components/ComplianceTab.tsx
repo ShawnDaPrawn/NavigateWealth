@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUrlState } from '../../../layout/page';
-import { useClientSubCrumbs } from '../../../layout/page';
+import { ErrorState, useClientSubCrumbs } from '../../../layout/page';
 import { Button } from '../../../../ui/button';
 import { exportComplianceDossier } from './compliance/exportDossier';
 import { useQueryClient } from '@tanstack/react-query';
@@ -129,8 +129,9 @@ const isValidIdNumber = (val: unknown): val is string =>
 export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
   const queryClient = useQueryClient();
   const [registrationStatus, setRegistrationStatus] = useState<
-    'loading' | 'registered' | 'unregistered'
+    'loading' | 'registered' | 'unregistered' | 'error'
   >('loading');
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
   const [isRegistering, setIsRegistering] = useState(false);
   const [honeycombId, setHoneycombId] = useState<string | null>(null);
 
@@ -213,7 +214,9 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
       }
     } catch (error) {
       console.error('Error checking registration:', error);
-      setRegistrationStatus('unregistered');
+      // A failed check is not "not registered": say it failed.
+      setRegistrationError(error instanceof Error ? error.message : String(error));
+      setRegistrationStatus('error');
     }
   }, [selectedClient.id]);
 
@@ -276,6 +279,20 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
       <div className="flex items-center justify-center p-12">
         <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
       </div>
+    );
+  }
+
+  if (registrationStatus === 'error') {
+    return (
+      <ErrorState
+        title="Couldn't load compliance"
+        description="The compliance registration for this client could not be checked."
+        onRetry={() => {
+          setRegistrationStatus('loading');
+          void checkRegistration();
+        }}
+        details={registrationError ?? undefined}
+      />
     );
   }
 

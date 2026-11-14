@@ -161,7 +161,15 @@ export function PolicyDetailsSection({ selectedClient, fnaFocus }: PolicyDetails
           Categories
         </p>
         <ul className="flex gap-1 overflow-x-auto lg:flex-col">
-          {policySubtabs.map((tab) => railItem(tab.id, tab.label, tab.icon, counts[tab.id] ?? 0))}
+          {policySubtabs.map((tab) =>
+            railItem(
+              tab.id,
+              tab.label,
+              tab.icon,
+              // No count while loading or when the read failed (not a false 0).
+              policiesQuery.isSuccess ? (counts[tab.id] ?? 0) : undefined,
+            ),
+          )}
         </ul>
         <p className="mb-1 mt-4 hidden px-3 text-xs font-medium text-nw-text-3 lg:block">
           Across all

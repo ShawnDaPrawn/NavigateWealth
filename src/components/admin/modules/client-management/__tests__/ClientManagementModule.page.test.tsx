@@ -37,8 +37,15 @@ const clients = [
 
 const toastError = vi.fn();
 vi.mock('sonner', () => ({ toast: { error: (m: string) => toastError(m), success: vi.fn() } }));
+const list = vi.hoisted(() => ({
+  error: null as Error | null,
+  retry: (() => undefined) as () => void,
+}));
 vi.mock('../hooks/useClientList', () => ({
-  useClientList: () => ({ clients, loading: false, refetch: vi.fn() }),
+  useClientList: () =>
+    list.error
+      ? { clients: [], loading: false, error: list.error, refetch: vi.fn(), retry: list.retry }
+      : { clients, loading: false, error: null, refetch: vi.fn(), retry: vi.fn() },
 }));
 vi.mock('../../personnel', () => ({
   useCurrentUserPermissions: () => ({ canDo: () => true }),
@@ -280,5 +287,29 @@ describe('Client Management page', () => {
     await waitFor(() =>
       expect(trail.map((c) => c.label)).toEqual(['Personal clients', 'Add client']),
     );
+  });
+
+  it('shows an error, not an empty book, when the client list fails to load', () => {
+    const retry = vi.fn();
+    list.error = new Error('400 Bad Request');
+    list.retry = retry;
+    try {
+      renderAt();
+      expect(screen.getByText("Couldn't load clients")).toBeDefined();
+      expect(screen.queryByText(/No clients/)).toBeNull();
+      expect(screen.queryByText('All clients')).toBeNull();
+      // Header and tabs stay.
+      expect(screen.getByRole('heading', { level: 1, name: 'Client Management' })).toBeDefined();
+      expect(screen.getByRole('tab', { name: 'Groups' })).toBeDefined();
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      expect(retry).toHaveBeenCalled();
+    } finally {
+      list.error = null;
+    }
+  });
+
+  it('says no clients match the filters, with Clear filters', () => {
+    renderAt('/admin?module=clients&q=zzzz');
+    expect(screen.getByText('No clients match your filters')).toBeDefined();
   });
 });

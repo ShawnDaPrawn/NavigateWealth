@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Plus, Loader2, FileBarChart, EyeOff, History, Target, Calculator } from 'lucide-react';
 import { PolicyFormDialog } from './PolicyFormDialog';
-import { usePageTakeover } from '../layout/page';
+import { ErrorState, usePageTakeover } from '../layout/page';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -226,6 +226,7 @@ export function PolicyCategoryTab({
     }
   }, [categoryId]);
 
+  const [policiesError, setPoliciesError] = useState<string | null>(null);
   const loadPolicies = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -233,9 +234,11 @@ export function PolicyCategoryTab({
         `/integrations/policies?clientId=${clientId}&categoryId=${categoryId}&includeArchived=${showArchived}`,
       );
       setPolicies(data.policies || []);
+      setPoliciesError(null);
     } catch (err) {
       console.error('Error loading policies:', err);
-      toast.error('Failed to load policies');
+      // An error state in place of the table, not "No policies added".
+      setPoliciesError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
     }
@@ -622,7 +625,14 @@ export function PolicyCategoryTab({
             {/* Policies List */}
             {/* Goal Dashboard moved to Dialog */}
 
-            {isLoading ? (
+            {policiesError && !isLoading ? (
+              <ErrorState
+                title="Couldn't load policies"
+                description={`This client's ${categoryName.toLowerCase()} policies could not be loaded.`}
+                onRetry={() => void loadPolicies()}
+                details={policiesError}
+              />
+            ) : isLoading ? (
               <Card>
                 <CardContent className="py-12 flex items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-[#6d28d9]" />

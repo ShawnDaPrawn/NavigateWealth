@@ -114,7 +114,9 @@ function LazyFallback() {
 }
 
 export function ClientManagementModule() {
-  const { clients, loading, refetch } = useClientList();
+  const { clients, loading, error: listError, refetch, retry } = useClientList();
+  // A failed load is an error, never an empty book (design system: states).
+  const listFailed = !!listError && !loading && (!Array.isArray(clients) || clients.length === 0);
   const [searchParams, setSearchParams] = useSearchParams();
   // Search, account and application filters live in the address (?q=, ?account=, ?application=).
   const search = searchParams.get('q') ?? '';
@@ -580,7 +582,10 @@ export function ClientManagementModule() {
         className="gap-5"
       >
         <NavTabsList aria-label="Client Management">
-          <NavTabsTrigger value="personal" count={baseClients.length}>
+          <NavTabsTrigger
+            value="personal"
+            count={loading || listFailed ? undefined : baseClients.length}
+          >
             Personal clients
           </NavTabsTrigger>
           <NavTabsTrigger value="groups">Groups</NavTabsTrigger>
@@ -612,117 +617,165 @@ export function ClientManagementModule() {
             />
           </Suspense>
 
-          {/* The four figures filter the table (synced with the Account chip). */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Filter by account">
-            <FilterStatCard
-              label="All clients"
-              value={baseClients.length}
-              meta={`+${totalStats.growthRate}% vs last month`}
-              active={accountFilter === 'all'}
-              onClick={() => setAccountFilter('all')}
+          {listFailed ? (
+            <ErrorState
+              title="Couldn't load clients"
+              description="The client list could not be loaded. Nothing has changed on the server."
+              onRetry={() => void retry()}
+              details={listError instanceof Error ? listError.message : String(listError)}
             />
-            <FilterStatCard
-              label="Active"
-              value={statusCounts.active}
-              meta="Active individual portfolios"
-              active={accountFilter === 'active'}
-              onClick={() => toggleAccount('active')}
-            />
-            <FilterStatCard
-              label="Suspended"
-              value={statusCounts.suspended}
-              meta="Access temporarily suspended"
-              tone={statusCounts.suspended > 0 ? 'attention' : 'default'}
-              active={accountFilter === 'suspended'}
-              onClick={() => toggleAccount('suspended')}
-            />
-            <FilterStatCard
-              label="Closed"
-              value={statusCounts.closed}
-              meta="Soft-deleted or closed accounts"
-              active={accountFilter === 'closed'}
-              onClick={() => toggleAccount('closed')}
-            />
-          </div>
-
-          <section
-            aria-label="Personal clients"
-            className="overflow-hidden rounded-xl border border-nw-line bg-white"
-          >
-            {/* Toolbar: search + filter chips */}
-            <div className="flex flex-wrap items-center gap-2 border-b border-nw-line-2 px-4 py-3">
-              <div className="relative w-full max-w-sm">
-                <Search
-                  className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <Input
-                  placeholder="Search name, email or ID"
-                  aria-label="Search clients"
-                  className="pl-8"
-                  value={search}
-                  readOnly={blockSearchAutofill}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  name="nw-client-management-search"
-                  id="nw-client-management-search"
-                  type="text"
-                  inputMode="search"
-                  role="combobox"
-                  aria-autocomplete="list"
-                  aria-expanded={false}
-                  data-1p-ignore="true"
-                  data-lpignore="true"
-                  data-form-type="other"
-                  onChange={(e) => setSearch(e.target.value)}
-                  onFocus={() => setBlockSearchAutofill(false)}
-                />
-              </div>
-              <FilterChipMenu
-                field="Account"
-                value={accountFilter}
-                labels={ACCOUNT_LABELS}
-                onChange={setAccountFilter}
-              />
-              <FilterChipMenu
-                field="Application"
-                value={applicationFilter}
-                labels={APPLICATION_LABELS}
-                onChange={setApplicationFilter}
-              />
-              {anyFilter && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  Clear filters
-                </Button>
+          ) : (
+            <>
+              {/* The four figures filter the table (synced with the Account chip). */}
+              {loading ? (
+                <div
+                  className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+                  aria-busy="true"
+                  aria-label="Loading figures"
+                >
+                  {[0, 1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-[92px] animate-pulse rounded-xl border border-nw-line bg-gray-50"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+                  aria-label="Filter by account"
+                >
+                  <FilterStatCard
+                    label="All clients"
+                    value={baseClients.length}
+                    meta={`+${totalStats.growthRate}% vs last month`}
+                    active={accountFilter === 'all'}
+                    onClick={() => setAccountFilter('all')}
+                  />
+                  <FilterStatCard
+                    label="Active"
+                    value={statusCounts.active}
+                    meta="Active individual portfolios"
+                    active={accountFilter === 'active'}
+                    onClick={() => toggleAccount('active')}
+                  />
+                  <FilterStatCard
+                    label="Suspended"
+                    value={statusCounts.suspended}
+                    meta="Access temporarily suspended"
+                    tone={statusCounts.suspended > 0 ? 'attention' : 'default'}
+                    active={accountFilter === 'suspended'}
+                    onClick={() => toggleAccount('suspended')}
+                  />
+                  <FilterStatCard
+                    label="Closed"
+                    value={statusCounts.closed}
+                    meta="Soft-deleted or closed accounts"
+                    active={accountFilter === 'closed'}
+                    onClick={() => toggleAccount('closed')}
+                  />
+                </div>
               )}
-              <span className="ml-auto text-sm text-nw-text-3">
-                {filteredSortedClients.length.toLocaleString()}{' '}
-                {filteredSortedClients.length === 1 ? 'client' : 'clients'} · A–Z by first name
-              </span>
-            </div>
-            <DataTable
-              columns={personalColumns as unknown as Column<Record<string, unknown>>[]}
-              data={filteredSortedClients as unknown as Record<string, unknown>[]}
-              onRowClick={handleRowClick as unknown as (row: Record<string, unknown>) => void}
-              loading={loading}
-              searchable={false}
-              exportable={false}
-              pageSize={25}
-              getRowKey={(row) => row.id as React.Key}
-              emptyState={
-                <div className="py-10 text-center">
-                  <p className="text-sm font-medium text-nw-ink">No clients match</p>
+
+              <section
+                aria-label="Personal clients"
+                className="overflow-hidden rounded-xl border border-nw-line bg-white"
+              >
+                {/* Toolbar: search + filter chips */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-nw-line-2 px-4 py-3">
+                  <div className="relative w-full max-w-sm">
+                    <Search
+                      className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      placeholder="Search name, email or ID"
+                      aria-label="Search clients"
+                      className="pl-8"
+                      value={search}
+                      readOnly={blockSearchAutofill}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      name="nw-client-management-search"
+                      id="nw-client-management-search"
+                      type="text"
+                      inputMode="search"
+                      role="combobox"
+                      aria-autocomplete="list"
+                      aria-expanded={false}
+                      data-1p-ignore="true"
+                      data-lpignore="true"
+                      data-form-type="other"
+                      onChange={(e) => setSearch(e.target.value)}
+                      onFocus={() => setBlockSearchAutofill(false)}
+                    />
+                  </div>
+                  <FilterChipMenu
+                    field="Account"
+                    value={accountFilter}
+                    labels={ACCOUNT_LABELS}
+                    onChange={setAccountFilter}
+                  />
+                  <FilterChipMenu
+                    field="Application"
+                    value={applicationFilter}
+                    labels={APPLICATION_LABELS}
+                    onChange={setApplicationFilter}
+                  />
                   {anyFilter && (
-                    <Button variant="link" onClick={clearFilters}>
+                    <Button variant="ghost" size="sm" onClick={clearFilters}>
                       Clear filters
                     </Button>
                   )}
+                  <span className="ml-auto text-sm text-nw-text-3">
+                    {filteredSortedClients.length.toLocaleString()}{' '}
+                    {filteredSortedClients.length === 1 ? 'client' : 'clients'} · A–Z by first name
+                  </span>
                 </div>
-              }
-            />
-          </section>
+                <DataTable
+                  columns={personalColumns as unknown as Column<Record<string, unknown>>[]}
+                  data={filteredSortedClients as unknown as Record<string, unknown>[]}
+                  onRowClick={handleRowClick as unknown as (row: Record<string, unknown>) => void}
+                  loading={loading}
+                  searchable={false}
+                  exportable={false}
+                  pageSize={25}
+                  getRowKey={(row) => row.id as React.Key}
+                  emptyState={
+                    anyFilter ? (
+                      <div className="py-10 text-center">
+                        <p className="text-sm font-medium text-nw-ink">
+                          No clients match your filters
+                        </p>
+                        <Button variant="link" onClick={clearFilters}>
+                          Clear filters
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="py-10 text-center">
+                        <p className="text-sm font-medium text-nw-ink">No clients yet</p>
+                        <p className="text-sm text-nw-text-3">
+                          Add your first client, or import many from a spreadsheet.
+                        </p>
+                        {canCreate && (
+                          <Button
+                            className="mt-3"
+                            size="sm"
+                            onClick={() => openAddClient('single')}
+                          >
+                            <Plus className="h-4 w-4" aria-hidden="true" />
+                            Add client
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  }
+                />
+              </section>
+            </>
+          )}
         </TabsContent>
 
         <TabsContent value="groups" className="mt-0">

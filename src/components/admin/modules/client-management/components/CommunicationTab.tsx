@@ -13,7 +13,7 @@
 import { useState, useCallback } from 'react';
 import { Button } from '../../../../ui/button';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
-import { SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
+import { ErrorState, SegmentedList, SegmentedTrigger, useUrlState } from '../../../layout/page';
 import { useClientSubCrumbs } from '../../../layout/page';
 
 const COMMUNICATION_VIEWS = ['compose', 'history'] as const;
@@ -69,6 +69,7 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
   const {
     data: communications = [],
     isLoading,
+    error: logsError,
     refetch,
   } = useQuery({
     queryKey: clientKeys.communicationLogs(client.id),
@@ -334,7 +335,9 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
       <Tabs value={view} onValueChange={(v) => setView(v as CommunicationView)} className="gap-4">
         <SegmentedList aria-label="Communication view">
           <SegmentedTrigger value="compose">Compose</SegmentedTrigger>
-          <SegmentedTrigger value="history">History · {communications.length}</SegmentedTrigger>
+          <SegmentedTrigger value="history">
+            {logsError || isLoading ? 'History' : `History · ${communications.length}`}
+          </SegmentedTrigger>
         </SegmentedList>
 
         <TabsContent value="compose" className="mt-0">
@@ -372,6 +375,18 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
               </div>
               {isLoading ? (
                 <p className="px-4 py-4 text-sm text-nw-text-3">Loading…</p>
+              ) : logsError ? (
+                <div className="px-4 py-4 text-sm text-red-700">
+                  Couldn&apos;t load messages.{' '}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0"
+                    onClick={() => void refetch()}
+                  >
+                    Try again
+                  </Button>
+                </div>
               ) : communications.length === 0 ? (
                 <p className="px-4 py-4 text-sm text-nw-text-3">Nothing sent yet.</p>
               ) : (
@@ -403,15 +418,24 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
         </TabsContent>
 
         <TabsContent value="history" className="mt-0">
-          <HistoryDialog
-            inline
-            open
-            onOpenChange={() => setView('compose')}
-            communications={communications}
-            isLoading={isLoading}
-            onViewDetail={setViewingCommunication}
-            onDelete={handleDeleteRequest}
-          />
+          {logsError && !isLoading ? (
+            <ErrorState
+              title="Couldn't load the communication history"
+              description="Messages sent to this client could not be loaded."
+              onRetry={() => void refetch()}
+              details={logsError instanceof Error ? logsError.message : String(logsError)}
+            />
+          ) : (
+            <HistoryDialog
+              inline
+              open
+              onOpenChange={() => setView('compose')}
+              communications={communications}
+              isLoading={isLoading}
+              onViewDetail={setViewingCommunication}
+              onDelete={handleDeleteRequest}
+            />
+          )}
         </TabsContent>
       </Tabs>
 

@@ -44,6 +44,7 @@ import { Separator } from '../../../../ui/separator';
 import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
 import { useEffect } from 'react';
+import { ErrorState } from '../../../layout/page';
 import { OverviewPanel, OverviewPanels } from './overview/OverviewPanel';
 import { HealthScoreRing } from './overview/WelcomeBanner';
 import { HealthScoreBreakdown } from './overview/HealthScoreBreakdown';
@@ -59,7 +60,6 @@ import {
 import {
   Scale,
   FileText,
-  RefreshCw,
   AlertCircle,
   AlertTriangle,
   Users,
@@ -124,6 +124,7 @@ export function ClientOverviewTab({
   onOpenTab,
 }: ClientOverviewTabProps) {
   const {
+    loadError,
     actionDistribution,
     actionItems,
     activityExpanded,
@@ -210,16 +211,16 @@ export function ClientOverviewTab({
     return <OverviewSkeleton />;
   }
 
-  if (error && allPolicies.length === 0 && !profile) {
+  if (loadError || (error && allPolicies.length === 0 && !profile)) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <AlertCircle className="h-10 w-10 text-red-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-1">Unable to load overview</h3>
-        <p className="text-sm text-gray-500 mb-4">{error}</p>
-        <Button variant="outline" size="sm" onClick={refreshAll}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Retry
-        </Button>
-      </div>
+      <ErrorState
+        title="Couldn't load the overview"
+        description="This client's figures could not be loaded, so none are shown rather than zeros."
+        onRetry={refreshAll}
+        details={
+          loadError instanceof Error ? loadError.message : (error ?? String(loadError ?? ''))
+        }
+      />
     );
   }
 

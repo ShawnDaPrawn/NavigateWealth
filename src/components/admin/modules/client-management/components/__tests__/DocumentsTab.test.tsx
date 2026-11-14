@@ -209,4 +209,16 @@ describe('DocumentsTab', () => {
     fireEvent.click(screen.getByLabelText(/ID Copy/));
     expect(screen.queryByText('Choose at least one document to attach')).toBeNull();
   });
+
+  it('shows an error, not "No documents yet", when the list fails to load', async () => {
+    vi.mocked(api.get).mockImplementation(async (endpoint: string) => {
+      if (endpoint.includes('client-document-summaries')) {
+        return { success: true, summaries: [], batches: [], canEdit: false, canGenerate: false };
+      }
+      throw new Error('400 Bad Request');
+    });
+    render(<DocumentsTab selectedClient={selectedClient} />);
+    expect(await screen.findByText("Couldn't load documents", {}, { timeout: 8000 })).toBeTruthy();
+    expect(screen.queryByText(/No documents yet/i)).toBeNull();
+  }, 15000);
 });
