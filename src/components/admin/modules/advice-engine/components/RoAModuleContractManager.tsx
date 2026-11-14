@@ -18,6 +18,7 @@ import { useSearchParams } from 'react-router';
 import {
   SegmentedList,
   SegmentedTrigger,
+  ErrorState,
   NoAccess,
   useConfirm,
   useUrlState,
@@ -68,6 +69,8 @@ export function RoAModuleContractManager() {
     publishContract,
     archiveContract,
     isSaving,
+    error: contractsError,
+    refetch: refetchContracts,
   } = useRoAModuleContracts({ includeArchived: true });
 
   // The open contract and editor tab are in the address (?contract=<id>&contractTab=fields).
@@ -257,6 +260,18 @@ export function RoAModuleContractManager() {
       <NoAccess
         what="RoA contracts"
         howToGetAccess="RoA module contracts are system-level configuration, so only a super admin can change them."
+      />
+    );
+  }
+
+  // A failed load is an error — never the built-in fallback contracts shown
+  // as if they were the saved ones.
+  if (!isLoading && contractsError) {
+    return (
+      <ErrorState
+        title="Unable to load RoA contracts"
+        onRetry={refetchContracts}
+        details={(contractsError as Error).message}
       />
     );
   }

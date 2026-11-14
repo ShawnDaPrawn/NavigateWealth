@@ -128,4 +128,16 @@ describe('RoAModuleContractManager', () => {
     expect(await screen.findByText('Archive contract?')).toBeTruthy();
     expect(archiveContract).not.toHaveBeenCalled();
   });
+
+  it('shows "Unable to load RoA contracts" on a failed load, not the fallback contracts', () => {
+    const refetch = vi.fn();
+    mockedUseContracts.mockReturnValue(
+      hookValue({ error: new Error('Request failed (400)'), refetch } as never),
+    );
+    render(<RoAModuleContractManager />);
+    expect(screen.getByText('Unable to load RoA contracts')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Save draft/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Try again/ }));
+    expect(refetch).toHaveBeenCalled();
+  });
 });

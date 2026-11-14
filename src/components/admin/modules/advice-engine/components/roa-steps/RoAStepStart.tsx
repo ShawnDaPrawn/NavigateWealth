@@ -1,4 +1,5 @@
 import { Button } from '../../../../../ui/button';
+import { ErrorState } from '../../../../layout/page';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Badge } from '../../../../../ui/badge';
 import { RoADraft } from '../DraftRoAInterface';
@@ -14,6 +15,9 @@ interface RoAStepStartProps {
   existingDrafts?: RoADraft[];
   finalisedDrafts?: RoADraft[];
   isLoadingDrafts?: boolean;
+  /** Saved drafts failed to load: shown as an error, not as "no drafts". */
+  draftsError?: Error | null;
+  onRetryDrafts?: () => void;
   /** True while a new draft is being created server-side (disables the button). */
   isCreating?: boolean;
 }
@@ -28,6 +32,8 @@ export function RoAStepStart({
   existingDrafts = [],
   finalisedDrafts = [],
   isLoadingDrafts = false,
+  draftsError = null,
+  onRetryDrafts,
   isCreating = false,
 }: RoAStepStartProps) {
   const getClientName = (draft: RoADraft): string => {
@@ -96,6 +102,15 @@ export function RoAStepStart({
             Loading saved RoA drafts...
           </CardContent>
         </Card>
+      )}
+
+      {draftsError && (
+        <ErrorState
+          title="Unable to load saved RoA drafts"
+          description="You can still begin a new RoA draft. Nothing you entered was lost."
+          onRetry={onRetryDrafts}
+          details={draftsError.message}
+        />
       )}
 
       {existingDrafts.length > 0 && (

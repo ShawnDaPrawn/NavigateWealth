@@ -20,7 +20,7 @@ import {
   getModuleRuntimeStatus,
   moduleContractToRuntimeModule,
 } from '../roaModuleRuntime';
-import { useBreadcrumbTrail, useConfirm } from '../../../layout/page';
+import { ErrorState, useBreadcrumbTrail, useConfirm } from '../../../layout/page';
 
 export type { RoADraft, RoAModule, RoAField, RoAEvidenceItem };
 
@@ -65,12 +65,21 @@ export function DraftRoAInterface() {
   // two concurrent creates (each POST would spawn a separate empty draft).
   const creatingDraftRef = useRef(false);
   const queryClient = useQueryClient();
-  const { data: activeContracts = [] } = useQuery({
+  const {
+    data: activeContracts = [],
+    error: contractsError,
+    refetch: refetchContracts,
+  } = useQuery({
     queryKey: adviceEngineKeys.roa.moduleContracts({ status: 'active' }),
     queryFn: () => roaApi.getModuleContracts({ status: 'active' }),
     staleTime: 5 * 60 * 1000,
   });
-  const { data: allDrafts = [], isLoading: isLoadingDrafts } = useQuery({
+  const {
+    data: allDrafts = [],
+    isLoading: isLoadingDrafts,
+    error: draftsError,
+    refetch: refetchDrafts,
+  } = useQuery({
     queryKey: adviceEngineKeys.roa.drafts(),
     queryFn: () => roaApi.listDrafts(),
     staleTime: 30 * 1000,
@@ -288,12 +297,24 @@ export function DraftRoAInterface() {
             existingDrafts={existingDrafts}
             finalisedDrafts={finalisedDrafts}
             isLoadingDrafts={isLoadingDrafts}
+            draftsError={draftsError as Error | null}
+            onRetryDrafts={() => void refetchDrafts()}
             isCreating={isAutoSaving}
           />
         );
       case 1:
         return <RoAStepClient draft={roaDraft} onUpdate={updateDraft} />;
       case 2:
+        // A failed contracts load is an error, not the built-in fallback list.
+        if (contractsError) {
+          return (
+            <ErrorState
+              title="Unable to load advice modules"
+              onRetry={() => void refetchContracts()}
+              details={(contractsError as Error).message}
+            />
+          );
+        }
         return (
           <RoAStepModules draft={roaDraft} onUpdate={updateDraft} modules={availableModules} />
         );

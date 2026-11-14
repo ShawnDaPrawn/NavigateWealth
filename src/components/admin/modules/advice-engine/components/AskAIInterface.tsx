@@ -13,6 +13,7 @@ import { ChatHistory, ChatInput, ClientSelector, ApiKeyWarning } from './';
 
 // Utils
 import { copyToClipboard } from '../utils';
+import { ErrorState } from '../../../layout/page';
 
 /**
  * Ask Vasco Interface Component
@@ -41,6 +42,8 @@ export function AskAIInterface() {
     clearChat,
     apiKeyStatus,
     isConfigured,
+    loadError,
+    retryLoad,
   } = useAIChat({
     autoLoadHistory: true,
     maxHistoryLength: 10,
@@ -98,6 +101,19 @@ export function AskAIInterface() {
   // ============================================================================
   // Render
   // ============================================================================
+
+  // A failed status or history load is the shared error — never the
+  // "API key needs to be updated" warning, which is only for a key the server
+  // reports as missing or invalid.
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load Ask Vasco"
+        onRetry={retryLoad}
+        details={loadError.message}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
