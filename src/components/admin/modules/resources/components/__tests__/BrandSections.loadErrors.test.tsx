@@ -49,6 +49,6 @@ describe('Corporate identity sections — failed loads', () => {
   it('Colours: a successful empty palette still shows its empty state', async () => {
     brand.getColourPalette.mockResolvedValue({ swatches: [], updatedAt: '', updatedBy: '' });
     render(<ColoursSection onUpdate={vi.fn()} />);
-    expect(await screen.findByText('No colours defined yet')).toBeTruthy();
+    expect(await screen.findByText('No colours yet')).toBeTruthy();
   });
 });
