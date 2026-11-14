@@ -20,7 +20,7 @@ describe('EmailSignatureGenerator', () => {
 
   it('renders heading', () => {
     render(<EmailSignatureGenerator />);
-    expect(screen.getByText('Email Signature Generator')).toBeDefined();
+    expect(screen.getByText('Email signature generator')).toBeDefined();
   });
 
   it('renders form fields', () => {

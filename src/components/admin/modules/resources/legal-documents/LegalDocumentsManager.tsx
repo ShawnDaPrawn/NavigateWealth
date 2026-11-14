@@ -15,19 +15,17 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button } from '../../../../ui/button';
+
 import { Card, CardContent, CardHeader } from '../../../../ui/card';
-import { Input } from '../../../../ui/input';
+
 import { Skeleton } from '../../../../ui/skeleton';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../ui/select';
-import { Search, Sparkles } from 'lucide-react';
-import { ErrorState, StatCard, useBreadcrumbTrail } from '../../../layout/page';
+  DsButton,
+  DsChipSelect,
+  ErrorState,
+  StatCard,
+  useBreadcrumbTrail,
+} from '../../../layout/page';
 import { BackLink } from '../components/BackLink';
 import { toast } from 'sonner';
 import { resourcesApi } from '../api';
@@ -39,7 +37,7 @@ import type {
 } from '../types';
 import { resourceKeys } from '../hooks/queryKeys';
 import { DetailShell } from './DetailShell';
-import { MigrationBadge, RenderModeBadge, StatusBadge } from './LegalDocumentBadges';
+import { ModePill, StatusBadge } from './LegalDocumentBadges';
 
 /** Address key for the open legal document (?legalDoc=<slug>). */
 const LEGAL_DOC_PARAM = 'legalDoc';
@@ -233,107 +231,82 @@ export default function LegalDocumentsManager() {
         />
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative w-full sm:w-72">
-          <Search
-            className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
+      <section className="ds-card overflow-hidden">
+        {/* RE-Legal: search, Group chip and Priority drafts in the card's toolbar */}
+        <div className="ds-toolbar flex-wrap">
+          <input
+            className="ds-input w-full sm:w-auto sm:min-w-[260px]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search legal documents"
+            placeholder="Search legal documents…"
             aria-label="Search legal documents"
-            className="pl-8"
           />
+          <DsChipSelect
+            label="Group"
+            anyLabel="All groups"
+            value={groupFilter}
+            options={sections.map((section) => ({ value: section, label: sectionLabel(section) }))}
+            onChange={setGroupFilter}
+          />
+          <button
+            type="button"
+            className="ds-chip"
+            onClick={() => void migratePriorityMutation.mutateAsync()}
+            disabled={
+              migratePriorityMutation.isPending || migrationSummary.priorityOutstanding === 0
+            }
+          >
+            {migratePriorityMutation.isPending ? 'Preparing…' : 'Priority drafts'}
+          </button>
         </div>
-        <Select value={groupFilter} onValueChange={setGroupFilter}>
-          <SelectTrigger className="w-full sm:w-[240px]" aria-label="Group">
-            <SelectValue placeholder="Group" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All groups</SelectItem>
-            {sections.map((section) => (
-              <SelectItem key={section} value={section}>
-                {sectionLabel(section)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex-1" />
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void migratePriorityMutation.mutateAsync()}
-          disabled={migratePriorityMutation.isPending || migrationSummary.priorityOutstanding === 0}
-        >
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
-          {migratePriorityMutation.isPending ? 'Preparing…' : 'Priority drafts'}
-        </Button>
-      </div>
 
-      {listQuery.isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-12 w-full" />
-          ))}
-        </div>
-      ) : listQuery.isError ? (
-        <ErrorState
-          title="Unable to load legal documents"
-          onRetry={() => void listQuery.refetch()}
-          details={(listQuery.error as Error | null)?.message}
-        />
-      ) : groups.length === 0 ? (
-        <div className="rounded-xl border border-nw-line bg-white px-6 py-12 text-center text-sm text-nw-text-3">
-          No legal documents match your search.
-        </div>
-      ) : (
-        <div className="flex flex-col gap-5">
-          {groups.map(([section, docs]) => (
-            <section
-              key={section}
-              className="overflow-hidden rounded-xl border border-nw-line bg-white"
-            >
-              <h2 className="border-b border-nw-line px-5 py-3 text-sm font-semibold text-nw-ink">
-                {sectionLabel(section)}
-              </h2>
-              <ul className="divide-y divide-nw-line">
-                {docs.map((doc) => (
-                  <li key={doc.slug} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-nw-ink">{doc.title}</p>
-                      <p className="text-xs text-nw-text-3">{sectionLabel(doc.section)}</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge value={doc.status} />
-                      <RenderModeBadge value={doc.renderMode} />
-                      <MigrationBadge
-                        state={
-                          doc.renderMode === 'versioned_document'
-                            ? 'migrated'
-                            : doc.currentDraftVersionId
-                              ? 'draft-ready'
-                              : 'legacy-only'
-                        }
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedSlug(doc.slug)}
-                      aria-label={`Open ${doc.title}`}
-                    >
-                      Open
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
+        {listQuery.isLoading ? (
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : listQuery.isError ? (
+          <div className="p-4">
+            <ErrorState
+              title="Unable to load legal documents"
+              onRetry={() => void listQuery.refetch()}
+              details={(listQuery.error as Error | null)?.message}
+            />
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="ds-card-b text-center">
+            <span className="ds-meta">No legal documents match your search.</span>
+          </div>
+        ) : (
+          <ul>
+            {groups.flatMap(([, docs]) =>
+              docs.map((doc) => (
+                <li key={doc.slug} className="ds-todo-row flex-wrap sm:flex-nowrap">
+                  <div className="grow min-w-0">
+                    <b className="block truncate text-[13.5px] font-medium text-nw-ink">
+                      {doc.title}
+                    </b>
+                    <span className="ds-meta">{sectionLabel(doc.section)}</span>
+                  </div>
+                  <StatusBadge value={doc.status} />
+                  <ModePill
+                    renderMode={doc.renderMode}
+                    draftReady={Boolean(doc.currentDraftVersionId)}
+                  />
+                  <DsButton
+                    size="sm"
+                    onClick={() => setSelectedSlug(doc.slug)}
+                    aria-label={`Open ${doc.title}`}
+                  >
+                    Open
+                  </DsButton>
+                </li>
+              )),
+            )}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

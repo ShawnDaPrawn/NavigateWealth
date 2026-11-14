@@ -1,30 +1,10 @@
 /**
- * Filter bar of the resources Forms tab: search, category, client type,
- * status, and the select-mode toggle. Pure view over props from
- * ResourcesModule.
+ * Filter bar of the resources Forms tab (RE-Forms): search, then the Kind,
+ * Type and Status chips, and the select-mode toggle on the right. Pure view
+ * over props from ResourcesModule.
  */
-import { Card, CardContent } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
-import { Input } from '../../../../ui/input';
-import { Label } from '../../../../ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../ui/select';
-import { Search, CheckSquare, Square } from 'lucide-react';
-
-// Module imports
-
-// Phase 1 — Form status config
-
-// ---------------------------------------------------------------------------
-// Heavy sub-components — lazy-loaded to reduce initial chunk size.
-// These are only rendered on user action (edit, preview, tab switch).
-
 import type { Dispatch, SetStateAction } from 'react';
+import { DsButton, DsChipSelect } from '../../../layout/page';
 import type { FormFilters } from '../types';
 
 interface FormsFilterBarProps {
@@ -37,6 +17,12 @@ interface FormsFilterBarProps {
   setSelectedFormIds: Dispatch<SetStateAction<Set<string>>>;
 }
 
+const STATUS_OPTIONS = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'published', label: 'Published' },
+  { value: 'archived', label: 'Archived' },
+];
+
 export function FormsFilterBar({
   categories,
   clientTypes,
@@ -47,125 +33,47 @@ export function FormsFilterBar({
   setSelectedFormIds,
 }: FormsFilterBarProps) {
   return (
-    <Card className="border shadow-sm">
-      <CardContent className="p-4">
-        <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:gap-4">
-          {/* Search */}
-          <div className="col-span-2 sm:flex-1">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Search
-            </Label>
-            <div className="relative mt-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search forms by name or description..."
-                value={filters.search}
-                onChange={(e) => updateFilters({ search: e.target.value })}
-                className="pl-10 h-10"
-              />
-            </div>
-          </div>
-
-          {/* Category */}
-          <div className="min-w-0 sm:w-44">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Category
-            </Label>
-            <Select
-              value={filters.category}
-              onValueChange={(value) => updateFilters({ category: value })}
-            >
-              <SelectTrigger className="h-10 mt-1">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Client Type */}
-          <div className="min-w-0 sm:w-40">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Client Type
-            </Label>
-            <Select
-              value={filters.clientType}
-              onValueChange={(value) => updateFilters({ clientType: value })}
-            >
-              <SelectTrigger className="h-10 mt-1">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {clientTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Phase 1: Status Filter */}
-          <div className="min-w-0 sm:w-36">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Status
-            </Label>
-            <Select
-              value={filters.status || 'all'}
-              onValueChange={(value) => updateFilters({ status: value })}
-            >
-              <SelectTrigger className="h-10 mt-1">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="draft">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500" />
-                    Draft
-                  </span>
-                </SelectItem>
-                <SelectItem value="published">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
-                    Published
-                  </span>
-                </SelectItem>
-                <SelectItem value="archived">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400" />
-                    Archived
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Select mode toggle */}
-          <Button
-            variant={isSelectMode ? 'default' : 'outline'}
-            size="sm"
-            className="h-10 shrink-0"
-            onClick={() => {
-              setIsSelectMode(!isSelectMode);
-              if (isSelectMode) setSelectedFormIds(new Set());
-            }}
-          >
-            {isSelectMode ? (
-              <CheckSquare className="h-4 w-4 mr-1.5" />
-            ) : (
-              <Square className="h-4 w-4 mr-1.5" />
-            )}
-            {isSelectMode ? 'Done' : 'Select'}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        className="ds-input w-full sm:w-auto sm:min-w-[300px]"
+        placeholder="Search forms by name or description…"
+        aria-label="Search forms"
+        value={filters.search}
+        onChange={(e) => updateFilters({ search: e.target.value })}
+      />
+      <DsChipSelect
+        label="Kind"
+        anyLabel="Any kind"
+        value={filters.category}
+        options={categories.map((c) => ({ value: c, label: c }))}
+        onChange={(category) => updateFilters({ category })}
+      />
+      <DsChipSelect
+        label="Type"
+        anyLabel="Any client type"
+        value={filters.clientType}
+        options={clientTypes.map((t) => ({ value: t, label: t }))}
+        onChange={(clientType) => updateFilters({ clientType })}
+      />
+      <DsChipSelect
+        label="Status"
+        anyLabel="Any status"
+        value={filters.status || 'all'}
+        options={STATUS_OPTIONS}
+        onChange={(status) => updateFilters({ status })}
+      />
+      <span className="grow" />
+      <DsButton
+        size="sm"
+        variant={isSelectMode ? 'primary' : 'default'}
+        aria-pressed={isSelectMode}
+        onClick={() => {
+          setIsSelectMode(!isSelectMode);
+          if (isSelectMode) setSelectedFormIds(new Set());
+        }}
+      >
+        {isSelectMode ? 'Done' : 'Select'}
+      </DsButton>
+    </div>
   );
 }

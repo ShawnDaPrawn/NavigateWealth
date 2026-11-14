@@ -58,7 +58,7 @@ const COLUMNS: PipelineColumn[] = [
   },
   {
     status: 'in_review',
-    label: 'In Review',
+    label: 'In review',
     icon: Send,
     color: 'text-yellow-600',
     bgLight: 'bg-yellow-50',

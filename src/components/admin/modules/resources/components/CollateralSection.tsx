@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '../../../../ui/button';
-import { Card, CardContent } from '../../../../ui/card';
-import { Badge } from '../../../../ui/badge';
+
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
@@ -20,22 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/tooltip';
-import {
-  Upload,
-  Search,
-  FolderOpen,
-  FileText,
-  ExternalLink,
-  Download,
-  Trash2,
-  Loader2,
-} from 'lucide-react';
+import { Upload, FileText, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { brandApi, COLLATERAL_CATEGORIES } from './brand-api';
 import type { CollateralItem } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
-import { useConfirm, ErrorState } from '../../../layout/page';
+import { DsButton, DsChipSelect, DsState, useConfirm, ErrorState } from '../../../layout/page';
 
 export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
@@ -136,85 +125,48 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-base font-semibold">Brand Collateral</h3>
-          <p className="text-sm text-muted-foreground">
-            Letterheads, banners, templates, and other brand assets.
-          </p>
-        </div>
-        <Button
-          size="sm"
-          className="bg-purple-600 hover:bg-purple-700"
-          onClick={() => setUploadOpen(true)}
-        >
-          <Upload className="h-4 w-4 mr-1.5" />
-          Upload Asset
-        </Button>
+    // RE-CI-Collateral: one "Brand collateral" card, upload in its header
+    <section className="ds-card overflow-hidden">
+      <div className="ds-card-h">
+        <h3>Brand collateral</h3>
+        <DsButton size="sm" variant="primary" onClick={() => setUploadOpen(true)}>
+          Upload collateral
+        </DsButton>
       </div>
 
-      {/* Filters */}
       {items.length > 0 && (
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search assets..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-9"
-            />
-          </div>
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[180px] h-9">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {COLLATERAL_CATEGORIES.map((c) => (
-                <SelectItem key={c.value} value={c.value}>
-                  {c.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="ds-toolbar flex-wrap">
+          <input
+            className="ds-input w-full sm:w-auto sm:min-w-[240px]"
+            placeholder="Search assets…"
+            aria-label="Search assets"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <DsChipSelect
+            label="Category"
+            anyLabel="All categories"
+            value={filter}
+            options={COLLATERAL_CATEGORIES.map((c) => ({ value: c.value, label: c.label }))}
+            onChange={setFilter}
+          />
         </div>
       )}
 
-      {/* Grid */}
       {items.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FolderOpen className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="font-medium text-sm">No collateral uploaded</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Upload brand assets like letterheads, banners, and templates.
-            </p>
-            <Button
-              size="sm"
-              className="mt-4 bg-purple-600 hover:bg-purple-700"
-              onClick={() => setUploadOpen(true)}
-            >
-              <Upload className="h-4 w-4 mr-1.5" />
-              Upload First Asset
-            </Button>
-          </CardContent>
-        </Card>
+        <DsState title="No collateral yet" className="min-h-[220px]">
+          Brochures, presentation templates and letterheads live here.
+        </DsState>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <Search className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-            <p className="text-sm font-medium">No matching assets</p>
-            <p className="text-xs text-muted-foreground mt-1">Try adjusting your filters.</p>
-          </CardContent>
-        </Card>
+        <DsState title="No matching assets" />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
+        <div className="ds-card-b grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((item) => (
-            <Card key={item.id} className="overflow-hidden group">
-              {/* Preview */}
-              <div className="h-32 bg-gray-50 flex items-center justify-center border-b overflow-hidden relative">
+            <div
+              key={item.id}
+              className="flex flex-col overflow-hidden rounded-[10px] border border-nw-line bg-white"
+            >
+              <div className="flex h-32 items-center justify-center overflow-hidden border-b border-nw-line bg-[#fafafb]">
                 {item.signedUrl && isImage(item.mimeType) ? (
                   <img
                     src={item.signedUrl}
@@ -222,69 +174,50 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
                     className="max-h-full max-w-full object-contain"
                   />
                 ) : (
-                  <FileText className="h-10 w-10 text-muted-foreground/30" />
+                  <FileText className="h-10 w-10 text-nw-text-3/40" aria-hidden="true" />
                 )}
-                {/* Hover actions */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 flex-wrap">
+              </div>
+              <div className="flex flex-1 flex-col gap-1 p-2.5">
+                <b className="truncate text-[13.5px] font-medium text-nw-ink">{item.name}</b>
+                <span className="ds-meta">
+                  {getCategoryLabel(item.category)} · {(item.fileSize / 1024).toFixed(0)} KB
+                </span>
+                {item.description && (
+                  <span className="ds-meta line-clamp-2">{item.description}</span>
+                )}
+                <div className="mt-auto flex flex-wrap gap-1 pt-1.5">
                   {item.signedUrl && (
-                    <div className="contents">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <a href={item.signedUrl} target="_blank" rel="noopener noreferrer">
-                            <Button size="icon" variant="secondary" className="h-8 w-8">
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Button>
-                          </a>
-                        </TooltipTrigger>
-                        <TooltipContent>Open</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <a
-                            href={item.signedUrl}
-                            download={item.fileName}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Button size="icon" variant="secondary" className="h-8 w-8">
-                              <Download className="h-3.5 w-3.5" />
-                            </Button>
-                          </a>
-                        </TooltipTrigger>
-                        <TooltipContent>Download</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="secondary"
-                        className="h-8 w-8 text-red-600"
-                        onClick={() => handleDelete(item.id)}
+                    <>
+                      <a
+                        className="ds-btn ds-btn-sm"
+                        href={item.signedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Delete</TooltipContent>
-                  </Tooltip>
+                        Open
+                      </a>
+                      <a
+                        className="ds-btn ds-btn-sm"
+                        href={item.signedUrl}
+                        download={item.fileName}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Download
+                      </a>
+                    </>
+                  )}
+                  <DsButton
+                    size="sm"
+                    variant="ghost"
+                    aria-label={`Delete ${item.name}`}
+                    onClick={() => handleDelete(item.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </DsButton>
                 </div>
               </div>
-              <CardContent className="pt-3 pb-3 space-y-1">
-                <p className="text-sm font-medium truncate">{item.name}</p>
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="text-[10px]">
-                    {getCategoryLabel(item.category)}
-                  </Badge>
-                  <span className="text-[10px] text-muted-foreground">
-                    {(item.fileSize / 1024).toFixed(0)} KB
-                  </span>
-                </div>
-                {item.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
-                )}
-              </CardContent>
-            </Card>
+            </div>
           ))}
         </div>
       )}
@@ -357,6 +290,6 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
         </DialogContent>
       </Dialog>
       {confirmDialog}
-    </div>
+    </section>
   );
 }

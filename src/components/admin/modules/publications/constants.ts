@@ -212,7 +212,7 @@ export const ERROR_MESSAGES = {
 
 export const STATUS_LABELS = {
   draft: 'Draft',
-  in_review: 'In Review',
+  in_review: 'In review',
   scheduled: 'Scheduled',
   published: 'Published',
   archived: 'Archived',

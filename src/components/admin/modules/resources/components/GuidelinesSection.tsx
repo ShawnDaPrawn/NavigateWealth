@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
@@ -12,21 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/dialog';
-import {
-  Download,
-  Upload,
-  FileText,
-  Plus,
-  AlertCircle,
-  Trash2,
-  Pencil,
-  Loader2,
-} from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { brandApi } from './brand-api';
 import type { BrandGuidelines } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
-import { useConfirm, ErrorState } from '../../../layout/page';
+import { DsButton, useConfirm, ErrorState } from '../../../layout/page';
 
 export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
@@ -150,158 +140,115 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
   const voice = guidelines?.voice || { tone: '', terminology: '', notes: '' };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold">Brand Guidelines</h3>
-          <p className="text-sm text-muted-foreground">
-            Quick-reference rules, brand voice, and downloadable guidelines.
-          </p>
-        </div>
-      </div>
-
+    // RE-CI-Guidelines: three cards — the PDF, quick reference rules, brand voice
+    <div className="space-y-4">
       {/* Guidelines PDF */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-x-3 gap-y-2">
-            <CardTitle className="text-sm">Guidelines Document</CardTitle>
-            <div className="flex items-center gap-2 flex-wrap">
-              {pdfUrl && (
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer">
-                  <Button size="sm" variant="outline">
-                    <Download className="h-3.5 w-3.5 mr-1.5" />
-                    Download PDF
-                  </Button>
-                </a>
+      <section className="ds-card overflow-hidden">
+        <div className="ds-card-h">
+          <h3>Guidelines document</h3>
+        </div>
+        <div className="ds-card-b">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="grow min-w-0">
+              {guidelines?.pdfFileName ? (
+                <>
+                  <b className="block truncate text-[13.5px] font-medium text-nw-ink">
+                    {guidelines.pdfFileName}
+                  </b>
+                  <span className="ds-meta">Brand guidelines document</span>
+                </>
+              ) : (
+                <span className="ds-meta">No guidelines document yet</span>
               )}
-              <Label htmlFor="pdf-upload" className="cursor-pointer">
-                <Button size="sm" variant="outline" asChild>
-                  <span>
-                    {pdfUploading ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <Upload className="h-3.5 w-3.5 mr-1.5" />
-                    )}
-                    {guidelines?.pdfFileName ? 'Replace PDF' : 'Upload PDF'}
-                  </span>
-                </Button>
-              </Label>
-              <input
-                id="pdf-upload"
-                type="file"
-                accept="application/pdf"
-                className="hidden"
-                onChange={handlePdfUpload}
-              />
             </div>
+            {pdfUrl && (
+              <a
+                className="ds-btn ds-btn-sm"
+                href={pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download PDF
+              </a>
+            )}
+            <label
+              htmlFor="pdf-upload"
+              className={`ds-btn ds-btn-sm cursor-pointer ${guidelines?.pdfFileName ? 'ds-btn-ghost' : 'ds-btn-primary'}`}
+            >
+              {pdfUploading && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+              {guidelines?.pdfFileName ? 'Replace' : 'Upload PDF'}
+            </label>
+            <input
+              id="pdf-upload"
+              type="file"
+              accept="application/pdf"
+              className="hidden"
+              onChange={handlePdfUpload}
+            />
           </div>
-        </CardHeader>
-        <CardContent>
-          {guidelines?.pdfFileName ? (
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <FileText className="h-5 w-5 text-red-500" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{guidelines.pdfFileName}</p>
-                <p className="text-xs text-muted-foreground">Brand guidelines document</p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No guidelines document uploaded yet.</p>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Brand Rules */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-sm">Quick Reference Rules</CardTitle>
-              <CardDescription className="text-xs">
-                Key brand rules for quick scanning.
-              </CardDescription>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => setAddRuleOpen(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Add Rule
-            </Button>
+      <section className="ds-card overflow-hidden">
+        <div className="ds-card-h">
+          <h3>Quick reference rules</h3>
+          <DsButton size="sm" variant="primary" onClick={() => setAddRuleOpen(true)}>
+            Add rule
+          </DsButton>
+        </div>
+        {rules.length === 0 ? (
+          <div className="ds-card-b">
+            <span className="ds-meta">No rules yet</span>
           </div>
-        </CardHeader>
-        <CardContent>
-          {rules.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              No rules defined yet. Add quick-reference brand rules.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {rules.map((rule) => (
-                <div
-                  key={rule.id}
-                  className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg group"
-                >
-                  <AlertCircle className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{rule.title}</p>
-                    {rule.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{rule.description}</p>
-                    )}
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-6 w-6 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 text-red-400 hover:text-red-600 flex-shrink-0"
-                    onClick={() => handleDeleteRule(rule.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+        ) : (
+          <ul>
+            {rules.map((rule) => (
+              <li key={rule.id} className="ds-todo-row">
+                <div className="grow min-w-0">
+                  <b className="block text-[13.5px] font-medium text-nw-ink">{rule.title}</b>
+                  {rule.description && <span className="ds-meta">{rule.description}</span>}
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <DsButton
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Delete rule ${rule.title}`}
+                  onClick={() => handleDeleteRule(rule.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </DsButton>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Brand Voice */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-sm">Brand Voice</CardTitle>
-              <CardDescription className="text-xs">
-                Tone, terminology, and communication style.
-              </CardDescription>
+      <section className="ds-card overflow-hidden">
+        <div className="ds-card-h">
+          <h3>Brand voice</h3>
+          {!voiceEditing ? (
+            <DsButton
+              size="sm"
+              onClick={() => {
+                setVoiceDraft(voice);
+                setVoiceEditing(true);
+              }}
+            >
+              Edit
+            </DsButton>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <DsButton size="sm" variant="ghost" onClick={() => setVoiceEditing(false)}>
+                Cancel
+              </DsButton>
+              <DsButton size="sm" variant="primary" onClick={handleSaveVoice} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </DsButton>
             </div>
-            {!voiceEditing ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setVoiceDraft(voice);
-                  setVoiceEditing(true);
-                }}
-              >
-                <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                Edit
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button size="sm" variant="outline" onClick={() => setVoiceEditing(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  className="bg-purple-600 hover:bg-purple-700"
-                  onClick={handleSaveVoice}
-                  disabled={saving}
-                >
-                  {saving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
-                  Save
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          )}
+        </div>
+        <div className="ds-card-b space-y-4">
           {voiceEditing ? (
             <div className="contents">
               <div className="space-y-2">
@@ -309,7 +256,6 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
                 <Textarea
                   value={voiceDraft.tone}
                   onChange={(e) => setVoiceDraft((prev) => ({ ...prev, tone: e.target.value }))}
-                  placeholder="e.g. Professional, approachable, knowledgeable. Avoid jargon unless speaking to industry peers..."
                   rows={3}
                 />
               </div>
@@ -320,7 +266,6 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
                   onChange={(e) =>
                     setVoiceDraft((prev) => ({ ...prev, terminology: e.target.value }))
                   }
-                  placeholder="e.g. Use 'wealth planning' not 'financial planning'. Use 'clients' not 'customers'..."
                   rows={3}
                 />
               </div>
@@ -340,38 +285,30 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
                 <div className="space-y-4">
                   {voice.tone && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                        Tone
-                      </p>
+                      <p className="ds-lbl mb-1">Tone</p>
                       <p className="text-sm">{voice.tone}</p>
                     </div>
                   )}
                   {voice.terminology && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                        Terminology
-                      </p>
+                      <p className="ds-lbl mb-1">Terminology</p>
                       <p className="text-sm">{voice.terminology}</p>
                     </div>
                   )}
                   {voice.notes && (
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
-                        Notes
-                      </p>
+                      <p className="ds-lbl mb-1">Notes</p>
                       <p className="text-sm">{voice.notes}</p>
                     </div>
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No brand voice guidelines defined yet.
-                </p>
+                <span className="ds-meta">No brand voice yet</span>
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Add Rule Dialog */}
       <Dialog open={addRuleOpen} onOpenChange={setAddRuleOpen}>
@@ -386,7 +323,6 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
               <Input
                 value={newRule.title}
                 onChange={(e) => setNewRule((prev) => ({ ...prev, title: e.target.value }))}
-                placeholder="e.g. Minimum logo size: 30mm wide"
               />
             </div>
             <div className="space-y-2">

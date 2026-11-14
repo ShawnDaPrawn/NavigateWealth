@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../../ui/button';
-import { Card, CardContent } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import {
@@ -18,13 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Palette, Plus, Trash2, Copy, Check, Loader2 } from 'lucide-react';
+import { Trash2, Copy, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { brandApi } from './brand-api';
 import type { ColourSwatch, ColourPalette } from './brand-api';
 import { hexToRgb, getContrastRatio } from './corporateIdentityUtils';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
-import { useConfirm, ErrorState } from '../../../layout/page';
+import { DsButton, DsState, useConfirm, ErrorState } from '../../../layout/page';
 
 export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
@@ -133,123 +132,91 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-base font-semibold">Brand Colours</h3>
-          <p className="text-sm text-muted-foreground">
-            Define and manage the brand colour palette.
-          </p>
-        </div>
-        <Button
-          size="sm"
-          className="bg-purple-600 hover:bg-purple-700"
-          onClick={() => setAddOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          Add Colour
-        </Button>
+    // RE-CI-Colours: one "Brand colours" card, action in its header, swatch tiles inside
+    <section className="ds-card overflow-hidden">
+      <div className="ds-card-h">
+        <h3>Brand colours</h3>
+        <DsButton size="sm" variant="primary" onClick={() => setAddOpen(true)}>
+          Add colour
+        </DsButton>
       </div>
-
-      {/* Colour groups */}
-      {groups.map((group) => {
-        const swatches = palette?.swatches.filter((s) => s.group === group) || [];
-        if (swatches.length === 0) return null;
-        return (
-          <div key={group} className="space-y-3">
-            <h4 className="text-sm font-medium capitalize text-muted-foreground">
-              {group} Colours
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
-              {swatches.map((swatch) => {
-                const luminance = getContrastRatio(swatch.hex);
-                const textColor = luminance > 0.5 ? 'text-gray-900' : 'text-white';
-                return (
-                  <Card key={swatch.id} className="overflow-hidden">
+      <div className="ds-card-b space-y-4">
+        {groups.map((group) => {
+          const swatches = palette?.swatches.filter((s) => s.group === group) || [];
+          if (swatches.length === 0) return null;
+          return (
+            <div key={group} className="space-y-2.5">
+              <span className="ds-lbl capitalize">{group}</span>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                {swatches.map((swatch) => {
+                  const luminance = getContrastRatio(swatch.hex);
+                  const textColor = luminance > 0.5 ? 'text-gray-900' : 'text-white';
+                  const rgb = `rgb(${swatch.rgb.r}, ${swatch.rgb.g}, ${swatch.rgb.b})`;
+                  return (
                     <div
-                      className={`h-20 flex items-end p-3 ${textColor}`}
-                      style={{ backgroundColor: swatch.hex }}
+                      key={swatch.id}
+                      className="overflow-hidden rounded-[10px] border border-nw-line bg-white"
                     >
-                      <span className="text-sm font-medium drop-shadow-sm">{swatch.name}</span>
-                    </div>
-                    <CardContent className="pt-3 pb-3 space-y-2">
-                      <div className="flex items-center justify-between">
+                      <div
+                        className={`flex h-[70px] items-end justify-end p-2 text-[11px] font-semibold ${textColor}`}
+                        style={{ backgroundColor: swatch.hex }}
+                        aria-hidden="true"
+                      >
+                        Aa
+                      </div>
+                      <div className="flex flex-col gap-0.5 p-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <b className="text-[13.5px] font-semibold text-nw-ink">{swatch.name}</b>
+                          <DsButton
+                            size="sm"
+                            variant="ghost"
+                            aria-label={`Delete ${swatch.name}`}
+                            onClick={() => handleDeleteSwatch(swatch.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          </DsButton>
+                        </div>
                         <button
-                          className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                          type="button"
+                          className="ds-meta flex items-center gap-1 text-left hover:text-nw-ink"
                           onClick={() => copyToClipboard(swatch.hex, swatch.id + '-hex')}
+                          aria-label={`Copy ${swatch.hex.toUpperCase()}`}
                         >
-                          {swatch.hex.toUpperCase()}
+                          {swatch.hex.toUpperCase()} ·{' '}
+                          <span className="capitalize">{swatch.group}</span>
                           {copiedId === swatch.id + '-hex' ? (
-                            <Check className="h-3 w-3 text-green-500" />
+                            <Check className="h-3 w-3 text-green-600" aria-hidden="true" />
                           ) : (
-                            <Copy className="h-3 w-3" />
+                            <Copy className="h-3 w-3" aria-hidden="true" />
                           )}
                         </button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 text-red-400 hover:text-red-600"
-                          onClick={() => handleDeleteSwatch(swatch.id)}
+                        <button
+                          type="button"
+                          className="ds-meta flex items-center gap-1 text-left font-mono text-[11px] hover:text-nw-ink"
+                          onClick={() => copyToClipboard(rgb, swatch.id + '-rgb')}
+                          aria-label={`Copy ${rgb}`}
                         >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <button
-                        className="text-[10px] text-muted-foreground font-mono hover:text-foreground transition-colors flex items-center gap-1"
-                        onClick={() =>
-                          copyToClipboard(
-                            `rgb(${swatch.rgb.r}, ${swatch.rgb.g}, ${swatch.rgb.b})`,
-                            swatch.id + '-rgb',
-                          )
-                        }
-                      >
-                        RGB({swatch.rgb.r}, {swatch.rgb.g}, {swatch.rgb.b})
-                        {copiedId === swatch.id + '-rgb' ? (
-                          <Check className="h-2.5 w-2.5 text-green-500" />
-                        ) : (
-                          <Copy className="h-2.5 w-2.5" />
-                        )}
-                      </button>
-                      {/* Contrast indicator */}
-                      <div className="flex items-center gap-1.5">
-                        <div
-                          className={`h-4 w-4 rounded text-[8px] font-bold flex items-center justify-center ${textColor}`}
-                          style={{ backgroundColor: swatch.hex }}
-                        >
-                          Aa
-                        </div>
-                        <span className="text-[10px] text-muted-foreground">
+                          {rgb}
+                          {copiedId === swatch.id + '-rgb' ? (
+                            <Check className="h-3 w-3 text-green-600" aria-hidden="true" />
+                          ) : (
+                            <Copy className="h-3 w-3" aria-hidden="true" />
+                          )}
+                        </button>
+                        <span className="ds-meta text-[11px]">
                           {luminance > 0.5 ? 'Use dark text' : 'Use light text'}
                         </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
 
-      {(!palette || palette.swatches.length === 0) && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Palette className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="font-medium text-sm">No colours defined yet</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Add your brand colours to build a consistent palette.
-            </p>
-            <Button
-              size="sm"
-              className="mt-4 bg-purple-600 hover:bg-purple-700"
-              onClick={() => setAddOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-1.5" />
-              Add First Colour
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+        {(!palette || palette.swatches.length === 0) && <DsState title="No colours yet" />}
+      </div>
 
       {/* Add Colour Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -335,6 +302,6 @@ export function ColoursSection({ onUpdate }: { onUpdate: () => void }) {
         </DialogContent>
       </Dialog>
       {confirmDialog}
-    </div>
+    </section>
   );
 }

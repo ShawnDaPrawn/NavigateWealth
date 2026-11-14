@@ -1,11 +1,11 @@
 /**
  * Publications Feature - StatusBadge Component
  *
- * Displays article status with appropriate styling.
+ * Article status as a board pill (PU-Articles).
  */
 
-import { Badge } from '../../../../ui/badge';
-import { STATUS_LABELS, STATUS_COLORS } from '../constants';
+import { cn } from '../../../../ui/utils';
+import { STATUS_LABELS } from '../constants';
 import type { ArticleStatus } from '../types';
 
 interface StatusBadgeProps {
@@ -13,9 +13,14 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const label = STATUS_LABELS[status];
-  const colorClass = STATUS_COLORS[status];
+const TONE: Record<ArticleStatus, string> = {
+  draft: '',
+  in_review: 'info',
+  scheduled: 'brand',
+  published: 'ok',
+  archived: 'bad',
+};
 
-  return <Badge className={`${colorClass} ${className || ''}`}>{label}</Badge>;
+export function StatusBadge({ status, className }: StatusBadgeProps) {
+  return <span className={cn('ds-pill', TONE[status], className)}>{STATUS_LABELS[status]}</span>;
 }

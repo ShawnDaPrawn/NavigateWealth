@@ -14,7 +14,7 @@ import { type Category, type ContentType } from './taxonomy';
  */
 export const ARTICLE_STATUS_LABELS: Record<ArticleStatus, string> = {
   draft: 'Draft',
-  in_review: 'In Review',
+  in_review: 'In review',
   scheduled: 'Scheduled',
   published: 'Published',
   archived: 'Archived',

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { Badge } from '../../../../ui/badge';
+
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
@@ -20,12 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
-import { Plus, Trash2, Type, Loader2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { brandApi } from './brand-api';
 import type { TypographyConfig } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
-import { useConfirm, ErrorState } from '../../../layout/page';
+import { DsButton, DsState, useConfirm, ErrorState } from '../../../layout/page';
 
 export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
@@ -166,85 +165,70 @@ export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-base font-semibold">Typography</h3>
-          <p className="text-sm text-muted-foreground">Approved fonts, scale, and usage rules.</p>
+    <div className="space-y-4">
+      {/* RE-CI-Typography: the fonts card, with Add font in its header */}
+      <section className="ds-card overflow-hidden">
+        <div className="ds-card-h">
+          <div>
+            <h3>Typography</h3>
+            <p className="ds-meta">Approved fonts, scale, and usage rules.</p>
+          </div>
+          <DsButton size="sm" variant="primary" onClick={() => setEditOpen(true)}>
+            Add font
+          </DsButton>
         </div>
-        <Button
-          size="sm"
-          className="bg-purple-600 hover:bg-purple-700"
-          onClick={() => setEditOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          Add Font
-        </Button>
-      </div>
-
-      {/* Registered Fonts */}
-      {config && config.fonts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {config.fonts.map((font) => (
-            <Card key={font.id}>
-              <CardContent className="pt-4 pb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="text-xs">
-                    {roleLabels[font.role] || font.role}
-                  </Badge>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-6 w-6 text-red-400 hover:text-red-600"
-                    onClick={() => handleDeleteFont(font.id)}
+        <div className="ds-card-b flex flex-col gap-3">
+          {config && config.fonts.length > 0 ? (
+            config.fonts.map((font) => (
+              <div key={font.id} className="ds-todo-row rounded-[10px] border border-nw-line">
+                <div className="grow flex min-w-0 flex-col gap-1">
+                  <b
+                    className="text-[22px] font-semibold text-nw-ink"
+                    style={{ fontFamily: `${font.family}, ${font.fallback}` }}
                   >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                    {font.family}
+                  </b>
+                  <span className="ds-meta">
+                    {roleLabels[font.role] || font.role} · Fallback: {font.fallback}
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {font.weights.map((w) => (
+                      <span key={w} className="ds-pill">
+                        {w}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ fontFamily: `${font.family}, ${font.fallback}` }}>
-                  <p className="text-2xl font-bold">{font.family}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    The quick brown fox jumps over the lazy dog
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {font.weights.map((w) => (
-                    <Badge key={w} variant="secondary" className="text-[10px] font-mono">
-                      {w}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">Fallback: {font.fallback}</p>
-              </CardContent>
-            </Card>
-          ))}
+                <DsButton
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Delete ${font.family}`}
+                  onClick={() => handleDeleteFont(font.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </DsButton>
+              </div>
+            ))
+          ) : (
+            <DsState title="No fonts yet" />
+          )}
         </div>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Type className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="font-medium text-sm">No fonts registered</p>
-            <p className="text-xs text-muted-foreground mt-1">Add your approved font families.</p>
-          </CardContent>
-        </Card>
-      )}
+      </section>
 
       {/* Type Scale */}
       {config && config.scale.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Type Scale</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <section className="ds-card overflow-hidden">
+          <div className="ds-card-h">
+            <h3>Type scale</h3>
+          </div>
+          <div className="ds-card-b space-y-3">
             {config.scale.map((s) => (
               <div
                 key={s.token}
                 className="flex items-baseline justify-between border-b border-dashed pb-2 last:border-0 last:pb-0"
               >
                 <div className="flex items-baseline gap-3">
-                  <Badge variant="outline" className="font-mono text-[10px] w-12 justify-center">
-                    {s.token}
-                  </Badge>
+                  <span className="ds-pill w-12 justify-center font-mono">{s.token}</span>
                   <span
                     style={{ fontSize: s.size, lineHeight: s.lineHeight, fontWeight: s.weight }}
                   >
@@ -256,30 +240,26 @@ export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
                 </span>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       )}
 
-      {/* Usage Notes */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Usage Notes</CardTitle>
-          <CardDescription className="text-xs">
-            Rules and guidelines for typography usage.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <section className="ds-card overflow-hidden">
+        <div className="ds-card-h">
+          <h3>Usage notes</h3>
+        </div>
+        <div className="ds-card-b">
           <Textarea
             value={config?.notes || ''}
             onChange={(e) =>
               setConfig((prev) => (prev ? { ...prev, notes: e.target.value } : prev))
             }
             onBlur={(e) => handleSaveNotes(e.target.value)}
-            placeholder="e.g. Never use Light weight below 14px. Use Bold for monetary values..."
             rows={3}
+            aria-label="Usage notes"
           />
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Add Font Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

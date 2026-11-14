@@ -7,17 +7,17 @@
  */
 
 import { useState } from 'react';
-import { ExternalLink, ImageOff, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
-import { Badge } from '../../../../ui/badge';
-import { Button } from '../../../../ui/button';
-import { Card, CardContent } from '../../../../ui/card';
+import { ExternalLink } from 'lucide-react';
+
 import type { SocialAsset } from './assetsTypes';
 import {
   ASSET_STATE_DISPLAY,
   IMAGE_STATUS_DISPLAY,
   REJECTABLE_STATES,
   formatSlot,
+  pillTone,
 } from './assetsModel';
+import { DsButton } from '../../../layout/page';
 
 interface AssetCardProps {
   asset: SocialAsset;
@@ -45,66 +45,80 @@ export function AssetCard({
   const longBody = asset.body.length > CLAMP_AT;
   const canReject = REJECTABLE_STATES.includes(asset.state);
 
+  const thumbBackground =
+    asset.channel === 'linkedin'
+      ? 'linear-gradient(135deg,#4c1d95,#6d28d9 60%,#8b5cf6)'
+      : 'linear-gradient(135deg,#111827,#312e81 70%,#4c1d95)';
+
   return (
-    <Card className="border-border" data-testid={`asset-card-${asset.id}`}>
-      <CardContent className="p-4 space-y-3">
+    // SM-Weekly: one to-do style row per asset — thumbnail, pills and copy, actions
+    <div
+      className="ds-todo-row flex-wrap items-start sm:flex-nowrap"
+      data-testid={`asset-card-${asset.id}`}
+    >
+      <div className="w-24 shrink-0">
+        {asset.image_url ? (
+          <img
+            src={asset.image_url}
+            alt={asset.image_alt_text || asset.title}
+            className="h-24 w-24 rounded-[10px] object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div
+            aria-hidden="true"
+            className="flex h-24 w-24 flex-col justify-between overflow-hidden rounded-[10px] p-2.5 text-white"
+            style={{ background: thumbBackground }}
+          >
+            <span className="text-[10px] font-semibold tracking-wide opacity-85">
+              {asset.channel === 'x'
+                ? 'X'
+                : asset.channel.charAt(0).toUpperCase() + asset.channel.slice(1)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="grow min-w-0 space-y-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className={state.className} title={state.description}>
+          <span className={`ds-pill ${pillTone(state)}`} title={state.description}>
             {state.label}
-          </Badge>
-          {asset.selection_rank != null && (
-            <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
-              #{asset.selection_rank}
-            </Badge>
-          )}
+          </span>
+          {asset.selection_rank != null && <span className="ds-pill">#{asset.selection_rank}</span>}
           {hasImagePipeline && (
-            <Badge variant="outline" className={image.className} title={image.description}>
+            <span className={`ds-pill ${pillTone(image)}`} title={image.description}>
               {image.label}
-            </Badge>
-          )}
-          {asset.scheduled_for && (
-            <span className="ml-auto text-xs text-muted-foreground">
-              {formatSlot(asset.scheduled_for, timeZone)}
             </span>
           )}
-        </div>
-
-        <div>
-          <h4 className="font-medium leading-snug">{asset.title}</h4>
-          {asset.source_summary && (
-            <p className="text-xs text-muted-foreground mt-0.5">{asset.source_summary}</p>
+          {asset.scheduled_for && (
+            <span className="ds-meta">{formatSlot(asset.scheduled_for, timeZone)}</span>
           )}
         </div>
 
-        {asset.image_url ? (
-          <div
-            className={`overflow-hidden rounded-md bg-muted ${asset.channel === 'instagram' ? 'aspect-square' : 'aspect-video'}`}
-          >
-            <img
-              src={asset.image_url}
-              alt={asset.image_alt_text || asset.title}
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
-          </div>
-        ) : asset.image_brief ? (
-          <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground flex gap-2">
-            <ImageOff className="h-4 w-4 shrink-0 mt-0.5" />
-            <div>
-              <span className="italic">{asset.image_brief}</span>
-              {asset.image_error && <div className="mt-1 text-red-600">{asset.image_error}</div>}
-            </div>
-          </div>
-        ) : null}
+        <div>
+          <h4 className="text-[13.5px] font-semibold leading-snug text-nw-ink">{asset.title}</h4>
+          {asset.source_summary && <span className="ds-meta">{asset.source_summary}</span>}
+        </div>
+
+        {!asset.image_url && asset.image_brief && (
+          <p className="ds-meta italic">
+            {asset.image_brief}
+            {asset.image_error && (
+              <span className="block not-italic text-red-700">{asset.image_error}</span>
+            )}
+          </p>
+        )}
 
         <div>
-          <p className={`text-sm whitespace-pre-wrap ${expanded ? '' : 'line-clamp-5'}`}>
+          <p
+            className={`whitespace-pre-wrap text-[13.5px] text-nw-ink ${expanded ? '' : 'line-clamp-3'}`}
+          >
             {asset.body}
           </p>
           {longBody && (
             <button
               type="button"
-              className="mt-1 text-xs text-primary underline-offset-2 hover:underline"
+              className="mt-0.5 text-[12.5px] text-nw-violet underline-offset-2 hover:underline"
               onClick={() => setExpanded((v) => !v)}
             >
               {expanded ? 'Show less' : 'Show more'}
@@ -112,20 +126,12 @@ export function AssetCard({
           )}
         </div>
 
-        {asset.first_comment && (
-          <p className="text-xs text-muted-foreground">
-            <span className="font-medium">First comment:</span> {asset.first_comment}
-          </p>
-        )}
+        {asset.first_comment && <p className="ds-meta">First comment: {asset.first_comment}</p>}
 
         {asset.hashtags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {asset.hashtags.map((tag) => (
-              <span key={tag} className="text-xs text-muted-foreground">
-                #{tag.replace(/^#/, '')}
-              </span>
-            ))}
-          </div>
+          <p className="ds-meta">
+            {asset.hashtags.map((tag) => `#${tag.replace(/^#/, '')}`).join(' ')}
+          </p>
         )}
 
         {asset.link_url && (
@@ -133,67 +139,49 @@ export function AssetCard({
             href={asset.link_url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            className="inline-flex items-center gap-1 text-[12.5px] text-nw-violet hover:underline"
           >
-            <ExternalLink className="h-3 w-3" />
+            <ExternalLink className="h-3 w-3" aria-hidden="true" />
             {asset.link_title || asset.link_url}
           </a>
         )}
 
         {asset.selection_rationale && (
-          <p className="text-xs italic text-muted-foreground border-l-2 pl-2">
+          <p className="ds-meta border-l-2 border-nw-line pl-2 italic">
             {asset.selection_rationale}
           </p>
         )}
 
         {asset.buffer_post_id && (
-          <p className="text-xs text-muted-foreground">
+          <p className="ds-meta">
             Buffer: {asset.buffer_status ?? 'scheduled'}
-            {asset.buffer_error && <span className="text-red-600"> — {asset.buffer_error}</span>}
+            {asset.buffer_error && <span className="text-red-700"> — {asset.buffer_error}</span>}
           </p>
         )}
         {!asset.buffer_post_id && asset.buffer_error && (
-          <p className="text-xs text-red-600">{asset.buffer_error}</p>
+          <p className="text-[12.5px] text-red-700">{asset.buffer_error}</p>
         )}
+      </div>
 
-        {(canReject || asset.state === 'rejected' || asset.image_status === 'failed') && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {canReject && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                onClick={() => onReject(asset.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                Remove
-              </Button>
-            )}
-            {asset.state === 'rejected' && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                onClick={() => onRestore(asset.id)}
-              >
-                <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                Restore
-              </Button>
-            )}
-            {asset.image_status === 'failed' && asset.image_brief && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                onClick={() => onRetryImage(asset.id)}
-              >
-                <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                Retry image
-              </Button>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {(canReject || asset.state === 'rejected' || asset.image_status === 'failed') && (
+        <div className="flex shrink-0 flex-wrap gap-1.5">
+          {asset.image_status === 'failed' && asset.image_brief && (
+            <DsButton size="sm" disabled={busy} onClick={() => onRetryImage(asset.id)}>
+              Retry image
+            </DsButton>
+          )}
+          {asset.state === 'rejected' && (
+            <DsButton size="sm" disabled={busy} onClick={() => onRestore(asset.id)}>
+              Restore
+            </DsButton>
+          )}
+          {canReject && (
+            <DsButton size="sm" variant="ghost" disabled={busy} onClick={() => onReject(asset.id)}>
+              Remove
+            </DsButton>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
