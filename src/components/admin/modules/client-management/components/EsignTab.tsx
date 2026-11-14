@@ -548,7 +548,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       <EsignWizardShell
         layout="inline"
         step="upload"
-        title="Add Documents"
+        title="Add documents"
         description="Upload the PDFs you want signed, and name the envelope your recipients will see."
         contextLabel={`${selectedClient.firstName} ${selectedClient.lastName}`}
         onExit={requestExitWizard}
