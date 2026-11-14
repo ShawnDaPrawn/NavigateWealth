@@ -159,3 +159,21 @@ describe('LegalDocumentsManager', () => {
     expect(await screen.findByText('Legal document not found')).toBeTruthy();
   });
 });
+
+describe('LegalDocumentsManager — failed list load', () => {
+  it('shows "Unable to load legal documents", not an empty list', async () => {
+    getLegalDocuments.mockRejectedValue(new Error('Request failed (400)'));
+    renderWithClient();
+    expect(await screen.findByText('Unable to load legal documents')).toBeTruthy();
+    expect(screen.queryByText('No legal documents match your search.')).toBeNull();
+  });
+});
+
+describe('LegalDocumentsManager — failed document load', () => {
+  it('a failed load is "Unable to load", not "not found"', async () => {
+    getLegalDocument.mockRejectedValue(new Error('Request failed (400)'));
+    renderWithClient('/?legalDoc=privacy-policy');
+    expect(await screen.findByText('Unable to load this legal document')).toBeTruthy();
+    expect(screen.queryByText('Legal document not found')).toBeNull();
+  });
+});

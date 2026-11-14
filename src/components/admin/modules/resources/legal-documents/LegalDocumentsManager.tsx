@@ -191,11 +191,28 @@ export default function LegalDocumentsManager() {
             sectionLabel={sectionLabel(detailQuery.data.definition.section)}
           />
         ) : (
-          <ErrorState
-            title="Legal document not found"
-            description="It may have been removed, or the link is out of date. Go back to the list of legal documents."
-            onRetry={() => void detailQuery.refetch()}
-          />
+          (() => {
+            const detailError = detailQuery.error as
+              (Error & { statusCode?: number; status?: number }) | null;
+            const notFound =
+              !detailError ||
+              detailError.statusCode === 404 ||
+              detailError.status === 404 ||
+              /not found/i.test(detailError.message);
+            return notFound ? (
+              <ErrorState
+                title="Legal document not found"
+                description="It may have been removed, or the link is out of date. Go back to the list of legal documents."
+                onRetry={() => void detailQuery.refetch()}
+              />
+            ) : (
+              <ErrorState
+                title="Unable to load this legal document"
+                onRetry={() => void detailQuery.refetch()}
+                details={detailError.message}
+              />
+            );
+          })()
         )}
       </div>
     );
@@ -263,8 +280,9 @@ export default function LegalDocumentsManager() {
         </div>
       ) : listQuery.isError ? (
         <ErrorState
-          title="Legal documents could not be loaded"
+          title="Unable to load legal documents"
           onRetry={() => void listQuery.refetch()}
+          details={(listQuery.error as Error | null)?.message}
         />
       ) : groups.length === 0 ? (
         <div className="rounded-xl border border-nw-line bg-white px-6 py-12 text-center text-sm text-nw-text-3">

@@ -150,6 +150,7 @@ export function ResourcesModule() {
   const {
     forms,
     filteredForms,
+    error: formsError,
     categories,
     clientTypes,
     loading,
@@ -178,7 +179,7 @@ export function ResourcesModule() {
     buildParam === 'form' || buildParam === 'letter' || (!!buildParam && !!formToEdit);
   const builderMode: 'form' | 'letter' =
     buildParam === 'letter' || formToEdit?.category === 'Letters' ? 'letter' : 'form';
-  const builderNotFound = !!buildParam && !isBuilderMode && !loading;
+  const builderNotFound = !!buildParam && !isBuilderMode && !loading && !formsError;
   const setBuildParam = useCallback(
     (value: string | null) => {
       setSearchParams((prev) => {
@@ -421,6 +422,19 @@ export function ResourcesModule() {
     );
   }
 
+  if (buildParam && !isBuilderMode && formsError) {
+    return (
+      <div className="space-y-4 p-6">
+        <BackLink label="Back to Resources" onClick={() => setBuildParam(null)} />
+        <ErrorState
+          title="Unable to open the form template"
+          onRetry={() => void refresh()}
+          details={formsError}
+        />
+      </div>
+    );
+  }
+
   if (isBuilderMode) {
     return (
       <Suspense fallback={<LazyFallback />}>
@@ -634,26 +648,34 @@ export function ResourcesModule() {
             </div>
           )}
 
-          {/* Forms List */}
-          <FormsList
-            filteredForms={filteredForms}
-            loading={loading}
-            filters={filters}
-            updateFilters={updateFilters}
-            isSelectMode={isSelectMode}
-            selectedFormIds={selectedFormIds}
-            toggleFormSelection={toggleFormSelection}
-            canCreate={canCreate}
-            canEdit={canEdit}
-            canDelete={canDelete}
-            categoryCounts={categoryCounts}
-            handleQuickPreview={handleQuickPreview}
-            handlePrefill={handlePrefill}
-            handleEdit={handleEdit}
-            handleDelete={handleDelete}
-            duplicateResource={duplicateResource}
-            updateResource={updateResource}
-          />
+          {/* Forms List — a failed load is an error, not "No forms available" */}
+          {formsError ? (
+            <ErrorState
+              title="Unable to load forms"
+              onRetry={() => void refresh()}
+              details={formsError}
+            />
+          ) : (
+            <FormsList
+              filteredForms={filteredForms}
+              loading={loading}
+              filters={filters}
+              updateFilters={updateFilters}
+              isSelectMode={isSelectMode}
+              selectedFormIds={selectedFormIds}
+              toggleFormSelection={toggleFormSelection}
+              canCreate={canCreate}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              categoryCounts={categoryCounts}
+              handleQuickPreview={handleQuickPreview}
+              handlePrefill={handlePrefill}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
+              duplicateResource={duplicateResource}
+              updateResource={updateResource}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="legal-docs">

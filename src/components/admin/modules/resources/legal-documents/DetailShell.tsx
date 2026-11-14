@@ -312,7 +312,12 @@ export function DetailShell({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AuditList entries={auditQuery.data || []} isLoading={auditQuery.isLoading} />
+              <AuditList
+                entries={auditQuery.data || []}
+                isLoading={auditQuery.isLoading}
+                error={auditQuery.error as Error | null}
+                onRetry={() => void auditQuery.refetch()}
+              />
             </CardContent>
           </Card>
         </TabsContent>
