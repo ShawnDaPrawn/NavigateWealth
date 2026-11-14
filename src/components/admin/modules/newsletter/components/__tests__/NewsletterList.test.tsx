@@ -175,7 +175,11 @@ describe('NewsletterList', () => {
     hooks.campaigns.isError = true;
     hooks.campaigns.error = new Error('boom');
     renderR(<NewsletterList caps={caps} onOpen={vi.fn()} onNew={vi.fn()} />);
-    expect(screen.getByText('The newsletters could not be loaded')).toBeTruthy();
+    // The shared error state, under the status tabs (which stay).
+    expect(screen.getByText('Unable to load newsletters')).toBeTruthy();
+    expect(screen.getAllByRole('tab').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: /show details/i }));
+    expect(screen.getByText('boom')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));
     expect(hooks.campaigns.refetch).toHaveBeenCalled();
   });

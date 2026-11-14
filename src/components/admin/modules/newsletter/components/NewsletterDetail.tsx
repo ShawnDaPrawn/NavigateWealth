@@ -260,6 +260,8 @@ function DraftEditor({ campaign, caps }: { campaign: NewsletterCampaign; caps: N
           <AudiencePicker
             lists={lists.data ?? []}
             loading={lists.isLoading}
+            error={lists.error}
+            onRetry={() => void lists.refetch()}
             value={listIds}
             onChange={setListIds}
             disabled={!caps.create}
