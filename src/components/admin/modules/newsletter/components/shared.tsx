@@ -6,7 +6,6 @@
 import type { ComponentType, ReactNode } from 'react';
 import { ChevronLeft, type LucideProps } from 'lucide-react';
 import { ErrorState as SharedErrorState } from '../../../layout/page';
-import { Card, CardContent } from '../../../../ui/card';
 import { cn } from '../../../../ui/utils';
 
 type IconType = ComponentType<LucideProps>;
@@ -79,15 +78,6 @@ export function ErrorState({
 
 export type Tone = 'default' | 'purple' | 'emerald' | 'amber' | 'rose' | 'blue' | 'slate';
 
-const TONE_ICON: Record<Tone, string> = {
-  default: 'bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300',
-  purple: 'bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-300',
-  emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300',
-  amber: 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300',
-  rose: 'bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300',
-  blue: 'bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300',
-  slate: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-};
 
 const TONE_BAR: Record<Tone, string> = {
   default: 'bg-gray-400',
@@ -104,7 +94,6 @@ export function StatTile({
   label,
   value,
   hint,
-  tone = 'default',
   progress,
   footer,
   className,
@@ -119,25 +108,20 @@ export function StatTile({
   footer?: ReactNode;
   className?: string;
 }) {
+  // NL-List board: a plain figure card (.stat), the reach meter under it.
+  void Icon;
   return (
-    <Card className={cn('gap-0', className)}>
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          {Icon ? (
-            <span className={cn('rounded-lg p-1.5', TONE_ICON[tone])}>
-              <Icon className="h-4 w-4" aria-hidden />
-            </span>
-          ) : null}
+    <div className={cn('ds-stat', className)}>
+      <span className="k">{label}</span>
+      <span className="v">{value}</span>
+      {typeof progress === 'number' ? (
+        <div className="ds-meter my-1">
+          <i style={{ width: `${Math.max(0, Math.min(100, progress))}%` }} />
         </div>
-        <div className="mt-2 text-3xl font-semibold tabular-nums tracking-tight">{value}</div>
-        {typeof progress === 'number' ? (
-          <MiniBar value={progress} tone={tone} className="mt-3" />
-        ) : null}
-        {hint ? <p className="mt-2 text-xs text-muted-foreground">{hint}</p> : null}
-        {footer ? <div className="mt-3">{footer}</div> : null}
-      </CardContent>
-    </Card>
+      ) : null}
+      {hint ? <span className="m">{hint}</span> : null}
+      {footer ? <div className="mt-2">{footer}</div> : null}
+    </div>
   );
 }
 

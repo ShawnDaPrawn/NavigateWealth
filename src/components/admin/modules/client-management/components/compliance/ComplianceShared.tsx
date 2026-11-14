@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card, CardContent } from '../../../../../ui/card';
 import { cn } from '../../../../../ui/utils';
 import type { PillTone } from './complianceTypes';
 
@@ -60,16 +59,12 @@ export function StatCard({
   value: number;
   icon: React.ReactNode;
 }) {
+  void icon;
   return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-3">
-        <div className="bg-gray-50 p-2 rounded-lg">{icon}</div>
-        <div>
-          <div className="text-xl font-bold">{value}</div>
-          <div className="text-xs text-muted-foreground">{label}</div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="ds-stat">
+      <span className="k">{label}</span>
+      <span className="v">{value}</span>
+    </div>
   );
 }
 

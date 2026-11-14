@@ -6,24 +6,12 @@
  * client-side over the loaded page so the status chips can show live counts.
  */
 import { useEffect, useMemo, useState } from 'react';
-import {
-  AlertTriangle,
-  Bot,
-  ChevronRight,
-  FileText,
-  Globe,
-  Loader2,
-  Search,
-  Sparkles,
-  Trash2,
-  Upload,
-  X,
-} from 'lucide-react';
+import { Loader2, Search, Sparkles, Upload, X } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Card, CardContent } from '../../../../ui/card';
-import { Input } from '../../../../ui/input';
+
 import { Skeleton } from '../../../../ui/skeleton';
-import { cn } from '../../../../ui/utils';
+
 import { CAMPAIGN_STATUS_FILTERS } from '../constants';
 import { useDeleteCampaign, useStudioCampaigns } from '../hooks/useNewsletterStudio';
 import type { NewsletterCampaign, NewsletterCaps } from '../types';
@@ -134,18 +122,15 @@ export function NewsletterList({
         </NavTabsList>
       </Tabs>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full min-w-56 sm:w-72">
-          <Search
-            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <Input
+      <div className="ds-toolbar">
+        <div className="relative w-full sm:w-[280px]">
+          <input
+            type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by title…"
             aria-label="Search newsletters"
-            className="h-9 pl-8 pr-8"
+            className="ds-input w-full"
           />
           {search ? (
             <button
@@ -204,7 +189,7 @@ export function NewsletterList({
                 }
               />
             ) : (
-              <ul className="divide-y divide-border/60">
+              <ul>
                 {visible.map((campaign) => (
                   <li key={campaign.id}>
                     <div
@@ -217,41 +202,30 @@ export function NewsletterList({
                           onOpen(campaign.id);
                         }
                       }}
-                      className={cn(
-                        'flex cursor-pointer items-center gap-4 px-4 py-3 transition-colors hover:bg-muted/40',
-                        'focus:outline-none focus-visible:bg-muted/40',
-                      )}
+                      className="ds-todo-row cursor-pointer focus:outline-none focus-visible:bg-[#fafafb]"
                     >
-                      <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300 sm:flex">
-                        <FileText className="h-5 w-5" aria-hidden />
-                      </span>
-                      <div className="min-w-0 flex-1">
+                      <div className="grow">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="truncate text-sm font-medium">{campaign.title}</span>
+                          <b className="truncate">{campaign.title}</b>
                           <CampaignStatusBadge status={campaign.status} />
                           {campaign.source === 'routine' && campaign.status === 'draft' ? (
-                            <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
-                              <Bot className="h-3 w-3" aria-hidden /> awaiting review
-                            </span>
+                            <span className="ds-pill warn">From monthly routine</span>
                           ) : null}
                           {campaign.website ? (
-                            <span
-                              className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-300"
-                              title="Live on the public website"
-                            >
-                              <Globe className="h-3 w-3" aria-hidden /> on the website
+                            <span className="ds-pill brand" title="Live on the public website">
+                              On website
                             </span>
                           ) : null}
                           {campaign.stuck ? (
                             <span
-                              className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
+                              className="ds-pill warn"
                               title="No delivery progress for a few minutes"
                             >
-                              <AlertTriangle className="h-3 w-3" aria-hidden /> stalled
+                              Stalled
                             </span>
                           ) : null}
                         </div>
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        <p className="ds-meta mt-0.5 truncate">
                           {campaign.listNames.join(', ') || 'No audience'}
                           {' · '}
                           {campaign.status === 'scheduled'
@@ -259,6 +233,12 @@ export function NewsletterList({
                             : campaign.status === 'finished' && campaign.completedAt
                               ? `Sent ${formatRelative(campaign.completedAt)}`
                               : `Updated ${formatRelative(campaign.updatedAt)}`}
+                          {' · '}
+                          {campaign.sentCount > 0
+                            ? `${formatNumber(campaign.sentCount)} delivered · ${formatRate(campaign.readCount, campaign.sentCount)} read`
+                            : campaign.pdf
+                              ? 'PDF attached'
+                              : 'No PDF yet'}
                         </p>
                         {campaign.recipientCount > 0 &&
                         (campaign.status === 'queued' ||
@@ -267,40 +247,19 @@ export function NewsletterList({
                           <CampaignProgressLine campaign={campaign} className="mt-1.5" />
                         ) : null}
                       </div>
-                      <div className="hidden shrink-0 text-right text-xs tabular-nums md:block">
-                        {campaign.sentCount > 0 ? (
-                          <>
-                            <span className="block font-medium">
-                              {formatNumber(campaign.sentCount)} delivered
-                            </span>
-                            <span className="block text-muted-foreground">
-                              {formatRate(campaign.readCount, campaign.sentCount)} read
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            {campaign.pdf ? 'PDF attached' : 'No PDF yet'}
-                          </span>
-                        )}
-                      </div>
                       {caps.delete && isCampaignDeletable(campaign) ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0 text-muted-foreground"
+                        <button
+                          type="button"
+                          className="ds-btn ds-btn-sm ds-btn-ghost !text-[#b91c1c]"
                           aria-label={`Delete ${campaign.title}`}
                           onClick={(event) => {
                             event.stopPropagation();
                             void askDelete(campaign);
                           }}
                         >
-                          <Trash2 className="h-4 w-4" aria-hidden />
-                        </Button>
+                          Delete
+                        </button>
                       ) : null}
-                      <ChevronRight
-                        className="h-4 w-4 shrink-0 text-muted-foreground"
-                        aria-hidden
-                      />
                     </div>
                   </li>
                 ))}
