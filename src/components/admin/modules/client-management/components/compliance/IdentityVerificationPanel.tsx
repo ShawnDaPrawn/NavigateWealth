@@ -11,8 +11,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../../../../ui/button';
 import { Loader2 } from 'lucide-react';
 import { Notice } from '../../../../layout/page';
-import { PanelCard, StatusPill } from './ComplianceShared';
-import { checkStatusTone } from './complianceTypes';
+import { PanelCard } from './ComplianceShared';
+import { CheckHistoryCard, CheckResult, ClientIdentificationCard } from './CheckBlocks';
 import { toast } from 'sonner';
 import { api } from '../../../../../../utils/api';
 
@@ -26,22 +26,7 @@ interface IdentityVerificationPanelProps {
   onCheckComplete?: () => void;
 }
 
-interface IdvResult {
-  success: boolean;
-  data?: Record<string, unknown>;
-  matterId?: string;
-  checkType?: string;
-  error?: string;
-}
-
-interface CheckHistoryEntry {
-  id: string;
-  checkType: string;
-  submittedAt: string;
-  status: string;
-  summary: string;
-  matterId: string | null;
-}
+import type { CheckHistoryEntry, CheckRunResult as IdvResult } from './CheckBlocks';
 
 export function IdentityVerificationPanel({
   clientId,
@@ -191,25 +176,12 @@ export function IdentityVerificationPanel({
     }
   };
 
-  const maskedId = idNumber
-    ? `${idNumber.substring(0, 6)}•••••${idNumber.substring(idNumber.length - 2)}`
-    : null;
   const latestMatterId = photoResult?.matterId ?? result?.matterId ?? history[0]?.matterId ?? null;
 
   return (
     <div className="space-y-4">
       {/* Design CM-K-Identity: identification, the two checks side by side, then history. */}
-      <PanelCard title="Client identification">
-        <dl className="grid gap-4 sm:grid-cols-3">
-          <IdField label="SA ID" value={maskedId} mono />
-          <IdField
-            label="Passport"
-            value={passport ? `${passport.substring(0, 3)}•••` : null}
-            mono
-          />
-          <IdField label="Matter ID" value={latestMatterId} mono />
-        </dl>
-      </PanelCard>
+      <ClientIdentificationCard idNumber={idNumber} passport={passport} matterId={latestMatterId} />
 
       {!hasIdentification && (
         <Notice kind="attention" title="No ID or passport number on file.">
@@ -312,132 +284,15 @@ export function IdentityVerificationPanel({
         </PanelCard>
       </div>
 
-      <PanelCard title="History">
-        {isLoadingHistory ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-gray-300" aria-hidden="true" />
-          </div>
-        ) : history.length === 0 ? (
-          <p className="py-2 text-sm text-nw-text-3">
-            No identity checks have been run for this client yet.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-nw-bg text-left text-xs font-medium text-nw-text-3">
-                  <th scope="col" className="px-3 py-2.5">
-                    Date
-                  </th>
-                  <th scope="col" className="px-3 py-2.5">
-                    Check
-                  </th>
-                  <th scope="col" className="px-3 py-2.5">
-                    Status
-                  </th>
-                  <th scope="col" className="px-3 py-2.5">
-                    Summary
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((entry) => (
-                  <tr key={entry.id} className="border-t border-nw-line align-top">
-                    <td className="px-3 py-3 whitespace-nowrap text-nw-ink">
-                      {new Date(entry.submittedAt).toLocaleString('en-ZA', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </td>
-                    <td className="px-3 py-3 text-nw-ink">
-                      {entry.checkType.startsWith('idv_with_photo')
-                        ? 'IDV with photo'
-                        : 'Identity verification'}
-                    </td>
-                    <td className="px-3 py-3">
-                      <StatusPill tone={checkStatusTone(entry.status)}>
-                        {entry.status === 'completed'
-                          ? 'Verification complete'
-                          : entry.status === 'failed'
-                            ? 'Failed'
-                            : entry.status}
-                      </StatusPill>
-                    </td>
-                    <td className="px-3 py-3 text-nw-text-2">{entry.summary || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </PanelCard>
-    </div>
-  );
-}
-
-function IdField({ label, value, mono }: { label: string; value: string | null; mono?: boolean }) {
-  return (
-    <div>
-      <dt className="text-xs font-medium text-nw-text-3">{label}</dt>
-      <dd
-        className={`mt-1 text-sm ${value ? 'text-nw-ink' : 'text-nw-text-3'} ${mono && value ? 'font-mono' : ''}`}
-      >
-        {value ?? 'Not set'}
-      </dd>
-    </div>
-  );
-}
-
-function CheckResult({
-  result,
-  successLabel,
-  failureLabel,
-  showDetails,
-  onToggleDetails,
-  photoMatch,
-}: {
-  result: IdvResult;
-  successLabel: string;
-  failureLabel: string;
-  showDetails: boolean;
-  onToggleDetails: () => void;
-  photoMatch?: boolean;
-}) {
-  return (
-    <div className="space-y-2 rounded-lg border border-nw-line p-3 text-sm">
-      <StatusPill tone={result.success ? 'good' : 'bad'}>
-        {result.success ? successLabel : failureLabel}
-      </StatusPill>
-      {result.error && <p className="text-xs text-red-700">{result.error}</p>}
-      {photoMatch !== undefined && (
-        <p className={`text-xs font-medium ${photoMatch ? 'text-emerald-700' : 'text-amber-700'}`}>
-          {photoMatch ? 'Photo matches bureau records' : 'Photo match inconclusive or failed'}
-        </p>
-      )}
-      {result.success && (
-        <>
-          {result.matterId && (
-            <p className="text-xs text-nw-text-2">
-              Matter ID <span className="font-mono text-nw-ink">{result.matterId}</span>
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={onToggleDetails}
-            className="text-xs font-medium text-nw-violet hover:underline"
-          >
-            {showDetails ? 'Hide' : 'Show'} full response
-          </button>
-          {showDetails && (
-            <pre className="max-h-48 overflow-auto rounded bg-gray-900 p-2 font-mono text-xs text-gray-100">
-              {JSON.stringify(result.data, null, 2)}
-            </pre>
-          )}
-        </>
-      )}
+      <CheckHistoryCard
+        loading={isLoadingHistory}
+        history={history}
+        emptyText="No identity checks have been run for this client yet."
+        checkLabel={(entry) =>
+          entry.checkType.startsWith('idv_with_photo') ? 'IDV with photo' : 'Identity verification'
+        }
+        completeLabel="Verification complete"
+      />
     </div>
   );
 }
