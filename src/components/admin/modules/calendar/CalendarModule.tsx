@@ -10,7 +10,7 @@ import { useClients } from '../../../../hooks/useClients';
 import { EVENT_TYPE_LABELS } from './constants';
 import type { CalendarView, EventStatus, EventType } from './types';
 import { moduleSearchParams } from '../../layout/moduleSearchParams';
-import { taskAddress } from '../tasks/taskLink';
+import { taskAddress } from '../tasks/shell';
 import { ClearFiltersButton, FilterChip } from '../../layout/page/FilterControls';
 import {
   useEvents,

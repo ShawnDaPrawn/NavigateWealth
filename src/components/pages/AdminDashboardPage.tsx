@@ -4,7 +4,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
 import { moduleSearchParams } from '../admin/layout/moduleSearchParams';
-import { taskAddress } from '../admin/modules/tasks/taskLink';
+import { taskAddress } from '../admin/modules/tasks/shell';
 import { ModuleFrame } from '../admin/layout/ModuleFrame';
 import { useCurrentUserPermissions } from '../admin/modules/personnel/shell';
 import { ErrorBoundary } from '../shared/ErrorBoundary';

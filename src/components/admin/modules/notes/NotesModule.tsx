@@ -67,7 +67,7 @@ import {
   useRecordInUrl,
   useUrlState,
 } from '../../layout/page';
-import { taskAddress } from '../tasks/taskLink';
+import { taskAddress } from '../tasks/shell';
 
 const NOTE_TABS = ['active', 'archived', 'all'] as const;
 const NOTE_LAYOUTS = ['grid', 'list'] as const;
