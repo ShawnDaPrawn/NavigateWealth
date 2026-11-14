@@ -506,6 +506,19 @@ launch-readiness checklist, and fixed in the same change:
   both, so the check always passed and the recovery link could be mailed to a
   host they control. All three now resolve through the allow-list.
 
+## Known benign log noise
+
+Not defects. Do not open an issue for these on sight; open one only if the
+rate changes or a user-facing error appears beside them.
+
+- **PostgREST `Warp server error: Thread killed by timeout manager`.** About
+  90 to 100 lines an hour, flat around the clock (2,200 or so a day), measured
+  2026-11-13 on `postgrest_logs` (#445). It is PostgREST's HTTP server closing a
+  connection that sat idle or slow, and it shows no 5xx on the Edge Function and
+  no Postgres ERROR beside it. The rate does not follow user traffic, so it is
+  not request failures. Worth a second look only if it climbs well above that
+  band, or lines up with Edge 5xx.
+
 ## Where money, not work, is the blocker
 
 When answering "is this production grade?", give both halves: whether every box
