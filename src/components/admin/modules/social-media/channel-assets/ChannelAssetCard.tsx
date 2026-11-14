@@ -7,15 +7,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import {
-  Archive,
-  Check,
-  ExternalLink,
-  MoreHorizontal,
-  RotateCcw,
-  Send,
-  Trash2,
-} from 'lucide-react';
+import { Archive, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,8 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
-import { Badge } from '../../../../ui/badge';
-import { Button } from '../../../../ui/button';
+
+
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Textarea } from '../../../../ui/textarea';
@@ -36,6 +28,7 @@ import {
   formatDuration,
   STATUS_DISPLAY,
 } from './channelAssetsModel';
+import { DsButton } from '../../../layout/page';
 
 interface ChannelAssetCardProps {
   asset: ChannelAsset;
@@ -86,8 +79,8 @@ export function ChannelAssetCard({
         : null;
 
   return (
-    <div className="border rounded-lg overflow-hidden bg-white">
-      <div className="aspect-square bg-muted relative">
+    <section className="ds-card flex flex-col overflow-hidden">
+      <div className="relative aspect-square bg-[#f3f4f6]">
         {asset.media_type === 'video' ? (
           <video
             src={asset.url}
@@ -104,13 +97,11 @@ export function ChannelAssetCard({
             className="w-full h-full object-cover"
           />
         )}
-        <Badge className={`absolute top-2 left-2 ${status.className}`} variant="outline">
-          {status.label}
-        </Badge>
       </div>
 
-      <div className="p-3 space-y-3">
-        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+      <div className="ds-card-b flex flex-1 flex-col gap-2">
+        <span className={`ds-pill self-start ${status.className}`}>{status.label}</span>
+        <div className="ds-meta flex items-center justify-between gap-2">
           <span className="truncate" title={asset.file_name ?? undefined}>
             {asset.file_name ?? 'Untitled'}
           </span>
@@ -120,29 +111,30 @@ export function ChannelAssetCard({
         </div>
 
         {asset.source && (
-          <p className="text-xs text-muted-foreground">
+          <p className="ds-meta">
             Added by {asset.source}
             {asset.buffer_post_id ? ' · published through Buffer' : ''}
           </p>
         )}
 
-        {warnings.length > 0 && <p className="text-xs text-amber-700">{warnings.join(' · ')}</p>}
+        {warnings.length > 0 && (
+          <p className="text-[12.5px] text-amber-700">{warnings.join(' · ')}</p>
+        )}
 
         <div className="space-y-2">
           <div>
-            <Label htmlFor={`caption-${asset.id}`} className="text-xs">
+            <Label htmlFor={`caption-${asset.id}`} className="text-[12.5px] text-nw-text-2">
               Suggested caption
             </Label>
             <Textarea
               id={`caption-${asset.id}`}
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              placeholder="What this post should say"
               className="min-h-[60px] text-sm"
             />
           </div>
           <div>
-            <Label htmlFor={`alt-${asset.id}`} className="text-xs">
+            <Label htmlFor={`alt-${asset.id}`} className="text-[12.5px] text-nw-text-2">
               Alt text
             </Label>
             <Input
@@ -155,52 +147,47 @@ export function ChannelAssetCard({
           </div>
         </div>
 
-        {postBlocker && <p className="text-xs text-muted-foreground">{postBlocker}</p>}
+        {postBlocker && <p className="ds-meta">{postBlocker}</p>}
 
-        <div className="flex flex-wrap gap-1">
+        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
           {onCreatePost && (
-            <Button
+            <DsButton
               size="sm"
-              variant={postBlocker ? 'outline' : 'default'}
+              variant={postBlocker ? 'default' : 'primary'}
               disabled={Boolean(postBlocker)}
-              title={postBlocker ?? undefined}
               aria-label={`Create a post from ${asset.file_name ?? 'asset'}`}
               onClick={() => onCreatePost({ caption: caption || null, altText: altText || null })}
             >
-              <Send className="h-3.5 w-3.5 mr-1" />
               Create post
-            </Button>
+            </DsButton>
           )}
-          <Button
+          <DsButton
             size="sm"
-            variant="outline"
             disabled={!dirty || isSaving}
             onClick={() => onPatch({ caption: caption || null, altText: altText || null })}
           >
-            <Check className="h-3.5 w-3.5 mr-1" />
             Save
-          </Button>
+          </DsButton>
 
           {asset.status !== 'available' && (
-            <Button
+            <DsButton
               size="sm"
-              variant="outline"
               aria-label={`Return ${asset.file_name ?? 'asset'} to available`}
               onClick={() => onPatch({ status: 'available' })}
             >
-              <RotateCcw className="h-3.5 w-3.5 mr-1" />
               Requeue
-            </Button>
+            </DsButton>
           )}
+          <span className="grow" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
+              <DsButton
                 size="sm"
                 variant="ghost"
                 aria-label={`More actions for ${asset.file_name ?? 'asset'}`}
               >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
+                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+              </DsButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
@@ -227,6 +214,6 @@ export function ChannelAssetCard({
           </DropdownMenu>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

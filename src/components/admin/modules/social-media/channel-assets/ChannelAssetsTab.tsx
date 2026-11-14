@@ -9,11 +9,12 @@
  * An admin can drop files straight in here too — same endpoint, same rows.
  */
 
-import { Info } from 'lucide-react';
+
 import { Skeleton } from '../../../../ui/skeleton';
 import { Tabs } from '../../../../ui/tabs';
 import { cn } from '../../../../ui/utils';
 import {
+  DsState,
   ErrorState,
   SegmentedList,
   SegmentedTrigger,
@@ -89,7 +90,8 @@ export function ChannelAssetsTab({ onCreatePost }: ChannelAssetsTabProps = {}) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
+      {/* SM-Assets: channel chips on the left, status segmented control on the right */}
+      <div className="flex flex-wrap items-center gap-2">
         <div role="group" aria-label="Channel" className="flex flex-wrap gap-1.5">
           {CHANNEL_ORDER.map((id) => {
             const active = id === channel;
@@ -99,19 +101,14 @@ export function ChannelAssetsTab({ onCreatePost }: ChannelAssetsTabProps = {}) {
                 type="button"
                 aria-pressed={active}
                 onClick={() => setChannel(id)}
-                className={cn(
-                  'inline-flex h-8 items-center gap-1 rounded-full border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
-                  active
-                    ? 'border-nw-violet bg-nw-violet-50 text-nw-violet-600'
-                    : 'border-nw-line bg-white text-nw-text-2 hover:text-nw-ink',
-                )}
+                className={cn('ds-chip', active && 'on')}
               >
-                {CHANNEL_LABEL[id]}
-                <span className="tabular-nums text-nw-text-3">· {countFor(id)}</span>
+                {CHANNEL_LABEL[id]} · <span className="tabular-nums">{countFor(id)}</span>
               </button>
             );
           })}
         </div>
+        <span className="grow" />
         <Tabs
           value={status}
           onValueChange={(value) => setStatus(value as ChannelAssetStatus | 'all')}
@@ -131,17 +128,12 @@ export function ChannelAssetsTab({ onCreatePost }: ChannelAssetsTabProps = {}) {
         isUploading={upload.isPending}
         onFiles={(files) => upload.mutate({ channel, files })}
       />
-      <p className="flex items-start gap-2 text-sm text-nw-text-3">
-        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <span>
-          Finished images and videos, ready to post. ChatGPT adds them through the social library
-          endpoint; a scheduling routine will pick from <strong>Available</strong> and mark each one{' '}
-          <strong>Published</strong> once Buffer has it.
-        </span>
+      <p className="ds-meta">
+        Finished images and videos, ready to post. Mark each one Published once Buffer has it.
       </p>
 
       {assetsQuery.isLoading && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-[420px] rounded-lg" />
           ))}
@@ -157,13 +149,13 @@ export function ChannelAssetsTab({ onCreatePost }: ChannelAssetsTabProps = {}) {
       )}
 
       {!assetsQuery.isLoading && !assetsQuery.error && assets.length === 0 && (
-        <p className="rounded-xl border border-dashed border-nw-line px-4 py-10 text-center text-sm text-nw-text-3">
-          Nothing here yet for {CHANNEL_LABEL[channel]}. Drop a file above, or let ChatGPT add one.
-        </p>
+        <section className="ds-card">
+          <DsState title={`Nothing here yet for ${CHANNEL_LABEL[channel]}`} />
+        </section>
       )}
 
       {!assetsQuery.isLoading && assets.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {assets.map((asset) => (
             <ChannelAssetCard
               key={asset.id}

@@ -23,9 +23,10 @@ export interface StatusDisplay {
 
 /** The §8.3 status vocabulary: green is live, blue is ready, grey is set aside. */
 export const STATUS_DISPLAY: Record<ChannelAssetStatus, StatusDisplay> = {
-  available: { label: 'Available', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-  used: { label: 'Published', className: 'bg-green-50 text-green-700 border-green-200' },
-  archived: { label: 'Archived', className: 'bg-gray-100 text-gray-600 border-gray-200' },
+  // Board pill tones (SM-Assets): available is ready to go, published is done.
+  available: { label: 'Available', className: 'ok' },
+  used: { label: 'Published', className: 'info' },
+  archived: { label: 'Archived', className: '' },
 };
 
 export function formatBytes(bytes: number): string {
