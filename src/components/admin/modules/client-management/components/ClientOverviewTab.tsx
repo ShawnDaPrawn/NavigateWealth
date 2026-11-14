@@ -46,8 +46,7 @@ import { Skeleton } from '../../../../ui/skeleton';
 import { useEffect } from 'react';
 import { ErrorState } from '../../../layout/page';
 import { OverviewPanel, OverviewPanels } from './overview/OverviewPanel';
-import { HealthScoreRing } from './overview/WelcomeBanner';
-import { HealthScoreBreakdown } from './overview/HealthScoreBreakdown';
+
 import type { ActionItem } from './clientOverview/actionItems';
 import {
   Table,
@@ -86,6 +85,7 @@ import { FNA_MODULES } from './clientOverviewConstants';
 import { WelcomeBanner } from './overview/WelcomeBanner';
 import { PillarCard } from './overview/PillarCard';
 import { UnifiedActionItems } from './overview/ActionItems';
+import { FinancialHealthCard, NeedsDoingCard, PillarTiles } from './overview/RecordOverviewParts';
 import { FNAStatusCard } from './overview/FNAStatusCard';
 import { TimelineEvent, EmptyBox, StatusDot } from './overview/TimelineHelpers';
 import { OverviewSkeleton } from './overview/OverviewSkeleton';
@@ -267,20 +267,38 @@ export function ClientOverviewTab({
         />
       )}
 
-      {/* ─── 2. Health Pillar Cards ──────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-stretch">
-        {pillars.map((pillar) => (
-          <PillarCard key={pillar.id} pillar={pillar} />
-        ))}
-      </div>
+      {inRecordPage ? (
+        // CM-Overview: compact pillar tiles, then "What needs doing" beside
+        // "Financial health".
+        <>
+          <PillarTiles
+            pillars={pillars}
+            subScores={subScores}
+            onOpen={onOpenTab ? () => onOpenTab('policies') : undefined}
+          />
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
+            <NeedsDoingCard items={actionItems} actionFor={actionFor} />
+            <FinancialHealthCard score={healthScore} subScores={subScores} />
+          </div>
+        </>
+      ) : (
+        <>
+          {/* ─── 2. Health Pillar Cards ──────────────────────────────────── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-stretch">
+            {pillars.map((pillar) => (
+              <PillarCard key={pillar.id} pillar={pillar} />
+            ))}
+          </div>
 
-      {/* ─── 3. Action Items — what needs attention ───────────────────── */}
-      <UnifiedActionItems
-        items={actionItems}
-        mode={mode}
-        actionDistribution={actionDistribution}
-        actionFor={actionFor}
-      />
+          {/* ─── 3. Action Items — what needs attention ───────────────────── */}
+          <UnifiedActionItems
+            items={actionItems}
+            mode={mode}
+            actionDistribution={actionDistribution}
+            actionFor={actionFor}
+          />
+        </>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* BELOW THE FOLD — Individual collapsible detail panels          */}
@@ -298,7 +316,11 @@ export function ClientOverviewTab({
                 <Activity className="h-4 w-4 text-gray-500" />
               </div>
               <span className="text-sm font-semibold text-gray-800">
-                {isClient ? 'My Financial Health Details' : 'Financial health'}
+                {isClient
+                  ? 'My Financial Health Details'
+                  : inRecordPage
+                    ? 'Health indicators & charts'
+                    : 'Financial health'}
               </span>
               <span className="text-xs text-gray-400 ml-auto mr-2 hidden sm:inline truncate">
                 {isClient
@@ -309,8 +331,8 @@ export function ClientOverviewTab({
           }
         >
           <div className="px-5 py-4 space-y-5">
-            {/* Data source note — adviser only */}
-            {!isClient && (
+            {/* Data source note — the client portal's adviser view only */}
+            {!isClient && !inRecordPage && (
               <div className="flex items-start gap-2 p-3 bg-blue-50/60 rounded-lg border border-blue-100 text-xs text-blue-700">
                 <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                 <div>
@@ -326,18 +348,8 @@ export function ClientOverviewTab({
               </div>
             )}
             {inRecordPage && (
-              <div className="grid gap-5 md:grid-cols-[auto_1fr] md:items-center">
-                <div className="flex items-center gap-4">
-                  <HealthScoreRing
-                    score={healthScore}
-                    label={healthLabel}
-                    color={healthColor}
-                    stroke={healthStroke}
-                  />
-                  <div className="w-[220px]">
-                    <HealthScoreBreakdown subScores={subScores} mode={mode} />
-                  </div>
-                </div>
+              <div>
+                {/* The score and its breakdown sit in the Financial health card above. */}
                 <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
                     ['Net worth', fmt(netWorth)],
