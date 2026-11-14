@@ -78,7 +78,6 @@ export function ErrorState({
 
 export type Tone = 'default' | 'purple' | 'emerald' | 'amber' | 'rose' | 'blue' | 'slate';
 
-
 const TONE_BAR: Record<Tone, string> = {
   default: 'bg-gray-400',
   purple: 'bg-purple-600',

@@ -13,7 +13,16 @@
 
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { FileText, Eye, Star, Send, CheckCircle2, PenLine, Archive, CalendarDays } from 'lucide-react';
+import {
+  FileText,
+  Eye,
+  Star,
+  Send,
+  CheckCircle2,
+  PenLine,
+  Archive,
+  CalendarDays,
+} from 'lucide-react';
 import { cn } from '../../../../ui/utils';
 import type { Article, Category } from '../types';
 import { Tabs } from '../../../../ui/tabs';
@@ -440,7 +449,6 @@ interface KPICardProps {
   trendLabel?: string;
   sub?: string;
 }
-
 
 function KPICard({ label, value, trend, trendLabel, sub }: KPICardProps) {
   // PU-Analytics board: a plain figure card (.stat).
