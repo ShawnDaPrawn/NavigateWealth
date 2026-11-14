@@ -12,11 +12,12 @@ export function KPICard({
   format = 'number',
   subtitle,
   onClick,
+  hideChange = false,
   loading = false,
 }: KPICardProps) {
-  const isPositive = change > 0;
-  const isNegative = change < 0;
-  const isNeutral = change === 0;
+  const isPositive = !hideChange && change > 0;
+  const isNegative = !hideChange && change < 0;
+  const isNeutral = !hideChange && change === 0;
 
   if (loading) {
     return (
@@ -41,11 +42,9 @@ export function KPICard({
       className={`transition-all ${onClick ? 'cursor-pointer hover:-translate-y-1 hover:shadow-lg' : ''}`}
       onClick={onClick}
     >
-      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 px-4 pt-4 pb-3 sm:items-center sm:px-6 sm:pt-6">
-        <CardTitle className="min-w-0 text-xs leading-snug font-semibold text-muted-foreground uppercase tracking-wide sm:text-sm">
-          {title}
-        </CardTitle>
-        <div className="shrink-0 rounded-full bg-primary/10 p-2 sm:p-2.5">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="text-sm font-medium text-nw-text-2">{title}</CardTitle>
+        <div className="p-2.5 bg-primary/10 rounded-full">
           <Icon className="h-4 w-4 text-primary" />
         </div>
       </CardHeader>
@@ -73,7 +72,11 @@ export function KPICard({
             </span>
           )}
 
-          {subtitle && <span className="min-w-0 truncate text-muted-foreground">{subtitle}</span>}
+          {subtitle && (
+            <span className={`truncate text-muted-foreground ${hideChange ? '' : 'ml-2'}`}>
+              {hideChange ? subtitle : `· ${subtitle}`}
+            </span>
+          )}
         </div>
       </CardContent>
     </Card>

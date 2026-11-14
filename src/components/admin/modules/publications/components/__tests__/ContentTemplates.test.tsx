@@ -1,5 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render as rtlRender } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
+import type { ReactElement } from 'react';
+
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
 vi.mock('../api', () => ({
   PublicationsAPI: {

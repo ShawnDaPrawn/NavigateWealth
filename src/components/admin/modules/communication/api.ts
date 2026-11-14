@@ -14,6 +14,8 @@ import {
   MessageCreate,
   CommunicationMessage,
   EmailFooterSettings,
+  GroupFilterConfig,
+  GroupPreview,
 } from './types';
 import { ProductProvider } from '../product-management';
 
@@ -184,6 +186,11 @@ export const communicationApi = {
 
   async deleteGroup(id: string): Promise<void> {
     return api.delete<void>(ENDPOINTS.GROUP_BY_ID(id));
+  },
+
+  /** Live match for a group's rules without saving: count + the first 50 clients. */
+  async previewGroup(filterConfig: GroupFilterConfig): Promise<GroupPreview> {
+    return api.post<GroupPreview>(`${ENDPOINTS.GROUPS}/preview`, { filterConfig });
   },
 
   async recalculateGroupMemberships(): Promise<{ success: boolean; message: string }> {

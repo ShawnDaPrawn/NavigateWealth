@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
 import { cn } from '../../../../ui/utils';
-import { StatCard, useUrlState } from '../../../layout/page';
+import { ErrorState, StatCard, useUrlState } from '../../../layout/page';
 import { useHandoffs, useUpdateHandoffStatus } from '../hooks';
 import { HANDOFF_STATUS_CONFIG } from '../constants';
 import type { HandoffStatus, HandoffRequest } from '../types';
@@ -40,7 +40,7 @@ const STATUS_FILTER_IDS: FilterStatus[] = ['all', ...STATUS_OPTIONS];
 
 export function HandoffQueue() {
   const searchInputGuard = useSearchInputAutofillGuard({ id: 'ai-handoff-queue-search' });
-  const { data: handoffs, isLoading } = useHandoffs();
+  const { data: handoffs, isLoading, isError, refetch } = useHandoffs();
   const updateStatus = useUpdateHandoffStatus();
   // The status filter is in the address (?tab=leads&stage=new).
   const [statusFilter, setStatusFilter] = useUrlState<FilterStatus>(
@@ -81,6 +81,16 @@ export function HandoffQueue() {
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <ErrorState
+        title="Couldn't load leads"
+        description="Something went wrong while loading. Nothing has changed."
+        onRetry={() => void refetch()}
+      />
     );
   }
 

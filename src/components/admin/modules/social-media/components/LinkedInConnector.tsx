@@ -56,6 +56,8 @@ import {
 import { linkedinApi } from '../api';
 import type { LinkedInConnectionStatus } from '../api';
 import { BRAND } from '../constants';
+import { Skeleton } from '../../../../ui/skeleton';
+import { ErrorState } from '../../../layout/page';
 
 // ============================================================================
 // Types
@@ -124,21 +126,24 @@ export function LinkedInConnector({ onStatusChange }: LinkedInConnectorProps) {
   // Fetch status on mount
   // --------------------------------------------------------------------------
 
+  const [statusError, setStatusError] = useState<string | null>(null);
   const fetchStatus = useCallback(async () => {
     setIsLoading(true);
+    setStatusError(null);
     try {
       const res = await linkedinApi.getStatus();
       if (res.success && res.data) {
         setStatus(res.data);
         onStatusChange?.(res.data.connected);
       } else {
-        setStatus({ connected: false });
-        onStatusChange?.(false);
+        // A failed check is not "not connected": say it failed.
+        setStatusError(res.error || 'Failed to check the LinkedIn connection');
       }
     } catch (error) {
       console.error('Failed to fetch LinkedIn status:', error);
-      setStatus({ connected: false });
-      onStatusChange?.(false);
+      setStatusError(
+        error instanceof Error ? error.message : 'Failed to check the LinkedIn connection',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -277,14 +282,20 @@ export function LinkedInConnector({ onStatusChange }: LinkedInConnectorProps) {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-10">
-          <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="ml-2.5 text-sm text-muted-foreground">
-            Checking LinkedIn connection…
-          </span>
-        </CardContent>
-      </Card>
+      <div aria-busy="true" aria-label="Checking LinkedIn connection" className="space-y-2">
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <Skeleton className="h-10 w-2/3 rounded-lg" />
+      </div>
+    );
+  }
+
+  if (statusError) {
+    return (
+      <ErrorState
+        title="Unable to check the LinkedIn connection"
+        onRetry={() => void fetchStatus()}
+        details={statusError}
+      />
     );
   }
 

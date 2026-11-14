@@ -54,7 +54,7 @@ export function LinkedInCallbackPage() {
           setProfileName(res.data.profileName || '');
           // Redirect to admin social media module after 2 seconds
           setTimeout(() => {
-            navigate('/admin?module=social-media&tab=social-media', { replace: true });
+            navigate('/admin?module=social-media&tab=channels', { replace: true });
           }, 2000);
         } else {
           setState('error');
@@ -113,7 +113,7 @@ export function LinkedInCallbackPage() {
             <h2 className="text-xl font-semibold text-gray-900">Connection Failed</h2>
             <p className="text-sm text-red-600">{errorMessage}</p>
             <button
-              onClick={() => navigate('/admin?module=social-media&tab=social-media')}
+              onClick={() => navigate('/admin?module=social-media&tab=channels')}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-white font-medium text-sm hover:opacity-90 transition-opacity"
               style={{ backgroundColor: '#0A66C2' }}
             >

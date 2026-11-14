@@ -5,7 +5,39 @@
  * hand the list-open + highlight props to that category only.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { fireEvent, renderWithQueryClient, screen, waitFor } from '@/test/utils';
+import { MemoryRouter, useLocation } from 'react-router';
+import type { ReactElement } from 'react';
+
+vi.mock('../../../../shared/api/clientPolicies', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../shared/api/clientPolicies')>();
+  return {
+    ...actual,
+    clientPoliciesQueryOptions: (clientId: string) => ({
+      queryKey: ['policies', clientId],
+      queryFn: async () => [
+        { id: 'p1', categoryId: 'risk_planning' },
+        { id: 'p2', categoryId: 'retirement_pre' },
+        { id: 'p3', categoryId: 'retirement_post' },
+      ],
+    }),
+  };
+});
+vi.mock('../PolicyComparisonPanel', () => ({
+  PolicyComparisonPanel: () => <div data-testid="compare" />,
+}));
+
+function Location() {
+  return <output data-testid="search">{useLocation().search}</output>;
+}
+function render(ui: ReactElement, url = '/') {
+  return renderWithQueryClient(
+    <MemoryRouter initialEntries={[url]}>
+      {ui}
+      <Location />
+    </MemoryRouter>,
+  );
+}
 
 vi.mock('../PolicyCategoryTab', () => ({
   PolicyCategoryTab: (props: {
@@ -35,16 +67,33 @@ describe('PolicyDetailsSection FNA focus', () => {
     expect(screen.getByTestId('overview')).toBeTruthy();
   });
 
+  it('shows the categories as a rail with counts, the open one in the address', async () => {
+    render(<PolicyDetailsSection selectedClient={CLIENT} />);
+    const rail = screen.getByRole('navigation', { name: 'Policy categories' });
+    await waitFor(() => expect(rail.textContent).toContain('Retirement planning2'));
+    expect(rail.textContent).toContain('Risk planning1');
+    fireEvent.click(screen.getByRole('button', { name: /Medical aid/ }));
+    expect(await screen.findByTestId('category-medical-aid')).toBeTruthy();
+    expect(screen.getByTestId('search').textContent).toBe('?pcat=medical-aid');
+    fireEvent.click(screen.getByRole('button', { name: 'Compare all policies' }));
+    expect(await screen.findByTestId('compare')).toBeTruthy();
+  });
+
+  it('opens the category named in the address', async () => {
+    render(<PolicyDetailsSection selectedClient={CLIENT} />, '/?pcat=tax-planning');
+    expect(await screen.findByTestId('category-tax-planning')).toBeTruthy();
+  });
+
   it.each(Object.entries(FNA_POLICY_CATEGORY))(
     'a published %s FNA opens %s on its FNA list',
-    (_type, categorySubtabId) => {
+    async (_type, categorySubtabId) => {
       render(
         <PolicyDetailsSection
           selectedClient={CLIENT}
           fnaFocus={{ categorySubtabId, fnaId: 'fna-9' }}
         />,
       );
-      expect(screen.getByTestId(`category-${categorySubtabId}`).textContent).toBe(
+      expect((await screen.findByTestId(`category-${categorySubtabId}`)).textContent).toBe(
         'FNA list open, highlighting fna-9',
       );
     },

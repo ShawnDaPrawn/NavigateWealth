@@ -10,7 +10,14 @@ import {
 } from '../../ui/table';
 import { Button } from '../../ui/button';
 import {
-  Edit,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../ui/dropdown-menu';
+import {
+  MoreHorizontal,
   Archive,
   Trash2,
   Building2,
@@ -381,64 +388,60 @@ export function PolicyTable({
                     })}
                     <TableCell className="text-right min-w-[100px] sticky right-0 bg-white group-hover:bg-gray-50 align-top py-3">
                       <div className="flex items-center justify-end gap-1">
-                        {!policy.archived ? (
-                          <div className="contents">
-                            <Button variant="ghost" size="sm" onClick={() => onEdit(policy)}>
-                              <Edit className="h-4 w-4" />
+                        {policy.archived && (
+                          <span className="pr-2 text-xs italic text-gray-400">Archived</span>
+                        )}
+                        {!policy.archived && (
+                          <Button variant="ghost" size="sm" onClick={() => onEdit(policy)}>
+                            Edit
+                          </Button>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" aria-label="More policy actions">
+                              <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
                             </Button>
-                            {onRefreshFromProvider &&
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {!policy.archived &&
+                              onRefreshFromProvider &&
                               (!canRefreshPolicy || canRefreshPolicy(policy)) && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                  onClick={() => onRefreshFromProvider(policy)}
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    if (refreshingPolicyId !== policy.id)
+                                      onRefreshFromProvider(policy);
+                                  }}
                                   disabled={refreshingPolicyId === policy.id}
-                                  title="Refresh this policy's values from the provider portal"
                                 >
                                   <RefreshCw
-                                    className={
-                                      refreshingPolicyId === policy.id
-                                        ? 'h-4 w-4 animate-spin'
-                                        : 'h-4 w-4'
-                                    }
+                                    className={`mr-2 h-4 w-4 ${refreshingPolicyId === policy.id ? 'animate-spin' : ''}`}
+                                    aria-hidden="true"
                                   />
-                                </Button>
+                                  Refresh from provider
+                                </DropdownMenuItem>
                               )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                              onClick={() => onArchive(policy)}
-                              title="Archive Policy"
-                            >
-                              <Archive className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center">
-                            <span className="text-xs text-gray-400 italic pr-2">Archived</span>
-                            {onReinstate && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                onClick={() => onReinstate(policy)}
-                                title="Reinstate Policy"
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                              </Button>
+                            {!policy.archived && (
+                              <DropdownMenuItem onClick={() => onArchive(policy)}>
+                                <Archive className="mr-2 h-4 w-4" aria-hidden="true" />
+                                Archive…
+                              </DropdownMenuItem>
                             )}
-                          </div>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDelete(policy)}
-                          title="Delete Permanently"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
+                            {policy.archived && onReinstate && (
+                              <DropdownMenuItem onClick={() => onReinstate(policy)}>
+                                <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+                                Reinstate
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-700 focus:text-red-700"
+                              onClick={() => onDelete(policy)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                              Delete permanently…
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>

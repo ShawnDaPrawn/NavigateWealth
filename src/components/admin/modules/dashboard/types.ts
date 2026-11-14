@@ -12,6 +12,8 @@ export interface DashboardKPI {
   format?: 'number' | 'currency' | 'percentage';
   subtitle?: string;
   trend?: 'up' | 'down' | 'neutral';
+  /** No percentage change for this figure (e.g. Tasks: open · completed). */
+  hideChange?: boolean;
   /** When true, the card renders its own skeleton state regardless of grid-level loading */
   loading?: boolean;
 }
@@ -22,6 +24,9 @@ export interface DashboardStats {
   pending_tasks: number;
   new_this_month: number;
   new_last_month: number;
+  /** New applications in the asked-for dashboard period and the one before it. */
+  new_in_period?: number;
+  new_previous_period?: number;
   total_completed?: number;
   avg_completion_time?: number;
 }
@@ -90,6 +95,7 @@ export interface KPICardProps {
   format?: 'number' | 'currency' | 'percentage';
   subtitle?: string;
   onClick?: () => void;
+  hideChange?: boolean;
   loading?: boolean;
 }
 
@@ -149,6 +155,9 @@ export interface SystemActivityResponse {
 
 export type ValueFormat = 'number' | 'currency' | 'percentage';
 export type TrendDirection = 'up' | 'down' | 'neutral';
+/** The "Practice at a glance" period (?period= in the address). */
+export type DashboardPeriod = 'month' | '30d' | 'year';
+
 export type TimePeriod = 'today' | 'week' | 'month' | 'quarter' | 'year';
 export type DashboardViewMode = 'standard' | 'compact' | 'detailed';
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
@@ -215,6 +224,8 @@ export interface AuditSummary {
 export interface AuditLogWidgetProps {
   onModuleChange?: (module: string) => void;
   maxEntries?: number;
+  /** Opens the audit trail page. */
+  onViewAll?: () => void;
 }
 
 // ── Dashboard Header & Modal Triggers ────────────────────────────────────────
@@ -222,6 +233,8 @@ export interface AuditLogWidgetProps {
 export interface DashboardHeaderProps {
   /** Display name used in the greeting (falls back to a plain greeting) */
   userName?: string;
+  /** Opens the audit trail page. */
+  onOpenAuditTrail: () => void;
 }
 
 export interface SystemHealthDialogProps {

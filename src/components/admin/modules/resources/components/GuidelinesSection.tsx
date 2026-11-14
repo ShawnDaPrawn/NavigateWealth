@@ -26,13 +26,14 @@ import { toast } from 'sonner';
 import { brandApi } from './brand-api';
 import type { BrandGuidelines } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
-import { useConfirm } from '../../../layout/page';
+import { useConfirm, ErrorState } from '../../../layout/page';
 
 export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [guidelines, setGuidelines] = useState<BrandGuidelines | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [addRuleOpen, setAddRuleOpen] = useState(false);
   const [newRule, setNewRule] = useState({ title: '', description: '' });
@@ -48,7 +49,9 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       if (data.guidelines?.voice) {
         setVoiceDraft(data.guidelines.voice);
       }
+      setLoadError(null);
     } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
       console.error('Failed to load guidelines:', err);
     } finally {
       setLoading(false);
@@ -133,6 +136,15 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
   };
 
   if (loading) return <SectionSkeleton rows={3} />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load brand guidelines"
+        onRetry={() => void loadGuidelines()}
+        details={loadError}
+      />
+    );
+  }
 
   const rules = guidelines?.rules || [];
   const voice = guidelines?.voice || { tone: '', terminology: '', notes: '' };

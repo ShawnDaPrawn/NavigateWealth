@@ -1,4 +1,4 @@
-export type TabStatus = 'pending' | 'approved' | 'rejected' | 'invited' | 'incomplete';
+export type TabStatus = 'pending' | 'approved' | 'rejected' | 'invited' | 'incomplete' | 'all';
 
 export type ApplicationStatus =
   'draft' | 'submitted' | 'approved' | 'declined' | 'in_progress' | 'invited';

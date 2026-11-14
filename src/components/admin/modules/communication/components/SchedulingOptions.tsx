@@ -1,6 +1,7 @@
-import React from 'react';
 import { Calendar as CalendarIcon, Clock, Repeat } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '../../../../ui/radio-group';
+import { Tabs } from '../../../../ui/tabs';
+import { Switch } from '../../../../ui/switch';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { Label } from '../../../../ui/label';
 import { Input } from '../../../../ui/input';
 import { NumberInputField } from '../../../../ui/number-input';
@@ -34,39 +35,15 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
 
   return (
     <div className="space-y-6">
-      <RadioGroup
+      <Tabs
         value={config.type}
         onValueChange={(val) => handleTypeChange(val as 'immediate' | 'scheduled')}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4"
       >
-        <div>
-          <RadioGroupItem value="immediate" id="immediate" className="peer sr-only" />
-          <Label
-            htmlFor="immediate"
-            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-full"
-          >
-            <SendIcon className="mb-3 h-6 w-6" />
-            <div className="text-center">
-              <div className="font-semibold">Send Now</div>
-              <div className="text-xs text-muted-foreground mt-1">Dispatch immediately</div>
-            </div>
-          </Label>
-        </div>
-
-        <div>
-          <RadioGroupItem value="scheduled" id="scheduled" className="peer sr-only" />
-          <Label
-            htmlFor="scheduled"
-            className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer h-full"
-          >
-            <CalendarIcon className="mb-3 h-6 w-6" />
-            <div className="text-center">
-              <div className="font-semibold">Schedule Send</div>
-              <div className="text-xs text-muted-foreground mt-1">Pick a date & time</div>
-            </div>
-          </Label>
-        </div>
-      </RadioGroup>
+        <SegmentedList aria-label="When to send">
+          <SegmentedTrigger value="immediate">Send now</SegmentedTrigger>
+          <SegmentedTrigger value="scheduled">Schedule</SegmentedTrigger>
+        </SegmentedList>
+      </Tabs>
 
       {config.type === 'scheduled' && (
         <Card className="animate-in fade-in zoom-in-95 duration-200 border-primary/20 bg-primary/5">
@@ -120,12 +97,10 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
             {/* Recurring Options */}
             <div className="space-y-2 pt-2">
               <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
+                <Switch
                   id="recurring"
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   checked={config.isRecurring || false}
-                  onChange={(e) => updateScheduled({ isRecurring: e.target.checked })}
+                  onCheckedChange={(checked) => updateScheduled({ isRecurring: checked })}
                 />
                 <Label
                   htmlFor="recurring"
@@ -162,7 +137,7 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
                     </div>
 
                     <div className="space-y-2">
-                      <Label>End Condition</Label>
+                      <Label>End condition</Label>
                       <Select
                         value={config.endCondition || 'never'}
                         onValueChange={(val: string) =>
@@ -197,25 +172,5 @@ export function SchedulingOptions({ config, onChange }: SchedulingOptionsProps) 
         </Card>
       )}
     </div>
-  );
-}
-
-function SendIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-    </svg>
   );
 }

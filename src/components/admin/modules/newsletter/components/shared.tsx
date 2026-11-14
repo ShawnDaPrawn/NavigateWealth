@@ -4,8 +4,8 @@
  * Keeping them here keeps every studio view visually consistent.
  */
 import type { ComponentType, ReactNode } from 'react';
-import { AlertTriangle, type LucideProps, RefreshCw } from 'lucide-react';
-import { Button } from '../../../../ui/button';
+import { ChevronLeft, type LucideProps } from 'lucide-react';
+import { ErrorState as SharedErrorState } from '../../../layout/page';
 import { Card, CardContent } from '../../../../ui/card';
 import { cn } from '../../../../ui/utils';
 
@@ -55,37 +55,23 @@ export function EmptyState({
   );
 }
 
+/** The shared admin error state (error pill, reassurance, Try again, details). */
 export function ErrorState({
-  title = 'Something went wrong',
+  title = 'Unable to load',
   description,
+  details,
   onRetry,
-  retrying = false,
 }: {
   title?: string;
   description?: ReactNode;
+  /** Technical message, behind "Show details". */
+  details?: string;
   onRetry?: () => void;
+  /** Kept for callers; the shared state shows its own busy feedback. */
   retrying?: boolean;
 }) {
   return (
-    <Card>
-      <CardContent className="py-10">
-        <div className="flex flex-col items-center text-center">
-          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300">
-            <AlertTriangle className="h-5 w-5" aria-hidden />
-          </div>
-          <h3 className="text-base font-semibold">{title}</h3>
-          {description ? (
-            <p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p>
-          ) : null}
-          {onRetry ? (
-            <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
-              <RefreshCw className={cn('h-3.5 w-3.5', retrying && 'animate-spin')} aria-hidden />
-              Try again
-            </Button>
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
+    <SharedErrorState title={title} description={description} details={details} onRetry={onRetry} />
   );
 }
 
@@ -250,53 +236,6 @@ export function SectionHeader({
 
 // ── Filter chips ─────────────────────────────────────────────────────────────
 
-export function FilterChips<T extends string>({
-  options,
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  options: { id: T; label: string; count?: number }[];
-  value: T;
-  onChange: (id: T) => void;
-  ariaLabel: string;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={ariaLabel}>
-      {options.map((option) => {
-        const active = option.id === value;
-        return (
-          <button
-            key={option.id}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(option.id)}
-            className={cn(
-              'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors',
-              active
-                ? 'border-purple-600 bg-purple-600 text-white shadow-sm'
-                : 'border-border bg-background text-muted-foreground hover:border-purple-300 hover:text-foreground',
-            )}
-          >
-            {option.label}
-            {typeof option.count === 'number' ? (
-              <span
-                className={cn(
-                  'rounded-full px-1.5 text-[11px] tabular-nums',
-                  active ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground',
-                )}
-              >
-                {option.count}
-              </span>
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // ── Notices ──────────────────────────────────────────────────────────────────
 
 const NOTICE_TONE: Record<'info' | 'warn' | 'error' | 'success' | 'progress', string> = {
@@ -359,5 +298,19 @@ export function DetailRow({
       <dt className="shrink-0 text-muted-foreground">{label}</dt>
       <dd className="min-w-0 text-right font-medium">{children}</dd>
     </div>
+  );
+}
+
+/** "‹ Back to newsletters" above a record or form page. */
+export function BackToList({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex w-fit items-center gap-1 rounded text-sm text-nw-text-2 hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+    >
+      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+      Back to newsletters
+    </button>
   );
 }

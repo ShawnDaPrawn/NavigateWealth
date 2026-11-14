@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
+  REASSIGN_BATCH_SIZE,
+  reassignPersonnelClients,
   fetchPersonnel,
   fetchPersonnelById,
   invitePersonnel,
@@ -18,6 +20,9 @@ import {
   fetchPermissionAudit,
   backfillAuthRoles,
   personnelApi,
+  suspendPersonnelAccess,
+  restorePersonnelAccess,
+  sendPersonnelPasswordReset,
 } from '../api';
 
 const mockApiGet = vi.fn();
@@ -70,10 +75,9 @@ describe('fetchPersonnel', () => {
     expect(mockApiGet).toHaveBeenCalledWith('personnel/list');
   });
 
-  it('returns empty array on API error', async () => {
+  it('rethrows an API error so the page can show it (not "No personnel yet")', async () => {
     mockApiGet.mockRejectedValue(new Error('Network error'));
-    const result = await fetchPersonnel();
-    expect(result).toEqual([]);
+    await expect(fetchPersonnel()).rejects.toThrow('Network error');
   });
 
   it('filters by role client-side', async () => {
@@ -479,5 +483,79 @@ describe('personnelApi object', () => {
     expect(typeof personnelApi.fetchPermissions).toBe('function');
     expect(typeof personnelApi.fetchMyPermissions).toBe('function');
     expect(typeof personnelApi.backfillAuthRoles).toBe('function');
+  });
+});
+
+describe('staff account access (shared /security routes)', () => {
+  beforeEach(() => {
+    mockApiPost.mockReset();
+    mockApiPut.mockReset();
+  });
+
+  it('suspends sign-in with the reason, then marks the staff record suspended', async () => {
+    mockApiPost.mockResolvedValue({ success: true });
+    mockApiPut.mockResolvedValue({ data: {} });
+    await suspendPersonnelAccess('per-001', '  Left the practice ');
+    expect(mockApiPost).toHaveBeenCalledWith('/security/per-001/suspend', {
+      suspended: true,
+      reason: 'Left the practice',
+    });
+    expect(mockApiPut).toHaveBeenCalledWith('personnel/per-001', { status: 'suspended' });
+  });
+
+  it('does not touch the staff record when the suspension is refused', async () => {
+    mockApiPost.mockResolvedValue({ success: false, error: 'Forbidden' });
+    await expect(suspendPersonnelAccess('per-001', '')).rejects.toThrow('Forbidden');
+    expect(mockApiPut).not.toHaveBeenCalled();
+  });
+
+  it('restores sign-in and marks the record active', async () => {
+    mockApiPost.mockResolvedValue({ success: true });
+    mockApiPut.mockResolvedValue({ data: {} });
+    await restorePersonnelAccess('per-001');
+    expect(mockApiPost).toHaveBeenCalledWith('/security/per-001/suspend', { suspended: false });
+    expect(mockApiPut).toHaveBeenCalledWith('personnel/per-001', { status: 'active' });
+  });
+
+  it('sends a reset link through the admin reset with a random password nobody sees', async () => {
+    mockApiPost.mockResolvedValue({ success: true });
+    await sendPersonnelPasswordReset('per-001');
+    const [url, body] = mockApiPost.mock.calls[0];
+    expect(url).toBe('/security/per-001/password');
+    expect(body.emailPassword).toBe(true);
+    expect(body.newPassword.length).toBeGreaterThanOrEqual(8);
+    await sendPersonnelPasswordReset('per-001');
+    expect(mockApiPost.mock.calls[1][1].newPassword).not.toBe(body.newPassword);
+  });
+});
+
+describe('reassignPersonnelClients', () => {
+  beforeEach(() => {
+    mockApiPost.mockReset();
+  });
+
+  it('sends a large book in batches the server accepts and merges the results', async () => {
+    const ids = Array.from({ length: 450 }, (_, i) => `c${i}`);
+    mockApiPost.mockImplementation((_url: string, body: { clientIds: string[] }) =>
+      Promise.resolve({ data: { reassigned: body.clientIds, skipped: [] } }),
+    );
+    const result = await reassignPersonnelClients('from', 'to', ids);
+    expect(mockApiPost).toHaveBeenCalledTimes(3);
+    for (const call of mockApiPost.mock.calls) {
+      expect((call[1] as { clientIds: string[] }).clientIds.length).toBeLessThanOrEqual(
+        REASSIGN_BATCH_SIZE,
+      );
+    }
+    expect(result.reassigned).toHaveLength(450);
+  });
+
+  it('says how many moved when a later batch fails', async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `c${i}`);
+    mockApiPost
+      .mockResolvedValueOnce({ data: { reassigned: ids.slice(0, 200), skipped: [] } })
+      .mockRejectedValueOnce(new Error('Server error'));
+    await expect(reassignPersonnelClients('from', 'to', ids)).rejects.toThrow(
+      'Moved 200 of 250 clients, then the rest failed: Server error',
+    );
   });
 });

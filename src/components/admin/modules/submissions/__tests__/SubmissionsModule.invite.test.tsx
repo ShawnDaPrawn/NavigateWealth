@@ -35,14 +35,14 @@ function renderAt(path: string) {
 describe('SubmissionsModule invite action', () => {
   it('opens the invite dialog from the board', () => {
     renderAt('/admin');
-    fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Invite a client' }));
     expect(screen.getByRole('dialog', { name: 'Invite' })).toBeTruthy();
   });
 
   it('opens the invite dialog from the archived tab', () => {
     renderAt('/admin?tab=archived');
     expect(screen.queryByRole('dialog', { name: 'Invite' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Invite a client' }));
     expect(screen.getByRole('dialog', { name: 'Invite' })).toBeTruthy();
   });
 });

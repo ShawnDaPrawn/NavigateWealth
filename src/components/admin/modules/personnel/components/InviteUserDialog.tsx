@@ -16,6 +16,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import { FormErrorBanner } from '../../../layout/page';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Dialog,
@@ -168,7 +169,7 @@ export function InviteUserDialog({
     reset,
     watch,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isSubmitted },
   } = useForm<InviteUserFormValues>({
     resolver: zodResolver(inviteUserSchema),
     defaultValues: {
@@ -396,6 +397,12 @@ export function InviteUserDialog({
           onSubmit={handleSubmit(onSubmit)}
           className="flex-1 overflow-y-auto px-6 py-5 space-y-5"
         >
+          {isSubmitted && (
+            <FormErrorBanner
+              count={Object.keys(errors).length}
+              action={mode === 'invite' ? 'send the invitation' : 'create the account'}
+            />
+          )}
           {/* ── Mode Toggle ────────────────────────────────────────── */}
           {onCreateAccount && (
             <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">

@@ -14,7 +14,7 @@ export function MaritalStatusSection({
   const hasSpouseDetails = data?.spouseFirstName;
 
   return (
-    <ReviewSection icon={Heart} title="Marital Status">
+    <ReviewSection icon={Heart} title="Marital status">
       {isEditing ? (
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

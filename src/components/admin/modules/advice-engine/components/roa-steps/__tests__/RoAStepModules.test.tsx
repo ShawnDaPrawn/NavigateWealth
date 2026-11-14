@@ -27,7 +27,7 @@ describe('RoAStepModules', () => {
 
   it('renders heading', () => {
     render(<RoAStepModules draft={null} onUpdate={vi.fn()} modules={[]} />);
-    expect(screen.getByText('Select Advice Modules')).toBeDefined();
+    expect(screen.getByText('Select advice modules')).toBeDefined();
   });
 
   it('renders module in library', () => {

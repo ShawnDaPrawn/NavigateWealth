@@ -295,13 +295,20 @@ export function WebhooksDialog({ open, onOpenChange, inline = false }: WebhooksD
 
       <div className="flex items-center justify-between mb-2">
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="flex-1">
-          <SegmentedList>
+          <SegmentedList aria-label="Webhook views">
             <SegmentedTrigger value="endpoints">Endpoints · {subs.length}</SegmentedTrigger>
             <SegmentedTrigger value="recent">Recent · {deliveries.length}</SegmentedTrigger>
             <SegmentedTrigger value="dlq">Dead letters · {deadLetters.length}</SegmentedTrigger>
           </SegmentedList>
         </Tabs>
-        <Button size="sm" variant="ghost" onClick={refresh} disabled={loading} className="ml-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={refresh}
+          disabled={loading}
+          className="ml-2"
+          aria-label="Refresh webhooks"
+        >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
       </div>

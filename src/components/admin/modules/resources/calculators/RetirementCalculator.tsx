@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
+import { Notice, PageHeader } from '../../../layout/page';
+import { BackLink } from '../components/BackLink';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { NumberInputField } from '../../../../ui/number-input';
@@ -23,7 +25,6 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import {
-  ArrowLeft,
   Save,
   Calculator,
   RefreshCw,
@@ -67,6 +68,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
   const [inputs, setInputs] = useState<RetirementInputs>(DEFAULT_INPUTS);
   const [results, setResults] = useState<RetirementResults | null>(null);
   const [clients, setClients] = useState<any[]>([]);
+  const [scenariosError, setScenariosError] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [scenarios, setScenarios] = useState<RetirementScenario[]>([]);
   const [scenarioName, setScenarioName] = useState('');
@@ -134,8 +136,11 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
         `/resources/calculators/retirement/scenarios/${clientId}`,
       );
       setScenarios(data.scenarios || []);
+      setScenariosError(null);
     } catch (error) {
       console.error('Error loading scenarios:', error);
+      setScenarios([]);
+      setScenariosError(error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -520,46 +525,36 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-12">
       {/* Top Bar */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b pb-4">
-        <div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="-ml-2 text-muted-foreground hover:text-foreground mb-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Tools
-          </Button>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Retirement Planning Calculator
-          </h1>
-          <p className="text-muted-foreground">
-            Projection of capital accumulation and sustainable income drawdown.
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="w-[250px]">
-            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Client for Scenario" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.first_name} {c.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" onClick={calculateResults}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Recalculate
-          </Button>
-          <Button variant="default" onClick={handleExportPdf}>
-            <Download className="h-4 w-4 mr-2" /> Export PDF
-          </Button>
-        </div>
+      <div className="flex flex-col gap-4">
+        <BackLink label="Back to Calculators" onClick={onBack} />
+        <PageHeader
+          title="Retirement Planning Calculator"
+          description="Projection of capital accumulation and sustainable income drawdown."
+          actions={
+            <>
+              <div className="w-[250px]">
+                <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                  <SelectTrigger aria-label="Client for scenario">
+                    <SelectValue placeholder="Select client for scenario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.first_name} {c.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="outline" onClick={calculateResults}>
+                <RefreshCw className="h-4 w-4" aria-hidden="true" /> Recalculate
+              </Button>
+              <Button variant="default" onClick={handleExportPdf}>
+                <Download className="h-4 w-4" aria-hidden="true" /> Export PDF
+              </Button>
+            </>
+          }
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -759,7 +754,21 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
               </div>
 
               <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
-                {scenarios.length === 0 ? (
+                {scenariosError ? (
+                  <Notice
+                    kind="error"
+                    title="Unable to load saved scenarios."
+                    action={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void loadScenarios(selectedClientId)}
+                      >
+                        Try again
+                      </Button>
+                    }
+                  />
+                ) : scenarios.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-2">
                     No scenarios saved for this client.
                   </p>

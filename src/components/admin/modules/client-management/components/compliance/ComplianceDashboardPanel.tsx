@@ -255,7 +255,7 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
             <Badge variant="outline" className={`mt-1 text-xs ${getScoreColour(readinessScore)}`}>
               {getScoreLabel(readinessScore)}
             </Badge>
-            <span className="text-xs text-muted-foreground mt-1">Compliance Readiness</span>
+            <span className="text-xs text-muted-foreground mt-1">Compliance readiness</span>
           </CardContent>
         </Card>
 
@@ -269,7 +269,7 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
               <div className="text-xl font-bold">
                 {completedCheckTypes}/{totalCheckTypes}
               </div>
-              <div className="text-xs text-muted-foreground">Check Types Completed</div>
+              <div className="text-xs text-muted-foreground">Check types completed</div>
             </div>
           </CardContent>
         </Card>
@@ -281,7 +281,7 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
             </div>
             <div>
               <div className="text-xl font-bold">{totalCheckRuns}</div>
-              <div className="text-xs text-muted-foreground">Total Check Runs</div>
+              <div className="text-xs text-muted-foreground">Total check runs</div>
             </div>
           </CardContent>
         </Card>
@@ -295,7 +295,7 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
               <div className="text-sm font-bold">
                 {lastCheckDate ? formatDate(lastCheckDate) : '—'}
               </div>
-              <div className="text-xs text-muted-foreground">Last Check Run</div>
+              <div className="text-xs text-muted-foreground">Last check run</div>
             </div>
           </CardContent>
         </Card>
@@ -306,7 +306,7 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
         <CardHeader className="pb-3">
           <CardTitle className="text-md font-medium flex items-center gap-2">
             <Shield className="h-5 w-5 text-purple-600" />
-            Category Completion
+            Category completion
           </CardTitle>
           <CardDescription>
             Progress across the {totalCheckTypes} compliance check types, weighted by category
@@ -317,7 +317,7 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
           {/* Overall bar */}
           <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-gray-700">Overall Readiness</span>
+              <span className="font-medium text-gray-700">Overall readiness</span>
               <span className={`font-bold ${getScoreColour(readinessScore)}`}>
                 {readinessScore}%
               </span>
@@ -354,13 +354,13 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
         </CardContent>
       </Card>
 
-      {/* ──── Risk Flags ──── */}
+      {/* ──── Risk flags ──── */}
       {riskFlags.length > 0 && (
         <Card className="border-red-200">
           <CardHeader className="pb-3">
             <CardTitle className="text-md font-medium flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
-              Risk Flags
+              Risk flags
               <Badge variant="destructive" className="text-xs">
                 {riskFlags.length}
               </Badge>
@@ -413,7 +413,7 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
           >
             <CardTitle className="text-md font-medium flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-gray-500" />
-              Check Completion Matrix
+              Check completion matrix
               <Badge variant="secondary" className="text-xs">
                 {completedCheckTypes}/{totalCheckTypes}
               </Badge>
@@ -484,7 +484,7 @@ export function ComplianceDashboardPanel({ clientId }: ComplianceDashboardPanelP
       <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={fetchDashboard} disabled={isLoading}>
           <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh Dashboard
+          Refresh
         </Button>
       </div>
     </div>

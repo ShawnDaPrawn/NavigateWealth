@@ -88,7 +88,7 @@ export function BulkReextractDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <RefreshCw className={`h-5 w-5 text-amber-600 ${bulkProgress ? 'animate-spin' : ''}`} />
-            Bulk Re-extract — {bulkReextractProvider?.name}
+            Re-extract documents — {bulkReextractProvider?.name}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-3">
@@ -357,7 +357,7 @@ export function BulkReextractDialog({
               ) : (
                 <div className="contents">
                   <RefreshCw className="h-4 w-4 mr-1.5" />
-                  Re-extract {bulkPreview.candidateCount} Policies
+                  Re-extract {bulkPreview.candidateCount} documents
                 </div>
               )}
             </AlertDialogAction>

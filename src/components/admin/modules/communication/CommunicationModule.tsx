@@ -3,6 +3,7 @@ import { CheckCircle, Users, Mail, Send, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
 import { NavTabsList, NavTabsTrigger, PageHeader, useUrlState } from '../../layout/page';
 import { CommunicationDraft } from './types';
+import { Crumbs } from './components/Crumbs';
 import { Step1Recipients } from './components/steps/Step1Recipients';
 import { Step2Compose } from './components/steps/Step2Compose';
 import { Step3Review } from './components/steps/Step3Review';
@@ -127,6 +128,7 @@ export function CommunicationModule() {
         )}
 
         <TabsContent value="compose" className="mt-0 space-y-8">
+          <Crumbs trail={[{ label: 'Compose' }]} />
           {/* Stepper */}
           <div className="w-full bg-white border rounded-lg p-4 shadow-sm">
             <div className="flex items-center justify-between max-w-3xl mx-auto">

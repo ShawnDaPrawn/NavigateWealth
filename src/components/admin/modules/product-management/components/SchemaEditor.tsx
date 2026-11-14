@@ -126,7 +126,7 @@ export function SchemaEditor({
             size="sm"
           >
             <Save className="w-4 h-4 mr-2" />
-            Save Changes
+            Save changes
           </Button>
         </div>
       </div>
@@ -253,6 +253,7 @@ export function SchemaEditor({
                               {field.type === 'dropdown' ? (
                                 <OptionsManager
                                   options={field.options || []}
+                                  fieldName={field.name}
                                   onChange={(newOptions) =>
                                     handleUpdateField(field.id, 'options', newOptions)
                                   }
@@ -326,17 +327,18 @@ export function SchemaEditor({
                                     variant="ghost"
                                     size="sm"
                                     className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                                    aria-label={`Delete field ${field.name || 'Untitled'}`}
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Field?</AlertDialogTitle>
+                                    <AlertDialogTitle>Delete field?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete the field{' '}
+                                      Delete the field{' '}
                                       <span className="font-medium text-gray-900">
-                                        "{field.name || 'Untitled'}"
+                                        “{field.name || 'Untitled'}”
                                       </span>
                                       ? This action cannot be undone.
                                     </AlertDialogDescription>
@@ -347,7 +349,7 @@ export function SchemaEditor({
                                       onClick={() => handleRemoveField(field.id)}
                                       className="bg-red-600 hover:bg-red-700"
                                     >
-                                      Delete
+                                      Delete field
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
@@ -372,7 +374,7 @@ export function SchemaEditor({
               className="w-full border-dashed border-gray-300 text-gray-500 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50/50 transition-all"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Field
+              Add field
             </Button>
           </div>
         </div>

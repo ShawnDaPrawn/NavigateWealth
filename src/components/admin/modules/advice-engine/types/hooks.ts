@@ -54,6 +54,12 @@ export interface UseAIChatReturn {
 
   /** Whether API key is configured */
   isConfigured: boolean;
+
+  /** The status or history request failed (a failed load, not a missing key). */
+  loadError: Error | null;
+
+  /** Retries the status and history requests. */
+  retryLoad: () => void;
 }
 
 /**

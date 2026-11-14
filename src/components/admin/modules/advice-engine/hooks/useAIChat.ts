@@ -73,7 +73,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   // API Key Status
   // ============================================================================
 
-  const { data: apiKeyStatus = null } = useQuery({
+  const {
+    data: apiKeyStatus = null,
+    error: statusError,
+    refetch: refetchStatus,
+  } = useQuery({
     queryKey: adviceEngineKeys.ai.status(),
     queryFn: async () => {
       return await aiIntelligenceApi.getStatus();
@@ -86,7 +90,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
   // Chat History
   // ============================================================================
 
-  const { data: historyData } = useQuery({
+  const {
+    data: historyData,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useQuery({
     queryKey: adviceEngineKeys.ai.history(),
     queryFn: async () => {
       return await aiIntelligenceApi.getHistory();
@@ -264,5 +272,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatReturn {
     clearChat,
     apiKeyStatus,
     isConfigured: apiKeyStatus?.configured ?? false,
+    /** Status or history failed to load (not a missing key). */
+    loadError: ((statusError || historyError) as Error | null) ?? null,
+    retryLoad: () => {
+      void refetchStatus();
+      if (autoLoadHistory) void refetchHistory();
+    },
   };
 }

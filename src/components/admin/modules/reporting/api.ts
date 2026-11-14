@@ -7,7 +7,8 @@
 
 import { api } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
-import { Report } from './types';
+import type { Report, SavedReportDefinition } from './types';
+import { pickColumns } from './reportSources';
 
 /** Shape returned by every /reporting/* export endpoint on the server. */
 interface ReportExportResponse {
@@ -53,7 +54,8 @@ export const reportingApi = {
    */
   getReportData: async (report: Report): Promise<Record<string, unknown>[]> => {
     try {
-      const baseEndpoint = REPORT_ENDPOINTS[report.id];
+      // A custom report runs its data source's export.
+      const baseEndpoint = REPORT_ENDPOINTS[report.dataSource ?? report.id];
 
       if (!baseEndpoint) {
         throw new Error(`Report type '${report.id}' is not yet implemented`);
@@ -67,7 +69,7 @@ export const reportingApi = {
       // The server wraps rows in { rows, count, generatedAt }
       if (response && Array.isArray(response.rows)) {
         logger.info(`Report data fetched: ${response.count} rows`, { reportId: report.id });
-        return response.rows;
+        return report.columns?.length ? pickColumns(response.rows, report.columns) : response.rows;
       }
 
       // Fallback: if the server returned a raw array (shouldn't happen, but be safe)
@@ -81,5 +83,25 @@ export const reportingApi = {
       logger.error('Failed to fetch report data from server', error, { reportId: report.id });
       throw error;
     }
+  },
+};
+
+/** Saved custom reports (Reporting › New report). */
+export const reportDefinitionsApi = {
+  list: async (): Promise<SavedReportDefinition[]> => {
+    const response = await api.get<{ data: SavedReportDefinition[] }>('/reporting/definitions');
+    return response.data ?? [];
+  },
+  create: async (
+    input: Pick<SavedReportDefinition, 'name' | 'category' | 'dataSource' | 'columns' | 'format'>,
+  ): Promise<SavedReportDefinition> => {
+    const response = await api.post<{ data: SavedReportDefinition }>(
+      '/reporting/definitions',
+      input,
+    );
+    return response.data;
+  },
+  remove: async (id: string): Promise<void> => {
+    await api.delete(`/reporting/definitions/${id}`);
   },
 };

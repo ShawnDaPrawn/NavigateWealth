@@ -23,6 +23,11 @@ export {
   useAddPersonnelDocument,
   useResendPersonnelInvite,
   useCancelPersonnelInvite,
+  useSuspendPersonnelAccess,
+  useRestorePersonnelAccess,
+  useSendPersonnelPasswordReset,
+  useReassignPersonnelClients,
+  useUploadPersonnelDocument,
   useUpdateSuperAdmin,
   useBackfillAuthRoles,
 } from './usePersonnelMutations';

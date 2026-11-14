@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useSearchParams } from 'react-router';
 import type { NewsletterCampaign } from '../types';
+import { BreadcrumbContext, type Crumb } from '../../../layout/page';
 
 const hooks = vi.hoisted(() => ({
   campaign: {
@@ -12,7 +13,13 @@ const hooks = vi.hoisted(() => ({
     refetch: vi.fn(),
     isFetching: false,
   },
-  dashboard: { data: undefined as unknown, isLoading: false },
+  dashboard: {
+    data: undefined as unknown,
+    isLoading: false,
+    isError: false,
+    error: null as unknown,
+    refetch: vi.fn(),
+  },
   detailProps: [] as unknown[],
 }));
 
@@ -39,9 +46,14 @@ vi.mock('../components/NewsletterEditor', () => ({
   ),
 }));
 vi.mock('../components/NewsletterDetail', () => ({
-  NewsletterDetail: (props: unknown) => {
+  NewsletterDetail: (props: { onBack?: () => void; campaign: { title: string } }) => {
     hooks.detailProps.push(props);
-    return <div data-testid="newsletter-detail" />;
+    return (
+      <div data-testid="newsletter-detail">
+        <h1>{props.campaign.title}</h1>
+        <button onClick={props.onBack}>detail-back</button>
+      </div>
+    );
   },
 }));
 vi.mock('../components/DeliveryHealthCard', () => ({
@@ -55,12 +67,22 @@ function Location() {
   return <output data-testid="location">{params.toString()}</output>;
 }
 
+const crumbs = { trail: [] as Crumb[] };
+const breadcrumb = {
+  trail: [] as Crumb[],
+  setTrail: (trail: Crumb[]) => {
+    crumbs.trail = trail;
+  },
+};
+
 function renderAt(search: string) {
   return render(
-    <MemoryRouter initialEntries={[`/admin${search}`]}>
-      <NewsletterModule />
-      <Location />
-    </MemoryRouter>,
+    <BreadcrumbContext.Provider value={breadcrumb}>
+      <MemoryRouter initialEntries={[`/admin${search}`]}>
+        <NewsletterModule />
+        <Location />
+      </MemoryRouter>
+    </BreadcrumbContext.Provider>,
   );
 }
 
@@ -158,8 +180,40 @@ describe('NewsletterModule', () => {
     expect(hooks.detailProps[0]).toMatchObject({ campaign: { id: 'c-1', source: 'routine' } });
     expect(screen.getByText('September issue')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Newsletters' }));
+    fireEvent.click(screen.getByRole('button', { name: 'detail-back' }));
     expect(screen.getByTestId('location').textContent).not.toContain('campaign=');
+  });
+
+  it('names the status tab, the upload page or the open newsletter in the breadcrumb', () => {
+    const first = renderAt('?module=newsletter&status=sending');
+    expect(crumbs.trail.map((c) => c.label)).toEqual(['Sending']);
+    first.unmount();
+    const second = renderAt('?module=newsletter&campaign=new');
+    expect(crumbs.trail.map((c) => c.label)).toEqual(['New newsletter']);
+    second.unmount();
+    hooks.campaign.data = campaign();
+    renderAt('?module=newsletter&campaign=c-1');
+    expect(crumbs.trail.map((c) => c.label)).toEqual(['September issue']);
+  });
+
+  it('shows the shared error state when the overview fails to load', () => {
+    hooks.dashboard.isError = true;
+    hooks.dashboard.error = new Error('400');
+    renderAt('?module=newsletter');
+    expect(screen.getByText('Unable to load the newsletter overview')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /try again/i }));
+    expect(hooks.dashboard.refetch).toHaveBeenCalled();
+    hooks.dashboard.isError = false;
+    hooks.dashboard.error = null;
+  });
+
+  it('shows the upload form as a page with its own header and a way back', () => {
+    renderAt('?module=newsletter&campaign=new');
+    expect(screen.getByRole('heading', { level: 1, name: 'New newsletter' })).toBeTruthy();
+    expect(screen.queryByTestId('newsletter-list')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /back to newsletters/i }));
+    expect(screen.getByTestId('location').textContent).not.toContain('campaign=');
+    expect(screen.getByTestId('newsletter-list')).toBeTruthy();
   });
 
   it('shows a loading placeholder while a deep-link resolves its newsletter', () => {
@@ -173,6 +227,7 @@ describe('NewsletterModule', () => {
     hooks.campaign.error = new Error('Campaign c-1 not found');
     renderAt('?module=newsletter&campaign=c-1');
     expect(screen.getByText('This newsletter could not be opened')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /show details/i }));
     expect(screen.getByText('Campaign c-1 not found')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /try again/i }));

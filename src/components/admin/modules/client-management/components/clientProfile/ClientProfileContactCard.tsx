@@ -24,7 +24,7 @@ export function ClientProfileContactCard({ state, actions }: ClientProfileContac
             <Phone className="h-5 w-5 text-[#6d28d9]" />
           </div>
           <div>
-            <CardTitle>Contact Details</CardTitle>
+            <CardTitle>Contact details</CardTitle>
             <CardDescription>Contact information and preferences</CardDescription>
           </div>
         </div>

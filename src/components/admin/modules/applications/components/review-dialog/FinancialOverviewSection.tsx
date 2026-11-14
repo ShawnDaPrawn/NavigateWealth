@@ -13,8 +13,8 @@ export function FinancialOverviewSection({
   amendedFields,
 }: FinancialOverviewSectionProps) {
   return (
-    <ReviewSection icon={DollarSign} title="Financial Overview">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+    <ReviewSection icon={DollarSign} title="Financial overview">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4">
         <ViewField
           label="Gross Monthly Income"
           value={grossMonthlyIncome}

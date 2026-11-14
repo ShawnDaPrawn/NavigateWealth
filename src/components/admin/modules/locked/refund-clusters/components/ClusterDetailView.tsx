@@ -39,6 +39,7 @@ import {
   TableRow,
 } from '../../../../../ui/table';
 import { Tabs, TabsContent } from '../../../../../ui/tabs';
+import { Breadcrumb } from '../../breadcrumb';
 import {
   NavTabsList,
   NavTabsTrigger,
@@ -227,17 +228,26 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
 
   const { cluster } = data;
 
+  const trail = [
+    { label: 'Accounts' },
+    { label: 'Refund clusters', onClick: onBack },
+    { label: cluster.name },
+  ];
+
   // Adding or editing an entity is a page of its own.
   if (openForm) {
     return (
-      <EntityFormPage
-        clusterId={clusterId}
-        entity={editingEntity}
-        onClose={closeForm}
-        backLabel={`Back to ${cluster.name}`}
-        onSubmit={handleSubmit}
-        isSubmitting={createEntity.isPending || updateEntity.isPending}
-      />
+      <>
+        <Breadcrumb trail={trail} />
+        <EntityFormPage
+          clusterId={clusterId}
+          entity={editingEntity}
+          onClose={closeForm}
+          backLabel={`Back to ${cluster.name}`}
+          onSubmit={handleSubmit}
+          isSubmitting={createEntity.isPending || updateEntity.isPending}
+        />
+      </>
     );
   }
 
@@ -245,6 +255,7 @@ export function ClusterDetailView({ clusterId, onBack }: ClusterDetailViewProps)
 
   return (
     <div className="space-y-6">
+      <Breadcrumb trail={trail} />
       <div className="space-y-3">
         <BackLink label="Back to clusters" onClick={onBack} />
         <PageHeader

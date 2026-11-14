@@ -55,7 +55,7 @@ export function ExternalProductsSection({
   return (
     <ReviewSection
       icon={Package}
-      title="External Financial Products"
+      title="External financial products"
       badge={
         <Badge
           variant="outline"

@@ -1,12 +1,13 @@
 import React, { Suspense } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { ShieldAlert, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { ProviderManagementTab } from './ProviderManagementTab';
 import { ProductManagementTab } from './ProductManagementTab';
 import { IntegrationsTab } from './IntegrationsTab';
 import { UniversalKeyManager } from '../resources';
-import { PageHeader, NavTabsList, NavTabsTrigger, useUrlState } from '../../layout/page';
+import { PageHeader, NavTabsList, NavTabsTrigger, NoAccess, useUrlState } from '../../layout/page';
 import { useCurrentUserPermissions } from '../personnel';
+import { useSearchParams } from 'react-router';
 import { ProductManagementSkeleton } from './components/ProductManagementSkeleton';
 
 // Lazy-load the Document AI tab since it's less frequently accessed
@@ -20,6 +21,10 @@ export function ProductManagementModule() {
   const { can, isLoading } = useCurrentUserPermissions();
   // The open tab is in the address (?tab=keys).
   const [activeTab, setActiveTab] = useUrlState('tab', 'providers', PRODUCT_TABS);
+  // An open integration is a page of its own: it replaces the module header
+  // and tabs with its own header and "‹ Integrations" back link.
+  const [searchParams] = useSearchParams();
+  const integrationOpen = activeTab === 'integrations' && !!searchParams.get('integration');
 
   const canAccess = can('product-management');
 
@@ -29,22 +34,24 @@ export function ProductManagementModule() {
 
   if (!canAccess) {
     return (
-      <div className="flex flex-col items-center justify-center h-[50vh] text-center p-6">
-        <ShieldAlert className="h-16 w-16 text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold">Access Restricted</h2>
-        <p className="text-muted-foreground mt-2">
-          You do not have permission to view the Product Management module.
-        </p>
+      <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
+        <PageHeader
+          title="Product Management"
+          description="Product providers, product data structures and external data integrations."
+        />
+        <NoAccess what="Product Management" />
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
-      <PageHeader
-        title="Product Management"
-        description="Product providers, product data structures and external data integrations."
-      />
+      {!integrationOpen && (
+        <PageHeader
+          title="Product Management"
+          description="Product providers, product data structures and external data integrations."
+        />
+      )}
 
       {/* Main Navigation */}
       <Tabs
@@ -52,7 +59,7 @@ export function ProductManagementModule() {
         onValueChange={(v) => setActiveTab(v as (typeof PRODUCT_TABS)[number])}
         className="gap-5"
       >
-        <NavTabsList aria-label="Product Management">
+        <NavTabsList aria-label="Product Management" hidden={integrationOpen}>
           <NavTabsTrigger value="providers">Providers</NavTabsTrigger>
           <NavTabsTrigger value="products">Product structure</NavTabsTrigger>
           <NavTabsTrigger value="keys">Key manager</NavTabsTrigger>

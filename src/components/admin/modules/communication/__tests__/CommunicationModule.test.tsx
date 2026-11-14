@@ -82,6 +82,7 @@ vi.mock('../components/GlobalFooterEditor', () => ({
 }));
 
 import { CommunicationModule } from '../CommunicationModule';
+import { BreadcrumbContext } from '../../../layout/page/breadcrumbContext';
 
 beforeEach(() => {
   toastError.mockReset();
@@ -247,5 +248,43 @@ describe('Transactional emails', () => {
     renderAt('/admin?module=communication&tab=transactional&edit=missing');
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Email template not found'));
     await waitFor(() => expect(search()).toBe('?module=communication&tab=transactional'));
+  });
+
+  it('reads the history filters and page from the address and asks the server for them', async () => {
+    renderAt('/admin?module=communication&tab=history&channel=email&status=failed&page=2&q=year');
+    await waitFor(() =>
+      expect(api.getHistoryPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          page: 2,
+          channel: 'email',
+          status: 'failed',
+          search: 'year',
+          recipientType: 'all',
+          createdBy: 'all',
+          origin: 'all',
+        }),
+      ),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Clear filters' }));
+    await waitFor(() => expect(search()).toBe('?module=communication&tab=history'));
+  });
+
+  it('sets the top-bar breadcrumb for the tab and an open template', async () => {
+    const setTrail = vi.fn();
+    render(
+      <BreadcrumbContext.Provider value={{ trail: [], setTrail }}>
+        <MemoryRouter
+          initialEntries={['/admin?module=communication&tab=transactional&edit=welcome']}
+        >
+          <CommunicationModule />
+        </MemoryRouter>
+      </BreadcrumbContext.Provider>,
+    );
+    await waitFor(() =>
+      expect(setTrail).toHaveBeenLastCalledWith([
+        expect.objectContaining({ label: 'Transactional emails' }),
+        { label: 'Welcome email' },
+      ]),
+    );
   });
 });

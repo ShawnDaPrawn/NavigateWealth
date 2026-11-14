@@ -79,9 +79,19 @@ describe('ArticlesListView', () => {
     expect(container).toBeTruthy();
   });
 
-  it('shows the Create First Article empty-state button when no articles exist', () => {
+  it('shows "No articles yet" with New article when no articles exist', () => {
     render(<ArticlesListView onCreateNew={noop} onEditArticle={noop} />);
-    expect(screen.getByRole('button', { name: /create first article/i })).toBeTruthy();
+    expect(screen.getByText('No articles yet')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: /new article/i }).length).toBeGreaterThan(0);
+  });
+
+  it('says no articles match and clears the filters', () => {
+    mocks.articles = [article('a1', 'draft')];
+    render(<ArticlesListView onCreateNew={noop} onEditArticle={noop} />);
+    fireEvent.change(screen.getByPlaceholderText(/search/i), { target: { value: 'zzzz-nothing' } });
+    expect(screen.getByText('No articles match your filters')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.queryByText('No articles match your filters')).toBeNull();
   });
 
   it('shows the Search input', () => {

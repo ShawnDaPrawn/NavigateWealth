@@ -24,6 +24,18 @@ interface Props {
   /** When true, renders a compact error card suitable for inline content areas
    *  (e.g. inside a layout) instead of a full-screen takeover. */
   inline?: boolean;
+  /**
+   * Custom fallback (e.g. the admin's standard ErrorState). Gets the error,
+   * a reset that re-renders the children, a reload for a stale build, and
+   * whether the failure was a stale chunk. Reporting and stale-chunk
+   * recovery still happen as usual.
+   */
+  renderFallback?: (args: {
+    error: Error | null;
+    reset: () => void;
+    reload: () => void;
+    isStaleChunk: boolean;
+  }) => ReactNode;
 }
 
 interface State {
@@ -130,6 +142,15 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     const { hasError, error, errorInfo } = this.state;
     const { children, fallbackTitle, fallbackMessage, showDetails, inline } = this.props;
+
+    if (hasError && this.props.renderFallback) {
+      return this.props.renderFallback({
+        error,
+        reset: this.handleReset,
+        reload: this.handleReload,
+        isStaleChunk: this.isDynamicImportError(error),
+      });
+    }
 
     if (hasError) {
       const showTechDetails = this.isDevelopment() || showDetails;

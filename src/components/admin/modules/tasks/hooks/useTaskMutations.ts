@@ -346,13 +346,32 @@ export function useDuplicateTask() {
 
   return useMutation({
     mutationFn: TasksAPI.duplicateTask,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: taskKeys.stats() });
-      queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
-      queryClient.invalidateQueries({ queryKey: tasksKeys.dueToday() });
+    onSuccess: (copy?: Task) => {
+      const refresh = () => {
+        queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+        queryClient.invalidateQueries({ queryKey: taskKeys.stats() });
+        queryClient.invalidateQueries({ queryKey: pendingCountsKeys.all });
+        queryClient.invalidateQueries({ queryKey: tasksKeys.dueToday() });
+      };
+      refresh();
 
-      toast.success('Task duplicated successfully');
+      // Undo removes the copy again.
+      toast.success('Task duplicated', {
+        action: copy?.id
+          ? {
+              label: 'Undo',
+              onClick: () => {
+                TasksAPI.deleteTask(copy.id).then(
+                  () => {
+                    refresh();
+                    toast.success('Duplicate removed');
+                  },
+                  () => toast.error('Could not remove the duplicate. Please try again.'),
+                );
+              },
+            }
+          : undefined,
+      });
     },
     onError: (error) => {
       console.error('Failed to duplicate task:', error);

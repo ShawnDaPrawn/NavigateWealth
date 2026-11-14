@@ -175,3 +175,40 @@ describe('buildSystemActivity', () => {
     expect(buildSystemActivity(null, null)).toEqual([]);
   });
 });
+
+describe('dashboard header helpers', () => {
+  it('reads the health status from the last cleanup run', async () => {
+    const { getHealthStatus } = await import('../utils');
+    const now = Date.parse('2026-11-13T10:00:00Z');
+    expect(getHealthStatus(null, now)).toBe('unknown');
+    expect(getHealthStatus({ timestamp: '2026-11-11T10:00:00Z' }, now)).toBe('ok');
+    expect(getHealthStatus({ timestamp: '2026-11-04T10:00:00Z' }, now)).toBe('overdue');
+  });
+
+  it('greets by the hour', async () => {
+    const { getGreeting } = await import('../utils');
+    expect(getGreeting(8)).toBe('Good morning');
+    expect(getGreeting(13)).toBe('Good afternoon');
+    expect(getGreeting(19)).toBe('Good evening');
+  });
+
+  it('exports audit entries as CSV with quoted summaries', async () => {
+    const { auditEntriesToCsv } = await import('../utils');
+    const csv = auditEntriesToCsv([
+      {
+        id: 'a1',
+        timestamp: '2026-11-13T10:00:00Z',
+        category: 'security',
+        severity: 'warning',
+        action: 'account_suspended',
+        summary: 'Suspended "an" account',
+        entityType: 'user',
+        entityId: 'u1',
+        actorRole: 'super_admin',
+      } as never,
+    ]);
+    expect(csv.split('\n')[1]).toBe(
+      '2026-11-13T10:00:00Z,security,warning,account_suspended,"Suspended ""an"" account",user,u1,super_admin',
+    );
+  });
+});

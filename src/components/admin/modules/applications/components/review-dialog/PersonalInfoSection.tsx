@@ -14,7 +14,7 @@ export function PersonalInfoSection({
     .join(' ');
 
   return (
-    <ReviewSection icon={User} title="Personal Information">
+    <ReviewSection icon={User} title="Personal information">
       {isEditing ? (
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">

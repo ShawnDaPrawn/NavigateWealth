@@ -235,141 +235,155 @@ function IssueDetail({
   }
 
   return (
-    <div className="flex flex-col">
-      <div className="space-y-3 border-b border-gray-100 px-6 py-5 text-left">
-        <div className="flex flex-wrap items-center gap-2">
-          <PriorityBadge priority={issue.priority} />
-          <WorkflowBadge status={issue.status} />
-          <IssueSignalBadges issue={issue} />
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink wrap-anywhere">
+            {labels.title}
+          </h1>
+          <p className="text-sm text-nw-text-3">
+            {[
+              sourceLabels[issue.source],
+              labels.area,
+              issue.occurrences > 1
+                ? `seen ${pluralize(issue.occurrences, 'time')}, last ${formatRelativeTime(issue.lastSeenAt)}`
+                : `seen ${formatRelativeTime(issue.lastSeenAt)}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
         </div>
-        <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-nw-ink wrap-anywhere">
-          {labels.title}
-        </h1>
-        <p className="text-sm text-nw-text-3">
-          {[
-            sourceLabels[issue.source],
-            labels.area,
-            issue.occurrences > 1
-              ? `seen ${pluralize(issue.occurrences, 'time')}, last ${formatRelativeTime(issue.lastSeenAt)}`
-              : `seen ${formatRelativeTime(issue.lastSeenAt)}`,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      </div>
-
-      <div className="space-y-8 px-6 py-6">
-        <section className="space-y-4">
-          <SectionHeading>Your response</SectionHeading>
-          <div className="space-y-2">
-            <Label id="issue-status-label">Status</Label>
-            <ToggleGroup
-              type="single"
-              value={draft.status}
-              onValueChange={(value) =>
-                value &&
-                setDraft((current) => ({ ...current, status: value as QualityIssueStatus }))
-              }
-              aria-labelledby="issue-status-label"
-              className="w-full rounded-lg bg-gray-100 p-1"
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {issue.linkedTaskId ? (
+            <Button variant="outline" asChild>
+              <a href="/admin?module=tasks" title={issue.linkedTaskTitle}>
+                View linked task
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleCreateTask()}
+              disabled={isCreatingTask}
             >
-              {WORKFLOW_STATUSES.map((value) => (
-                <ToggleGroupItem
-                  key={value}
-                  value={value}
-                  className="h-8 rounded-md text-gray-600 hover:bg-transparent hover:text-gray-900 data-[state=on]:bg-white data-[state=on]:text-gray-900 data-[state=on]:shadow-sm"
-                >
-                  {statusLabels[value]}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="issue-owner">Owner</Label>
-            <Input
-              id="issue-owner"
-              value={draft.ownerName}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, ownerName: event.target.value }))
-              }
-              placeholder="Who is handling this?"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="issue-status-note">Note</Label>
-            <Textarea
-              id="issue-status-note"
-              value={draft.statusNote}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, statusNote: event.target.value }))
-              }
-              placeholder="What's been decided, or what still needs to happen"
-              className="min-h-20 rounded-lg border-gray-200 bg-white shadow-sm"
-            />
-          </div>
-          {showEvidence ? (
-            <div className="space-y-2">
-              <Label htmlFor="issue-resolution-evidence">How do you know it's fixed?</Label>
-              <Textarea
-                id="issue-resolution-evidence"
-                value={draft.resolutionEvidence}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, resolutionEvidence: event.target.value }))
-                }
-                placeholder="Link the PR, commit, deploy or test run that proves it"
-                className="min-h-20 rounded-lg border-gray-200 bg-white shadow-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Kept with the issue so the closure can be checked later, and used to flag a
-                regression if the same problem comes back.
-              </p>
-            </div>
-          ) : null}
-        </section>
-
-        <IssueDiagnosis issue={issue} />
-
-        {nextSteps.length > 0 ? (
-          <section className="space-y-3">
-            <SectionHeading>Suggested next steps</SectionHeading>
-            <ol className="list-decimal space-y-2 pl-5 text-sm text-gray-700 marker:text-gray-400">
-              {nextSteps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          </section>
-        ) : null}
-
-        <IssueReferenceDetails issue={issue} />
-      </div>
-
-      <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t border-gray-100 bg-white px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-        {issue.linkedTaskId ? (
-          <Button variant="outline" asChild>
-            <a href="/admin?module=tasks" title={issue.linkedTaskTitle}>
-              View linked task
-              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-            </a>
-          </Button>
-        ) : (
+              {isCreatingTask ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Wrench className="h-4 w-4" aria-hidden="true" />
+              )}
+              Create remediation task
+            </Button>
+          )}
           <Button
             type="button"
-            variant="outline"
-            onClick={() => void handleCreateTask()}
-            disabled={isCreatingTask}
+            onClick={() => void handleSave()}
+            disabled={isSaving || !hasChanges}
           >
-            {isCreatingTask ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Wrench className="h-4 w-4" aria-hidden="true" />
-            )}
-            Create remediation task
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+            Save changes
           </Button>
-        )}
-        <Button type="button" onClick={() => void handleSave()} disabled={isSaving || !hasChanges}>
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-          Save changes
-        </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <PriorityBadge priority={issue.priority} />
+        <WorkflowBadge status={issue.status} />
+        <IssueSignalBadges issue={issue} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-8 rounded-xl border border-nw-line bg-white px-6 py-6">
+          <IssueDiagnosis issue={issue} />
+          {nextSteps.length > 0 ? (
+            <section className="space-y-3">
+              <SectionHeading>Suggested next steps</SectionHeading>
+              <ol className="list-decimal space-y-2 pl-5 text-sm text-gray-700 marker:text-gray-400">
+                {nextSteps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
+        </div>
+        <div className="space-y-6">
+          <div className="rounded-xl border border-nw-line bg-white px-6 py-6">
+            <section className="space-y-4">
+              <SectionHeading>Your response</SectionHeading>
+              <div className="space-y-2">
+                <Label id="issue-status-label">Status</Label>
+                <ToggleGroup
+                  type="single"
+                  value={draft.status}
+                  onValueChange={(value) =>
+                    value &&
+                    setDraft((current) => ({ ...current, status: value as QualityIssueStatus }))
+                  }
+                  aria-labelledby="issue-status-label"
+                  className="w-full rounded-lg bg-gray-100 p-1"
+                >
+                  {WORKFLOW_STATUSES.map((value) => (
+                    <ToggleGroupItem
+                      key={value}
+                      value={value}
+                      className="h-8 rounded-md text-gray-600 hover:bg-transparent hover:text-gray-900 data-[state=on]:bg-white data-[state=on]:text-gray-900 data-[state=on]:shadow-sm"
+                    >
+                      {statusLabels[value]}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issue-owner">Owner</Label>
+                <Input
+                  id="issue-owner"
+                  value={draft.ownerName}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, ownerName: event.target.value }))
+                  }
+                  placeholder="Who is handling this?"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="issue-status-note">Note</Label>
+                <Textarea
+                  id="issue-status-note"
+                  value={draft.statusNote}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, statusNote: event.target.value }))
+                  }
+                  placeholder="What's been decided, or what still needs to happen"
+                  className="min-h-20 rounded-lg border-gray-200 bg-white shadow-sm"
+                />
+              </div>
+              {showEvidence ? (
+                <div className="space-y-2">
+                  <Label htmlFor="issue-resolution-evidence">How do you know it's fixed?</Label>
+                  <Textarea
+                    id="issue-resolution-evidence"
+                    value={draft.resolutionEvidence}
+                    onChange={(event) =>
+                      setDraft((current) => ({
+                        ...current,
+                        resolutionEvidence: event.target.value,
+                      }))
+                    }
+                    placeholder="Link the PR, commit, deploy or test run that proves it"
+                    className="min-h-20 rounded-lg border-gray-200 bg-white shadow-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Kept with the issue so the closure can be checked later, and used to flag a
+                    regression if the same problem comes back.
+                  </p>
+                </div>
+              ) : null}
+            </section>
+          </div>
+          <div className="rounded-xl border border-nw-line bg-white px-6 py-6">
+            <IssueReferenceDetails issue={issue} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -401,14 +415,12 @@ export function IssueDetailSheet({
         <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         Back to issues
       </button>
-      <div className="overflow-hidden rounded-xl border border-nw-line bg-white">
-        <IssueDetail
-          key={issue.fingerprint}
-          issue={issue}
-          onSave={onSave}
-          onCreateTask={onCreateTask}
-        />
-      </div>
+      <IssueDetail
+        key={issue.fingerprint}
+        issue={issue}
+        onSave={onSave}
+        onCreateTask={onCreateTask}
+      />
     </div>
   );
 }

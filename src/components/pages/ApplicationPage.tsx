@@ -57,6 +57,8 @@ export function ApplicationPage() {
     data,
     isLoading,
     isInitialLoad,
+    loadError,
+    retryLoad,
     validationErrors,
     updateData,
     goToNextStep,
@@ -76,14 +78,14 @@ export function ApplicationPage() {
 
   // Detect resume: once initial load completes, if currentStep > 1 it means saved progress was restored
   React.useEffect(() => {
-    if (!isInitialLoad && !resumeTracked.current) {
+    if (!isInitialLoad && !loadError && !resumeTracked.current) {
       resumeTracked.current = true;
       if (currentStep > 1) {
         setResumeInfo({ step: currentStep, stepTitle: STEPS[currentStep - 1].title });
         setShowResumeBanner(true);
       }
     }
-  }, [isInitialLoad, currentStep]);
+  }, [isInitialLoad, loadError, currentStep]);
 
   // Auto-dismiss resume banner after 8 seconds
   React.useEffect(() => {
@@ -157,6 +159,28 @@ export function ApplicationPage() {
   };
 
   const requiredCounts: Record<number, number> = { 1: 9, 2: 7, 3: 3, 4: 2, 5: 5 };
+
+  // Loading the saved application failed: say so and offer a retry. The form
+  // stays hidden (and nothing is saved) so an empty form cannot overwrite it.
+  if (loadError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+        <Card className="w-full max-w-md p-8 text-center" role="alert">
+          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-red-500" aria-hidden="true" />
+          <h1 className="text-lg font-semibold text-gray-900">
+            We couldn&apos;t load your application
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Your saved answers are safe. Check your connection and try again.
+          </p>
+          <Button className="mt-6" onClick={retryLoad}>
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            Try again
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

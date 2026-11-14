@@ -54,7 +54,7 @@ export function AddressSection({
               <MapPin className="h-5 w-5 text-[#6d28d9]" />
             </div>
             <div>
-              <CardTitle>Address Information</CardTitle>
+              <CardTitle>Address</CardTitle>
               <CardDescription>Client's residential and work address details</CardDescription>
             </div>
           </div>
@@ -63,7 +63,7 @@ export function AddressSection({
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Home className="h-4 w-4 text-[#6d28d9]" />
-              <h4 className="text-sm text-gray-900">Residential Address</h4>
+              <h4 className="text-sm text-gray-900">Residential address</h4>
             </div>
 
             <div className="grid grid-cols-1 gap-4">
@@ -238,7 +238,7 @@ export function AddressSection({
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Briefcase className="h-4 w-4 text-[#6d28d9]" />
-              <h4 className="text-sm text-gray-900">Work Address</h4>
+              <h4 className="text-sm text-gray-900">Work address</h4>
             </div>
 
             <div className="grid grid-cols-1 gap-4">

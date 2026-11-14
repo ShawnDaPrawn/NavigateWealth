@@ -6,7 +6,19 @@ const mockApiPost = vi.fn();
 const mockApiPut = vi.fn();
 const mockApiDelete = vi.fn();
 
+const { MockAPIError } = vi.hoisted(() => ({
+  MockAPIError: class MockAPIError extends Error {
+    constructor(
+      message: string,
+      public statusCode: number,
+    ) {
+      super(message);
+    }
+  },
+}));
+
 vi.mock('../../../../../utils/api/client', () => ({
+  APIError: MockAPIError,
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
@@ -172,10 +184,17 @@ describe('productManagementApi', () => {
       expect(result).toBeNull();
     });
 
-    it('returns null on error (fallback to default)', async () => {
-      mockApiGet.mockRejectedValue(new Error('Schema not found'));
+    it('returns null when no schema is saved yet (404, fallback to default)', async () => {
+      mockApiGet.mockRejectedValue(new MockAPIError('Schema not found', 404));
       const result = await productManagementApi.fetchSchema('medical_aid' as never);
       expect(result).toBeNull();
+    });
+
+    it('rethrows any other failure, so the screen shows an error instead of defaults', async () => {
+      mockApiGet.mockRejectedValue(new MockAPIError('Bad request', 400));
+      await expect(productManagementApi.fetchSchema('medical_aid' as never)).rejects.toThrow(
+        'Bad request',
+      );
     });
   });
 

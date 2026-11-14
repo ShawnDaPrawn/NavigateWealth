@@ -10,12 +10,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import DOMPurify from 'dompurify';
-import { FileText, Loader2, Search, Sparkles, X, ChevronRight, Check, Zap } from 'lucide-react';
+import { FileText, Search, Sparkles, X, ChevronRight, Check, Zap } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Badge } from '../../../../ui/badge';
 import { cn } from '../../../../ui/utils';
 import { PublicationsAPI } from '../api';
 import type { ContentTemplate } from '../types';
+import { Skeleton } from '../../../../ui/skeleton';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -158,9 +159,10 @@ export function TemplatePickerDialog({
           {/* Template list */}
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {isLoading && (
-              <div className="flex items-center justify-center py-12 gap-3">
-                <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-                <span className="text-sm text-gray-500">Loading templates...</span>
+              <div aria-busy="true" aria-label="Loading templates" className="space-y-2">
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                ))}
               </div>
             )}
 

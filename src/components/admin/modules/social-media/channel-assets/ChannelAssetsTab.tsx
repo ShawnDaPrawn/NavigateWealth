@@ -9,29 +9,17 @@
  * An admin can drop files straight in here too — same endpoint, same rows.
  */
 
-import { useState } from 'react';
 import { Info } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '../../../../ui/alert-dialog';
-import { Badge } from '../../../../ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../../../ui/select';
 import { Skeleton } from '../../../../ui/skeleton';
-import { Tabs, TabsList, TabsTrigger } from '../../../../ui/tabs';
+import { Tabs } from '../../../../ui/tabs';
+import { cn } from '../../../../ui/utils';
+import {
+  ErrorState,
+  SegmentedList,
+  SegmentedTrigger,
+  useConfirm,
+  useUrlState,
+} from '../../../layout/page';
 import {
   useChannelAssets,
   useChannelAssetSummary,
@@ -59,10 +47,21 @@ interface ChannelAssetsTabProps {
   onCreatePost?: (asset: ChannelAsset) => void;
 }
 
+const STATUS_IDS = STATUS_FILTERS.map((f) => f.value);
+
 export function ChannelAssetsTab({ onCreatePost }: ChannelAssetsTabProps = {}) {
-  const [channel, setChannel] = useState<ChannelAssetChannel>('instagram');
-  const [status, setStatus] = useState<ChannelAssetStatus | 'all'>('available');
-  const [pendingDelete, setPendingDelete] = useState<ChannelAsset | null>(null);
+  // Channel and status define "where you are", so both live in the address.
+  const [channel, setChannel] = useUrlState<ChannelAssetChannel>(
+    'channel',
+    'instagram',
+    CHANNEL_ORDER,
+  );
+  const [status, setStatus] = useUrlState<ChannelAssetStatus | 'all'>(
+    'assetStatus',
+    'available',
+    STATUS_IDS,
+  );
+  const { confirm, confirmDialog } = useConfirm();
 
   const summaryQuery = useChannelAssetSummary();
   const assetsQuery = useChannelAssets({
@@ -78,152 +77,116 @@ export function ChannelAssetsTab({ onCreatePost }: ChannelAssetsTabProps = {}) {
   const summaries = summaryQuery.data ?? [];
   const countFor = (id: ChannelAssetChannel) => summaries.find((s) => s.id === id)?.available ?? 0;
 
+  const askDelete = async (asset: ChannelAsset) => {
+    const ok = await confirm({
+      title: 'Delete this asset?',
+      description: `${asset.file_name ?? 'The file'} is removed from storage as well as from the list. A post already scheduled with it would lose its media, so archive it instead if you are not sure.`,
+      confirmLabel: 'Delete',
+      destructive: true,
+    });
+    if (ok) remove.mutate(asset.id);
+  };
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground flex items-start gap-2">
-            <Info className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>
-              Finished images and videos, ready to post. ChatGPT adds them through the social
-              library endpoint; a scheduling routine will pick from <strong>Available</strong> and
-              mark each one <strong>Published</strong> once Buffer has it.
-            </span>
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div role="group" aria-label="Channel" className="flex flex-wrap gap-1.5">
+          {CHANNEL_ORDER.map((id) => {
+            const active = id === channel;
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setChannel(id)}
+                className={cn(
+                  'inline-flex h-8 items-center gap-1 rounded-full border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+                  active
+                    ? 'border-nw-violet bg-nw-violet-50 text-nw-violet-600'
+                    : 'border-nw-line bg-white text-nw-text-2 hover:text-nw-ink',
+                )}
+              >
+                {CHANNEL_LABEL[id]}
+                <span className="tabular-nums text-nw-text-3">· {countFor(id)}</span>
+              </button>
+            );
+          })}
+        </div>
+        <Tabs
+          value={status}
+          onValueChange={(value) => setStatus(value as ChannelAssetStatus | 'all')}
+        >
+          <SegmentedList aria-label="Asset status">
+            {STATUS_FILTERS.map((option) => (
+              <SegmentedTrigger key={option.value} value={option.value}>
+                {option.label}
+              </SegmentedTrigger>
+            ))}
+          </SegmentedList>
+        </Tabs>
+      </div>
 
-      <Tabs value={channel} onValueChange={(value) => setChannel(value as ChannelAssetChannel)}>
-        <TabsList>
-          {CHANNEL_ORDER.map((id) => (
-            <TabsTrigger key={id} value={id} className="flex items-center gap-2">
-              {CHANNEL_LABEL[id]}
-              <Badge variant="secondary" className="ml-1">
-                {countFor(id)}
-              </Badge>
-            </TabsTrigger>
+      <ChannelAssetUploadZone
+        channelLabel={CHANNEL_LABEL[channel]}
+        isUploading={upload.isPending}
+        onFiles={(files) => upload.mutate({ channel, files })}
+      />
+      <p className="flex items-start gap-2 text-sm text-nw-text-3">
+        <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>
+          Finished images and videos, ready to post. ChatGPT adds them through the social library
+          endpoint; a scheduling routine will pick from <strong>Available</strong> and mark each one{' '}
+          <strong>Published</strong> once Buffer has it.
+        </span>
+      </p>
+
+      {assetsQuery.isLoading && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-[420px] rounded-lg" />
           ))}
-        </TabsList>
-      </Tabs>
+        </div>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Add to {CHANNEL_LABEL[channel]}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChannelAssetUploadZone
-            channelLabel={CHANNEL_LABEL[channel]}
-            isUploading={upload.isPending}
-            onFiles={(files) => upload.mutate({ channel, files })}
-          />
-        </CardContent>
-      </Card>
+      {assetsQuery.error && (
+        <ErrorState
+          title="Unable to load assets"
+          details={assetsQuery.error instanceof Error ? assetsQuery.error.message : undefined}
+          onRetry={() => void assetsQuery.refetch()}
+        />
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between gap-3">
-            <span>
-              {CHANNEL_LABEL[channel]} assets
-              {assets.length > 0 && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  {' '}
-                  · {assets.length}
-                </span>
-              )}
-            </span>
-            <Select
-              value={status}
-              onValueChange={(value) => setStatus(value as ChannelAssetStatus | 'all')}
-            >
-              <SelectTrigger className="w-[160px]" aria-label="Filter by status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTERS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {assetsQuery.isLoading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className="h-[420px] rounded-lg" />
-              ))}
-            </div>
-          )}
+      {!assetsQuery.isLoading && !assetsQuery.error && assets.length === 0 && (
+        <p className="rounded-xl border border-dashed border-nw-line px-4 py-10 text-center text-sm text-nw-text-3">
+          Nothing here yet for {CHANNEL_LABEL[channel]}. Drop a file above, or let ChatGPT add one.
+        </p>
+      )}
 
-          {assetsQuery.error && (
-            <p className="text-sm text-red-600">
-              {assetsQuery.error instanceof Error
-                ? assetsQuery.error.message
-                : 'Could not load the assets.'}
-            </p>
-          )}
+      {!assetsQuery.isLoading && assets.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {assets.map((asset) => (
+            <ChannelAssetCard
+              key={asset.id}
+              asset={asset}
+              isSaving={update.isPending}
+              onPatch={(patch) => update.mutate({ id: asset.id, patch })}
+              onDelete={() => void askDelete(asset)}
+              onCreatePost={
+                onCreatePost
+                  ? (edits) =>
+                      onCreatePost({
+                        ...asset,
+                        caption: edits.caption,
+                        alt_text: edits.altText,
+                      })
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+      )}
 
-          {!assetsQuery.isLoading && !assetsQuery.error && assets.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Nothing here yet for {CHANNEL_LABEL[channel]}. Drop a file above, or let ChatGPT add
-              one.
-            </p>
-          )}
-
-          {!assetsQuery.isLoading && assets.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {assets.map((asset) => (
-                <ChannelAssetCard
-                  key={asset.id}
-                  asset={asset}
-                  isSaving={update.isPending}
-                  onPatch={(patch) => update.mutate({ id: asset.id, patch })}
-                  onDelete={() => setPendingDelete(asset)}
-                  onCreatePost={
-                    onCreatePost
-                      ? (edits) =>
-                          onCreatePost({
-                            ...asset,
-                            caption: edits.caption,
-                            alt_text: edits.altText,
-                          })
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <AlertDialog
-        open={Boolean(pendingDelete)}
-        onOpenChange={(open) => !open && setPendingDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this asset?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingDelete?.file_name ?? 'The file'} is removed from storage as well as from the
-              list. A post already scheduled with it would lose its media, so archive it instead if
-              you are not sure.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (pendingDelete) remove.mutate(pendingDelete.id);
-                setPendingDelete(null);
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {confirmDialog}
     </div>
   );
 }

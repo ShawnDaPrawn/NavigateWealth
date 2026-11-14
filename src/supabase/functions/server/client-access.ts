@@ -10,6 +10,15 @@ export function isPlatformAdminRole(role: string | undefined): boolean {
   return !!role && PLATFORM_ADMIN_ROLES.has(role);
 }
 
+/**
+ * Roles that can hold a client book: {@link canAccessClientAs} lets an
+ * assigned adviser (or a platform admin) open the client, and denies every
+ * other staff role even when assigned.
+ */
+export function canHoldClientBook(role: string | undefined): boolean {
+  return role === 'adviser' || isPlatformAdminRole(role);
+}
+
 /** The caller, however the route happened to authenticate them. */
 export interface ClientAccessCaller {
   id: string | undefined;

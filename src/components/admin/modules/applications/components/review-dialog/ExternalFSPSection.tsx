@@ -30,7 +30,7 @@ export function ExternalFSPSection({
   return (
     <ReviewSection
       icon={Building2}
-      title="External Providers (FSPs)"
+      title="External providers (FSPs)"
       badge={
         hasProviders ? (
           <Badge

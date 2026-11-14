@@ -21,7 +21,7 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   consultation: 'Consultation',
   deadline: 'Deadline',
   birthday: 'Birthday',
-  renewal: 'Policy Renewal',
+  renewal: 'Policy renewal',
   other: 'Other',
 };
 
@@ -43,9 +43,9 @@ export const EVENT_TYPE_COLORS: Record<EventType, string> = {
 // ============================================================================
 
 export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
-  in_person: 'In Person',
-  video: 'Video Call',
-  phone: 'Phone Call',
+  in_person: 'In person',
+  video: 'Video call',
+  phone: 'Phone call',
   virtual: 'Virtual',
   other: 'Other',
 };

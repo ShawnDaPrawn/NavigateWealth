@@ -5,12 +5,13 @@ import { LoadingState, LoadingSpinner, SkeletonLoader } from '../LoadingState';
 describe('LoadingState', () => {
   it('renders default loading message', () => {
     render(<LoadingState />);
-    expect(screen.getByText('Loading...')).toBeDefined();
+    expect(screen.getByRole('status', { name: 'Loading…' }).getAttribute('aria-busy')).toBe('true');
+    expect(screen.queryByText('Loading…')).toBeNull();
   });
 
   it('renders custom message', () => {
     render(<LoadingState message="Fetching articles..." />);
-    expect(screen.getByText('Fetching articles...')).toBeDefined();
+    expect(screen.getByRole('status', { name: 'Fetching articles...' })).toBeDefined();
   });
 
   it('applies fullPage container class when fullPage=true', () => {

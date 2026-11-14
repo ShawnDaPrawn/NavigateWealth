@@ -31,6 +31,8 @@ export function usePublicationsInit() {
     isLoading,
     isInitializing,
     error: error || initError,
+    /** The status check itself failed — show an error, never the setup screen. */
+    loadError: error,
     checkInitialization: refetch,
     initialize,
   };

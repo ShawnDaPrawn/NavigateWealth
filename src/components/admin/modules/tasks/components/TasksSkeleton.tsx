@@ -63,6 +63,27 @@ function KanbanColumnSkeleton({ cards = 3 }: { cards?: number }) {
   );
 }
 
+/** The board under the header and tabs while tasks load. */
+export function TaskBoardBodySkeleton() {
+  return (
+    <div className="space-y-5" role="status" aria-label="Loading tasks">
+      <span className="sr-only">Loading tasks, please wait…</span>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <TaskStatCardSkeleton />
+        <TaskStatCardSkeleton />
+        <TaskStatCardSkeleton />
+        <TaskStatCardSkeleton />
+      </div>
+      <Skeleton className="h-9 w-full max-w-md rounded-md" />
+      <div className="flex gap-6 overflow-hidden px-1 pb-4">
+        <KanbanColumnSkeleton cards={4} />
+        <KanbanColumnSkeleton cards={3} />
+        <KanbanColumnSkeleton cards={2} />
+      </div>
+    </div>
+  );
+}
+
 export function TasksSkeleton() {
   return (
     <div className="min-h-screen bg-gray-50/30 pb-10" role="status" aria-label="Loading tasks">

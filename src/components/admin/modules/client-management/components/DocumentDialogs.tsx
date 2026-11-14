@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import {
@@ -141,6 +142,11 @@ export function ResendPackDialog({
               CC info@navigatewealth.co
             </Label>
           </div>
+
+          <p className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+            <span className="font-semibold">Secure attachment</span> — the documents are attached as
+            an encrypted ZIP file. Password: the client&apos;s ID number.
+          </p>
         </div>
         <DialogFooter className="mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
@@ -214,6 +220,9 @@ export function EmailComposeDialog({
   onCcAdminChange,
   sending,
   onSend,
+  documents,
+  selectedIds = [],
+  onSelectedIdsChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -223,28 +232,80 @@ export function EmailComposeDialog({
   onCcAdminChange: (value: boolean) => void;
   sending: boolean;
   onSend: () => void;
+  /** When given, the adviser picks which documents to attach. */
+  documents?: { id: string; title: string; meta?: string }[];
+  selectedIds?: string[];
+  onSelectedIdsChange?: (ids: string[]) => void;
 }) {
+  const [attempted, setAttempted] = useState(false);
+  const picking = !!documents && !!onSelectedIdsChange;
+  const noneChosen = picking && selectedIds.length === 0;
+  const toggle = (id: string) =>
+    onSelectedIdsChange?.(
+      selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id],
+    );
+  const handleSend = () => {
+    setAttempted(true);
+    if (noneChosen) return;
+    onSend();
+  };
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setAttempted(false);
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Email Documents to Client</DialogTitle>
+          <DialogTitle>Email documents to client</DialogTitle>
           <DialogDescription>
             Notify the client that new documents have been added to their profile.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800">
-            <p className="font-medium mb-1">Secure Attachment</p>
-            <p>
-              The documents will be attached as an <strong>encrypted ZIP file</strong>.
-            </p>
-            <p className="mt-1 text-xs opacity-90">Password: Client's National ID Number</p>
-          </div>
+          {picking && (
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">
+                Documents to attach{' '}
+                <span className="font-normal text-nw-text-3">· {selectedIds.length} selected</span>
+              </legend>
+              {documents.length === 0 ? (
+                <p className="text-sm text-nw-text-3">This client has no documents to attach.</p>
+              ) : (
+                <ul
+                  className={`max-h-48 divide-y overflow-y-auto rounded-lg border ${
+                    attempted && noneChosen ? 'border-red-400' : 'border-nw-line'
+                  }`}
+                  aria-invalid={attempted && noneChosen}
+                >
+                  {documents.map((doc) => (
+                    <li key={doc.id} className="flex items-center gap-3 px-3 py-2">
+                      <Checkbox
+                        id={`email-doc-${doc.id}`}
+                        checked={selectedIds.includes(doc.id)}
+                        onCheckedChange={() => toggle(doc.id)}
+                      />
+                      <Label htmlFor={`email-doc-${doc.id}`} className="min-w-0 flex-1 font-normal">
+                        <span className="block truncate text-sm text-nw-ink">{doc.title}</span>
+                        {doc.meta && (
+                          <span className="block text-xs text-nw-text-3">{doc.meta}</span>
+                        )}
+                      </Label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {attempted && noneChosen && (
+                <p className="text-xs text-red-700">Choose at least one document to attach</p>
+              )}
+            </fieldset>
+          )}
 
           <div className="space-y-2">
-            <Label>Custom Message</Label>
+            <Label>Custom message</Label>
             <div className="h-64 mb-12">
               <ReactQuill
                 value={message}
@@ -269,13 +330,18 @@ export function EmailComposeDialog({
               CC info@navigatewealth.co
             </Label>
           </div>
+
+          <p className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+            <span className="font-semibold">Secure attachment</span> — the documents are attached as
+            an encrypted ZIP file. Password: the client&apos;s ID number.
+          </p>
         </div>
 
         <DialogFooter className="mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
             Cancel
           </Button>
-          <Button onClick={onSend} disabled={sending} className="bg-[#6d28d9] hover:bg-[#5b21b6]">
+          <Button onClick={handleSend} disabled={sending}>
             {sending ? (
               <div className="contents">
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -284,7 +350,7 @@ export function EmailComposeDialog({
             ) : (
               <div className="contents">
                 <Mail className="h-4 w-4 mr-2" />
-                Send Email
+                Send email
               </div>
             )}
           </Button>

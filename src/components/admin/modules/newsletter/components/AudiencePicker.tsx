@@ -12,16 +12,22 @@ import { cn } from '../../../../ui/utils';
 import { SUBSCRIBER_LIST_ID } from '../constants';
 import type { NewsletterListView } from '../types';
 import { formatNumber, pluralize } from '../utils/format';
+import { ErrorState } from '../../../layout/page';
 
 export function AudiencePicker({
   lists,
   loading,
+  error,
+  onRetry,
   value,
   onChange,
   disabled,
 }: {
   lists: NewsletterListView[];
   loading?: boolean;
+  /** The groups failed to load: show the error, not "No audiences yet". */
+  error?: unknown;
+  onRetry?: () => void;
   value: string[];
   onChange: (listIds: string[]) => void;
   disabled?: boolean;
@@ -43,6 +49,12 @@ export function AudiencePicker({
             <Skeleton key={i} className="h-12 w-full rounded-xl" />
           ))}
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Unable to load audiences"
+          details={error instanceof Error ? error.message : undefined}
+          onRetry={onRetry}
+        />
       ) : lists.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
           No audiences yet. Create a group in Communication → Groups first.

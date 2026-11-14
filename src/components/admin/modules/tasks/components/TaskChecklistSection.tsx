@@ -8,6 +8,7 @@ import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Checkbox } from '../../../../ui/checkbox';
+import { Skeleton } from '../../../../ui/skeleton';
 import { CheckSquare, GripVertical, X } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import type { TaskChecklistItem } from '../types';
@@ -20,6 +21,8 @@ interface TaskChecklistSectionProps {
   handleToggleChecklistItem: (itemId: string) => Promise<void>;
   handleDeleteChecklistItem: (itemId: string) => Promise<void>;
   handleDragEnd: (result: DropResult) => Promise<void>;
+  /** Items still loading: rows shaped like the list. */
+  isLoading?: boolean;
 }
 
 export function TaskChecklistSection({
@@ -30,6 +33,7 @@ export function TaskChecklistSection({
   handleToggleChecklistItem,
   handleDeleteChecklistItem,
   handleDragEnd,
+  isLoading = false,
 }: TaskChecklistSectionProps) {
   return (
     <div className="space-y-3">
@@ -60,6 +64,14 @@ export function TaskChecklistSection({
                 }}
               />
             </div>
+          </div>
+        )}
+
+        {isLoading && (
+          <div role="status" aria-label="Loading checklist" className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-8 w-full rounded-md" />
+            ))}
           </div>
         )}
 

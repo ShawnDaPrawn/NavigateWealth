@@ -2,6 +2,7 @@ export const ENDPOINTS = {
   ADMIN_STATS: '/admin/stats',
   TASKS_DUE_TODAY: '/tasks/due-today',
   TASKS_BY_DATE: '/tasks/by-date',
+  TASK_STATS: '/tasks/stats',
   DASHBOARD_STATS: '/integrations/dashboard-stats',
   SYSTEM_ACTIVITY: '/dashboard/activity',
   KV_CLEANUP_STATUS: '/kv-cleanup/status',

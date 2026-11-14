@@ -4,43 +4,20 @@
  * Displays error messages with optional retry action.
  */
 
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Button } from '../../../../ui/button';
+import { AlertCircle } from 'lucide-react';
+import { ErrorState as SharedErrorState } from '../../../layout/page';
 
 interface ErrorStateProps {
   title?: string;
+  /** The technical message — shown behind "Show details". */
   message: string;
   onRetry?: () => void;
   fullPage?: boolean;
 }
 
-export function ErrorState({
-  title = 'Something went wrong',
-  message,
-  onRetry,
-  fullPage = false,
-}: ErrorStateProps) {
-  const containerClasses = fullPage
-    ? 'flex flex-col items-center justify-center min-h-[400px]'
-    : 'flex flex-col items-center justify-center py-12';
-
-  return (
-    <div className={containerClasses}>
-      <div className="flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
-        <AlertCircle className="w-8 h-8 text-red-600" />
-      </div>
-
-      <h3 className="text-lg mb-2 text-gray-900">{title}</h3>
-      <p className="text-gray-600 text-center mb-6 max-w-md">{message}</p>
-
-      {onRetry && (
-        <Button onClick={onRetry} variant="outline">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Try Again
-        </Button>
-      )}
-    </div>
-  );
+/** Publications' error state: the shared one (error pill, Try again, details). */
+export function ErrorState({ title = 'Unable to load', message, onRetry }: ErrorStateProps) {
+  return <SharedErrorState title={title} onRetry={onRetry} details={message} />;
 }
 
 /**

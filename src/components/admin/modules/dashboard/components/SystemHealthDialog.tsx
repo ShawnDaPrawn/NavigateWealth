@@ -27,7 +27,7 @@ export function SystemHealthDialog({ open, onOpenChange }: SystemHealthDialogPro
             <div className="p-1.5 bg-gray-100 rounded-lg">
               <Server className="h-4 w-4 text-gray-600" />
             </div>
-            System Health
+            System health
           </DialogTitle>
           <DialogDescription>KV store maintenance status</DialogDescription>
         </DialogHeader>

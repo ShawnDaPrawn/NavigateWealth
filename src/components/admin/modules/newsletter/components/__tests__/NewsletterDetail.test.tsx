@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter, useSearchParams } from 'react-router';
 import type { NewsletterCampaign } from '../../types';
 
 const hooks = vi.hoisted(() => {
@@ -50,6 +52,20 @@ vi.mock('../../api', () => ({
 
 import { NewsletterDetail } from '../NewsletterDetail';
 
+function Location() {
+  const [params] = useSearchParams();
+  return <output data-testid="location">{params.toString()}</output>;
+}
+
+function renderR(ui: ReactElement, path = '/admin?module=newsletter') {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      {ui}
+      <Location />
+    </MemoryRouter>,
+  );
+}
+
 const campaign = (overrides: Partial<NewsletterCampaign> = {}): NewsletterCampaign => ({
   id: 'c1',
   title: 'September issue',
@@ -93,7 +109,7 @@ beforeEach(() => {
 
 describe('NewsletterDetail', () => {
   it('lets a website-only draft save an edit with no audience (review finding)', () => {
-    render(
+    renderR(
       <NewsletterDetail
         campaign={campaign({ listIds: [], listNames: [] })}
         caps={caps}
@@ -106,7 +122,9 @@ describe('NewsletterDetail', () => {
   });
 
   it('blocks every send action until a PDF is uploaded', () => {
-    render(<NewsletterDetail campaign={campaign({ pdf: null })} caps={caps} onDeleted={vi.fn()} />);
+    renderR(
+      <NewsletterDetail campaign={campaign({ pdf: null })} caps={caps} onDeleted={vi.fn()} />,
+    );
     expect(screen.getByText('Upload the PDF first')).toBeTruthy();
     expect((screen.getByRole('button', { name: /send now/i }) as HTMLButtonElement).disabled).toBe(
       true,
@@ -120,7 +138,7 @@ describe('NewsletterDetail', () => {
   });
 
   it('flags a routine hand-over and lets the admin edit and save the draft', () => {
-    render(
+    renderR(
       <NewsletterDetail
         campaign={campaign({ source: 'routine' })}
         caps={caps}
@@ -145,7 +163,7 @@ describe('NewsletterDetail', () => {
   });
 
   it('opens the send-now pre-flight showing the title and PDF, then sends', () => {
-    render(<NewsletterDetail campaign={campaign()} caps={caps} onDeleted={vi.fn()} />);
+    renderR(<NewsletterDetail campaign={campaign()} caps={caps} onDeleted={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /send now/i }));
     expect(screen.getByText('Send this newsletter now?')).toBeTruthy();
     // The pre-flight names the PDF (the stored-file card above shows it too).
@@ -155,7 +173,7 @@ describe('NewsletterDetail', () => {
   });
 
   it('offers stop while sending and confirms it', () => {
-    render(
+    renderR(
       <NewsletterDetail
         campaign={campaign({
           status: 'sending',
@@ -176,7 +194,7 @@ describe('NewsletterDetail', () => {
   });
 
   it('shows the provider fault and a retry when delivery stopped', () => {
-    render(
+    renderR(
       <NewsletterDetail
         campaign={campaign({
           status: 'paused',
@@ -203,7 +221,7 @@ describe('NewsletterDetail', () => {
       readCount: 60,
       readRate: 30.3,
     };
-    render(
+    renderR(
       <NewsletterDetail
         campaign={campaign({
           status: 'finished',
@@ -226,7 +244,7 @@ describe('NewsletterDetail', () => {
   });
 
   it('hides mutations from an admin without the capability', () => {
-    render(
+    renderR(
       <NewsletterDetail
         campaign={campaign()}
         caps={{ create: false, send: false, delete: false }}
@@ -236,5 +254,41 @@ describe('NewsletterDetail', () => {
     expect(screen.queryByRole('button', { name: /send now/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /save changes/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /delete newsletter/i })).toBeNull();
+  });
+
+  it('shows the title and status as the page header, with Delete under the more menu', async () => {
+    const onDeleted = vi.fn();
+    const onBack = vi.fn();
+    hooks.remove.mutate.mockImplementation((_id: unknown, opts?: { onSuccess?: () => void }) =>
+      opts?.onSuccess?.(),
+    );
+    renderR(
+      <NewsletterDetail campaign={campaign()} caps={caps} onDeleted={onDeleted} onBack={onBack} />,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: 'September issue' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /back to newsletters/i }));
+    expect(onBack).toHaveBeenCalled();
+
+    // Delete is not a visible button any more: it lives under ⋯.
+    expect(screen.queryByRole('button', { name: /delete newsletter/i })).toBeNull();
+    const more = screen.getByRole('button', { name: 'More actions' });
+    fireEvent.pointerDown(more, { button: 0, pointerType: 'mouse' });
+    fireEvent.click(await screen.findByRole('menuitem', { name: /delete newsletter/i }));
+    expect(await screen.findByText('Delete “September issue”?')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(hooks.remove.mutate).toHaveBeenCalledWith('c1', expect.anything()));
+    expect(onDeleted).toHaveBeenCalled();
+  });
+
+  it('switches the recipient status with a segmented control kept in the address', () => {
+    renderR(
+      <NewsletterDetail
+        campaign={campaign({ status: 'finished', recipientCount: 3, sentCount: 3 })}
+        caps={caps}
+        onDeleted={vi.fn()}
+      />,
+    );
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /^Failed/ }));
+    expect(screen.getByTestId('location').textContent).toContain('recipients=failed_terminal');
   });
 });

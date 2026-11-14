@@ -1,44 +1,31 @@
-import React, { Suspense, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router';
 import { AdminLayout } from '../admin/AdminLayout';
 import { AdminModule } from '../admin/layout/types';
 import { AdminNavigationProvider } from '../admin/layout/AdminNavigationContext';
 import { moduleSearchParams } from '../admin/layout/moduleSearchParams';
+import { taskAddress } from '../admin/modules/tasks/shell';
+import { ModuleFrame } from '../admin/layout/ModuleFrame';
+import { useCurrentUserPermissions } from '../admin/modules/personnel/shell';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { useOptionalUnsavedChangesRegistry } from '../shared/unsaved-changes';
 
 // ============================================================================
 // SHELL ENTRIES, NOT BARRELS
-// Skeletons and the three self-lazy modules come from each module's
+// The three self-lazy modules come from each module's
 // `shell.ts`, never from its `index.ts` barrel. This page also
 // `import()`s those barrels below, and Rollup cannot split out a module that is
 // imported both statically and dynamically: one static barrel import here puts
 // the whole module in this page's chunk, and every admin visit downloads it.
 // `admin-shell-static-graph.test.ts` fails if a barrel import comes back.
-// Each skeleton mirrors the full card/tab/table structure of its module so the
-// page layout is stable from the first paint, before the JS chunk loads.
+// While a module's chunk loads, ModuleFrame shows the one shared skeleton
+// (header with the module's name, grey tabs, figures and rows), and the one
+// shared error state if it fails.
 // ============================================================================
 
-import { PublicationsSkeleton } from '../admin/modules/publications/shell';
-import { TasksSkeleton } from '../admin/modules/tasks/shell';
-import { ClientManagementSkeleton } from '../admin/modules/client-management/shell';
-import { NewsletterSkeleton } from '../admin/modules/newsletter/shell';
-import { SocialMediaModule, SocialMediaSkeleton } from '../admin/modules/social-media/shell';
-import { IssuesModule, IssuesSkeleton } from '../admin/modules/issues/shell';
-import { EsignModule, EsignSkeleton } from '../admin/modules/esign/shell';
-import { DashboardSkeleton } from '../admin/modules/dashboard/shell';
-import { ApplicationsSkeleton } from '../admin/modules/applications/shell';
-import { PersonnelSkeleton } from '../admin/modules/personnel/shell';
-import { AdviceEngineSkeleton } from '../admin/modules/advice-engine/shell';
-import { ProductManagementSkeleton } from '../admin/modules/product-management/shell';
-import { ResourcesSkeleton } from '../admin/modules/resources/shell';
-import { ComplianceSkeleton } from '../admin/modules/compliance/shell';
-import { CommunicationSkeleton } from '../admin/modules/communication/shell';
-import { ReportingSkeleton } from '../admin/modules/reporting/shell';
-import { CalendarSkeleton } from '../admin/modules/calendar/shell';
-import { SubmissionsSkeleton } from '../admin/modules/submissions/shell';
-import { NotesSkeleton } from '../admin/modules/notes/shell';
-import { AIManagementSkeleton } from '../admin/modules/ai-management/shell';
+import { SocialMediaModule } from '../admin/modules/social-media/shell';
+import { IssuesModule } from '../admin/modules/issues/shell';
+import { EsignModule } from '../admin/modules/esign/shell';
 
 // ============================================================================
 // LAZY-LOADED MODULE CHUNKS
@@ -113,6 +100,7 @@ const LockedModule = React.lazy(() =>
 export function AdminDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
+  const { can } = useCurrentUserPermissions();
 
   // ── Deep Link Support ──────────────────────────────────────────────────
   // URL params like ?module=resources&resourcesTab=tools allow drawer links
@@ -125,17 +113,15 @@ export function AdminDashboardPage() {
   }, [moduleFromUrl]);
 
   // ── Task Deep Link ──────────────────────────────────────────────────────
-  // When a task is clicked in the dashboard's Due Today widget, we store
-  // the task ID and switch to the tasks module. The TaskManagementModule
-  // reads this ID and auto-opens the task detail modal.
-  const [deepLinkTaskId, setDeepLinkTaskId] = useState<string | null>(null);
+  // A task clicked in the dashboard's Due Today widget opens To-Do with the
+  // task in the address (?module=tasks&task=<id>); the module opens its page.
+  const handleViewTaskFromDashboard = useCallback(
+    (taskId: string) => {
+      setSearchParams(taskAddress(taskId));
+    },
+    [setSearchParams],
+  );
 
-  const handleViewTaskFromDashboard = useCallback((taskId: string) => {
-    setDeepLinkTaskId(taskId);
-    setActiveModule('tasks');
-  }, []);
-
-  // Clear deep-link when navigating away from tasks
   const handleModuleChange = useCallback(
     (module: string) => {
       const applyModuleChange = () => {
@@ -143,9 +129,6 @@ export function AdminDashboardPage() {
         // were opened in (see moduleSearchParams).
         setSearchParams(moduleSearchParams(module), { replace: true });
 
-        if (module !== 'tasks') {
-          setDeepLinkTaskId(null);
-        }
         setActiveModule(module as AdminModule);
       };
 
@@ -171,182 +154,226 @@ export function AdminDashboardPage() {
     switch (activeModule) {
       case 'dashboard':
         return (
-          <Suspense fallback={<DashboardSkeleton />}>
-            <ErrorBoundary fallbackTitle="Dashboard Module Error">
-              <DashboardModule
-                onModuleChange={handleModuleChange}
-                onViewTask={handleViewTaskFromDashboard}
-              />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="dashboard"
+            allowed={can('dashboard')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <DashboardModule
+              onModuleChange={handleModuleChange}
+              onViewTask={handleViewTaskFromDashboard}
+            />
+          </ModuleFrame>
         );
       case 'clients':
         return (
-          <Suspense fallback={<ClientManagementSkeleton />}>
-            <ErrorBoundary fallbackTitle="Client Management Error">
-              <ClientManagementModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="clients"
+            allowed={can('clients')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <ClientManagementModule />
+          </ModuleFrame>
         );
       case 'esign':
         return (
-          <Suspense fallback={<EsignSkeleton />}>
-            <ErrorBoundary fallbackTitle="E-Signature Module Error">
-              <EsignModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="esign"
+            allowed={can('esign')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <EsignModule />
+          </ModuleFrame>
         );
       case 'personnel':
         return (
-          <Suspense fallback={<PersonnelSkeleton />}>
-            <ErrorBoundary fallbackTitle="Personnel Module Error">
-              <PersonnelModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="personnel"
+            allowed={can('personnel')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <PersonnelModule />
+          </ModuleFrame>
         );
       case 'advice-engine':
         return (
-          <Suspense fallback={<AdviceEngineSkeleton />}>
-            <ErrorBoundary fallbackTitle="Advice Engine Error">
-              <AdviceEngineModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="advice-engine"
+            allowed={can('advice-engine')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <AdviceEngineModule />
+          </ModuleFrame>
         );
       case 'product-management':
         return (
-          <Suspense fallback={<ProductManagementSkeleton />}>
-            <ErrorBoundary fallbackTitle="Product Management Error">
-              <ProductManagementModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="product-management"
+            allowed={can('product-management')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <ProductManagementModule />
+          </ModuleFrame>
         );
       case 'resources':
         return (
-          <Suspense fallback={<ResourcesSkeleton />}>
-            <ErrorBoundary fallbackTitle="Resources Module Error">
-              <ResourcesModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="resources"
+            allowed={can('resources')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <ResourcesModule />
+          </ModuleFrame>
         );
       case 'publications':
         return (
-          <Suspense fallback={<PublicationsSkeleton />}>
-            <ErrorBoundary fallbackTitle="Publications Module Error">
-              <PublicationsModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="publications"
+            allowed={can('publications')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <PublicationsModule />
+          </ModuleFrame>
         );
       case 'compliance':
         return (
-          <Suspense fallback={<ComplianceSkeleton />}>
-            <ErrorBoundary fallbackTitle="Compliance Module Error">
-              <ComplianceModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="compliance"
+            allowed={can('compliance')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <ComplianceModule />
+          </ModuleFrame>
         );
       case 'tasks':
         return (
-          <Suspense fallback={<TasksSkeleton />}>
-            <ErrorBoundary fallbackTitle="Task Management Error">
-              <TaskManagementModule initialTaskId={deepLinkTaskId} />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="tasks"
+            allowed={can('tasks')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <TaskManagementModule />
+          </ModuleFrame>
         );
       case 'notes':
         return (
-          <Suspense fallback={<NotesSkeleton />}>
-            <ErrorBoundary fallbackTitle="Notes Module Error">
-              <NotesModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="notes"
+            allowed={can('notes')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <NotesModule />
+          </ModuleFrame>
         );
       case 'applications':
         return (
-          <Suspense fallback={<ApplicationsSkeleton />}>
-            <ErrorBoundary fallbackTitle="Applications Module Error">
-              <ApplicationsModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="applications"
+            allowed={can('applications')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <ApplicationsModule />
+          </ModuleFrame>
         );
       case 'submissions':
         return (
-          <Suspense fallback={<SubmissionsSkeleton />}>
-            <ErrorBoundary fallbackTitle="Submissions Manager Error">
-              <SubmissionsModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="submissions"
+            allowed={can('submissions')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <SubmissionsModule />
+          </ModuleFrame>
         );
       case 'communication':
         return (
-          <Suspense fallback={<CommunicationSkeleton />}>
-            <ErrorBoundary fallbackTitle="Communication Module Error">
-              <CommunicationModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="communication"
+            allowed={can('communication')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <CommunicationModule />
+          </ModuleFrame>
         );
       case 'newsletter':
         return (
-          <Suspense fallback={<NewsletterSkeleton />}>
-            <ErrorBoundary fallbackTitle="Newsletters Error">
-              <NewsletterModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="newsletter"
+            allowed={can('newsletter')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <NewsletterModule />
+          </ModuleFrame>
         );
       case 'marketing':
         return (
-          <Suspense fallback={<SocialMediaSkeleton />}>
-            <ErrorBoundary fallbackTitle="Social Media Module Error">
-              <SocialMediaModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="marketing"
+            allowed={can('marketing')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <SocialMediaModule />
+          </ModuleFrame>
         );
       case 'reporting':
         return (
-          <Suspense fallback={<ReportingSkeleton />}>
-            <ErrorBoundary fallbackTitle="Reporting Module Error">
-              <ReportingModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="reporting"
+            allowed={can('reporting')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <ReportingModule />
+          </ModuleFrame>
         );
       case 'issues':
         return (
-          <Suspense fallback={<IssuesSkeleton />}>
-            <ErrorBoundary fallbackTitle="Issue Manager Error">
-              <IssuesModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="issues"
+            allowed={can('issues')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <IssuesModule />
+          </ModuleFrame>
         );
       case 'calendar':
         return (
-          <Suspense fallback={<CalendarSkeleton />}>
-            <ErrorBoundary fallbackTitle="Calendar Module Error">
-              <CalendarModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="calendar"
+            allowed={can('calendar')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <CalendarModule />
+          </ModuleFrame>
         );
       case 'locked':
         return (
-          <Suspense fallback={<div className="p-6" />}>
-            <ErrorBoundary fallbackTitle="Locked Module Error">
-              <LockedModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="locked"
+            allowed={can('locked')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <LockedModule />
+          </ModuleFrame>
         );
       case 'ai-management':
         return (
-          <Suspense fallback={<AIManagementSkeleton />}>
-            <ErrorBoundary fallbackTitle="AI Management Module Error">
-              <AIManagementModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="ai-management"
+            allowed={can('ai-management')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <AIManagementModule />
+          </ModuleFrame>
         );
       default:
         return (
-          <Suspense fallback={<DashboardSkeleton />}>
-            <ErrorBoundary fallbackTitle="Dashboard Module Error">
-              <DashboardModule />
-            </ErrorBoundary>
-          </Suspense>
+          <ModuleFrame
+            module="dashboard"
+            allowed={can('dashboard')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <DashboardModule />
+          </ModuleFrame>
         );
     }
   };

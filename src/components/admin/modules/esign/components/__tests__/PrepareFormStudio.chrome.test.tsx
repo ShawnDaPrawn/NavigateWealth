@@ -104,16 +104,18 @@ describe('the dialogs the toolbar opens', () => {
     });
   });
 
-  it('opens the recipients quick-edit and lists the envelope signers', async () => {
+  it('opens the recipients as a page of their own and lists the envelope signers', async () => {
     const { container } = setup();
 
     clickControl(container, /recipient/i);
 
     await waitFor(() => {
-      const panel = document.querySelector('[role="dialog"]');
-      expect(panel, 'recipients panel did not open').toBeTruthy();
-      expect(panel!.textContent).toContain('signer@test.co');
+      const heading = screen.getByRole('heading', { level: 1, name: 'Recipients' });
+      expect(heading, 'recipients page did not open').toBeTruthy();
+      expect(container.textContent).toContain('signer@test.co');
     });
+    // A page, not a side panel.
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it('opens the preview dialog', async () => {

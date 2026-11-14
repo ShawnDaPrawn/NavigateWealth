@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { XIcon } from '../../../../shared/XIcon';
 import { api } from '../../../../../utils/api';
+import { normalizeNavigateWealthUrl } from '../../../../../utils/siteOrigin';
 
 // ============================================================================
 // Types
@@ -217,3 +218,23 @@ export async function fetchJson<T>(url: string, opts?: RequestInit): Promise<T> 
 // ============================================================================
 // Component
 // ============================================================================
+
+/** Inline validation for the add / edit link form. */
+export function validateLinkForm(title: string, url: string): { title?: string; url?: string } {
+  const errors: { title?: string; url?: string } = {};
+  if (!title.trim()) errors.title = 'Add a title';
+  const normalized = normalizeNavigateWealthUrl(url);
+  let valid: boolean;
+  try {
+    const parsed = new URL(normalized);
+    valid =
+      ['https:', 'http:', 'mailto:', 'tel:'].includes(parsed.protocol) &&
+      (parsed.protocol === 'mailto:' ||
+        parsed.protocol === 'tel:' ||
+        parsed.hostname.includes('.'));
+  } catch {
+    valid = false;
+  }
+  if (!valid) errors.url = 'Enter a full web address starting with https://';
+  return errors;
+}

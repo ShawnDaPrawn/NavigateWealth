@@ -80,8 +80,10 @@ export const vascoConfigApi = {
       const response = await api.get<{ config: VascoConfig }>(ENDPOINTS.VASCO_CONFIG);
       return response.config;
     } catch (error) {
+      // Rethrow: defaulting to "off" would show Vasco as switched off (and
+      // let the switch act on a state nobody has read) when the read failed.
       logger.error('Failed to fetch Vasco config', error);
-      return { enabled: false, updatedAt: new Date().toISOString(), updatedBy: 'system' };
+      throw error;
     }
   },
 

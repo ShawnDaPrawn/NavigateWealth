@@ -50,7 +50,7 @@ describe('KPICard', () => {
 
   it('renders subtitle when provided', () => {
     render(<KPICard {...baseProps} subtitle="vs last month" />);
-    expect(screen.getByText('vs last month')).toBeDefined();
+    expect(screen.getByText('· vs last month')).toBeDefined();
   });
 
   it('renders currency format', () => {

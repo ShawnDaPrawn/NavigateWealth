@@ -172,7 +172,7 @@ export function SystemHealthPanel() {
           ) : (
             <Eye className="h-3 w-3" />
           )}
-          {stage === 'previewing' ? 'Scanning…' : 'Run Cleanup'}
+          {stage === 'previewing' ? 'Scanning…' : 'Run cleanup'}
         </Button>
       </div>
 

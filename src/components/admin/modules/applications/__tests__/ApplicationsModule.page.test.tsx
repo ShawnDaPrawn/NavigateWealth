@@ -1,0 +1,268 @@
+/**
+ * Applications: status tabs with counts in the address, a Review button and
+ * ⋯ per row, the review / complete-on-behalf / preview pages in the address,
+ * and the approve confirmation that says what approval does.
+ */
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { makeTestQueryClient } from '@/test/utils';
+import type { Application } from '../types';
+
+const app = (id: string, status: Application['status'], first: string): Application =>
+  ({
+    id,
+    user_id: `u-${id}`,
+    status,
+    created_at: '2026-07-09T09:00:00Z',
+    updated_at: '2026-07-09T09:10:00Z',
+    submitted_at: '2026-07-09T09:01:00Z',
+    application_number: `APP-2026-${id}`,
+    application_data: { firstName: first, lastName: 'Hendricks', emailAddress: `${first}@x.co` },
+    user_email: `${first}@x.co`,
+    user_name: `${first} Hendricks`,
+    origin: 'admin_import',
+  }) as unknown as Application;
+
+const rows = [
+  app('0190', 'submitted', 'Nadia'),
+  app('0191', 'approved', 'Riaan'),
+  app('0192', 'in_progress', 'Lindiwe'),
+];
+const api = vi.hoisted(() => ({
+  getApplications: vi.fn(),
+  getStats: vi.fn(),
+  getApplicationDetail: vi.fn(),
+  approveApplication: vi.fn(),
+  declineApplication: vi.fn(),
+  resendInvite: vi.fn(),
+}));
+const toastError = vi.hoisted(() => vi.fn());
+const toastSuccess = vi.hoisted(() => vi.fn());
+const sendDirectMessage = vi.hoisted(() => vi.fn());
+const downloadPdf = vi.hoisted(() => vi.fn());
+vi.mock('../../communication', () => ({
+  communicationApi: { sendDirectMessage: (p: unknown) => sendDirectMessage(p) },
+}));
+vi.mock('../components/application-pdf', () => ({
+  downloadApplicationAsPdf: (a: unknown) => downloadPdf(a),
+}));
+
+vi.mock('../api', () => ({ applicationsApi: api }));
+vi.mock('sonner', () => ({
+  toast: {
+    success: (m: string) => toastSuccess(m),
+    error: (m: string) => toastError(m),
+    info: vi.fn(),
+  },
+}));
+vi.mock('../../../../auth/AuthContext', () => ({
+  useAuth: () => ({ isAuthenticated: true, user: { id: 'admin-1', role: 'admin' } }),
+}));
+vi.mock('../../personnel', () => ({
+  useCurrentUserPermissions: () => ({ canDo: () => true }),
+}));
+vi.mock('../components/ReviewPage', () => ({
+  ReviewPage: (props: {
+    application: Application;
+    backLabel: string;
+    onClose: () => void;
+    onApprove: (a: Application) => void;
+  }) => (
+    <div>
+      <h1>{props.application.application_data.firstName} Hendricks</h1>
+      <button onClick={props.onClose}>Back to {props.backLabel.toLowerCase()}</button>
+      <button onClick={() => props.onApprove(props.application)}>Approve</button>
+    </div>
+  ),
+}));
+vi.mock('../components/CompleteOnBehalfPage', () => ({
+  CompleteOnBehalfPage: (props: { application: Application }) => (
+    <h1>Complete application for {props.application.application_data.firstName}</h1>
+  ),
+}));
+vi.mock('../components/ApplicationPreviewPage', () => ({
+  ApplicationPreviewPage: () => <p>Nothing you type here is saved.</p>,
+}));
+
+import { ApplicationsModule } from '../ApplicationsModule';
+
+function Location() {
+  return <output data-testid="search">{useLocation().search}</output>;
+}
+function renderAt(url = '/admin?module=applications') {
+  render(
+    <QueryClientProvider client={makeTestQueryClient()}>
+      <MemoryRouter initialEntries={[url]}>
+        <ApplicationsModule />
+        <Location />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+function setup() {
+  api.getApplications.mockImplementation(async (tab: string) =>
+    tab === 'all'
+      ? rows
+      : rows.filter((r) =>
+          tab === 'pending'
+            ? r.status === 'submitted'
+            : tab === 'incomplete'
+              ? r.status === 'in_progress'
+              : r.status === tab,
+        ),
+  );
+  api.getStats.mockResolvedValue({
+    total: 187,
+    submitted_for_review: 183,
+    approved: 2,
+    declined: 1,
+    invited: 0,
+    incomplete: 1,
+  });
+  api.getApplicationDetail.mockImplementation(async (id: string) => {
+    const found = rows.find((r) => r.id === id);
+    if (!found) throw new Error('404');
+    return found;
+  });
+  api.approveApplication.mockResolvedValue({});
+}
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
+describe('Applications page', () => {
+  it('shows status tabs with counts (All = total) and keeps the tab in the address', async () => {
+    setup();
+    renderAt();
+    await screen.findByText('Nadia Hendricks');
+    expect(screen.getByRole('tab', { name: /Pending review/ }).textContent).toContain('183');
+    expect(screen.getByRole('tab', { name: /All/ }).textContent).toContain('187');
+    fireEvent.mouseDown(screen.getByRole('tab', { name: /All/ }), { button: 0 });
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toBe('?module=applications&status=all'),
+    );
+    await screen.findByText('Riaan Hendricks');
+    expect(screen.getByRole('button', { name: 'Open client' })).toBeDefined();
+  });
+
+  it('has a Review button and ⋯ per row, and opens the review as a page', async () => {
+    setup();
+    renderAt();
+    await screen.findByText('Nadia Hendricks');
+    expect(screen.getByRole('button', { name: 'More actions for Nadia Hendricks' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Filter by origin' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Nadia Hendricks' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toBe(
+        '?module=applications&application=0190',
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Back to pending review' }));
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Applications' }));
+  });
+
+  it('confirms approval with what it does', async () => {
+    setup();
+    renderAt('/admin?module=applications&application=0190');
+    await waitFor(() => screen.getByRole('heading', { level: 1, name: 'Nadia Hendricks' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Approve Nadia Hendricks?')).toBeDefined();
+    expect(within(dialog).getByText(/creates the client profile/)).toBeDefined();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm approval' }));
+    await waitFor(() => expect(api.approveApplication).toHaveBeenCalledWith('0190'));
+  });
+
+  it('drops an unknown application from the address with a message', async () => {
+    setup();
+    renderAt('/admin?module=applications&application=nope');
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Application not found'));
+    await waitFor(() =>
+      expect(screen.getByTestId('search').textContent).toBe('?module=applications'),
+    );
+  });
+
+  it('opens the form preview and complete-on-behalf as pages', async () => {
+    setup();
+    renderAt();
+    await screen.findByText('Nadia Hendricks');
+    fireEvent.click(screen.getByRole('button', { name: /Preview form/ }));
+    await screen.findByText('Nothing you type here is saved.');
+    expect(screen.getByTestId('search').textContent).toBe('?module=applications&preview=form');
+    cleanup();
+    renderAt('/admin?module=applications&behalf=0190');
+    await screen.findByRole('heading', { name: 'Complete application for Nadia' });
+  });
+
+  it('shows the per-tab empty state', async () => {
+    setup();
+    renderAt('/admin?module=applications&status=invited');
+    await screen.findByRole('heading', { name: 'No invited applicants' });
+    expect(screen.getAllByRole('button', { name: /Invite applicant/ }).length).toBe(2);
+  });
+
+  it('sends a reminder to an incomplete applicant after confirming', async () => {
+    setup();
+    sendDirectMessage.mockResolvedValue({ success: true, messageId: 'm1', status: 'completed' });
+    renderAt('/admin?module=applications&status=incomplete');
+    await screen.findByText('Lindiwe Hendricks');
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'More actions for Lindiwe Hendricks' }),
+      { button: 0, ctrlKey: false },
+    );
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Send reminder' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Send a reminder to Lindiwe Hendricks?')).toBeDefined();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Send reminder' }));
+    await waitFor(() => expect(sendDirectMessage).toHaveBeenCalled());
+    expect(sendDirectMessage.mock.calls[0][0]).toMatchObject({
+      clientId: 'u-0192',
+      sendEmail: true,
+      clientEmail: 'Lindiwe@x.co',
+    });
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Reminder sent to Lindiwe@x.co'));
+  });
+
+  it('downloads an approved application as a PDF', async () => {
+    setup();
+    downloadPdf.mockResolvedValue(undefined);
+    renderAt('/admin?module=applications&status=approved');
+    await screen.findByText('Riaan Hendricks');
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'More actions for Riaan Hendricks' }),
+      {
+        button: 0,
+        ctrlKey: false,
+      },
+    );
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Download PDF' }));
+    await waitFor(() => expect(downloadPdf).toHaveBeenCalled());
+    expect(downloadPdf.mock.calls[0][0]).toMatchObject({ id: '0191' });
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('PDF downloaded'));
+  });
+
+  it('says when no application matches the filters, with Clear filters', async () => {
+    setup();
+    renderAt();
+    await screen.findByText('Nadia Hendricks');
+    fireEvent.change(screen.getByLabelText('Search applications'), { target: { value: 'zzz' } });
+    expect(
+      screen.getByRole('heading', { name: 'No applications match your filters' }),
+    ).toBeDefined();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' }).at(-1)!);
+    expect(screen.getByText('Nadia Hendricks')).toBeDefined();
+  });
+
+  it('tells a failed load of a linked application apart from a missing one', async () => {
+    setup();
+    api.getApplicationDetail.mockRejectedValue(new Error('Network down'));
+    renderAt('/admin?module=applications&application=0190');
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Couldn't open the application"));
+  });
+});

@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { NoteColor, CustomColourLabels } from '../types';
 import { NOTE_COLOR_CONFIG, NOTE_COLORS } from '../constants';
 import { Button } from '../../../../ui/button';
+import { toast } from 'sonner';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
 import { Dialog, DialogContent, DialogTitle } from '../../../../ui/dialog';
@@ -62,6 +63,7 @@ export function ColourLabelsDialog({ isOpen, onClose, labels }: ColourLabelsDial
       }
     }
     setAllLabels(labels);
+    toast.success('Colour labels saved');
     onClose();
   }, [draft, setAllLabels, onClose]);
 
@@ -83,10 +85,10 @@ export function ColourLabelsDialog({ isOpen, onClose, labels }: ColourLabelsDial
           </div>
           <div>
             <DialogTitle className="text-base font-semibold text-gray-900">
-              Colour Labels
+              Colour labels
             </DialogTitle>
             <p className="text-xs text-gray-500 mt-0.5">
-              Assign a description to each colour for quick identification.
+              Name each colour so it means something, e.g. “Follow up”.
             </p>
           </div>
         </div>
@@ -108,6 +110,7 @@ export function ColourLabelsDialog({ isOpen, onClose, labels }: ColourLabelsDial
                 </Label>
                 {/* Custom description input */}
                 <Input
+                  aria-label={`${cfg.label} label`}
                   value={draft[color] || ''}
                   onChange={(e) => handleChange(color, e.target.value)}
                   placeholder={`e.g. ${getPlaceholder(color)}`}
@@ -154,7 +157,7 @@ export function ColourLabelsDialog({ isOpen, onClose, labels }: ColourLabelsDial
                 onClick={handleClearAll}
               >
                 <RotateCcw className="h-3 w-3" />
-                Clear All
+                Clear all
               </Button>
             )}
           </div>
@@ -162,12 +165,8 @@ export function ColourLabelsDialog({ isOpen, onClose, labels }: ColourLabelsDial
             <Button variant="outline" size="sm" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              size="sm"
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-              onClick={handleSave}
-            >
-              Save Labels
+            <Button size="sm" onClick={handleSave}>
+              Save labels
             </Button>
           </div>
         </div>

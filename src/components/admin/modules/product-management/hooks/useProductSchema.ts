@@ -21,16 +21,19 @@ export function useProductSchema(selectedCategory: ProductCategoryId | '') {
   const queryClient = useQueryClient();
 
   // Server state: the persisted schema
-  const { data: serverSchema, isLoading } = useQuery({
+  const {
+    data: serverSchema,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: productKeys.schema(selectedCategory),
     queryFn: async () => {
       if (!selectedCategory) return null;
-      try {
-        const schema = await productManagementApi.fetchSchema(selectedCategory);
-        if (schema && schema.fields) return schema;
-      } catch {
-        // Fall through to default
-      }
+      // A failed load throws (the screen shows an error); only "nothing saved
+      // yet" falls back to the default schema.
+      const schema = await productManagementApi.fetchSchema(selectedCategory);
+      if (schema && schema.fields) return schema;
       // Fallback to default schema
       const defaultSchema = DEFAULT_SCHEMAS.find((s) => s.categoryId === selectedCategory);
       return defaultSchema ? { fields: [...defaultSchema.fields] } : { fields: [] };
@@ -95,6 +98,8 @@ export function useProductSchema(selectedCategory: ProductCategoryId | '') {
   return {
     currentFields,
     isLoading,
+    error: error as Error | null,
+    refetch,
     hasUnsavedChanges,
     saveSchema,
     updateFields,

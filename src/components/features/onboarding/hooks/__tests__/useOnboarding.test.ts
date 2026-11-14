@@ -101,8 +101,9 @@ function makeValidStep1() {
 beforeEach(() => {
   vi.clearAllMocks();
   setupDefaultAuth();
-  // Default: no application on server — fast resolve
-  mockGetApplication.mockResolvedValue({ success: false });
+  // Default: no application on server yet (the service answers success with
+  // data null) — fast resolve
+  mockGetApplication.mockResolvedValue({ success: true, data: null });
   mockSaveApplicationProgress.mockResolvedValue({ success: true });
   mockSubmitApplication.mockResolvedValue({ success: true });
   mockCompleteApplication.mockResolvedValue(undefined);
@@ -169,7 +170,7 @@ describe('useOnboarding — load from server', () => {
     expect(result.current.isInitialLoad).toBe(true);
 
     await act(async () => {
-      resolveGet({ success: false });
+      resolveGet({ success: true, data: null });
     });
 
     expect(result.current.isInitialLoad).toBe(false);
@@ -235,7 +236,7 @@ describe('useOnboarding — load from server', () => {
   });
 
   it('pre-fills name/email from user when no app data exists on server', async () => {
-    mockGetApplication.mockResolvedValueOnce({ success: false });
+    mockGetApplication.mockResolvedValueOnce({ success: true, data: null });
 
     const { result } = renderHook(() => useOnboarding());
     await act(async () => {});
@@ -261,6 +262,75 @@ describe('useOnboarding — load from server', () => {
     await act(async () => {});
 
     expect(result.current.currentStep).toBe(2);
+  });
+});
+
+describe('useOnboarding — loading an existing application fails', () => {
+  it('reports the failure instead of starting a fresh form, and saves nothing', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mockGetApplication.mockResolvedValueOnce({ success: false, error: 'Server unavailable' });
+
+    const { result } = renderHook(() => useOnboarding());
+    await act(async () => {});
+
+    expect(result.current.loadError).toBe('Server unavailable');
+    expect(result.current.isInitialLoad).toBe(false);
+    // Not pre-filled as a fresh application
+    expect(result.current.data.firstName).toBe('');
+
+    // Edits and navigation must not overwrite the saved application
+    act(() => result.current.updateData('firstName', 'X'));
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    await act(async () => {
+      await result.current.goToPreviousStep();
+    });
+    expect(mockSaveApplicationProgress).not.toHaveBeenCalled();
+    const submitted = await act(async () => result.current.submit());
+    expect(submitted).toEqual({ success: false, error: 'Server unavailable' });
+    expect(mockSubmitApplication).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('treats a thrown load the same way', async () => {
+    mockGetApplication.mockRejectedValueOnce(new Error('Network down'));
+    const { result } = renderHook(() => useOnboarding());
+    await act(async () => {});
+    expect(result.current.loadError).toBe('Network down');
+  });
+
+  it('retryLoad loads the saved application and clears the error', async () => {
+    mockGetApplication.mockResolvedValueOnce({ success: false, error: 'Server unavailable' });
+    mockGetApplication.mockResolvedValueOnce({
+      success: true,
+      data: {
+        id: 'app-9',
+        application_data: { firstName: 'Sue', lastName: 'Lee', currentStep: 3 },
+      },
+    });
+
+    const { result } = renderHook(() => useOnboarding());
+    await act(async () => {});
+    expect(result.current.loadError).toBe('Server unavailable');
+
+    await act(async () => {
+      result.current.retryLoad();
+    });
+    await act(async () => {});
+
+    expect(mockGetApplication).toHaveBeenCalledTimes(2);
+    expect(result.current.loadError).toBeNull();
+    expect(result.current.data.firstName).toBe('Sue');
+    expect(result.current.currentStep).toBe(3);
+  });
+
+  it('still starts fresh when there is no application yet', async () => {
+    mockGetApplication.mockResolvedValueOnce({ success: true, data: null });
+    const { result } = renderHook(() => useOnboarding());
+    await act(async () => {});
+    expect(result.current.loadError).toBeNull();
+    expect(result.current.data.firstName).toBe('Alice');
   });
 });
 
@@ -673,7 +743,7 @@ describe('useOnboarding — submit', () => {
 
 describe('useOnboarding — saveNow', () => {
   it('calls saveApplicationProgress after initial load completes', async () => {
-    mockGetApplication.mockResolvedValueOnce({ success: false });
+    mockGetApplication.mockResolvedValueOnce({ success: true, data: null });
 
     const { result } = renderHook(() => useOnboarding());
     await act(async () => {}); // Let initial load finish
@@ -714,7 +784,7 @@ describe('useOnboarding — admin mode', () => {
 
 describe('useOnboarding — saveStatus transitions', () => {
   it('sets saveStatus to saved after a successful saveNow', async () => {
-    mockGetApplication.mockResolvedValueOnce({ success: false });
+    mockGetApplication.mockResolvedValueOnce({ success: true, data: null });
     mockSaveApplicationProgress.mockResolvedValue({ success: true });
 
     const { result } = renderHook(() => useOnboarding());
@@ -734,7 +804,7 @@ describe('useOnboarding — saveStatus transitions', () => {
   });
 
   it('sets saveStatus to error on save failure', async () => {
-    mockGetApplication.mockResolvedValueOnce({ success: false });
+    mockGetApplication.mockResolvedValueOnce({ success: true, data: null });
     mockSaveApplicationProgress.mockResolvedValueOnce({ success: false, error: 'DB error' });
 
     const { result } = renderHook(() => useOnboarding());

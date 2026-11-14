@@ -37,7 +37,7 @@ export function ProviderDeleteDialog({
               <AlertTriangle className="h-6 w-6 text-red-600" />
             </div>
             <div className="flex-1">
-              <AlertDialogTitle className="text-xl">Delete Provider</AlertDialogTitle>
+              <AlertDialogTitle className="text-xl">Delete provider</AlertDialogTitle>
               <AlertDialogDescription className="mt-1">
                 This action cannot be undone.
               </AlertDialogDescription>
@@ -110,7 +110,7 @@ export function ProviderDeleteDialog({
             ) : (
               <div className="contents">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete Provider
+                Delete provider
               </div>
             )}
           </AlertDialogAction>

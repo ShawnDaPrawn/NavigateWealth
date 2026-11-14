@@ -27,6 +27,7 @@ export function renderPolicyFieldInput({
   handleFieldChange,
   recalcMaturityValues,
   tableStructure,
+  openAssumptions = false,
 }: {
   field: ProductField;
   formData: Record<string, unknown>;
@@ -35,6 +36,8 @@ export function renderPolicyFieldInput({
   handleFieldChange: (fieldId: string, value: string | number | boolean) => void;
   recalcMaturityValues: (data: Record<string, unknown>) => Record<string, unknown>;
   tableStructure: ProductField[];
+  /** Open the assumptions tool on its first render. */
+  openAssumptions?: boolean;
 }) {
   // formData is Record<string, unknown>; coerce to string for input/select
   // bindings (the boolean case below reads formData[field.id] directly).
@@ -100,6 +103,7 @@ export function renderPolicyFieldInput({
                   tableStructure={tableStructure}
                   formData={formData}
                   handleFieldChange={handleFieldChange}
+                  defaultOpen={openAssumptions}
                 />
                 <Button
                   type="button"

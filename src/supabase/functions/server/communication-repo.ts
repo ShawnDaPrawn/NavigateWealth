@@ -198,6 +198,10 @@ export async function fetchMatcherClients(): Promise<MatcherClient[]> {
 
     return {
       id: c.id as string,
+      // For showing who matched (group preview); the matcher ignores them.
+      firstName: c.firstName,
+      lastName: c.lastName,
+      email: c.email,
       gender,
       country: nationality,
       maritalStatus,

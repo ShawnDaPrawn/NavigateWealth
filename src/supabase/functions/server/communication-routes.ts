@@ -23,18 +23,21 @@ import {
   UpdateTemplateSchema,
   EmailFooterSettingsSchema,
   CreateCampaignSchema,
+  GroupFilterConfigSchema,
 } from './communication-validation.ts';
 import type {
   MessageCreate,
   MessageCategory,
   Group,
   GroupCreate,
+  GroupFilterConfig,
   CampaignCreate,
   CampaignStatus,
   CommunicationChannel,
   HistoryFilters,
 } from './communication-types.ts';
 import { validateBody, body } from './validate.ts';
+import { z } from 'npm:zod@4.6.5';
 
 /** Accepted values for the history view's `?channel=` filter. */
 const CAMPAIGN_CHANNELS: CommunicationChannel[] = ['email', 'whatsapp', 'portal'];
@@ -341,6 +344,25 @@ app.delete(
     }).catch(() => {});
 
     return c.json({ success: true });
+  }),
+);
+
+/**
+ * POST /communication/groups/preview
+ * Which active clients a set of group rules matches right now (count + first
+ * 50), without saving anything.
+ */
+const PreviewGroupSchema = z.object({ filterConfig: GroupFilterConfigSchema });
+
+app.post(
+  '/groups/preview',
+  requireAdmin,
+  validateBody(PreviewGroupSchema),
+  asyncHandler(async (c) => {
+    const { filterConfig } = body(c, PreviewGroupSchema);
+    const { previewGroupMembers } = await import('./communication-group-preview.ts');
+    const preview = await previewGroupMembers(filterConfig as GroupFilterConfig);
+    return c.json(preview);
   }),
 );
 

@@ -25,12 +25,13 @@ import { toast } from 'sonner';
 import { brandApi } from './brand-api';
 import type { TypographyConfig } from './brand-api';
 import { SectionSkeleton } from './CorporateIdentitySkeleton';
-import { useConfirm } from '../../../layout/page';
+import { useConfirm, ErrorState } from '../../../layout/page';
 
 export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
   const [config, setConfig] = useState<TypographyConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editFont, setEditFont] = useState({
@@ -64,7 +65,9 @@ export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
           updatedBy: '',
         },
       );
+      setLoadError(null);
     } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err));
       console.error('Failed to load typography:', err);
     } finally {
       setLoading(false);
@@ -152,6 +155,15 @@ export function TypographySection({ onUpdate }: { onUpdate: () => void }) {
   };
 
   if (loading) return <SectionSkeleton rows={3} />;
+  if (loadError) {
+    return (
+      <ErrorState
+        title="Unable to load typography"
+        onRetry={() => void loadConfig()}
+        details={loadError}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

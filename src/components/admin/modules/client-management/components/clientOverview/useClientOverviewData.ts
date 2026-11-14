@@ -109,6 +109,8 @@ export function useClientOverviewData(client: Client, mode: DashboardMode = 'adv
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** The profile read failed (the Overview shows an error, not empty figures). */
+  const [profileLoadError, setProfileLoadError] = useState<unknown>(null);
 
   // Policies and schemas come from the shared, cached queries the Policies tab
   // also reads (shared/api/clientPolicies.ts): the overview paints from the
@@ -225,8 +227,10 @@ export function useClientOverviewData(client: Client, mode: DashboardMode = 'adv
     try {
       const profile = await queryClient.fetchQuery(getClientProfileQueryOptions(client.id));
       setProfile(profile || client.profile?.personalInformation || null);
-    } catch {
+      setProfileLoadError(null);
+    } catch (err) {
       setProfile(client.profile?.personalInformation || null);
+      setProfileLoadError(err);
     } finally {
       setLoadingProfile(false);
     }
@@ -892,7 +896,11 @@ export function useClientOverviewData(client: Client, mode: DashboardMode = 'adv
     documentChecklist,
   ]);
 
+  // Primary data for the Overview: if it failed, say so instead of showing zeros.
+  const loadError: unknown = policiesQuery.error ?? profileLoadError ?? null;
+
   return {
+    loadError,
     actionDistribution,
     actionItems,
     activityExpanded,

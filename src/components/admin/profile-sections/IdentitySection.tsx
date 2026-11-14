@@ -267,7 +267,7 @@ export function IdentitySection({
                 <Shield className="h-6 w-6 text-white" />
               </div>
               <div>
-                <CardTitle>KYC Documents</CardTitle>
+                <CardTitle>KYC documents</CardTitle>
                 <CardDescription>
                   {identityDocuments.length}{' '}
                   {identityDocuments.length === 1 ? 'KYC document' : 'KYC documents'} on file
@@ -322,7 +322,7 @@ export function IdentitySection({
               <div className="mx-auto h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                 <Shield className="h-8 w-8 text-gray-400" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Yet</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No documents yet</h3>
               <p className="text-sm text-gray-500 mb-4">
                 Add KYC documents to support the client's compliance record
               </p>

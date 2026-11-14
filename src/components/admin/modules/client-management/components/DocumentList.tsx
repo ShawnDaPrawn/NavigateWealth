@@ -127,7 +127,7 @@ export function DocumentList({
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Folder className="h-5 w-5" />
-          Client Documents & Links
+          Documents & links
           {documents.length > 0 && filteredDocuments.length !== documents.length && (
             <span className="text-sm font-normal text-muted-foreground ml-2">
               (Showing {filteredDocuments.length} of {documents.length})

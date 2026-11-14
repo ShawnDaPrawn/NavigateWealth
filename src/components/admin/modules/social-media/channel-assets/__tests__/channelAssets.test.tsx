@@ -5,6 +5,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router';
 
 const api = vi.hoisted(() => ({
   listChannels: vi.fn(),
@@ -56,7 +57,17 @@ const asset = (over: Partial<ChannelAsset> = {}): ChannelAsset => ({
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <MemoryRouter>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    </MemoryRouter>
+  );
+}
+
+/** Radix menus open on pointerdown, not click, in jsdom. */
+function openMenu(name: RegExp) {
+  const trigger = screen.getByRole('button', { name });
+  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: 'mouse' });
 }
 
 function file(name: string, type: string, size: number): File {
@@ -133,11 +144,10 @@ describe('ChannelAssetsTab', () => {
     render(<ChannelAssetsTab />, { wrapper });
     await waitFor(() => expect(screen.getByText('chart.png')).toBeDefined());
 
-    const linkedinTab = screen.getByRole('tab', { name: /LinkedIn/ });
-    // Radix activates a tab on focus under its default automatic mode, so a
-    // bare click in jsdom is not enough to switch it.
-    linkedinTab.focus();
-    fireEvent.click(linkedinTab);
+    // Channels are filter chips now, not a second row of tabs.
+    const linkedinChip = screen.getByRole('button', { name: /LinkedIn/ });
+    expect(linkedinChip.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(linkedinChip);
     await waitFor(() =>
       expect(api.list).toHaveBeenCalledWith(expect.objectContaining({ channel: 'linkedin' })),
     );
@@ -180,7 +190,8 @@ describe('ChannelAssetsTab', () => {
     render(<ChannelAssetsTab />, { wrapper });
     await waitFor(() => expect(screen.getByText('chart.png')).toBeDefined());
 
-    fireEvent.click(screen.getByRole('button', { name: /archive chart\.png/i }));
+    openMenu(/more actions for chart\.png/i);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /archive/i }));
     await waitFor(() =>
       expect(api.update).toHaveBeenCalledWith(
         'a1',
@@ -188,12 +199,25 @@ describe('ChannelAssetsTab', () => {
       ),
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /delete chart\.png/i }));
-    expect(screen.getByText(/Delete this asset\?/i)).toBeDefined();
+    openMenu(/more actions for chart\.png/i);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /delete/i }));
+    expect(await screen.findByText(/Delete this asset\?/i)).toBeDefined();
     expect(api.remove).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(api.remove).toHaveBeenCalledWith('a1'));
+  });
+
+  it('filters by status with a segmented control', async () => {
+    render(<ChannelAssetsTab />, { wrapper });
+    await waitFor(() => expect(screen.getByText('chart.png')).toBeDefined());
+    const archived = screen.getByRole('tab', { name: 'Archived' });
+    archived.focus();
+    fireEvent.mouseDown(archived);
+    fireEvent.click(archived);
+    await waitFor(() =>
+      expect(api.list).toHaveBeenCalledWith(expect.objectContaining({ status: 'archived' })),
+    );
   });
 
   it('plays a video asset rather than trying to show it as a picture', async () => {

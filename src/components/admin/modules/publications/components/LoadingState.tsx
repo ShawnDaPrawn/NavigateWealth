@@ -5,32 +5,32 @@
  */
 
 import { Loader2 } from 'lucide-react';
+import { Skeleton } from '../../../../ui/skeleton';
 
 interface LoadingStateProps {
+  /** Read out to screen readers; the page shows a skeleton, not a spinner. */
   message?: string;
   size?: 'sm' | 'md' | 'lg';
   fullPage?: boolean;
 }
 
-export function LoadingState({
-  message = 'Loading...',
-  size = 'md',
-  fullPage = false,
-}: LoadingStateProps) {
-  const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12',
-  };
-
-  const containerClasses = fullPage
-    ? 'flex flex-col items-center justify-center min-h-[400px]'
-    : 'flex flex-col items-center justify-center py-12';
-
+/**
+ * Loading = a skeleton in the shape of a list (design system: States), with
+ * `aria-busy`. `message` is the accessible name.
+ */
+export function LoadingState({ message = 'Loading…', fullPage = false }: LoadingStateProps) {
   return (
-    <div className={containerClasses}>
-      <Loader2 className={`${sizeClasses[size]} animate-spin text-blue-600 mb-4`} />
-      <p className="text-gray-600">{message}</p>
+    <div
+      aria-busy="true"
+      aria-label={message}
+      role="status"
+      data-testid="loading-skeleton"
+      className={`space-y-3 ${fullPage ? 'min-h-[400px]' : ''}`}
+    >
+      <Skeleton className="h-9 w-full max-w-sm rounded-lg" />
+      {[0, 1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-12 w-full rounded-lg" />
+      ))}
     </div>
   );
 }

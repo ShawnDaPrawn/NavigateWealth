@@ -36,9 +36,11 @@ interface ReportDialogProps {
   onOpenChange: (open: boolean) => void;
   report: Report | null;
   onRun: (report: Report) => void;
+  /** Saved custom reports only: delete it (the caller confirms). */
+  onDelete?: (report: Report) => void;
 }
 
-export function ReportDialog({ open, onOpenChange, report, onRun }: ReportDialogProps) {
+export function ReportDialog({ open, onOpenChange, report, onRun, onDelete }: ReportDialogProps) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -187,6 +189,15 @@ export function ReportDialog({ open, onOpenChange, report, onRun }: ReportDialog
         </div>
 
         <DialogFooter>
+          {report?.custom && onDelete && (
+            <Button
+              variant="ghost"
+              className="mr-auto text-red-700 hover:bg-red-50 hover:text-red-800"
+              onClick={() => onDelete(report)}
+            >
+              Delete report
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

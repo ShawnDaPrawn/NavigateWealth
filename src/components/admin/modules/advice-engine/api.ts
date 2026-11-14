@@ -151,17 +151,13 @@ export const aiIntelligenceApi = {
    * }
    */
   async getStatus(): Promise<ApiKeyStatus> {
+    // A failed status request is a failed load, not "the key is missing":
+    // rethrow so the screen shows the shared error instead of the key warning.
     try {
-      const response = await api.get<ApiKeyStatus>(ENDPOINTS.AI_STATUS);
-      return response;
+      return await api.get<ApiKeyStatus>(ENDPOINTS.AI_STATUS);
     } catch (error) {
       logger.error('Failed to get API key status', error);
-      // Return default unconfigured status on error
-      return {
-        configured: false,
-        valid: false,
-        error: getErrorMessage(error),
-      };
+      throw error;
     }
   },
 

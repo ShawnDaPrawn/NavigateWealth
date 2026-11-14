@@ -10,7 +10,11 @@ const envelopes = [
   { id: 'e4', status: 'expired' },
 ] as unknown as EsignEnvelope[];
 
-vi.mock('../hooks/useEnvelopes', () => ({ useEnvelopes: () => ({ envelopes }) }));
+const envelopeLoad = vi.hoisted(() => ({ error: null as string | null }));
+vi.mock('../hooks/useEnvelopes', () => ({
+  useEnvelopes: () =>
+    envelopeLoad.error ? { envelopes: [], error: envelopeLoad.error } : { envelopes, error: null },
+}));
 vi.mock('../components/EnvelopesList', () => ({ EnvelopesList: () => <div>envelope list</div> }));
 vi.mock('../components/TemplateLibrary', () => ({
   TemplateLibrary: () => <div>template library</div>,
@@ -72,6 +76,17 @@ function renderDashboard(url = '/admin?module=esign', access = allTools, onBulkS
 }
 
 describe('EsignDashboard', () => {
+  it('shows "—" for the figures when the envelopes failed to load', () => {
+    envelopeLoad.error = 'Server error';
+    try {
+      renderDashboard('/admin?module=esign', allTools, vi.fn());
+      expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(5);
+      expect(screen.queryByText('0%')).toBeNull();
+    } finally {
+      envelopeLoad.error = null;
+    }
+  });
+
   it('shows the header, figures and envelopes by default', () => {
     const props = renderDashboard('/admin?module=esign', allTools, vi.fn());
     expect(screen.getByRole('heading', { level: 1, name: 'E-Signature' })).toBeDefined();
@@ -83,6 +98,23 @@ describe('EsignDashboard', () => {
     expect(props.onCreateNew).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Bulk send from template' }));
     expect(props.onBulkSend).toHaveBeenCalled();
+  });
+
+  it('shows "View only" instead of actions for a role that can only look', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin?module=esign']}>
+        <EsignDashboard
+          onCreateNew={vi.fn()}
+          onViewEnvelope={vi.fn()}
+          onRefresh={vi.fn()}
+          onOpenEnvelopeById={vi.fn()}
+          manageAccess={allTools}
+          viewOnly
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('View only')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'New envelope' })).toBeNull();
   });
 
   it('hides bulk send when the person cannot send', () => {

@@ -80,16 +80,22 @@ export function useDeleteNote() {
 /**
  * Convert a note to a to-do task
  */
-export function useConvertNoteToTask() {
+export function useConvertNoteToTask(options: { onOpenTask?: (taskId: string) => void } = {}) {
   const qc = useQueryClient();
+  const { onOpenTask } = options;
 
   return useMutation({
     mutationFn: (noteId: string) => NotesAPI.convertToTask(noteId),
-    onSuccess: () => {
+    onSuccess: (data?: { taskId?: string }) => {
       qc.invalidateQueries({ queryKey: noteKeys.all });
       qc.invalidateQueries({ queryKey: tasksKeys.all });
+      const taskId = data?.taskId;
       toast.success('Note converted to task', {
-        description: 'You can find it in your To-Do board.',
+        description: onOpenTask && taskId ? undefined : 'You can find it in your To-Do board.',
+        action:
+          onOpenTask && taskId
+            ? { label: 'Open task', onClick: () => onOpenTask(taskId) }
+            : undefined,
       });
     },
     onError: (error: Error) => {

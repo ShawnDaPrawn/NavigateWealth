@@ -6,6 +6,7 @@
  * file. Each piece was already a self-contained function with its own props;
  * this only changes which file it lives in.
  */
+import { ErrorState } from '../../../layout/page';
 import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
 import type { LegalDocumentAuditEntry } from '../types';
@@ -14,9 +15,14 @@ import { formatDate } from './legalDocumentHelpers';
 export function AuditList({
   entries,
   isLoading,
+  error,
+  onRetry,
 }: {
   entries: LegalDocumentAuditEntry[];
   isLoading: boolean;
+  /** A failed load: shown as an error, never as "no entries". */
+  error?: Error | null;
+  onRetry?: () => void;
 }) {
   if (isLoading) {
     return (
@@ -25,6 +31,16 @@ export function AuditList({
           <Skeleton key={index} className="h-24 w-full" />
         ))}
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Unable to load the audit trail"
+        onRetry={onRetry}
+        details={error.message}
+      />
     );
   }
 

@@ -11,6 +11,7 @@
  * Heavy children are stubbed; the stubs echo the props the module wires into
  * them so the tests assert the wiring, not the children.
  */
+import { MemoryRouter } from 'react-router';
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@/test/utils';
 import { toast } from 'sonner';
@@ -314,9 +315,9 @@ const DRAFT_ENVELOPE = {
 };
 
 async function openTemplate(testId: string) {
-  render(<EsignModule />);
+  render(<EsignModule />, { wrapper: MemoryRouter });
   fireEvent.click(screen.getByTestId(testId));
-  await waitFor(() => screen.getByText('Add Recipients'));
+  await waitFor(() => screen.getByText('Add recipients'));
   // RecipientsManager is React.lazy — the heading paints before the child.
   await waitFor(() => screen.getByTestId('recipients-manager'));
 }
@@ -354,10 +355,10 @@ describe('EsignModule wizard flow', () => {
   });
 
   it('template without saved documents goes to the upload step instead', async () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('use-tpl-no-docs'));
     await waitFor(() => screen.getByTestId('upload-step'));
-    expect(screen.queryByText('Add Recipients')).toBeNull();
+    expect(screen.queryByText('Add recipients')).toBeNull();
   });
 
   it('shows the express banner and button for a template with a complete field layout', async () => {
@@ -379,7 +380,7 @@ describe('EsignModule wizard flow', () => {
     expect(screen.getByText('Add at least one recipient to continue.')).toBeTruthy();
 
     fireEvent.click(next);
-    expect(screen.getByText('Add Recipients')).toBeTruthy();
+    expect(screen.getByText('Add recipients')).toBeTruthy();
     expect(spies.materialiseTemplateDraft).not.toHaveBeenCalled();
   });
 
@@ -457,6 +458,15 @@ describe('EsignModule wizard flow', () => {
     expect(toast.success).toHaveBeenCalledWith('Document sent for signature!');
   });
 
+  it('shows the three-step stepper and a "Save draft & exit" escape on every wizard step', async () => {
+    await openTemplate('use-tpl-ready');
+    const stepper = screen.getByTestId('esign-wizard-stepper');
+    expect(stepper.textContent).toContain('Documents');
+    expect(stepper.textContent).toContain('Recipients');
+    expect(stepper.textContent).toContain('Fields & send');
+    expect(screen.getByRole('button', { name: 'Save draft & exit' })).toBeTruthy();
+  });
+
   it('Exit offers to keep the work, and saving it materialises a resumable draft', async () => {
     await openTemplate('use-tpl-ready');
 
@@ -487,7 +497,7 @@ describe('EsignModule wizard flow', () => {
       expect(toast.error).toHaveBeenCalledWith('network died');
     });
     // Still on the recipients step, with everything intact.
-    expect(screen.getByText('Add Recipients')).toBeTruthy();
+    expect(screen.getByText('Add recipients')).toBeTruthy();
     expect(screen.queryByTestId('esign-dashboard')).toBeNull();
   });
 
@@ -495,7 +505,7 @@ describe('EsignModule wizard flow', () => {
     await openTemplate('use-tpl-ready');
     fireEvent.click(screen.getByRole('button', { name: /^back$/i }));
     await waitFor(() => screen.getByTestId('esign-dashboard'));
-    expect(screen.queryByText('Add Recipients')).toBeNull();
+    expect(screen.queryByText('Add recipients')).toBeNull();
   });
 
   it('resume rebuilds signers from draft_signers and opens the studio on a fresh document URL', async () => {
@@ -519,7 +529,7 @@ describe('EsignModule wizard flow', () => {
     });
     spies.getDocumentUrl.mockResolvedValue({ url: 'https://x/fresh.pdf' });
 
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('resume-draft'));
     await waitFor(() => screen.getByTestId('prepare-step'));
 
@@ -580,7 +590,7 @@ describe('EsignModule wizard flow', () => {
     });
     spies.getDocumentUrl.mockResolvedValue({ url: 'https://x/fresh.pdf' });
 
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('resume-draft'));
     await waitFor(() => screen.getByTestId('prepare-step'));
 
@@ -619,7 +629,7 @@ describe('EsignModule wizard flow', () => {
     });
     spies.getDocumentUrl.mockResolvedValue({ url: 'https://x/fresh.pdf' });
 
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('resume-draft'));
     await waitFor(() => screen.getByTestId('prepare-step'));
 
@@ -642,7 +652,7 @@ describe('EsignModule wizard flow', () => {
   });
 
   it('bulk send opens its dialog; Manage tools are on the page, not in dialogs', async () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('open-bulk-send'));
     await waitFor(() => screen.getByTestId('bulk-send-dialog'));
     expect(JSON.parse(screen.getByTestId('manage-access').textContent ?? '{}')).toEqual({
@@ -658,8 +668,54 @@ describe('EsignModule wizard flow', () => {
     expect(screen.queryByTestId('recovery-bin-dialog')).toBeNull();
   });
 
+  it('opens the envelope named in the address as a page, with Back to envelopes', async () => {
+    spies.getEnvelope.mockResolvedValueOnce({ id: 'env-7', title: 'Mandate', status: 'sent' });
+    render(<EsignModule />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter initialEntries={['/admin?module=esign&envelope=env-7']}>
+          {children}
+        </MemoryRouter>
+      ),
+    });
+    await waitFor(() => screen.getByTestId('inspector'));
+    expect(spies.getEnvelope).toHaveBeenCalledWith('env-7');
+    // The list stays mounted (keeping its filters) but hidden.
+    expect(screen.getByTestId('esign-dashboard').closest('[hidden]')).not.toBeNull();
+  });
+
+  it('says the envelope was not found when the API answers 404, and shows the list', async () => {
+    spies.getEnvelope.mockRejectedValueOnce(
+      Object.assign(new Error('Not found'), { statusCode: 404 }),
+    );
+    render(<EsignModule />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter initialEntries={['/admin?module=esign&envelope=missing']}>
+          {children}
+        </MemoryRouter>
+      ),
+    });
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Envelope not found'));
+    expect(screen.getByTestId('esign-dashboard').closest('[hidden]')).toBeNull();
+    expect(screen.queryByTestId('inspector')).toBeNull();
+  });
+
+  it('says it could not open the envelope on other errors', async () => {
+    spies.getEnvelope.mockRejectedValueOnce(Object.assign(new Error('boom'), { statusCode: 500 }));
+    render(<EsignModule />, {
+      wrapper: ({ children }) => (
+        <MemoryRouter initialEntries={['/admin?module=esign&envelope=env-x']}>
+          {children}
+        </MemoryRouter>
+      ),
+    });
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Could not open this envelope. Please try again.'),
+    );
+    expect(screen.queryByTestId('inspector')).toBeNull();
+  });
+
   it('opens an envelope found only by id (audit log rows)', async () => {
-    render(<EsignModule />);
+    render(<EsignModule />, { wrapper: MemoryRouter });
     fireEvent.click(screen.getByTestId('open-env-by-id'));
     await waitFor(() => expect(spies.getEnvelope).toHaveBeenCalledWith('env-9'));
   });

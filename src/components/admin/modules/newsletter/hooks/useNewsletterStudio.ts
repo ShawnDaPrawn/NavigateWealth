@@ -137,7 +137,16 @@ export function usePublishToWebsite() {
       newsletterStudioApi.publishToWebsite(id, issueMonth),
     onSuccess: (campaign) => {
       invalidate(campaign.id);
-      toast.success('Published on the website');
+      const slug = campaign.website?.slug;
+      toast.success('Published on the website', {
+        action: slug
+          ? {
+              label: 'View page',
+              onClick: () =>
+                window.open(`/resources/newsletter/${slug}`, '_blank', 'noopener,noreferrer'),
+            }
+          : undefined,
+      });
     },
     onError: (error) => toast.error(errorMessage(error, 'Failed to publish on the website')),
   });

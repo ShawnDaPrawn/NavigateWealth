@@ -25,6 +25,19 @@ import type {
 /**
  * Hook for AI social media content generation (text + images + bundles).
  */
+/**
+ * The API helpers answer `{ success: false, error }` instead of throwing, so
+ * a failed request looks like data. Surface either form as an error message.
+ */
+function queryError(query: {
+  error: unknown;
+  data?: { success?: boolean; error?: string } | undefined;
+}): string | null {
+  if (query.error) return query.error instanceof Error ? query.error.message : 'Request failed';
+  if (query.data && query.data.success === false) return query.data.error || 'Request failed';
+  return null;
+}
+
 export function useSocialMediaAI() {
   const queryClient = useQueryClient();
 
@@ -144,16 +157,22 @@ export function useSocialMediaAI() {
     bundleError: generateBundleMutation.data?.error || null,
     resetBundle: generateBundleMutation.reset,
 
-    // Status
+    // Status. A failed check is an error, never "not configured".
     isConfigured: statusQuery.data?.data?.configured ?? false,
     statusLoading: statusQuery.isLoading,
+    statusError: queryError(statusQuery),
+    refetchStatus: statusQuery.refetch,
 
     // Text history
     history: (historyQuery.data?.data || []) as AIGenerationRecord[],
     historyLoading: historyQuery.isLoading,
+    historyError: queryError(historyQuery),
+    refetchHistory: historyQuery.refetch,
 
     // Image history
     imageHistory: (imageHistoryQuery.data?.data || []) as AIImageRecord[],
     imageHistoryLoading: imageHistoryQuery.isLoading,
+    imageHistoryError: queryError(imageHistoryQuery),
+    refetchImageHistory: imageHistoryQuery.refetch,
   };
 }

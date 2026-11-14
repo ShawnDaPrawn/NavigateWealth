@@ -13,7 +13,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
-import { Mail, Send, Users, Calendar, TrendingUp } from 'lucide-react';
+import { ArrowRight, Mail, Send, Users, Calendar, TrendingUp } from 'lucide-react';
+import { Button } from '../../../../ui/button';
+import { CardError } from './CardError';
 import { api } from '../../../../../utils/api';
 import { newsletterKeys } from '../../../../../utils/queryKeys';
 
@@ -24,16 +26,13 @@ interface NewsletterStats {
   lastBroadcastAt: string | null;
 }
 
+/** Throws when the stats can't be read, so the card can offer Try again. */
 async function fetchNewsletterStats(): Promise<NewsletterStats | null> {
-  try {
-    const json = await api.get<{ success?: boolean; data?: NewsletterStats }>(
-      '/newsletter/admin/stats',
-    );
-    if (json.success) return json.data ?? null;
-  } catch (err) {
-    console.error('Failed to fetch newsletter stats:', err);
-  }
-  return null;
+  const json = await api.get<{ success?: boolean; data?: NewsletterStats; error?: string }>(
+    '/newsletter/admin/stats',
+  );
+  if (!json.success) throw new Error(json.error || 'Newsletter stats unavailable');
+  return json.data ?? null;
 }
 
 function formatRelativeDate(iso: string): string {
@@ -69,11 +68,20 @@ function LastBroadcastBadge({ iso }: { iso: string }) {
   );
 }
 
-export function NewsletterKPICard() {
+interface NewsletterKPICardProps {
+  onModuleChange?: (module: string) => void;
+}
+
+export function NewsletterKPICard({ onModuleChange }: NewsletterKPICardProps = {}) {
   // React Query rather than an effect into local state, so this card is cached
   // with the rest of the dashboard instead of re-requesting and re-spinning on
   // every mount — which included every return from another admin module.
-  const { data: stats = null, isLoading: loading } = useQuery({
+  const {
+    data: stats = null,
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: newsletterKeys.stats(),
     queryFn: fetchNewsletterStats,
     staleTime: 5 * 60 * 1000,
@@ -88,14 +96,14 @@ export function NewsletterKPICard() {
       iconColor: 'text-purple-600',
     },
     {
-      label: 'Total Sent',
+      label: 'Total sent',
       value: stats?.totalBroadcasts ?? 0,
       icon: Send,
       iconBg: 'bg-blue-50',
       iconColor: 'text-blue-600',
     },
     {
-      label: 'This Month',
+      label: 'This month',
       value: stats?.broadcastsThisMonth ?? 0,
       icon: TrendingUp,
       iconBg: 'bg-green-50',
@@ -113,47 +121,68 @@ export function NewsletterKPICard() {
             </div>
             Newsletter
           </CardTitle>
-          {!loading && stats?.lastBroadcastAt && <LastBroadcastBadge iso={stats.lastBroadcastAt} />}
+          <div className="flex items-center gap-2">
+            {!loading && stats?.lastBroadcastAt && (
+              <LastBroadcastBadge iso={stats.lastBroadcastAt} />
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onModuleChange?.('newsletter')}
+              className="h-7 gap-1.5 text-xs"
+            >
+              Open
+              <ArrowRight className="h-3 w-3" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
         <CardDescription>Subscriber &amp; broadcast overview</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Primary stat row */}
-        <div className="grid grid-cols-3 gap-3">
-          {primaryStats.map((item) => (
-            <div key={item.label} className="rounded-lg bg-gray-50 p-3 text-center">
-              <div className={`inline-flex p-1.5 rounded-md ${item.iconBg} mb-2`}>
-                <item.icon className={`h-3.5 w-3.5 ${item.iconColor}`} />
-              </div>
-              {loading ? (
-                <Skeleton className="h-6 w-10 mx-auto mb-1" />
-              ) : (
-                <p className="text-xl font-bold leading-tight">{item.value}</p>
-              )}
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{item.label}</p>
+        {isError ? (
+          <CardError title="Couldn't load newsletter figures" onRetry={() => void refetch()} />
+        ) : (
+          <>
+            {/* Primary stat row */}
+            <div className="grid grid-cols-3 gap-3">
+              {primaryStats.map((item) => (
+                <div key={item.label} className="rounded-lg bg-gray-50 p-3 text-center">
+                  <div className={`inline-flex p-1.5 rounded-md ${item.iconBg} mb-2`}>
+                    <item.icon className={`h-3.5 w-3.5 ${item.iconColor}`} />
+                  </div>
+                  {loading ? (
+                    <Skeleton className="h-6 w-10 mx-auto mb-1" />
+                  ) : (
+                    <p className="text-xl font-bold leading-tight">{item.value}</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                    {item.label}
+                  </p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Last broadcast row */}
-        <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2.5">
-          <div className="p-1.5 rounded-md bg-white border border-gray-100">
-            <Calendar className="h-3.5 w-3.5 text-gray-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-700">Last broadcast</p>
-            {loading ? (
-              <Skeleton className="h-3.5 w-20 mt-0.5" />
-            ) : (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {stats?.lastBroadcastAt
-                  ? formatRelativeDate(stats.lastBroadcastAt)
-                  : 'No broadcasts yet'}
-              </p>
-            )}
-          </div>
-        </div>
+            {/* Last broadcast row */}
+            <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2.5">
+              <div className="p-1.5 rounded-md bg-white border border-gray-100">
+                <Calendar className="h-3.5 w-3.5 text-gray-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-700">Last broadcast</p>
+                {loading ? (
+                  <Skeleton className="h-3.5 w-20 mt-0.5" />
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {stats?.lastBroadcastAt
+                      ? formatRelativeDate(stats.lastBroadcastAt)
+                      : 'No broadcasts yet'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

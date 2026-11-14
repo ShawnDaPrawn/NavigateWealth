@@ -76,19 +76,19 @@ describe('InvestmentINAWizard', () => {
     render(<InvestmentINAWizard open onClose={noop} clientId="c-1" clientName="Jane" />);
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: 'Investment Needs Analysis — Jane' })),
+      expect(screen.getByRole('heading', { level: 1, name: 'Investment Needs Analysis' })),
     );
-    expect(screen.getByText('Information Gathering')).toBeTruthy();
-    expect(screen.getByText('System Auto-Calculation')).toBeTruthy();
-    expect(screen.getByText('Adviser Manual Adjustment')).toBeTruthy();
-    expect(screen.getByText('Finalise & Publish')).toBeTruthy();
+    expect(screen.getByText('Information gathering')).toBeTruthy();
+    expect(screen.getByText('System auto-calculation')).toBeTruthy();
+    expect(screen.getByText('Adviser manual adjustment')).toBeTruthy();
+    expect(screen.getByText('Finalise & publish')).toBeTruthy();
   });
 
   it('gathers information on Step 1, starting with the client overview', async () => {
     render(<InvestmentINAWizard open onClose={noop} clientId="c-1" />);
 
     await waitFor(() => expect(screen.getAllByText('Client Overview').length).toBeGreaterThan(0));
-    expect(screen.getByRole('button', { name: /Run Calculation/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Next: System auto-calculation/ })).toBeTruthy();
   });
 
   it('takes client values only through the review prefill, and only records from auto-populate', async () => {

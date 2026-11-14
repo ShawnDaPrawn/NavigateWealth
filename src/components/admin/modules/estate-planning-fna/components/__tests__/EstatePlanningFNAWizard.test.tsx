@@ -70,8 +70,10 @@ describe('EstatePlanningFNAWizard', () => {
   it('uses the shared wizard title and four-step stepper', async () => {
     render(<EstatePlanningFNAWizard open onClose={noop} clientId="c-1" clientName="Sam" />);
 
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Estate Planning FNA — Sam' })));
-    expect(screen.getByText('Adviser Manual Adjustment')).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { level: 1, name: 'Estate Planning FNA' })),
+    );
+    expect(screen.getByText('Adviser manual adjustment')).toBeTruthy();
   });
 
   it('loads estate records, but client values only through the review prefill', async () => {
@@ -98,16 +100,16 @@ describe('EstatePlanningFNAWizard', () => {
 
     // Opens on Step 2 with the calculation run.
     await waitFor(() => expect(screen.getByText('System Calculation')).toBeTruthy());
-    fireEvent.click(screen.getByRole('button', { name: /Continue to Adjustments/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Next: Adviser manual adjustment/ }));
 
     // Step 3: override the funeral costs; a reason is mandatory.
     fireEvent.change(screen.getByLabelText('Funeral costs'), { target: { value: '80000' } });
-    fireEvent.click(screen.getByRole('button', { name: /Continue to Finalise/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Next: Finalise & publish/ }));
     expect(screen.getByText(/Give a reason of at least/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText(/Reason for adjustment/), {
       target: { value: 'Family has a larger funeral planned' },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Continue to Finalise/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Next: Finalise & publish/ }));
 
     // Step 4: publish.
     await waitFor(() => expect(screen.getByText('Final Analysis')).toBeTruthy());
@@ -170,8 +172,8 @@ describe('accepted client intake', () => {
     expect(screen.getAllByText('R2,000,000').length).toBeGreaterThan(0);
     expect(screen.queryByText(/NaN/)).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /Continue to Adjustments/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Continue to Finalise/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Next: Adviser manual adjustment/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Next: Finalise & publish/ }));
     await waitFor(() => expect(screen.getByText('Final Analysis')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: /Publish FNA/ }));
 

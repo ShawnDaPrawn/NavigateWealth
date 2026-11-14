@@ -9,7 +9,11 @@
  * are mocked to avoid canvas / ProseMirror issues in jsdom.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { render as rtlRender, screen } from '@/test/utils';
+import { MemoryRouter } from 'react-router';
+import type { ReactElement } from 'react';
+
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
 const formStub = {
   formData: {
@@ -77,10 +81,16 @@ beforeEach(() => {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('ArticleEditor', () => {
-  it('shows "New Article" heading when no article is provided', () => {
+  it('shows "New article" as the page heading, with a way back to the list', () => {
     render(<ArticleEditor onBack={noop} onSaved={noop} />);
 
-    expect(screen.getByText('New Article')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'New article' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /back to articles/i })).toBeTruthy();
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+      'Editor',
+      'Preview',
+      'SEO & meta',
+    ]);
   });
 
   it('shows "Edit Article" heading when an article is provided', () => {
@@ -99,13 +109,15 @@ describe('ArticleEditor', () => {
       />,
     );
 
-    expect(screen.getByText('Edit Article')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Edit article' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /history/i })).toBeTruthy();
   });
 
-  it('shows the Publish Now and Save Draft buttons', () => {
+  it('shows Publish… and Save draft, with Schedule under the more menu', () => {
     render(<ArticleEditor onBack={noop} onSaved={noop} />);
 
-    expect(screen.getByRole('button', { name: /publish now/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /publish…/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /more article actions/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /save draft/i })).toBeTruthy();
   });
 });

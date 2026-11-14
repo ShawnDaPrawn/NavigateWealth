@@ -1,64 +1,52 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
-import { Calculator, ArrowRight } from 'lucide-react';
+import { Calculator } from 'lucide-react';
+import { Button } from '../../../../ui/button';
+import { SoonBadge } from '../../../layout/page';
 
 interface CalculatorsListProps {
   onSelectCalculator: (id: string) => void;
 }
 
+const SOON = [{ title: 'Tax calculator' }, { title: 'Estate duty estimator' }];
+
 export function CalculatorsList({ onSelectCalculator }: CalculatorsListProps) {
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-bold tracking-tight">Financial Calculators</h2>
-        <p className="text-muted-foreground">
-          Tools for financial planning, projections, and client scenarios.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Retirement Calculator Card */}
-        <Card
-          className="hover:shadow-lg transition-all cursor-pointer group"
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-3 rounded-xl border border-nw-line bg-white p-5">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-nw-bg">
+          <Calculator className="h-5 w-5 text-nw-text-2" aria-hidden="true" />
+        </span>
+        <div className="flex-1">
+          <h2 className="text-base font-semibold text-nw-ink">Retirement planner</h2>
+          <p className="mt-1 text-sm text-nw-text-3">
+            Retirement capital and income projection with real-return adjustments.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          className="w-fit"
           onClick={() => onSelectCalculator('retirement')}
+          aria-label="Launch retirement planner"
         >
-          <CardHeader>
-            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors">
-              <Calculator className="h-6 w-6 text-blue-600 group-hover:text-white" />
-            </div>
-            <CardTitle>Retirement Planner</CardTitle>
-            <CardDescription>
-              Comprehensive retirement capital and income projection with real-return adjustments.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center text-sm text-blue-600 font-medium mt-2">
-              Launch Tool{' '}
-              <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Placeholder for future calculators */}
-        <Card className="opacity-60 border-dashed">
-          <CardHeader>
-            <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center mb-4">
-              <Calculator className="h-6 w-6 text-gray-400" />
-            </div>
-            <CardTitle className="text-gray-500">Tax Calculator</CardTitle>
-            <CardDescription>Coming Soon</CardDescription>
-          </CardHeader>
-        </Card>
-
-        <Card className="opacity-60 border-dashed">
-          <CardHeader>
-            <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center mb-4">
-              <Calculator className="h-6 w-6 text-gray-400" />
-            </div>
-            <CardTitle className="text-gray-500">Estate Duty Estimator</CardTitle>
-            <CardDescription>Coming Soon</CardDescription>
-          </CardHeader>
-        </Card>
+          Launch
+        </Button>
       </div>
+
+      {SOON.map((entry) => (
+        <div
+          key={entry.title}
+          className="flex flex-col gap-3 rounded-xl border border-dashed border-nw-line bg-white p-5 opacity-70"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-nw-bg">
+            <Calculator className="h-5 w-5 text-nw-text-3" aria-hidden="true" />
+          </span>
+          <div className="flex-1">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-nw-text-2">
+              {entry.title} <SoonBadge />
+            </h2>
+            <p className="mt-1 text-sm text-nw-text-3">Coming soon</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

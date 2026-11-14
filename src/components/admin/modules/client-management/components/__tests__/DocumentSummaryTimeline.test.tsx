@@ -130,6 +130,8 @@ describe('DocumentSummaryTimeline', () => {
     await waitFor(() => expect(screen.getByTitle('Edit summary')).toBeTruthy());
 
     fireEvent.click(screen.getByTitle('Edit summary'));
+    // A centred dialog (design CM-SummaryEdit), not an inline form.
+    expect(screen.getByRole('dialog').textContent).toContain('Edit summary');
     fireEvent.change(screen.getByLabelText('Summary'), { target: { value: 'Corrected.' } });
     fireEvent.click(screen.getByRole('button', { name: /save summary/i }));
 

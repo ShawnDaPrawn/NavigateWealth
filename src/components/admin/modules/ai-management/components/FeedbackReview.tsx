@@ -11,7 +11,13 @@ import { Input } from '../../../../ui/input';
 import { Badge } from '../../../../ui/badge';
 import { Tabs } from '../../../../ui/tabs';
 import { cn } from '../../../../ui/utils';
-import { SegmentedList, SegmentedTrigger, StatCard, useUrlState } from '../../../layout/page';
+import {
+  ErrorState,
+  SegmentedList,
+  SegmentedTrigger,
+  StatCard,
+  useUrlState,
+} from '../../../layout/page';
 import { useFeedback } from '../hooks';
 import { FEEDBACK_RATING_CONFIG } from '../constants';
 import type { FeedbackRating, FeedbackEntry } from '../types';
@@ -25,7 +31,7 @@ const RATING_FILTERS: Array<{ id: FilterRating; label: string }> = [
 const RATING_FILTER_IDS = RATING_FILTERS.map((f) => f.id);
 
 export function FeedbackReview() {
-  const { data: feedback, isLoading } = useFeedback();
+  const { data: feedback, isLoading, isError, refetch } = useFeedback();
   // The rating filter is in the address (?tab=feedback&rating=negative).
   const [ratingFilter, setRatingFilter] = useUrlState<FilterRating>(
     'rating',
@@ -63,6 +69,16 @@ export function FeedbackReview() {
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
       </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <ErrorState
+        title="Couldn't load feedback"
+        description="Something went wrong while loading. Nothing has changed."
+        onRetry={() => void refetch()}
+      />
     );
   }
 

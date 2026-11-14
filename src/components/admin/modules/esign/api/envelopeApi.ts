@@ -118,11 +118,13 @@ export const envelopeApi = {
     const queryString = queryParams.toString();
     const endpoint = queryString ? `/esign/envelopes?${queryString}` : '/esign/envelopes';
 
+    // A failed load throws, so the list shows an error instead of
+    // "No envelopes found" and zeroed totals.
     try {
       return await api.get<{ envelopes: EsignEnvelope[] }>(endpoint);
     } catch (error) {
       logger.error('Error fetching envelopes', error, { status });
-      return { envelopes: [] };
+      throw error;
     }
   },
 

@@ -14,7 +14,8 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Info, AlertCircle } from 'lucide-react';
 import { Button } from '../../../../ui/button';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../ui/tabs';
+import { Tabs, TabsContent } from '../../../../ui/tabs';
+import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { Form } from '../../../../ui/form';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { DEFAULT_FORM_VALUES } from '../constants';
@@ -222,17 +223,11 @@ export function Step1InformationGathering({
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full h-auto p-1">
-            <TabsTrigger value="income" className="text-sm px-6 py-2.5">
-              Income & Personal
-            </TabsTrigger>
-            <TabsTrigger value="dependants" className="text-sm px-6 py-2.5">
-              Dependants & Family
-            </TabsTrigger>
-            <TabsTrigger value="existing" className="text-sm px-6 py-2.5">
-              Existing Cover
-            </TabsTrigger>
-          </TabsList>
+          <SegmentedList aria-label="Information sections">
+            <SegmentedTrigger value="income">Income &amp; personal</SegmentedTrigger>
+            <SegmentedTrigger value="dependants">Dependants &amp; family</SegmentedTrigger>
+            <SegmentedTrigger value="existing">Existing cover</SegmentedTrigger>
+          </SegmentedList>
 
           <TabsContent value="income" className="mt-6">
             <IncomeDetailsForm />

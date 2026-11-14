@@ -5,7 +5,7 @@
  * check history, then renders a formatted, type-aware view with
  * third-party attribution (Honeycomb / Beeswax).
  *
- * Also provides a "Download Report" action that opens a printable
+ * Also provides a "Download report" action that opens a printable
  * HTML document suitable for PDF export.
  */
 
@@ -183,7 +183,7 @@ export function ComplianceResultViewer({
             </span>
           </div>
           <Badge variant="outline" className="text-xs border-slate-300 text-slate-500">
-            Third Party
+            Third party
           </Badge>
         </div>
 
@@ -239,7 +239,7 @@ export function ComplianceResultViewer({
               className="bg-purple-600 hover:bg-purple-700"
             >
               <Download className="h-3.5 w-3.5 mr-1.5" />
-              Download Report
+              Download report
             </Button>
           </div>
         </DialogFooter>
@@ -258,7 +258,7 @@ function MetaSection({ result, clientName }: { result: CheckResult; clientName: 
         <div className="font-medium mt-0.5">{clientName}</div>
       </div>
       <div>
-        <span className="text-muted-foreground">Check Type</span>
+        <span className="text-muted-foreground">Check type</span>
         <div className="font-medium mt-0.5">{result.checkType.replace(/_/g, ' ')}</div>
       </div>
       {result.matterId && (
@@ -272,7 +272,7 @@ function MetaSection({ result, clientName }: { result: CheckResult; clientName: 
         <div className="font-medium mt-0.5">{formatDate(result.submittedAt)}</div>
       </div>
       <div>
-        <span className="text-muted-foreground">Result Status</span>
+        <span className="text-muted-foreground">Result status</span>
         <div className="mt-0.5">
           <Badge
             variant="outline"
@@ -316,7 +316,7 @@ function FormattedResult({ activityType, result }: { activityType: string; resul
       return <BulkIdvResultView data={raw} />;
     case 'Bank Verification':
       return <BankVerificationResultView data={raw} />;
-    case 'Consumer Credit Check':
+    case 'Consumer credit check':
       return <CreditCheckResultView data={raw} />;
     case 'Consumer Trace':
       return <ConsumerTraceResultView data={raw} />;
@@ -332,7 +332,7 @@ function FormattedResult({ activityType, result }: { activityType: string; resul
       return <CipcResultView data={raw} />;
     case 'Director Enquiry':
       return <DirectorResultView data={raw} />;
-    case 'Best Known Address':
+    case 'Best known address':
       return <AddressResultView data={raw} />;
     case 'Custom Screening':
       return <CustomScreeningResultView data={raw} />;

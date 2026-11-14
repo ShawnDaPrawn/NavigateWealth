@@ -23,6 +23,11 @@ export interface ApplicationStats {
   new_applications_7d: number;
   new_this_month: number;
   new_last_month: number;
+  /** The dashboard period asked for (?period=month|30d|year; month by default). */
+  period?: 'month' | '30d' | 'year';
+  /** New applications in that period, and in the period before it. */
+  new_in_period?: number;
+  new_previous_period?: number;
   // Task statistics
   new_tasks: number;
   pending_tasks: number;

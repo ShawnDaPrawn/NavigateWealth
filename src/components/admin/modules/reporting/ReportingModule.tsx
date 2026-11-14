@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '../../../ui/button';
 import { Plus } from 'lucide-react';
-import { Badge } from '../../../ui/badge';
-import { PageHeader } from '../../layout/page';
+import { Notice, PageHeader, useBreadcrumbTrail, useConfirm } from '../../layout/page';
 import { toast } from 'sonner';
 
 // Import types
@@ -12,6 +11,9 @@ import { Report, ReportRun } from './types';
 import { ReportsTable } from './components/ReportsTable';
 import { ReportRunsList } from './components/ReportRunsList';
 import { ReportDialog } from './components/ReportDialog';
+import { CreateReportDialog, type NewReportDefinition } from './components/CreateReportDialog';
+import { reportDefinitionsApi } from './api';
+import { definitionToReport } from './reportSources';
 
 // Import utilities
 import { executeReport, createReportRun } from './utils';
@@ -81,10 +83,68 @@ export function ReportingModule() {
   const [reportRuns, setReportRuns] = useState<ReportRun[]>([]);
   const [runningReports, setRunningReports] = useState<Set<string>>(new Set());
   const [reports, setReports] = useState<Report[]>(DEFAULT_REPORTS);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [definitionsError, setDefinitionsError] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirm();
+
+  // Saved custom reports come after the built-in five.
+  const loadDefinitions = useCallback(async () => {
+    try {
+      setDefinitionsError(null);
+      const defs = await reportDefinitionsApi.list();
+      setReports((prev) => [...prev.filter((r) => !r.custom), ...defs.map(definitionToReport)]);
+    } catch (error) {
+      setDefinitionsError(error instanceof Error ? error.message : 'Unknown error');
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDefinitions();
+  }, [loadDefinitions]);
+
+  const handleCreate = async (input: NewReportDefinition) => {
+    setCreating(true);
+    try {
+      const def = await reportDefinitionsApi.create(input);
+      setReports((prev) => [...prev, definitionToReport(def)]);
+      setCreateOpen(false);
+      toast.success('Report created');
+    } catch (error) {
+      toast.error(
+        `Could not create the report: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (report: Report) => {
+    const ok = await confirm({
+      title: 'Delete this report?',
+      description: `"${report.name}" is removed for everyone. Its data is not affected.`,
+      confirmLabel: 'Delete report',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await reportDefinitionsApi.remove(report.id);
+      setReports((prev) => prev.filter((r) => r.id !== report.id));
+      setReportDialogOpen(false);
+      toast.success('Report deleted');
+    } catch (error) {
+      toast.error(
+        `Could not delete the report: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+    }
+  };
 
   const { canDo } = useCurrentUserPermissions();
 
   const canCreate = canDo('reporting', 'create');
+
+  // Top-bar breadcrumb: Reporting / <report> while its settings are open.
+  useBreadcrumbTrail(reportDialogOpen && selectedReport ? [{ label: selectedReport.name }] : []);
 
   /**
    * Execute a report with progress tracking
@@ -180,19 +240,27 @@ export function ReportingModule() {
           // "New report" is not switched on yet: it stays visible but off, and
           // only for people allowed to create reports.
           canCreate ? (
-            <Button disabled>
+            <Button onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" aria-hidden="true" />
               New report
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">
-                Soon
-              </Badge>
             </Button>
           ) : null
         }
       />
 
-      {/* Recent Report Runs */}
-      <ReportRunsList runs={reportRuns} reports={reports} />
+      {definitionsError && (
+        <Notice
+          kind="error"
+          title="Couldn't load your saved reports."
+          action={
+            <Button variant="outline" size="sm" onClick={() => void loadDefinitions()}>
+              Try again
+            </Button>
+          }
+        >
+          The built-in reports below still work.
+        </Notice>
+      )}
 
       {/* Reports Table */}
       <ReportsTable
@@ -202,13 +270,27 @@ export function ReportingModule() {
         onOpenSettings={openReportDialog}
       />
 
+      {/* Recent report runs: under the table, once something has run */}
+      <ReportRunsList runs={reportRuns} reports={reports} />
+
       {/* Report Configuration Dialog */}
       <ReportDialog
         open={reportDialogOpen}
         onOpenChange={setReportDialogOpen}
         report={selectedReport}
         onRun={runReport}
+        onDelete={(report) => void handleDelete(report)}
       />
+
+      {createOpen && (
+        <CreateReportDialog
+          open
+          onOpenChange={setCreateOpen}
+          submitting={creating}
+          onCreate={(input) => void handleCreate(input)}
+        />
+      )}
+      {confirmDialog}
     </div>
   );
 }

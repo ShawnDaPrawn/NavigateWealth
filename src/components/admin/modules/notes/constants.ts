@@ -114,8 +114,8 @@ export const NOTE_COLORS: NoteColor[] = [
 // ============================================================================
 
 export const NOTE_SORT_OPTIONS: { value: NoteSortBy; label: string }[] = [
-  { value: 'updatedAt', label: 'Last Updated' },
-  { value: 'createdAt', label: 'Date Created' },
+  { value: 'updatedAt', label: 'Last updated' },
+  { value: 'createdAt', label: 'Date created' },
   { value: 'title', label: 'Title (A\u2013Z)' },
 ];
 

@@ -349,3 +349,9 @@ export interface ValidationResult {
   eligibleRecipients: Client[];
   ineligibleRecipients: Array<{ client: Client; reason: string }>;
 }
+
+/** Who a set of group rules matches right now (count + the first 50), unsaved. */
+export interface GroupPreview {
+  count: number;
+  clients: Array<{ id: string; name: string; email: string }>;
+}

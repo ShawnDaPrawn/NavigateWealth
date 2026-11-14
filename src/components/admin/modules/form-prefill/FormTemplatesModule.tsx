@@ -31,6 +31,7 @@ import {
   uploadFormTemplate,
 } from '../../../../services/form-prefill-api';
 import { PrefillReviewModal } from './PrefillReviewModal';
+import { ErrorState } from '../../layout/page';
 import { ClientPicker } from '../../../shared/ClientPicker';
 import { api } from '../../../../utils/api';
 
@@ -103,14 +104,16 @@ export function FormTemplatesModule({
     };
   }, [selectedClientIdProp]);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
   const loadTemplates = useCallback(async () => {
     setLoading(true);
     try {
       const data = await listFormTemplates();
       setTemplates(data);
+      setLoadError(null);
       if (data[0] && !selectedTemplateId) setSelectedTemplateId(data[0].id);
-    } catch {
-      toast.error('Failed to load form templates');
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to load form templates');
     } finally {
       setLoading(false);
     }
@@ -334,6 +337,12 @@ export function FormTemplatesModule({
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading templates...
             </div>
+          ) : loadError ? (
+            <ErrorState
+              title="Unable to load form templates"
+              onRetry={() => void loadTemplates()}
+              details={loadError}
+            />
           ) : templates.length === 0 ? (
             <p className="text-sm text-muted-foreground">No templates uploaded yet.</p>
           ) : (

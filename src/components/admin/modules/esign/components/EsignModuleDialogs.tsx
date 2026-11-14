@@ -1,16 +1,11 @@
 /**
- * Dialog layer of the e-sign module: the template picker, bulk send and the
- * envelope inspector, all lazy-loaded. The module root owns the open/closed
+ * Dialog layer of the e-sign module: the template picker and bulk send, all lazy-loaded. The module root owns the open/closed
  * state and the handlers; this component owns the mounting and the lazy
  * chunking, so index.tsx stays focused on the wizard state machine.
  */
 import React, { Suspense } from 'react';
-import { StepFallback } from './StepFallback';
-import type { EsignEnvelope, EsignTemplateRecord } from '../types';
+import type { EsignTemplateRecord } from '../types';
 
-const EnvelopeInspector = React.lazy(() =>
-  import('./EnvelopeInspector').then((m) => ({ default: m.EnvelopeInspector })),
-);
 const TemplatePickerDialog = React.lazy(() =>
   import('./TemplatePickerDialog').then((m) => ({ default: m.TemplatePickerDialog })),
 );
@@ -27,14 +22,6 @@ interface EsignModuleDialogsProps {
   onBulkSendOpenChange: (open: boolean) => void;
   /** Bump the dashboard's refresh trigger after a dialog changed data. */
   onRefresh: () => void;
-  selectedEnvelope: EsignEnvelope | null;
-  detailsDialogOpen: boolean;
-  onDetailsOpenChange: (open: boolean) => void;
-  onDownloadDocument: (envelopeId: string) => void;
-  onResumePrepare?: (envelope: EsignEnvelope) => void;
-  resumingEnvelopeId: string | null;
-  onVoidEnvelope?: (envelopeId: string, reason: string) => void;
-  onDeleteEnvelope?: (envelopeId: string) => void;
 }
 
 export function EsignModuleDialogs({
@@ -45,14 +32,6 @@ export function EsignModuleDialogs({
   bulkSendOpen,
   onBulkSendOpenChange,
   onRefresh,
-  selectedEnvelope,
-  detailsDialogOpen,
-  onDetailsOpenChange,
-  onDownloadDocument,
-  onResumePrepare,
-  resumingEnvelopeId,
-  onVoidEnvelope,
-  onDeleteEnvelope,
 }: EsignModuleDialogsProps) {
   return (
     <>
@@ -79,22 +58,6 @@ export function EsignModuleDialogs({
             open={bulkSendOpen}
             onOpenChange={onBulkSendOpenChange}
             onCompleted={onRefresh}
-          />
-        </Suspense>
-      )}
-
-      {/* Details Modal */}
-      {selectedEnvelope && (
-        <Suspense fallback={<StepFallback />}>
-          <EnvelopeInspector
-            envelope={selectedEnvelope}
-            open={detailsDialogOpen}
-            onOpenChange={onDetailsOpenChange}
-            onDownloadDocument={onDownloadDocument}
-            onResumePrepare={onResumePrepare}
-            resumingEnvelopeId={resumingEnvelopeId}
-            onVoidEnvelope={onVoidEnvelope}
-            onDeleteEnvelope={onDeleteEnvelope}
           />
         </Suspense>
       )}

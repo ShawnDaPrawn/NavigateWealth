@@ -171,10 +171,9 @@ describe('tasksApi.getDueToday', () => {
     expect(tasks).toEqual([]);
   });
 
-  it('returns empty array on failure', async () => {
+  it('throws on failure so the Due today card can offer Try again', async () => {
     mockApiGet.mockRejectedValue(new Error('Network fail'));
-    const tasks = await tasksApi.getDueToday();
-    expect(tasks).toEqual([]);
+    await expect(tasksApi.getDueToday()).rejects.toThrow('Network fail');
   });
 });
 
@@ -304,10 +303,9 @@ describe('adminAuditApi.getLog', () => {
     expect(result).toEqual([]);
   });
 
-  it('returns empty array on API failure', async () => {
+  it('throws on API failure so the audit trail can offer Try again', async () => {
     mockApiGet.mockRejectedValue(new Error('Network fail'));
-    const result = await adminAuditApi.getLog();
-    expect(result).toEqual([]);
+    await expect(adminAuditApi.getLog()).rejects.toThrow('Network fail');
   });
 });
 
@@ -331,5 +329,20 @@ describe('adminAuditApi.getSummary', () => {
     mockApiGet.mockRejectedValue(new Error('Network fail'));
     const result = await adminAuditApi.getSummary();
     expect(result).toBeNull();
+  });
+});
+
+describe('dashboard period', () => {
+  it('asks the stats and metrics endpoints for the period (month needs no parameter)', async () => {
+    mockApiGet.mockResolvedValue({ stats: {}, activePolicies: 0 });
+    await dashboardStatsApi.getStats(undefined, '30d');
+    expect(mockApiGet).toHaveBeenLastCalledWith('/admin/stats?period=30d', undefined);
+    await dashboardStatsApi.getStats();
+    expect(mockApiGet).toHaveBeenLastCalledWith('/admin/stats', undefined);
+    await dashboardMetricsApi.getMetrics(undefined, 'year');
+    expect(mockApiGet).toHaveBeenLastCalledWith(
+      '/integrations/dashboard-stats?period=year',
+      undefined,
+    );
   });
 });

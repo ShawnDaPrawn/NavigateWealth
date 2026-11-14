@@ -59,6 +59,10 @@ export function useRoAModuleContracts(options: UseRoAModuleContractsOptions = {}
     schemaFormat: schemaQuery.data,
     isLoading: contractsQuery.isLoading || schemaQuery.isLoading,
     error: contractsQuery.error || schemaQuery.error,
+    refetch: () => {
+      void contractsQuery.refetch();
+      void schemaQuery.refetch();
+    },
     saveContract: saveMutation.mutateAsync,
     publishContract: publishMutation.mutateAsync,
     archiveContract: archiveMutation.mutateAsync,

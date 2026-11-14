@@ -182,7 +182,8 @@ describe('usePendingCounts', () => {
     renderHook(() => usePendingCounts());
     const result = await capturedConfig.mock.calls[0][0].queryFn();
     expect(result.applications).toEqual({ count: 2 });
-    expect(result.tasks).toEqual({ count: 0 });
+    // A failed count is flagged so the dashboard shows "—", not 0.
+    expect(result.tasks).toEqual({ count: 0, failed: true });
     expect(result.submissions).toEqual({ count: 5 });
     expect(result.issues).toEqual({ count: 0 });
   });
@@ -199,9 +200,9 @@ describe('usePendingCounts', () => {
     renderHook(() => usePendingCounts());
     const config = capturedConfig.mock.calls[0][0];
     const result = await config.queryFn();
-    // All API calls fail silently
-    expect(result.applications).toEqual({ count: 0 });
-    expect(result.tasks).toEqual({ count: 0 });
+    // All API calls fail: zeroed counts, each flagged as failed
+    expect(result.applications).toEqual({ count: 0, failed: true });
+    expect(result.tasks).toEqual({ count: 0, failed: true });
   });
 
   it('queryFn uses safeCount for non-numeric issue open count', async () => {

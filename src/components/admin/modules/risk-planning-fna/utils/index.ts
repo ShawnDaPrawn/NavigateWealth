@@ -1,3 +1,3 @@
 export * from './calculations';
 export * from './formatting';
-export * from './pdfExport';
+export * from '../../../../shared/pdf/exportComponentToPdf';

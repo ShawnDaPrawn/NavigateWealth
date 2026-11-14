@@ -46,6 +46,8 @@ export interface PolicyAssumptionsToolProps {
   formData: Record<string, unknown>;
   /** Writes a value back into the policy form. */
   handleFieldChange: (fieldId: string, value: string | number | boolean) => void;
+  /** Opens straight away (the category's Assumptions button). */
+  defaultOpen?: boolean;
 }
 
 export function PolicyAssumptionsTool({
@@ -53,8 +55,9 @@ export function PolicyAssumptionsTool({
   tableStructure,
   formData,
   handleFieldChange,
+  defaultOpen = false,
 }: PolicyAssumptionsToolProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   // Determine context (Retirement vs Investment)
   const isInvestment = field.keyId === 'invest_maturity_value';

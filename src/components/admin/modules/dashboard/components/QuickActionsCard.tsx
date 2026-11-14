@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import {
   Users,
@@ -17,35 +17,35 @@ export function QuickActionsCard({ onModuleChange, customActions }: QuickActions
   const defaultActions: QuickAction[] = [
     {
       id: 'new-client',
-      label: 'New Client',
+      label: 'New client',
       icon: Users,
       module: 'clients',
       variant: 'default',
     },
     {
       id: 'new-application',
-      label: 'New Application',
+      label: 'New application',
       icon: FilePlus,
       module: 'applications',
       variant: 'outline',
     },
     {
       id: 'new-advice',
-      label: 'New Advice Record',
+      label: 'New advice record',
       icon: ClipboardCheck,
       module: 'advice-engine',
       variant: 'outline',
     },
     {
       id: 'compliance',
-      label: 'Compliance Check',
+      label: 'Compliance check',
       icon: Shield,
       module: 'compliance',
       variant: 'outline',
     },
     {
       id: 'search-client',
-      label: 'Find Client',
+      label: 'Find client',
       icon: Search,
       module: 'clients',
       variant: 'outline',
@@ -88,9 +88,8 @@ export function QuickActionsCard({ onModuleChange, customActions }: QuickActions
       <CardHeader>
         <CardTitle className="text-lg font-semibold flex items-center">
           <Settings className="h-5 w-5 mr-2 text-primary" />
-          Quick Actions
+          Quick actions
         </CardTitle>
-        <CardDescription>Frequently used admin tools</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-3">

@@ -10,7 +10,7 @@ export function ServicesSection({ isEditing, fv, updateField, amendedFields, dat
   return (
     <ReviewSection
       icon={Target}
-      title="Services & Interests"
+      title="Services & interests"
       badge={
         <span className="text-[11px] text-gray-400 font-normal ml-2">
           {services.length} selected

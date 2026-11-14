@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router';
+import { BreadcrumbContext } from '../../../layout/page/breadcrumbContext';
 
 vi.mock('../components/OverviewTab', () => ({
   OverviewTab: ({ onNavigate }: { onNavigate: (t: string) => void }) => (
@@ -98,5 +99,30 @@ describe('AIManagementModule', () => {
     expect(screen.getByText('knowledge-content')).toBeDefined();
     expect(screen.queryByRole('heading', { level: 1, name: 'AI Management' })).toBeNull();
     expect(screen.queryAllByRole('tab')).toHaveLength(0);
+  });
+
+  it('sets the top-bar breadcrumb to the tab, and to New entry on the entry page', () => {
+    const setTrail = vi.fn();
+    const { unmount } = render(
+      <BreadcrumbContext.Provider value={{ trail: [], setTrail }}>
+        <MemoryRouter initialEntries={['/admin?module=ai-management&tab=prompts']}>
+          <AIManagementModule />
+        </MemoryRouter>
+      </BreadcrumbContext.Provider>,
+    );
+    expect(setTrail).toHaveBeenLastCalledWith([{ label: 'Prompts' }]);
+    unmount();
+
+    render(
+      <BreadcrumbContext.Provider value={{ trail: [], setTrail }}>
+        <MemoryRouter initialEntries={['/admin?module=ai-management&tab=knowledge&entry=new']}>
+          <AIManagementModule />
+        </MemoryRouter>
+      </BreadcrumbContext.Provider>,
+    );
+    expect(setTrail).toHaveBeenLastCalledWith([
+      expect.objectContaining({ label: 'Knowledge' }),
+      { label: 'New entry' },
+    ]);
   });
 });

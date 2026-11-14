@@ -34,28 +34,28 @@ export const FNA_WIZARD_FLOW: readonly FNAWizardFlowStep[] = [
   {
     step: 1,
     id: 'information',
-    title: 'Information Gathering',
+    title: 'Information gathering',
     shortTitle: 'Information',
     description: 'Confirm client information from the client record',
   },
   {
     step: 2,
     id: 'calculation',
-    title: 'System Auto-Calculation',
+    title: 'System auto-calculation',
     shortTitle: 'Calculation',
     description: 'Review the formula-driven results',
   },
   {
     step: 3,
     id: 'adjustment',
-    title: 'Adviser Manual Adjustment',
+    title: 'Adviser manual adjustment',
     shortTitle: 'Adjustments',
     description: 'Apply overrides with a recorded reason',
   },
   {
     step: 4,
     id: 'finalise',
-    title: 'Finalise & Publish',
+    title: 'Finalise & publish',
     shortTitle: 'Finalise',
     description: 'Review and publish the analysis',
   },
@@ -65,9 +65,9 @@ export const FNA_WIZARD_STEP_COUNT = FNA_WIZARD_FLOW.length;
 
 /** Primary footer action of each step. Identical in every wizard. */
 export const FNA_WIZARD_NEXT_LABELS: Record<FNAWizardStepNumber, string> = {
-  1: 'Run Calculation',
-  2: 'Continue to Adjustments',
-  3: 'Continue to Finalise',
+  1: 'Next: System auto-calculation',
+  2: 'Next: Adviser manual adjustment',
+  3: 'Next: Finalise & publish',
   4: 'Publish FNA',
 };
 
@@ -101,7 +101,7 @@ export function getFNAWizardStep(step: FNAWizardStepNumber): FNAWizardFlowStep {
 
 export function backLabelFor(step: FNAWizardStepNumber): string | null {
   if (step === 1) return null;
-  return `Back to ${getFNAWizardStep((step - 1) as FNAWizardStepNumber).shortTitle}`;
+  return 'Back';
 }
 
 /**

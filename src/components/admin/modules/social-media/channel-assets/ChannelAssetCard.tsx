@@ -7,7 +7,22 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Archive, Check, ExternalLink, RotateCcw, Send, Trash2 } from 'lucide-react';
+import {
+  Archive,
+  Check,
+  ExternalLink,
+  MoreHorizontal,
+  RotateCcw,
+  Send,
+  Trash2,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../../../ui/dropdown-menu';
 import { Badge } from '../../../../ui/badge';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -177,34 +192,39 @@ export function ChannelAssetCard({
               Requeue
             </Button>
           )}
-          {asset.status !== 'archived' && (
-            <Button
-              size="sm"
-              variant="outline"
-              aria-label={`Archive ${asset.file_name ?? 'asset'}`}
-              onClick={() => onPatch({ status: 'archived' })}
-            >
-              <Archive className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            asChild
-            aria-label={`Open ${asset.file_name ?? 'asset'}`}
-          >
-            <a href={asset.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            aria-label={`Delete ${asset.file_name ?? 'asset'}`}
-            onClick={onDelete}
-          >
-            <Trash2 className="h-3.5 w-3.5 text-red-600" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={`More actions for ${asset.file_name ?? 'asset'}`}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <a href={asset.url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                  Open
+                </a>
+              </DropdownMenuItem>
+              {asset.status !== 'archived' && (
+                <DropdownMenuItem onSelect={() => onPatch({ status: 'archived' })}>
+                  <Archive className="h-3.5 w-3.5 mr-2" />
+                  Archive
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-700"
+                onSelect={() => onDelete()}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                Delete…
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

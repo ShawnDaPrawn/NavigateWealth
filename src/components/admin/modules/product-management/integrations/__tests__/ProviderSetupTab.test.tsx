@@ -10,7 +10,7 @@
  * Run: npx vitest run src/.../ProviderSetupTab.test.tsx
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@/test/utils';
+import { fireEvent, render, screen } from '@/test/utils';
 import { ProviderSetupTab } from '@/components/admin/modules/product-management/integrations/ProviderSetupTab';
 import type {
   IntegrationProvider,
@@ -112,5 +112,29 @@ describe('ProviderSetupTab', () => {
     render(<ProviderSetupTab {...makeProps({ flow: minimalFlow })} />);
     expect(screen.getAllByText('Save Setup').length).toBeGreaterThan(0);
     expect(screen.getByText('Reset This Product Flow')).toBeTruthy();
+  });
+
+  it('renders Advanced & diagnostics as a page: back link, Cancel and Save in the header', () => {
+    const onCloseAdvanced = vi.fn();
+    const onSaveFlow = vi.fn();
+    render(
+      <ProviderSetupTab
+        {...makeProps({ flow: minimalFlow, onSaveFlow })}
+        view="advanced"
+        onCloseAdvanced={onCloseAdvanced}
+      />,
+    );
+    expect(screen.getByRole('heading', { level: 1, name: 'Advanced & diagnostics' })).toBeTruthy();
+    // No side panel any more.
+    expect(document.querySelector('[data-slot="sheet-content"]')).toBeNull();
+    expect(screen.queryByText('Provider Setup')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Old Mutual integration' }));
+    expect(onCloseAdvanced).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onCloseAdvanced).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(onSaveFlow).toHaveBeenCalledTimes(1);
   });
 });

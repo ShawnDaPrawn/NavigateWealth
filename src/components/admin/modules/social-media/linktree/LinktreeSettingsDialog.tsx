@@ -73,7 +73,7 @@ export function LinktreeSettingsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Page Settings</DialogTitle>
+          <DialogTitle>Page settings</DialogTitle>
         </DialogHeader>
         <div className="space-y-5 py-2">
           {/* General */}

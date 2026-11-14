@@ -24,6 +24,33 @@ vi.mock('@/shared/fna-intake/hooks/useFnaBatchStatus', () => ({
   })),
 }));
 
+// Primary reads succeed (empty): a failed read now shows the error state.
+vi.mock('@/shared/api/clientPolicies', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/shared/api/clientPolicies')>();
+  return {
+    ...actual,
+    clientPoliciesQueryOptions: (clientId: string) => ({
+      queryKey: ['test-policies', clientId],
+      queryFn: async () => {
+        if (clientId === 'client-fails') throw new Error('400 Bad Request');
+        return [];
+      },
+    }),
+    policySchemasQueryOptions: () => ({ queryKey: ['test-schemas'], queryFn: async () => ({}) }),
+  };
+});
+vi.mock('@/components/admin/modules/client-management/api', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/components/admin/modules/client-management/api')>();
+  return {
+    ...actual,
+    getClientProfileQueryOptions: (clientId: string) => ({
+      queryKey: ['test-profile', clientId],
+      queryFn: async () => null,
+    }),
+  };
+});
+
 vi.mock('@/utils/auth/profileService', () => ({
   getClientProfileQueryOptions: (clientId: string) => ({
     queryKey: ['client-profile', clientId],
@@ -64,17 +91,17 @@ describe('ClientOverviewTab adviser mode', () => {
     vi.clearAllMocks();
   });
 
-  it('renders without throwing and shows the Portfolio Summary accordion header', async () => {
+  it('renders without throwing and shows the Portfolio summary card header', async () => {
     renderAdviser();
     await waitFor(() => {
-      expect(screen.getAllByText('Portfolio Summary').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Portfolio summary').length).toBeGreaterThan(0);
     });
   });
 
   it('shows the Financial Reviews intake section', async () => {
     renderAdviser();
     await waitFor(() => {
-      expect(screen.getByText('Financial Reviews')).toBeTruthy();
+      expect(screen.getByText('Financial reviews')).toBeTruthy();
     });
   });
 
@@ -94,7 +121,7 @@ describe('ClientOverviewTab adviser mode', () => {
   it('does not show the client welcome greeting in adviser mode', async () => {
     renderAdviser();
     await waitFor(() => {
-      expect(screen.getAllByText('Financial Reviews').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Financial reviews').length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText(/welcome back/i).length).toBe(0);
   });
@@ -102,9 +129,20 @@ describe('ClientOverviewTab adviser mode', () => {
   it('hides client-only accordion labels in adviser mode', async () => {
     renderAdviser();
     await waitFor(() => {
-      expect(screen.getAllByText('Portfolio Summary').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Portfolio summary').length).toBeGreaterThan(0);
     });
     expect(screen.queryAllByText('My Policies').length).toBe(0);
     expect(screen.queryAllByText('My Net Worth').length).toBe(0);
+  });
+
+  it('shows an error, not zero figures, when the policies read fails', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <ClientOverviewTab client={{ ...mockClient, id: 'client-fails' }} mode="adviser" />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Couldn't load the overview")).toBeTruthy();
+    expect(screen.queryByText('Portfolio summary')).toBeNull();
   });
 });

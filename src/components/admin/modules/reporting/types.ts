@@ -1,3 +1,5 @@
+import type { ReportDataSource } from './reportSources';
+
 export interface Report {
   id: string;
   name: string;
@@ -6,6 +8,22 @@ export interface Report {
   parameters: Record<string, unknown>;
   lastRunAt?: string;
   outputs: string[];
+  createdAt: string;
+  /** Saved custom reports: the built-in export they draw on, and the columns kept. */
+  dataSource?: ReportDataSource;
+  columns?: string[];
+  custom?: boolean;
+}
+
+/** A saved custom report as the server stores it. */
+export interface SavedReportDefinition {
+  id: string;
+  name: string;
+  category: ReportCategory;
+  dataSource: ReportDataSource;
+  columns: string[];
+  format: 'xlsx';
+  createdBy: string;
   createdAt: string;
 }
 

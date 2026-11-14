@@ -297,7 +297,9 @@ export function FormsList({
       ) : (
         <div className="text-center py-16 text-muted-foreground border rounded-lg bg-white">
           <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="text-lg font-medium">No forms available</p>
+          <p className="text-lg font-medium">
+            {filters.search ? 'No forms match your search' : 'No forms available'}
+          </p>
           <p className="text-sm mt-1">
             {filters.search
               ? 'Try adjusting your search or filters'
