@@ -460,7 +460,7 @@ export function ContentCalendar({
           [
             { status: 'published' as const, label: 'Published' },
             { status: 'scheduled' as const, label: 'Scheduled' },
-            { status: 'in_review' as const, label: 'In Review' },
+            { status: 'in_review' as const, label: 'In review' },
             { status: 'draft' as const, label: 'Draft' },
           ] as const
         ).map(({ status, label }) => (

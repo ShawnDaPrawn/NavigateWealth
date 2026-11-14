@@ -182,7 +182,7 @@ export function ContentAnalytics({ articles: allArticles, categories }: ContentA
         icon: PenLine,
       },
       {
-        name: 'In Review',
+        name: 'In review',
         value: statusCounts.in_review,
         color: STATUS_CHART_COLORS.in_review,
         icon: Send,

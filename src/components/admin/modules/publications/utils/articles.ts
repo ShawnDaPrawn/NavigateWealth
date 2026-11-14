@@ -141,13 +141,13 @@ export function getStatusColor(status: ArticleStatus): string {
  *
  * @example
  * ```typescript
- * getStatusLabel('in_review'); // 'In Review'
+ * getStatusLabel('in_review'); // 'In review'
  * ```
  */
 export function getStatusLabel(status: ArticleStatus): string {
   const labels: Record<ArticleStatus, string> = {
     draft: 'Draft',
-    in_review: 'In Review',
+    in_review: 'In review',
     scheduled: 'Scheduled',
     published: 'Published',
     archived: 'Archived',

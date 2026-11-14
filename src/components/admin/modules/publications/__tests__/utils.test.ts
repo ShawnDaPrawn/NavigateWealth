@@ -171,7 +171,7 @@ describe('getStatusColor', () => {
 describe('getStatusLabel', () => {
   it('returns human-readable labels', () => {
     expect(getStatusLabel('draft')).toBe('Draft');
-    expect(getStatusLabel('in_review')).toBe('In Review');
+    expect(getStatusLabel('in_review')).toBe('In review');
     expect(getStatusLabel('scheduled')).toBe('Scheduled');
     expect(getStatusLabel('published')).toBe('Published');
     expect(getStatusLabel('archived')).toBe('Archived');

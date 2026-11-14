@@ -21,30 +21,25 @@ import {
   DropdownMenuTrigger,
 } from '../../../ui/dropdown-menu';
 import { ArticleReshareDialog } from './components/ArticleReshareDialog';
-import { Button } from '../../../ui/button';
+
 import { Badge } from '../../../ui/badge';
 import { Card, CardContent } from '../../../ui/card';
 import {
-  PlusCircle,
   Mail,
   MoreHorizontal,
-  Filter,
   Eye,
   Copy,
   Archive,
   Trash2,
   Clock,
   Star,
-  FileText,
-  LayoutGrid,
-  LayoutList,
   X,
   ArrowUpDown,
   CheckSquare,
   Square,
-  Search,
 } from 'lucide-react';
 import { cn } from '../../../ui/utils';
+import { DsButton, DsSegmented, DsState } from '../../layout/page';
 
 // Hooks & components
 import {
@@ -83,6 +78,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+  const [featuredOnly, setFeaturedOnly] = useState(false);
   const [sortField, setSortField] = useState<SortField>('updated_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
@@ -125,6 +121,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
     // Filters
     if (selectedStatus) list = list.filter((a) => a.status === selectedStatus);
     if (selectedCategory) list = list.filter((a) => a.category_id === selectedCategory);
+    if (featuredOnly) list = list.filter((a) => a.is_featured);
 
     // Sort. Precompute each article's comparable key once (a single pass)
     // rather than re-parsing dates / lowercasing inside the comparator, which
@@ -156,7 +153,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
     });
 
     return keyed.map((entry) => entry.article);
-  }, [articles, searchQuery, selectedStatus, selectedCategory, sortField, sortDir]);
+  }, [articles, searchQuery, selectedStatus, selectedCategory, sortField, sortDir, featuredOnly]);
 
   // ── Active filter count ──────────────────────────────────────────────
   const activeFilterCount = [selectedStatus, selectedCategory].filter(Boolean).length;
@@ -266,281 +263,198 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
   // ── Render ───────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
-      {/* ── Stat pills ────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <StatPill
-          label="Published"
-          count={stats.published}
-          active={selectedStatus === 'published'}
-          onClick={() => setSelectedStatus((s) => (s === 'published' ? '' : 'published'))}
-          color="green"
+      {/* ── Toolbar (PU-Articles): search, status chips, filters, sort, layout ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative w-full sm:w-[280px]">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search articles…"
+            aria-label="Search articles"
+            className="ds-input w-full"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              aria-label="Clear search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-nw-text-3 hover:text-nw-ink"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        {(
+          [
+            ['published', 'Published', stats.published],
+            ['draft', 'Drafts', stats.draft],
+            ['scheduled', 'Scheduled', stats.scheduled],
+          ] as const
+        ).map(([value, label, count]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={selectedStatus === value}
+            className={cn('ds-chip', selectedStatus === value && 'on')}
+            onClick={() => setSelectedStatus((s) => (s === value ? '' : value))}
+          >
+            {label} · {count}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-pressed={featuredOnly}
+          className={cn('ds-chip', featuredOnly && 'on')}
+          onClick={() => setFeaturedOnly((f) => !f)}
+        >
+          Featured · {stats.featured}
+        </button>
+        <span className="grow" />
+        <DsButton size="sm" aria-expanded={showFilters} onClick={() => setShowFilters((f) => !f)}>
+          Filters{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+        </DsButton>
+        <DsButton size="sm" variant="ghost" onClick={() => toggleSort(sortField)}>
+          Sort:{' '}
+          {sortField === 'updated_at'
+            ? 'Modified'
+            : sortField === 'title'
+              ? 'Title'
+              : sortField === 'view_count'
+                ? 'Views'
+                : 'Date'}{' '}
+          {sortDir === 'asc' ? '↑' : '↓'}
+        </DsButton>
+        <DsSegmented<ViewMode>
+          label="Layout"
+          value={viewMode}
+          onChange={setViewMode}
+          options={[
+            { value: 'table', label: 'Table' },
+            { value: 'cards', label: 'Cards' },
+          ]}
         />
-        <StatPill
-          label="Drafts"
-          count={stats.draft}
-          active={selectedStatus === 'draft'}
-          onClick={() => setSelectedStatus((s) => (s === 'draft' ? '' : 'draft'))}
-          color="gray"
-        />
-        <StatPill
-          label="Scheduled"
-          count={stats.scheduled}
-          active={selectedStatus === 'scheduled'}
-          onClick={() => setSelectedStatus((s) => (s === 'scheduled' ? '' : 'scheduled'))}
-          color="blue"
-        />
-        <StatPill label="Featured" count={stats.featured} color="amber" />
       </div>
 
-      {/* ── Toolbar ───────────────────────────────────────────────── */}
-      <Card>
-        <CardContent className="py-3 px-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            {/* Search */}
-            <div className="relative flex-1 min-w-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search articles..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Actions row */}
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              {/* Filter toggle */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters((f) => !f)}
-                className={cn(
-                  'gap-1.5',
-                  showFilters && 'bg-purple-50 border-purple-200 text-purple-700',
-                )}
-              >
-                <Filter className="h-3.5 w-3.5" />
-                Filters
-                {activeFilterCount > 0 && (
-                  <Badge className="ml-1 bg-purple-600 text-white text-[10px] px-1.5 py-0 h-4">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </Button>
-
-              {/* Sort */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => toggleSort(sortField)}
-                className="gap-1.5"
-              >
-                <ArrowUpDown className="h-3.5 w-3.5" />
-                <span className="hidden md:inline">
-                  {sortField === 'updated_at'
-                    ? 'Modified'
-                    : sortField === 'title'
-                      ? 'Title'
-                      : sortField === 'view_count'
-                        ? 'Views'
-                        : 'Date'}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {sortDir === 'asc' ? 'A-Z' : 'Z-A'}
-                </span>
-              </Button>
-
-              {/* View toggle */}
-              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={cn(
-                    'p-1.5 transition-colors',
-                    viewMode === 'table'
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-400 hover:text-gray-600',
-                  )}
-                  aria-label="Table view"
-                >
-                  <LayoutList className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('cards')}
-                  className={cn(
-                    'p-1.5 transition-colors',
-                    viewMode === 'cards'
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-400 hover:text-gray-600',
-                  )}
-                  aria-label="Card view"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-              </div>
-
-              <Button
-                onClick={onCreateNew}
-                size="sm"
-                className="gap-1.5 bg-purple-600 hover:bg-purple-700"
-              >
-                <PlusCircle className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">New</span>
-              </Button>
-            </div>
+      {/* ── Filter panel ──────────────────────────────────────── */}
+      {showFilters && (
+        <div className="ds-card ds-card-b">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <FilterSelect
+              label="Status"
+              value={selectedStatus}
+              onChange={setSelectedStatus}
+              options={[
+                { value: '', label: 'All statuses' },
+                { value: 'published', label: 'Published' },
+                { value: 'draft', label: 'Draft' },
+                { value: 'in_review', label: 'In review' },
+                { value: 'scheduled', label: 'Scheduled' },
+                { value: 'archived', label: 'Archived' },
+              ]}
+            />
+            <FilterSelect
+              label="Category"
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              options={[
+                { value: '', label: 'All categories' },
+                ...categories.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+            />
           </div>
-
-          {/* ── Filter panel ──────────────────────────────────────── */}
-          {showFilters && (
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <FilterSelect
-                  label="Status"
-                  value={selectedStatus}
-                  onChange={setSelectedStatus}
-                  options={[
-                    { value: '', label: 'All Status' },
-                    { value: 'published', label: 'Published' },
-                    { value: 'draft', label: 'Draft' },
-                    { value: 'in_review', label: 'In Review' },
-                    { value: 'scheduled', label: 'Scheduled' },
-                    { value: 'archived', label: 'Archived' },
-                  ]}
+          {activeFilterCount > 0 && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs text-muted-foreground">Active:</span>
+              {selectedStatus && (
+                <FilterPill
+                  label={selectedStatus.replace('_', ' ')}
+                  onClear={() => setSelectedStatus('')}
                 />
-                <FilterSelect
-                  label="Category"
-                  value={selectedCategory}
-                  onChange={setSelectedCategory}
-                  options={[
-                    { value: '', label: 'All Categories' },
-                    ...categories.map((c) => ({ value: c.id, label: c.name })),
-                  ]}
-                />
-              </div>
-              {activeFilterCount > 0 && (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-muted-foreground">Active:</span>
-                  {selectedStatus && (
-                    <FilterPill
-                      label={selectedStatus.replace('_', ' ')}
-                      onClear={() => setSelectedStatus('')}
-                    />
-                  )}
-                  {selectedCategory && (
-                    <FilterPill
-                      label={getCategoryName(selectedCategory)}
-                      onClear={() => setSelectedCategory('')}
-                    />
-                  )}
-                  <button
-                    onClick={() => {
-                      setSelectedStatus('');
-                      setSelectedCategory('');
-                    }}
-                    className="text-xs text-purple-600 hover:text-purple-800 ml-1"
-                  >
-                    Clear all
-                  </button>
-                </div>
               )}
-            </div>
-          )}
-
-          {/* ── Bulk action bar ───────────────────────────────────── */}
-          {selectedIds.size > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-medium text-gray-700">{selectedIds.size} selected</span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={handleBulkArchive}
-                disabled={isBusy}
-              >
-                <Archive className="h-3.5 w-3.5" />
-                Archive
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-red-600 hover:bg-red-50 border-red-200"
-                onClick={handleBulkDelete}
-                disabled={isBusy}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete
-              </Button>
+              {selectedCategory && (
+                <FilterPill
+                  label={getCategoryName(selectedCategory)}
+                  onClear={() => setSelectedCategory('')}
+                />
+              )}
               <button
-                onClick={() => setSelectedIds(new Set())}
-                className="text-xs text-muted-foreground hover:text-gray-700 ml-auto"
-              >
-                Deselect all
-              </button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ── Results ───────────────────────────────────────────────── */}
-      <div className="text-xs text-muted-foreground flex items-center justify-between">
-        <span>
-          {filteredArticles.length === articles.length
-            ? `${articles.length} articles`
-            : `${filteredArticles.length} of ${articles.length} articles`}
-        </span>
-      </div>
-
-      {/* ── Empty state ───────────────────────────────────────────── */}
-      {filteredArticles.length === 0 && (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <FileText className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">
-              {articles.length === 0 ? 'No articles yet' : 'No articles match your filters'}
-            </h3>
-            <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">
-              {articles.length === 0
-                ? 'Create your first article to start building your content library.'
-                : 'Try another search, status or category.'}
-            </p>
-            {articles.length === 0 ? (
-              <Button onClick={onCreateNew} className="gap-2">
-                <PlusCircle className="h-4 w-4" />
-                New article
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
                 onClick={() => {
-                  setSearchQuery('');
                   setSelectedStatus('');
                   setSelectedCategory('');
                 }}
+                className="text-xs text-purple-600 hover:text-purple-800 ml-1"
               >
-                Clear filters
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Bulk action bar ───────────────────────────────────── */}
+      {selectedIds.size > 0 && (
+        <div className="ds-notice dark" role="status">
+          <b>{selectedIds.size} selected</b>
+          <span className="grow" />
+          <DsButton size="sm" onClick={handleBulkArchive} disabled={isBusy}>
+            Archive
+          </DsButton>
+          <DsButton size="sm" variant="danger" onClick={handleBulkDelete} disabled={isBusy}>
+            Delete
+          </DsButton>
+          <DsButton
+            size="sm"
+            variant="ghost"
+            className="text-white hover:bg-white/10"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Deselect all
+          </DsButton>
+        </div>
+      )}
+
+      {/* ── Empty state ───────────────────────────────────────────── */}
+      {filteredArticles.length === 0 && (
+        <section className="ds-card">
+          <DsState
+            title={articles.length === 0 ? 'No articles yet' : 'No articles match your filters'}
+            action={
+              articles.length === 0 ? (
+                <DsButton variant="primary" onClick={onCreateNew}>
+                  New article
+                </DsButton>
+              ) : (
+                <DsButton
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedStatus('');
+                    setSelectedCategory('');
+                    setFeaturedOnly(false);
+                  }}
+                >
+                  Clear filters
+                </DsButton>
+              )
+            }
+          />
+        </section>
       )}
 
       {/* ── Table view ────────────────────────────────────────────── */}
       {filteredArticles.length > 0 && viewMode === 'table' && (
-        <Card>
+        <section className="ds-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b bg-gray-50/80">
+            <table className="w-full text-[13.5px]">
+              <thead className="border-b border-nw-line bg-[#fafafb]">
                 <tr>
                   <th className="w-10 px-4 py-3">
-                    <button onClick={toggleSelectAll} className="text-gray-400 hover:text-gray-600">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      aria-label={allSelected ? 'Deselect all' : 'Select all'}
+                      className="text-nw-text-3 hover:text-nw-ink"
+                    >
                       {allSelected ? (
                         <CheckSquare className="h-4 w-4 text-purple-600" />
                       ) : (
@@ -555,10 +469,10 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                     dir={sortDir}
                     onSort={toggleSort}
                   />
-                  <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden px-4 py-2.5 text-left text-[12px] font-medium text-nw-text-3 sm:table-cell">
                     Category
                   </th>
-                  <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="hidden px-4 py-2.5 text-left text-[12px] font-medium text-nw-text-3 sm:table-cell">
                     Status
                   </th>
                   <SortableHeader
@@ -577,18 +491,18 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                     dir={sortDir}
                     onSort={toggleSort}
                   />
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                  <th className="px-4 py-2.5">
+                    <span className="sr-only">Actions</span>
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-nw-line">
                 {filteredArticles.map((article) => (
                   <tr
                     key={article.id}
                     className={cn(
                       'group transition-colors cursor-pointer',
-                      selectedIds.has(article.id) ? 'bg-purple-50/50' : 'hover:bg-gray-50',
+                      selectedIds.has(article.id) ? 'bg-nw-violet-50/60' : 'hover:bg-[#fafafb]',
                     )}
                     onClick={() => onEditArticle(article)}
                   >
@@ -606,12 +520,12 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                     </td>
                     <td className="px-2 py-3 sm:px-4">
                       <div className="flex items-center gap-2 min-w-0">
-                        {article.is_featured && (
-                          <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
-                        )}
                         <div className="min-w-0">
-                          <p className="line-clamp-2 font-medium text-gray-900 sm:line-clamp-none sm:max-w-[300px] sm:truncate">
-                            {article.title}
+                          <p className="flex items-center gap-2 font-medium text-nw-ink">
+                            <span className="line-clamp-2 sm:line-clamp-1 sm:max-w-[360px]">
+                              {article.title}
+                            </span>
+                            {article.is_featured && <span className="ds-pill brand">Featured</span>}
                           </p>
                           {article.subtitle && (
                             <p className="hidden max-w-[300px] truncate text-xs text-muted-foreground sm:block">
@@ -628,45 +542,36 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                       </div>
                     </td>
                     <td className="hidden px-4 py-3 sm:table-cell">
-                      <span className="text-sm text-gray-600">
-                        {getCategoryName(article.category_id)}
-                      </span>
+                      <span className="text-nw-text-2">{getCategoryName(article.category_id)}</span>
                     </td>
                     <td className="hidden px-4 py-3 sm:table-cell">
                       <StatusBadge status={article.status} />
                     </td>
                     <td className="hidden px-4 py-3 sm:table-cell">
-                      <span className="text-sm text-gray-500">
-                        {getRelativeTime(article.updated_at)}
+                      <span className="text-nw-text-2" title={getRelativeTime(article.updated_at)}>
+                        {formatShortDate(article.updated_at)}
                       </span>
                     </td>
                     <td className="hidden px-4 py-3 sm:table-cell">
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <Eye className="h-3 w-3" />
-                        {(article.view_count || 0).toLocaleString()}
-                      </div>
+                      <span className="tabular-nums text-nw-text-2">
+                        {article.view_count ? article.view_count.toLocaleString() : '—'}
+                      </span>
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7"
-                          onClick={() => onEditArticle(article)}
-                        >
+                        <DsButton size="sm" onClick={() => onEditArticle(article)}>
                           Edit
-                        </Button>
+                        </DsButton>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button
+                            <DsButton
+                              size="sm"
                               variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
                               aria-label={`More actions for ${article.title}`}
                               disabled={isBusy}
                             >
                               <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-                            </Button>
+                            </DsButton>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {article.status === 'published' && (
@@ -721,7 +626,14 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
               </tbody>
             </table>
           </div>
-        </Card>
+          <div className="flex items-center justify-between border-t border-nw-line px-4 py-2.5">
+            <span className="ds-meta">
+              {filteredArticles.length === articles.length
+                ? `${articles.length} articles`
+                : `${filteredArticles.length} of ${articles.length} articles`}
+            </span>
+          </div>
+        </section>
       )}
 
       {/* ── Card view ─────────────────────────────────────────────── */}
@@ -768,40 +680,16 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
 
 // ── Sub-components ───────────────────────────────────────────────────────
 
-function StatPill({
-  label,
-  count,
-  active,
-  onClick,
-  color,
-}: {
-  label: string;
-  count: number;
-  active?: boolean;
-  onClick?: () => void;
-  color: 'green' | 'gray' | 'blue' | 'amber';
-}) {
-  const colorMap = {
-    green: 'bg-green-50 text-green-700 border-green-200',
-    gray: 'bg-gray-50 text-gray-700 border-gray-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    amber: 'bg-amber-50 text-amber-700 border-amber-200',
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border transition-all',
-        onClick ? 'cursor-pointer hover:shadow-sm' : 'cursor-default',
-        active ? 'ring-2 ring-purple-400 ring-offset-1' : '',
-        colorMap[color],
-      )}
-    >
-      <span>{label}</span>
-      <span className="font-bold">{count}</span>
-    </button>
-  );
+/** "6 Nov" (this year) or "6 Nov 2025" — the board's Modified column. */
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  });
 }
 
 function FilterSelect({

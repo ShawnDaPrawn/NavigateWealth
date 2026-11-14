@@ -17,6 +17,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
 import {
+  DsButton,
   ErrorState,
   PageHeader,
   NavTabsList,
@@ -26,11 +27,10 @@ import {
   useUrlState,
   type RecordOpenResult,
 } from '../../layout/page';
-import { Button } from '../../../ui/button';
 
-import { PlusCircle, RefreshCw } from 'lucide-react';
+
 import { Skeleton } from '../../../ui/skeleton';
-import { cn } from '../../../ui/utils';
+
 
 // Existing module components
 import { ArticlesListView } from './ArticlesListView';
@@ -462,17 +462,12 @@ export function PublicationsModule() {
           description="Articles, content pipeline, subscribers and website content."
           actions={
             <>
-              <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw
-                  className={cn('h-4 w-4', isRefreshing && 'animate-spin')}
-                  aria-hidden="true"
-                />
-                Refresh
-              </Button>
-              <Button onClick={handleCreateNew} disabled={!canCreate}>
-                <PlusCircle className="h-4 w-4" aria-hidden="true" />
+              <DsButton onClick={handleRefresh} disabled={isRefreshing}>
+                {isRefreshing ? 'Refreshing…' : 'Refresh'}
+              </DsButton>
+              <DsButton variant="primary" onClick={handleCreateNew} disabled={!canCreate}>
                 New article
-              </Button>
+              </DsButton>
             </>
           }
         />
