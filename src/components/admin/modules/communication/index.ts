@@ -19,6 +19,7 @@ export type {
   CommunicationLog,
   ExternalContact,
   GroupFilterConfig,
+  GroupPreview,
   SendMessageResponse,
 } from './types';
 

@@ -1,10 +1,17 @@
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronLeft, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../../../../ui/button';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
 import { Tabs, TabsContent } from '../../../../../ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../../../../ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +22,6 @@ import {
   SegmentedList,
   SegmentedTrigger,
   FormErrorBanner,
-  SoonBadge,
   useConfirm,
   useUrlState,
 } from '../../../../layout/page';
@@ -26,6 +32,7 @@ import {
   type ClientGroup,
   type ExternalContact,
   type GroupFilterConfig,
+  type GroupPreview,
 } from '../../../communication';
 import {
   GROUP_EDITOR_VIEWS,
@@ -34,6 +41,8 @@ import {
   groupKind,
   hasDynamicFilters,
   isValidEmail,
+  matchCountLabel,
+  GROUP_PREVIEW_DEBOUNCE_MS,
   type GroupEditorView,
 } from './groupModel';
 import { useGroupEditorOptions } from './useClientGroups';
@@ -84,6 +93,35 @@ export function GroupEditorPage({ group, onClose, onChanged }: GroupEditorPagePr
   const activeView: GroupEditorView = isNewsletter ? 'contacts' : view;
   const validContactCount = externalContacts.filter((c) => isValidEmail(c.email)).length;
   const dynamic = hasDynamicFilters(filterConfig);
+
+  // Live count of who the rules match, refreshed shortly after each change.
+  const [preview, setPreview] = useState<
+    { state: 'idle' | 'loading' | 'error' } | { state: 'ready'; data: GroupPreview }
+  >({ state: 'idle' });
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewToken, setPreviewToken] = useState(0);
+  useEffect(() => {
+    if (isNewsletter || !dynamic) {
+      setPreview({ state: 'idle' });
+      return;
+    }
+    let cancelled = false;
+    setPreview({ state: 'loading' });
+    const timer = window.setTimeout(() => {
+      communicationApi
+        .previewGroup(filterConfig)
+        .then((data) => {
+          if (!cancelled) setPreview({ state: 'ready', data });
+        })
+        .catch(() => {
+          if (!cancelled) setPreview({ state: 'error' });
+        });
+    }, GROUP_PREVIEW_DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [filterConfig, dynamic, isNewsletter, previewToken]);
 
   const subtitle = useMemo(() => {
     if (!group) return 'New group';
@@ -415,8 +453,8 @@ export function GroupEditorPage({ group, onClose, onChanged }: GroupEditorPagePr
         </TabsContent>
       </Tabs>
 
-      {/* Member count bar. The server works out who matches the rules when the
-          group is saved; there is no preview endpoint yet. */}
+      {/* Member count bar: hand-picked and external, plus a live count of who
+          the rules match (refreshed as the rules change, nothing saved). */}
       {!isNewsletter && (
         <div
           className="sticky bottom-0 flex flex-wrap items-center gap-3 rounded-xl border border-nw-line bg-white px-5 py-3 shadow-sm"
@@ -426,15 +464,58 @@ export function GroupEditorPage({ group, onClose, onChanged }: GroupEditorPagePr
             {selectedClientIds.length} hand-picked · {validContactCount} external
           </span>
           <span className="text-sm text-nw-text-3">
-            {dynamic
-              ? 'Clients matching the rules are counted when you save'
-              : 'No dynamic rules set'}
+            {!dynamic
+              ? 'No dynamic rules set'
+              : preview.state === 'ready'
+                ? matchCountLabel(preview.data.count)
+                : preview.state === 'error'
+                  ? "Couldn't count the matches"
+                  : 'Counting matches…'}
             {group ? ` · ${group.clientCount ?? 0} members now` : ''}
           </span>
-          <Button variant="outline" size="sm" className="ml-auto" disabled>
-            Preview list <SoonBadge />
+          {preview.state === 'error' && (
+            <Button variant="ghost" size="sm" onClick={() => setPreviewToken((n) => n + 1)}>
+              Try again
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-auto"
+            disabled={preview.state !== 'ready'}
+            onClick={() => setPreviewOpen(true)}
+          >
+            Preview list
           </Button>
         </div>
+      )}
+      {preview.state === 'ready' && (
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Who the rules match</DialogTitle>
+              <DialogDescription>
+                {matchCountLabel(preview.data.count)} right now
+                {preview.data.count > preview.data.clients.length
+                  ? ` (the first ${preview.data.clients.length} are listed)`
+                  : ''}
+                . Hand-picked clients and external contacts are added on top.
+              </DialogDescription>
+            </DialogHeader>
+            {preview.data.clients.length === 0 ? (
+              <p className="py-6 text-center text-sm text-nw-text-3">No clients match yet.</p>
+            ) : (
+              <ul className="max-h-80 divide-y overflow-y-auto rounded-lg border border-nw-line">
+                {preview.data.clients.map((c) => (
+                  <li key={c.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                    <span className="truncate text-sm text-nw-ink">{c.name}</span>
+                    <span className="truncate text-xs text-nw-text-3">{c.email}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </DialogContent>
+        </Dialog>
       )}
       {confirmDialog}
     </div>

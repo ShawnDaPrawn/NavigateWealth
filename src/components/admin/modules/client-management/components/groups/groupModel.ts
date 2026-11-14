@@ -103,3 +103,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email.trim());
 }
+
+/** Wait this long after the last rule change before asking for a new count. */
+export const GROUP_PREVIEW_DEBOUNCE_MS = 400;
+
+/** "12 clients match the rules" / "1 client matches the rules". */
+export function matchCountLabel(count: number): string {
+  return `${count} ${count === 1 ? 'client matches' : 'clients match'} the rules`;
+}

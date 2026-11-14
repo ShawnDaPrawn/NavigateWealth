@@ -16,6 +16,10 @@ const _log = createModuleLogger('group-matcher');
 
 export interface MatcherClient {
   id: string;
+  /** Display only (group preview); not used for matching. */
+  firstName?: string;
+  lastName?: string;
+  email?: string;
   gender?: string;
   country?: string;
   income?: number;
