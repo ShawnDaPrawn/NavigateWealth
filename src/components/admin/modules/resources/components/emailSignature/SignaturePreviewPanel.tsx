@@ -5,10 +5,10 @@
  * it owns no state; everything it needs arrives as a prop.
  */
 import type { Dispatch, SetStateAction } from 'react';
-import { Badge } from '../../../../../ui/badge';
+
 import { Button } from '../../../../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
-import { Check, Code, Copy, Download, Mail, Sparkles } from 'lucide-react';
+import { DsButton } from '../../../../layout/page';
+import { Check, Code, Copy } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { type SignatureData, TEMPLATES } from './signatureModel';
 
@@ -21,6 +21,8 @@ interface SignaturePreviewPanelProps {
   signatureHtml: string;
   onCopyHtml: () => void;
   onDownloadHtml: () => void;
+  /** Opens the full email preview (RE-CI-Signatures puts it in the preview header). */
+  onFullPreview?: () => void;
   isReady: boolean;
 }
 
@@ -33,25 +35,36 @@ export function SignaturePreviewPanel({
   signatureHtml,
   onCopyHtml,
   onDownloadHtml,
+  onFullPreview,
   isReady,
 }: SignaturePreviewPanelProps) {
   return (
-    <div className="lg:col-span-3 space-y-4">
-      <div className="sticky top-4 space-y-4">
-        {/* Preview Card */}
-        <Card className="overflow-hidden border-border">
-          <CardHeader className="pb-3 bg-muted/40 border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-purple-500" />
-                <CardTitle className="text-sm">Live Preview</CardTitle>
-              </div>
-              <Badge variant="secondary" className="text-[10px] font-medium">
-                {TEMPLATES.find((t) => t.id === template)?.name} Template
-              </Badge>
+    <div className="min-w-0">
+      <div className="space-y-4 lg:sticky lg:top-4">
+        {/* RE-CI-Signatures: the "Preview" card, actions in its header */}
+        <section className="ds-card overflow-hidden">
+          <div className="ds-card-h flex-wrap">
+            <div>
+              <h3>Preview</h3>
+              <span className="ds-meta">
+                {TEMPLATES.find((t) => t.id === template)?.name} template
+              </span>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
+            <div className="flex flex-wrap gap-1.5">
+              {onFullPreview && (
+                <DsButton size="sm" onClick={onFullPreview} disabled={!isReady}>
+                  Full email preview
+                </DsButton>
+              )}
+              <DsButton size="sm" onClick={onDownloadHtml} disabled={!isReady}>
+                Download .html
+              </DsButton>
+              <DsButton size="sm" variant="primary" onClick={onCopyHtml} disabled={!isReady}>
+                {copied ? 'Copied' : 'Copy signature'}
+              </DsButton>
+            </div>
+          </div>
+          <div className="bg-[#fafafb]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={template}
@@ -119,73 +132,25 @@ export function SignaturePreviewPanel({
                   </div>
                 ) : (
                   <div className="text-center py-16 px-6">
-                    <motion.div
-                      animate={{ scale: [1, 1.06, 1] }}
-                      transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                    >
-                      <div className="p-3 rounded-xl bg-purple-50 inline-flex">
-                        <Mail className="h-8 w-8 text-purple-300" />
-                      </div>
-                    </motion.div>
-                    <p className="text-sm font-medium text-muted-foreground mt-4">
-                      Enter your name to see the preview
-                    </p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">
-                      Fill in the details on the left to generate your signature
-                    </p>
+                    <span className="ds-meta">Enter a full name to see the preview</span>
                   </div>
                 )}
               </motion.div>
             </AnimatePresence>
-          </CardContent>
-        </Card>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            className="bg-purple-600 hover:bg-purple-700 h-10"
-            onClick={onCopyHtml}
-            disabled={!isReady}
-          >
-            <AnimatePresence mode="wait">
-              {copied ? (
-                <motion.div
-                  key="copied"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  className="flex items-center gap-1.5"
-                >
-                  <Check className="h-4 w-4" /> Copied!
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="copy"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  className="flex items-center gap-1.5"
-                >
-                  <Copy className="h-4 w-4" /> Copy HTML
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </Button>
-          <Button variant="outline" className="h-10" onClick={onDownloadHtml} disabled={!isReady}>
-            <Download className="h-4 w-4 mr-1.5" />
-            Download .html
-          </Button>
-        </div>
+          </div>
+        </section>
 
         {/* HTML Source */}
-        <Card>
+        <section className="ds-card overflow-hidden">
           <button
-            className="flex items-center justify-between w-full px-4 py-3"
+            type="button"
+            aria-expanded={showSource}
+            className="flex w-full items-center justify-between px-4 py-3"
             onClick={() => setShowSource(!showSource)}
           >
             <div className="flex items-center gap-2">
-              <Code className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground">View HTML Source</span>
+              <Code className="h-3.5 w-3.5 text-nw-text-3" aria-hidden="true" />
+              <span className="text-[13px] font-medium text-nw-text-2">HTML source</span>
             </div>
             <motion.svg
               animate={{ rotate: showSource ? 180 : 0 }}
@@ -237,7 +202,7 @@ export function SignaturePreviewPanel({
               </motion.div>
             )}
           </AnimatePresence>
-        </Card>
+        </section>
       </div>
     </div>
   );

@@ -6,22 +6,18 @@
  */
 import type { ChangeEvent, RefObject } from 'react';
 import { Button } from '../../../../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
 import { Input } from '../../../../../ui/input';
 import { Label } from '../../../../../ui/label';
 import { Textarea } from '../../../../../ui/textarea';
 import {
-  Award,
   ImageIcon,
   Instagram,
   Linkedin,
   Palette,
-  Phone,
   RotateCcw,
   Shield,
   Type,
   Upload,
-  User,
 } from 'lucide-react';
 import { type SignatureData, FSP_TAGLINE } from './signatureModel';
 
@@ -49,18 +45,11 @@ export function SignatureFormPanel({
   onClearLogo,
 }: SignatureFormPanelProps) {
   return (
-    <div className="lg:col-span-2 space-y-4">
+    <div className="space-y-5">
       {/* Personal Details */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-purple-50">
-              <User className="h-3.5 w-3.5 text-purple-600" />
-            </div>
-            <CardTitle className="text-sm">Personal Details</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <div>
+        <b className="mb-2.5 block text-[13.5px] font-semibold text-nw-ink">Personal details</b>
+        <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs">
               Full Name <span className="text-red-500">*</span>
@@ -86,24 +75,17 @@ export function SignatureFormPanel({
             <Input
               value={data.qualifications}
               onChange={(e) => updateField('qualifications', e.target.value)}
-              placeholder="e.g. CFP\u00AE, B.Com (Hons)"
+              placeholder="e.g. CFP®, B.Com (Hons)"
               className="h-9"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Contact Details */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-blue-50">
-              <Phone className="h-3.5 w-3.5 text-blue-600" />
-            </div>
-            <CardTitle className="text-sm">Contact Details</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <div>
+        <b className="mb-2.5 block text-[13.5px] font-semibold text-nw-ink">Contact details</b>
+        <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Email</Label>
@@ -153,20 +135,13 @@ export function SignatureFormPanel({
               className="h-9"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Social Profiles */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-pink-50">
-              <Instagram className="h-3.5 w-3.5 text-pink-600" />
-            </div>
-            <CardTitle className="text-sm">Social Profiles</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <div>
+        <b className="mb-2.5 block text-[13.5px] font-semibold text-nw-ink">Social profiles</b>
+        <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs flex items-center gap-1.5">
@@ -207,20 +182,15 @@ export function SignatureFormPanel({
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Branding & Disclaimer */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-amber-50">
-              <Award className="h-3.5 w-3.5 text-amber-600" />
-            </div>
-            <CardTitle className="text-sm">Branding & Disclaimer</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <div>
+        <b className="mb-2.5 block text-[13.5px] font-semibold text-nw-ink">
+          Branding &amp; disclaimer
+        </b>
+        <div className="space-y-3">
           {/* Row 1: Primary Colour */}
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1.5">
@@ -508,8 +478,8 @@ export function SignatureFormPanel({
               className="text-xs"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

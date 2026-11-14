@@ -25,9 +25,16 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { Button } from '../../../../ui/button';
-import { Eye, RotateCcw, Bookmark } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Label } from '../../../../ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../../ui/select';
+import { DsButton } from '../../../layout/page';
+
 import { toast } from 'sonner';
 import navigateWealthLogo from 'figma:asset/def9c4d4fdd055d486a64e8df869988fd6a2aca3.png';
 import {
@@ -39,7 +46,7 @@ import {
   TEMPLATES,
 } from './emailSignature/signatureModel';
 import { generateSignatureHtml } from './emailSignature/signatureHtml';
-import { SavedFormatsBar } from './emailSignature/SavedFormatsBar';
+
 import { SignatureFormPanel } from './emailSignature/SignatureFormPanel';
 import { SignaturePreviewPanel } from './emailSignature/SignaturePreviewPanel';
 import { PreviewDialog } from './emailSignature/PreviewDialog';
@@ -48,6 +55,7 @@ import { SaveFormatDialog } from './emailSignature/SaveFormatDialog';
 export function EmailSignatureGenerator() {
   const [data, setData] = useState<SignatureData>({ ...DEFAULT_DATA });
   const [template, setTemplate] = useState('modern');
+  const [loadedFormatId, setLoadedFormatId] = useState('');
   const [copied, setCopied] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [showSource, setShowSource] = useState(false);
@@ -204,127 +212,113 @@ export function EmailSignatureGenerator() {
   const isReady = data.fullName.trim().length > 0;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-base font-semibold">Email Signature Generator</h3>
-          <p className="text-sm text-muted-foreground">
-            Create professional HTML email signatures with Navigate Wealth branding.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={resetForm}>
-            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-            Reset
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-purple-200 text-purple-700 hover:bg-purple-50"
-            onClick={() => {
-              setFormatName('');
-              setSaveFormatOpen(true);
-            }}
-          >
-            <Bookmark className="h-3.5 w-3.5 mr-1.5" />
-            Save Format
-          </Button>
-          <Button
-            size="sm"
-            className="bg-purple-600 hover:bg-purple-700"
-            onClick={() => setPreviewOpen(true)}
-            disabled={!isReady}
-          >
-            <Eye className="h-3.5 w-3.5 mr-1.5" />
-            Full Preview
-          </Button>
-        </div>
-      </div>
-
-      {/* Template Selection */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
-        {TEMPLATES.map((t) => {
-          const active = template === t.id;
-          return (
-            <motion.button
-              key={t.id}
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setTemplate(t.id)}
-              className={`relative p-4 rounded-xl border-2 text-left transition-all ${
-                active
-                  ? 'border-purple-500 bg-purple-50/60 shadow-sm shadow-purple-500/10'
-                  : 'border-border bg-white hover:border-purple-200 hover:bg-purple-50/30'
-              }`}
+    <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
+      {/* RE-CI-Signatures: the generator card (template, saved format, details)… */}
+      <section className="ds-card overflow-hidden">
+        <div className="ds-card-h flex-wrap">
+          <h3>Email signature generator</h3>
+          <div className="flex flex-wrap gap-1.5">
+            <DsButton size="sm" variant="ghost" onClick={resetForm}>
+              Reset
+            </DsButton>
+            <DsButton
+              size="sm"
+              onClick={() => {
+                setFormatName('');
+                setSaveFormatOpen(true);
+              }}
             >
-              {active && (
-                <motion.div
-                  layoutId="template-indicator"
-                  className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-purple-600"
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                />
-              )}
-              {/* Mini preview swatch */}
-              <div
-                className={`h-2 w-10 rounded-full mb-3 ${
-                  t.id === 'modern'
-                    ? 'bg-gradient-to-r from-purple-600 to-purple-400'
-                    : t.id === 'elegant'
-                      ? 'bg-gradient-to-r from-amber-600 to-amber-400'
-                      : t.id === 'navigate'
-                        ? 'bg-[#313653]'
-                        : 'bg-purple-600'
-                }`}
-              />
-              <p
-                className={`text-sm font-semibold ${active ? 'text-purple-700' : 'text-foreground'}`}
-              >
-                {t.name}
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
-                {t.description}
-              </p>
-            </motion.button>
-          );
-        })}
-      </div>
+              Save signature format
+            </DsButton>
+          </div>
+        </div>
+        <div className="ds-card-b space-y-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="sig-template">Template</Label>
+              <Select value={template} onValueChange={setTemplate}>
+                <SelectTrigger id="sig-template">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TEMPLATES.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sig-format">Saved format</Label>
+              <div className="flex gap-1.5">
+                <Select
+                  value={loadedFormatId}
+                  onValueChange={(id) => {
+                    const format = savedFormats.find((f) => f.id === id);
+                    if (format) {
+                      setLoadedFormatId(id);
+                      handleLoadFormat(format);
+                    }
+                  }}
+                  disabled={savedFormats.length === 0}
+                >
+                  <SelectTrigger id="sig-format" className="min-w-0 flex-1">
+                    <SelectValue placeholder={savedFormats.length ? 'Choose' : 'None saved'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {savedFormats.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {loadedFormatId && (
+                  <DsButton
+                    size="sm"
+                    variant="ghost"
+                    className="h-9"
+                    aria-label="Delete saved format"
+                    onClick={() => {
+                      handleDeleteFormat(loadedFormatId);
+                      setLoadedFormatId('');
+                    }}
+                  >
+                    Delete
+                  </DsButton>
+                )}
+              </div>
+            </div>
+          </div>
 
-      <SavedFormatsBar
-        savedFormats={savedFormats}
-        onOpenSaveDialog={() => {
-          setFormatName('');
-          setSaveFormatOpen(true);
-        }}
-        onLoadFormat={handleLoadFormat}
-        onDeleteFormat={handleDeleteFormat}
+          <SignatureFormPanel
+            data={data}
+            template={template}
+            logoFileRef={logoFileRef}
+            updateField={updateField}
+            logoSrc={logoSrc}
+            effectiveNameColour={effectiveNameColour}
+            effectiveTitleColour={effectiveTitleColour}
+            onLogoUpload={handleLogoUpload}
+            onClearLogo={handleClearLogo}
+          />
+        </div>
+      </section>
+
+      {/* …and the preview card beside it */}
+      <SignaturePreviewPanel
+        data={data}
+        template={template}
+        copied={copied}
+        showSource={showSource}
+        setShowSource={setShowSource}
+        signatureHtml={signatureHtml}
+        onCopyHtml={handleCopyHtml}
+        onDownloadHtml={handleDownloadHtml}
+        onFullPreview={() => setPreviewOpen(true)}
+        isReady={isReady}
       />
-
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <SignatureFormPanel
-          data={data}
-          template={template}
-          logoFileRef={logoFileRef}
-          updateField={updateField}
-          logoSrc={logoSrc}
-          effectiveNameColour={effectiveNameColour}
-          effectiveTitleColour={effectiveTitleColour}
-          onLogoUpload={handleLogoUpload}
-          onClearLogo={handleClearLogo}
-        />
-
-        <SignaturePreviewPanel
-          data={data}
-          template={template}
-          copied={copied}
-          showSource={showSource}
-          setShowSource={setShowSource}
-          signatureHtml={signatureHtml}
-          onCopyHtml={handleCopyHtml}
-          onDownloadHtml={handleDownloadHtml}
-          isReady={isReady}
-        />
-      </div>
 
       <PreviewDialog
         data={data}

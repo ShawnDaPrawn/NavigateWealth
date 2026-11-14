@@ -117,17 +117,15 @@ describe('the generated signature is the output that matters', () => {
    * user actually walks away with.
    */
   function copiedHtml(): string {
-    const copy = screen.getAllByText(/Copy HTML/i)[0];
+    const copy = screen.getAllByText(/Copy signature/i)[0];
     fireEvent.click(copy.closest('button') ?? copy);
     return writeText.mock.calls.at(-1)![0] as string;
   }
 
-  function clickTemplate(container: HTMLElement, name: string): void {
-    const button = Array.from(container.querySelectorAll('button')).find((b) =>
-      (b.textContent ?? '').trim().startsWith(name),
-    );
-    expect(button, `no template button named ${name}`).toBeTruthy();
-    fireEvent.click(button!);
+  // The board puts the template in a "Template" select.
+  function clickTemplate(_container: HTMLElement, name: string): void {
+    fireEvent.click(screen.getByLabelText('Template'));
+    fireEvent.click(screen.getByRole('option', { name }));
   }
 
   it('produces different markup for each of the four templates', () => {
@@ -158,7 +156,7 @@ describe('copy and download read the same generated HTML', () => {
   it('copies the signature markup, not the page', async () => {
     renderReady();
 
-    const copy = screen.getAllByText(/Copy HTML/i)[0];
+    const copy = screen.getAllByText(/Copy signature/i)[0];
     fireEvent.click(copy.closest('button') ?? copy);
 
     expect(writeText).toHaveBeenCalledTimes(1);
@@ -174,7 +172,7 @@ describe('saved formats survive a round trip through localStorage', () => {
   it('writes a saved format under the documented key', () => {
     renderReady();
 
-    const save = screen.getAllByText(/Save Format/i)[0];
+    const save = screen.getAllByText(/Save signature format/i)[0];
     fireEvent.click(save.closest('button') ?? save);
 
     const nameInput = document.querySelector(
@@ -204,7 +202,9 @@ describe('saved formats survive a round trip through localStorage', () => {
 
     render(<EmailSignatureGenerator />);
 
-    expect(screen.getAllByText(/Preloaded/i).length).toBeGreaterThan(0);
+    // Saved formats are listed in the "Saved format" select.
+    fireEvent.click(screen.getByLabelText('Saved format'));
+    expect(screen.getByRole('option', { name: 'Preloaded' })).toBeTruthy();
   });
 
   it('survives corrupt storage rather than failing to render', () => {
