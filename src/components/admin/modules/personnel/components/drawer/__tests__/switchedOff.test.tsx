@@ -6,8 +6,8 @@ const reassign = vi.hoisted(() => vi.fn());
 vi.mock('../../../hooks', () => ({
   usePersonnel: () => ({
     data: [
-      { id: 'p-1', firstName: 'Ruan', lastName: 'Steyn', status: 'active' },
-      { id: 'p-2', firstName: 'Priya', lastName: 'Naidoo', status: 'active' },
+      { id: 'p-1', firstName: 'Ruan', lastName: 'Steyn', status: 'active', role: 'adviser' },
+      { id: 'p-2', firstName: 'Priya', lastName: 'Naidoo', status: 'active', role: 'adviser' },
     ],
   }),
   useReassignPersonnelClients: () => ({ mutate: reassign, isPending: false }),

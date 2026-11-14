@@ -150,9 +150,17 @@ export function CalendarModule() {
     error: eventsError,
     refetch: refetchEvents,
   } = useEvents(filters);
-  const { data: birthdayEvents = [], isError: birthdaysFailed } = useClientBirthdays(currentDate);
-  const { data: policyRenewals = [], isError: renewalsFailed } = usePolicyRenewals(currentDate);
-  const { data: tasks = [], isError: tasksFailed } = useTasks();
+  const {
+    data: birthdayEvents = [],
+    isError: birthdaysFailed,
+    isLoading: birthdaysLoading,
+  } = useClientBirthdays(currentDate);
+  const {
+    data: policyRenewals = [],
+    isError: renewalsFailed,
+    isLoading: renewalsLoading,
+  } = usePolicyRenewals(currentDate);
+  const { data: tasks = [], isError: tasksFailed, isLoading: tasksLoading } = useTasks();
   // Birthdays, renewals and task due dates are secondary: the calendar still
   // works without them, so a failure is a toast, not the error state.
   useEffect(() => {
@@ -416,8 +424,19 @@ export function CalendarModule() {
 
   // ── The open event lives in the address (?event=<id>, ?event=new) ──
   const openEventId = showEventModal ? (selectedEvent ? selectedEvent.id : NEW_EVENT) : null;
+  // A linked task, birthday or renewal comes from its own request, which can
+  // finish after the ordinary events: wait for the source the id names.
+  const sourceLoading = (id: string) =>
+    id.startsWith('task-')
+      ? tasksLoading
+      : id.startsWith('birthday-')
+        ? birthdaysLoading
+        : id.startsWith('renewal-')
+          ? renewalsLoading
+          : false;
   useRecordInUrl('event', openEventId, {
-    ready: !isLoadingEvents && !eventsError,
+    ready:
+      !isLoadingEvents && !eventsError && !tasksLoading && !birthdaysLoading && !renewalsLoading,
     openFromUrl: (id) => {
       if (id === NEW_EVENT) {
         if (!canCreateEvent) return 'missing';
@@ -429,7 +448,7 @@ export function CalendarModule() {
         openEventPage(found);
         return 'opened';
       }
-      if (isLoadingEvents || eventsError) return 'waiting';
+      if (isLoadingEvents || eventsError || sourceLoading(id)) return 'waiting';
       toast.error('Event not found', {
         description: 'It may have been deleted, or it falls outside the dates loaded.',
       });

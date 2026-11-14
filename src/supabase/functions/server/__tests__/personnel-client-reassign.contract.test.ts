@@ -68,13 +68,13 @@ const call = (path: string, init: RequestInit & { auth?: string } = {}) => {
 
 const json = async (res: Response) => (await res.json()) as any;
 
-const staff = (id: string, status = 'active') =>
+const staff = (id: string, status = 'active', role = 'adviser') =>
   kvStore.set(`personnel:profile:${id}`, {
     id,
     email: `${id}@example.co.za`,
     firstName: id,
     lastName: 'Staff',
-    role: 'adviser',
+    role,
     status,
     commissionSplit: 0.7,
     createdAt: 'x',
@@ -154,6 +154,21 @@ describe('POST /:id/clients/reassign', () => {
     expect((await reassign('naledi', { toPersonnelId: 'x', clientIds: [] })).status).toBe(400);
     expect((await reassign('nobody', { toPersonnelId: 'naledi', clientIds: ['c1'] })).status).toBe(
       404,
+    );
+  });
+
+  it('refuses a target whose role cannot open an assigned client', async () => {
+    await staff('naledi');
+    await client('c1', { adviserId: 'naledi' });
+    for (const role of ['compliance', 'paraplanner', 'viewer']) {
+      await staff(`t-${role}`, 'active', role);
+      const res = await reassign('naledi', { toPersonnelId: `t-${role}`, clientIds: ['c1'] });
+      expect(res.status).toBe(400);
+    }
+    expect(kvStore.get('user_profile:c1:personal_info')).toMatchObject({ adviserId: 'naledi' });
+    await staff('boss', 'active', 'admin');
+    expect((await reassign('naledi', { toPersonnelId: 'boss', clientIds: ['c1'] })).status).toBe(
+      200,
     );
   });
 });

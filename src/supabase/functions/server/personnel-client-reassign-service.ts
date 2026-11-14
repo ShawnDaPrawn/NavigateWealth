@@ -15,6 +15,7 @@ import {
   personnelProfiles,
 } from './repositories/client-adviser-repository.ts';
 import type { ClientProfileRecord } from './repositories/client-adviser-repository.ts';
+import { canHoldClientBook } from './client-access.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 
 const log = createModuleLogger('personnel-client-reassign');
@@ -63,6 +64,9 @@ export async function reassignClients(
   if (!target) throw new ReassignError('The staff member to reassign to was not found', 404);
   if (target.status !== 'active') {
     throw new ReassignError('Clients can only move to an active staff member', 400);
+  }
+  if (!canHoldClientBook(target.role)) {
+    throw new ReassignError('Clients can only move to an adviser or an admin', 400);
   }
 
   const profiles = await clientProfiles.getMany(ids.map(clientProfileId));

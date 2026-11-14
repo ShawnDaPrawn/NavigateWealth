@@ -36,12 +36,17 @@ interface TabClientBookProps {
  * Assigned client book. The super admin can move some or all of the clients
  * to another active staff member (Bulk reassign).
  */
+const CLIENT_BOOK_ROLES = new Set<string>(['adviser', 'admin', 'super_admin']);
+
 export function TabClientBook({ personnelId, clients, loading }: TabClientBookProps) {
   const { isSuperAdmin } = useCurrentUserPermissions();
   const { data: personnel = [] } = usePersonnel();
   const { mutate: reassign, isPending } = useReassignPersonnelClients();
   const [reassignOpen, setReassignOpen] = useState(false);
-  const candidates = personnel.filter((p) => p.id !== personnelId && p.status === 'active');
+  // Only roles the client-access policy lets open an assigned client.
+  const candidates = personnel.filter(
+    (p) => p.id !== personnelId && p.status === 'active' && CLIENT_BOOK_ROLES.has(p.role),
+  );
 
   return (
     <>
