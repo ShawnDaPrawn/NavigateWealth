@@ -1,7 +1,7 @@
 import React, { useCallback, useState, Suspense } from 'react';
-import { CheckCircle, Users, Mail, Send, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Tabs, TabsContent } from '../../../ui/tabs';
-import { NavTabsList, NavTabsTrigger, PageHeader, useUrlState } from '../../layout/page';
+import { DsSteps, NavTabsList, NavTabsTrigger, PageHeader, useUrlState } from '../../layout/page';
 import { CommunicationDraft } from './types';
 import { Crumbs } from './components/Crumbs';
 import { Step1Recipients } from './components/steps/Step1Recipients';
@@ -31,9 +31,9 @@ function ViewFallback() {
 }
 
 const STEPS = [
-  { id: 1, name: 'Recipients', icon: Users },
-  { id: 2, name: 'Message', icon: Mail },
-  { id: 3, name: 'Review & send', icon: Send },
+  { id: 1, name: 'Recipients' },
+  { id: 2, name: 'Message' },
+  { id: 3, name: 'Review & send' },
 ];
 
 /** Level-1 tabs, kept in the address (?tab=history). */
@@ -106,7 +106,7 @@ export function CommunicationModule() {
   const recordPageOpen = pageOpenIn === tab;
 
   return (
-    <div className="mx-auto flex max-w-[1600px] flex-col gap-6 p-6 lg:p-8">
+    <div className="ds-page">
       {!recordPageOpen && (
         <PageHeader
           title="Communication"
@@ -127,62 +127,10 @@ export function CommunicationModule() {
           </NavTabsList>
         )}
 
-        <TabsContent value="compose" className="mt-0 space-y-8">
+        <TabsContent value="compose" className="mt-0 space-y-5">
           <Crumbs trail={[{ label: 'Compose' }]} />
-          {/* Stepper */}
-          <div className="w-full bg-white border rounded-lg p-4 shadow-sm">
-            <div className="flex items-center justify-between max-w-3xl mx-auto">
-              {STEPS.map((step, index) => {
-                const Icon = step.icon;
-                const isActive = step.id === currentStep;
-                const isCompleted = step.id < currentStep;
-
-                return (
-                  <div key={step.id} className="contents">
-                    <div
-                      className="flex flex-col items-center relative z-10"
-                      aria-current={isActive ? 'step' : undefined}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-200 ${
-                          isActive
-                            ? 'border-primary bg-primary text-white shadow-md scale-110'
-                            : isCompleted
-                              ? 'border-primary bg-primary/10 text-primary'
-                              : 'border-muted bg-white text-muted-foreground'
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <CheckCircle className="h-5 w-5" />
-                        ) : (
-                          <Icon className="h-5 w-5" />
-                        )}
-                      </div>
-                      <span
-                        className={`text-xs font-medium mt-2 transition-colors duration-200 ${
-                          isActive
-                            ? 'text-primary'
-                            : isCompleted
-                              ? 'text-primary'
-                              : 'text-muted-foreground'
-                        }`}
-                      >
-                        {step.name}
-                      </span>
-                    </div>
-                    {index < STEPS.length - 1 && (
-                      <div className="flex-1 h-[2px] mx-4 bg-gray-100 relative">
-                        <div
-                          className="absolute top-0 left-0 h-full bg-primary transition-all duration-500 ease-in-out"
-                          style={{ width: isCompleted ? '100%' : '0%' }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* Stepper (CO-Recipients board: .steps) */}
+          <DsSteps steps={STEPS.map((step) => step.name)} current={currentStep - 1} />
 
           {/* Step Content */}
           <div className="min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500">

@@ -45,10 +45,8 @@ import { useClients } from '../../../../hooks/useClients';
 import { NotesAPI } from './api';
 import { toast } from 'sonner';
 
-import { Button } from '../../../ui/button';
 import { Skeleton } from '../../../ui/skeleton';
 import { Tabs } from '../../../ui/tabs';
-import { Plus, CheckSquare, GripVertical } from 'lucide-react';
 
 // ============================================================================
 // SORT UTILITY (§7.1 — pure utility, no UI coupling)
@@ -58,11 +56,14 @@ import { EmptyState, NoteGrid } from './notesModuleParts';
 import { sortNotes } from './notesSort';
 import { NotesToolbar } from './NotesToolbar';
 import {
+  DsButton,
+  DsPage,
+  DsStat,
+  DsStats,
   ErrorState,
   NavTabsList,
   NavTabsTrigger,
   PageHeader,
-  StatCard,
   useBreadcrumbTrail,
   useRecordInUrl,
   useUrlState,
@@ -605,24 +606,23 @@ export function NotesModule() {
   const isArchivedTab = archiveFilter === 'archived';
 
   return (
-    <div className="space-y-5 p-6 lg:p-8">
+    <DsPage>
       <PageHeader
         title="Notes"
         description="Your notes — link them to clients, turn them into tasks, keep them organised."
         actions={
           <>
-            <Button
-              variant="outline"
+            <DsButton
               onClick={handleToggleSelecting}
               aria-pressed={isSelecting}
               disabled={isLoading || !!error}
+              style={isSelecting ? { borderColor: '#c4b5fd', background: '#f5f3ff' } : undefined}
             >
-              <CheckSquare className="h-4 w-4" aria-hidden="true" />
               {isSelecting ? 'Exit select' : 'Select'}
-            </Button>
-            <Button onClick={handleNewNote}>
-              <Plus className="h-4 w-4" aria-hidden="true" /> New note
-            </Button>
+            </DsButton>
+            <DsButton variant="primary" onClick={handleNewNote}>
+              New note
+            </DsButton>
           </>
         }
       />
@@ -650,7 +650,7 @@ export function NotesModule() {
       {isLoading ? (
         <div role="status" aria-label="Loading notes" className="space-y-5">
           <span className="sr-only">Loading notes…</span>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="ds-stats">
             {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-[92px] rounded-xl" />
             ))}
@@ -672,12 +672,12 @@ export function NotesModule() {
       ) : (
         <>
           {archiveFilter === 'active' && (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <StatCard label="Total notes" value={stats.total} />
-              <StatCard label="Pinned" value={stats.pinned} />
-              <StatCard label="Client-linked" value={stats.linked} />
-              <StatCard label="Converted to tasks" value={stats.converted} />
-            </div>
+            <DsStats>
+              <DsStat label="Total notes" value={stats.total} />
+              <DsStat label="Pinned" value={stats.pinned} />
+              <DsStat label="Client-linked" value={stats.linked} />
+              <DsStat label="Converted to tasks" value={stats.converted} />
+            </DsStats>
           )}
 
           <NotesToolbar
@@ -735,20 +735,12 @@ export function NotesModule() {
               onClearFilters={handleClearFilters}
             />
           ) : (
-            <div className="space-y-6">
+            <div className="flex flex-col gap-5">
               {pinnedNotes.length > 0 && (
-                <section aria-labelledby="notes-pinned" className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <h2 id="notes-pinned" className="text-sm font-semibold text-nw-ink">
-                      Pinned
-                    </h2>
-                    <span className="text-xs text-nw-text-3">{pinnedNotes.length}</span>
-                    {!isSelecting && pinnedNotes.length > 1 && (
-                      <span className="ml-2 flex items-center gap-1 text-xs text-nw-text-3">
-                        <GripVertical className="h-3 w-3" aria-hidden="true" /> Drag to reorder
-                      </span>
-                    )}
-                  </div>
+                <section aria-labelledby="notes-pinned" className="flex flex-col gap-3">
+                  <h2 id="notes-pinned" className="ds-lbl">
+                    Pinned
+                  </h2>
                   <DraggablePinnedGrid
                     notes={pinnedNotes}
                     viewMode={viewMode}
@@ -762,14 +754,11 @@ export function NotesModule() {
               )}
 
               {unpinnedNotes.length > 0 && (
-                <section aria-labelledby="notes-all" className="space-y-3">
+                <section aria-labelledby="notes-all" className="flex flex-col gap-3">
                   {pinnedNotes.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <h2 id="notes-all" className="text-sm font-semibold text-nw-ink">
-                        All notes
-                      </h2>
-                      <span className="text-xs text-nw-text-3">{unpinnedNotes.length}</span>
-                    </div>
+                    <h2 id="notes-all" className="ds-lbl">
+                      All notes
+                    </h2>
                   )}
                   <NoteGrid
                     notes={unpinnedNotes}
@@ -792,6 +781,6 @@ export function NotesModule() {
         labels={colourLabels}
         personnelId={personnelId}
       />
-    </div>
+    </DsPage>
   );
 }

@@ -10,8 +10,8 @@
 
 import React, { useState } from 'react';
 import { Button } from '../../../../ui/button';
-import { Badge } from '../../../../ui/badge';
-import { Input } from '../../../../ui/input';
+import { DsButton } from '../../../layout/page';
+
 import {
   Table,
   TableBody,
@@ -21,16 +21,12 @@ import {
   TableRow,
 } from '../../../../ui/table';
 import {
-  Clock,
-  Play,
-  Settings,
   FileSpreadsheet,
   BarChart3,
   Users,
   ClipboardList,
   ShieldCheck,
   TrendingUp,
-  Search,
 } from 'lucide-react';
 import { Report, ReportCategory } from '../types';
 
@@ -113,29 +109,25 @@ export function ReportsTable({
     : reports;
 
   return (
-    <div className="space-y-4">
-      {/* Search */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-md">
-          <Search
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            placeholder="Search reports…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-            aria-label="Search reports"
-          />
-        </div>
-        <span className="ml-auto text-sm text-nw-text-3">
+    <section className="ds-card overflow-hidden">
+      {/* RP-List: search in the card's toolbar, the count on the right */}
+      <div className="ds-toolbar">
+        <input
+          type="search"
+          placeholder="Search reports…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="ds-input sm:w-[300px]"
+          aria-label="Search reports"
+        />
+        <span className="grow" />
+        <span className="ds-meta">
           {reports.length} {reports.length === 1 ? 'report' : 'reports'}
         </span>
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
+      <div>
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
@@ -151,8 +143,8 @@ export function ReportsTable({
               <TableHead scope="col" className="hidden w-[120px] sm:table-cell">
                 Format
               </TableHead>
-              <TableHead scope="col" className="sm:w-[150px]">
-                Actions
+              <TableHead scope="col" className="sm:w-[170px]">
+                <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -177,7 +169,6 @@ export function ReportsTable({
             ) : (
               filteredReports.map((report) => {
                 const cfg = CATEGORY_CONFIG[report.category] || CATEGORY_CONFIG.custom;
-                const IconComponent = cfg.icon;
                 const isRunning = runningReports.has(report.id);
                 const ext = report.outputs[0]?.split('.').pop()?.toUpperCase() || 'XLSX';
 
@@ -186,12 +177,9 @@ export function ReportsTable({
                     {/* Report Name */}
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className={`${cfg.bgClass} p-2 rounded-lg flex-shrink-0`}>
-                          <IconComponent className={`h-5 w-5 ${cfg.iconClass}`} />
-                        </div>
                         <div className="min-w-0">
-                          <div className="font-medium">{report.name}</div>
-                          <div className="max-w-[calc(100vw-15rem)] truncate text-sm text-muted-foreground sm:max-w-[280px]">
+                          <b className="block font-medium">{report.name}</b>
+                          <div className="ds-meta max-w-[calc(100vw-15rem)] truncate sm:max-w-[420px]">
                             {report.description}
                           </div>
                           <div className="text-xs text-muted-foreground sm:hidden">
@@ -206,9 +194,7 @@ export function ReportsTable({
 
                     {/* Category Badge */}
                     <TableCell className="hidden sm:table-cell">
-                      <Badge variant="secondary" className={`text-xs ${cfg.badgeClass}`}>
-                        {cfg.label}
-                      </Badge>
+                      <span className="ds-pill">{cfg.label}</span>
                     </TableCell>
 
                     {/* Last Run */}
@@ -227,35 +213,27 @@ export function ReportsTable({
 
                     {/* Format */}
                     <TableCell className="hidden sm:table-cell">
-                      <Badge variant="outline" className="text-xs">
-                        {ext}
-                      </Badge>
+                      {ext === 'XLSX' ? 'Excel (XLSX)' : ext}
                     </TableCell>
 
                     {/* Actions */}
                     <TableCell>
-                      <div className="flex gap-2">
-                        <Button
+                      <div className="flex justify-end gap-1">
+                        <DsButton
                           size="sm"
-                          variant="outline"
                           onClick={() => onRunReport(report)}
                           disabled={isRunning}
                         >
-                          {isRunning ? (
-                            <Clock className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Play className="h-4 w-4 mr-2" />
-                          )}
                           {isRunning ? 'Running…' : 'Run'}
-                        </Button>
-                        <Button
+                        </DsButton>
+                        <DsButton
                           size="sm"
                           variant="ghost"
                           onClick={() => onOpenSettings(report)}
                           aria-label={`Settings for ${report.name}`}
                         >
-                          <Settings className="h-4 w-4" />
-                        </Button>
+                          Settings
+                        </DsButton>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -265,6 +243,6 @@ export function ReportsTable({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </section>
   );
 }

@@ -16,8 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import {
   FileText,
   Eye,
-  TrendingUp,
-  TrendingDown,
   Star,
   Send,
   CheckCircle2,
@@ -452,54 +450,18 @@ interface KPICardProps {
   sub?: string;
 }
 
-const ACCENT_MAP = {
-  purple: { bg: 'bg-purple-50', text: 'text-purple-600', ring: 'ring-purple-100' },
-  green: { bg: 'bg-green-50', text: 'text-green-600', ring: 'ring-green-100' },
-  blue: { bg: 'bg-blue-50', text: 'text-blue-600', ring: 'ring-blue-100' },
-  amber: { bg: 'bg-amber-50', text: 'text-amber-600', ring: 'ring-amber-100' },
-};
-
-function KPICard({ label, value, icon: Icon, accent, trend, trendLabel, sub }: KPICardProps) {
-  const a = ACCENT_MAP[accent];
-  const isUp = (trend ?? 0) >= 0;
-
+function KPICard({ label, value, trend, trendLabel, sub }: KPICardProps) {
+  // PU-Analytics board: a plain figure card (.stat).
+  const meta =
+    trend !== undefined
+      ? `${trend >= 0 ? '+' : ''}${trend}%${trendLabel ? ` ${trendLabel}` : ''}`
+      : sub;
   return (
-    <Card className="relative overflow-hidden">
-      <CardContent className="pt-5 pb-4 px-5">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">{label}</p>
-            <p className="text-2xl font-bold tracking-tight text-gray-900">{value}</p>
-          </div>
-          <div
-            className={cn(
-              'w-10 h-10 rounded-xl flex items-center justify-center ring-1',
-              a.bg,
-              a.ring,
-            )}
-          >
-            <Icon className={cn('w-5 h-5', a.text)} />
-          </div>
-        </div>
-
-        {trend !== undefined && (
-          <div className="flex items-center gap-1.5 mt-2">
-            {isUp ? (
-              <TrendingUp className="w-3.5 h-3.5 text-green-600" />
-            ) : (
-              <TrendingDown className="w-3.5 h-3.5 text-red-500" />
-            )}
-            <span className={cn('text-xs font-medium', isUp ? 'text-green-600' : 'text-red-500')}>
-              {isUp ? '+' : ''}
-              {trend}%
-            </span>
-            {trendLabel && <span className="text-xs text-muted-foreground">{trendLabel}</span>}
-          </div>
-        )}
-
-        {sub && !trend && <p className="text-xs text-muted-foreground mt-2">{sub}</p>}
-      </CardContent>
-    </Card>
+    <div className="ds-stat">
+      <span className="k">{label}</span>
+      <span className="v">{value}</span>
+      {meta ? <span className="m">{meta}</span> : null}
+    </div>
   );
 }
 

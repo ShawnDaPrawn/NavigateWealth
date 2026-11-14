@@ -384,7 +384,7 @@ export function PersonnelModule() {
     const livePersonnel =
       personnel.find((person) => person.id === selectedPersonnel.id) ?? selectedPersonnel;
     return (
-      <div className="mx-auto max-w-[1200px] p-6 lg:p-8">
+      <div className="ds-page">
         <PersonnelDrawer
           key={selectedPersonnel.id}
           open
@@ -408,7 +408,7 @@ export function PersonnelModule() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
+    <div className="ds-page">
       <PageHeader
         title="Personnel"
         description="Manage staff access, compliance and commission structures."
@@ -450,7 +450,7 @@ export function PersonnelModule() {
       )}
 
       {/* ── Figures ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="ds-stats">
         {statusTile('all', 'Total personnel', stats.total)}
         {statusTile('active', 'Active', stats.active)}
         {statusTile('suspended', 'Suspended', stats.suspended)}

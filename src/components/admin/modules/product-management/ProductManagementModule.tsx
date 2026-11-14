@@ -34,7 +34,7 @@ export function ProductManagementModule() {
 
   if (!canAccess) {
     return (
-      <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
+      <div className="ds-page">
         <PageHeader
           title="Product Management"
           description="Product providers, product data structures and external data integrations."
@@ -45,7 +45,7 @@ export function ProductManagementModule() {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-6 p-6 lg:p-8">
+    <div className="ds-page">
       {!integrationOpen && (
         <PageHeader
           title="Product Management"

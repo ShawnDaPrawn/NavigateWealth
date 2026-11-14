@@ -9,18 +9,10 @@
  */
 
 import { Draggable } from '@hello-pangea/dnd';
-import {
-  MoreHorizontal,
-  AlertCircle,
-  Calendar,
-  Tag,
-  ArrowRight,
-  CheckCircle2,
-  RotateCw,
-} from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Task, TaskStatus } from '../types';
-import { PRIORITY_LABELS, PRIORITY_COLORS } from '../constants';
+import { PRIORITY_LABELS } from '../constants';
 import { useUpdateTask, useDeleteTask, useDuplicateTask } from '../hooks';
 import { getOverdueDays, getTaskDescriptionPreview, isIssueManagerTask } from '../utils';
 import {
@@ -30,8 +22,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/dropdown-menu';
-import { useConfirm } from '../../../layout/page';
-import { Button } from '../../../../ui/button';
+import { DsButton, DsPill, useConfirm, type DsTone } from '../../../layout/page';
+import { cn } from '../../../../ui/utils';
 
 // ============================================================================
 // TYPES
@@ -120,6 +112,26 @@ export function TaskCard({
   // RENDER
   // ============================================================================
 
+  const isDone = task.status === 'completed';
+  const when = isDone
+    ? task.completed_at
+      ? `Completed ${format(new Date(task.completed_at), 'd MMM')}`
+      : 'Completed'
+    : task.due_date
+      ? `Due ${format(new Date(task.due_date), 'd MMM')}${overdueDays > 0 ? ` · ${overdueDays}d overdue` : ''}`
+      : 'No due date';
+
+  // The one action the board shows on each card (TD-Board): Start a new task,
+  // Complete one in progress, Reopen a finished one. The rest sit under ⋯.
+  const primary =
+    task.status === 'new'
+      ? { label: 'Start', to: 'in_progress' as TaskStatus }
+      : task.status === 'in_progress'
+        ? { label: 'Complete', to: 'completed' as TaskStatus }
+        : isDone
+          ? { label: 'Reopen', to: 'in_progress' as TaskStatus }
+          : null;
+
   return (
     <div className="contents">
       <Draggable draggableId={task.id} index={index}>
@@ -128,12 +140,10 @@ export function TaskCard({
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
-            className={`
-              group bg-white rounded-lg border border-gray-200 p-4 relative
-              hover:border-purple-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing
-              ${snapshot.isDragging ? 'shadow-xl ring-2 ring-purple-500 rotate-2 z-50' : ''}
-              ${task.status === 'completed' ? 'bg-gray-50/50' : ''}
-            `}
+            className={cn(
+              'ds-kcard group cursor-grab active:cursor-grabbing',
+              snapshot.isDragging && 'sel z-50',
+            )}
             onClick={(e) => {
               if (
                 !(e.target as HTMLElement).closest('button') &&
@@ -151,182 +161,93 @@ export function TaskCard({
               }
             }}
           >
-            {/* Priority Strip */}
-            <div
-              className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full ${
-                task.priority === 'high'
-                  ? 'bg-red-500'
-                  : task.priority === 'medium'
-                    ? 'bg-amber-500'
-                    : 'bg-blue-500'
-              }`}
-            />
+            <div className="flex flex-wrap items-center gap-1.5 pr-8">
+              <DsPill tone={isDone ? 'ok' : (PRIORITY_TONE[task.priority] ?? 'neutral')}>
+                {isDone ? 'Done' : (PRIORITY_LABELS[task.priority] ?? task.priority)}
+              </DsPill>
+              {issueManagerTask && <DsPill tone="info">Issue Manager</DsPill>}
+              {task.is_template && <DsPill tone="brand">Template</DsPill>}
+            </div>
 
-            <div className="pl-3">
-              {/* Header Row */}
-              <div className="flex items-start justify-between mb-2 gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${PRIORITY_COLORS[task.priority]} bg-opacity-10`}
-                    >
-                      {PRIORITY_LABELS[task.priority]}
-                    </span>
-                    {issueManagerTask && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">
-                        Issue Manager
-                      </span>
-                    )}
-                    {task.is_template && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
-                        Template
-                      </span>
-                    )}
-                  </div>
-                  <h3
-                    className={`font-semibold text-sm text-gray-900 leading-snug line-clamp-2 ${
-                      task.status === 'completed' ? 'line-through text-gray-500' : ''
-                    }`}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`More actions for ${task.title}`}
+                  className="ds-btn ds-btn-ghost ds-btn-sm no-drag absolute right-2 top-2 !w-8 !justify-center !p-0 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+                >
+                  <MoreHorizontal aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewDetails(task);
+                  }}
+                >
+                  View
+                </DropdownMenuItem>
+                {task.status === 'new' && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStatusChange('completed');
+                    }}
                   >
-                    {task.title}
-                  </h3>
-                </div>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`More actions for ${task.title}`}
-                      className="h-6 w-6 p-0 -mr-2 text-gray-400 hover:text-gray-600 no-drag opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 transition-opacity"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
+                    Complete
+                  </DropdownMenuItem>
+                )}
+                {canEdit && (
+                  <DropdownMenuItem onClick={handleDuplicate}>Duplicate</DropdownMenuItem>
+                )}
+                {canEdit && (
+                  <DropdownMenuItem onClick={(e) => void handleArchive(e)}>
+                    Archive
+                  </DropdownMenuItem>
+                )}
+                {canDelete && (
+                  <div className="contents">
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewDetails(task);
-                      }}
+                      onClick={(e) => void handleDelete(e)}
+                      className="text-red-600 focus:bg-red-50 focus:text-red-700"
                     >
-                      View
+                      Delete
                     </DropdownMenuItem>
-                    {canEdit && (
-                      <DropdownMenuItem onClick={handleDuplicate}>Duplicate</DropdownMenuItem>
-                    )}
-                    {canEdit && (
-                      <DropdownMenuItem onClick={(e) => void handleArchive(e)}>
-                        Archive
-                      </DropdownMenuItem>
-                    )}
-                    {canDelete && (
-                      <div className="contents">
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={(e) => void handleDelete(e)}
-                          className="text-red-600 focus:text-red-700 focus:bg-red-50"
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </div>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-              {/* Description Preview */}
-              {descriptionPreview && (
-                <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed break-words">
-                  {descriptionPreview}
-                </p>
+            <b className={cn('line-clamp-2 break-words', isDone && 'text-nw-text-3')}>
+              {task.title}
+            </b>
+            {descriptionPreview && (
+              <p className="ds-meta line-clamp-2 break-words">{descriptionPreview}</p>
+            )}
+
+            <div className="row no-drag">
+              <span
+                className={cn(
+                  'ds-meta min-w-0 truncate',
+                  overdueDays > 0 && !isDone && '!text-[#b91c1c]',
+                )}
+              >
+                {when}
+                {task.assignee_initials ? ` · ${task.assignee_initials}` : ''}
+              </span>
+              {primary && (
+                <DsButton
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStatusChange(primary.to);
+                  }}
+                >
+                  {primary.label}
+                </DsButton>
               )}
-
-              {/* Meta Info */}
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                {task.due_date && (
-                  <div
-                    className={`flex items-center gap-1 text-xs ${
-                      overdueDays > 0 ? 'text-red-600 font-medium' : 'text-gray-500'
-                    }`}
-                  >
-                    {overdueDays > 0 ? (
-                      <AlertCircle className="w-3 h-3" />
-                    ) : (
-                      <Calendar className="w-3 h-3" />
-                    )}
-                    <span>
-                      {format(new Date(task.due_date), 'MMM d')}
-                      {overdueDays > 0 && ` (+${overdueDays}d)`}
-                    </span>
-                  </div>
-                )}
-
-                {task.tags && task.tags.length > 0 && (
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Tag className="w-3 h-3" />
-                    <span>
-                      {task.tags.length} tag{task.tags.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                )}
-
-                {task.assignee_initials && (
-                  <div className="ml-auto w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center border border-purple-200 shadow-sm">
-                    {task.assignee_initials}
-                  </div>
-                )}
-              </div>
-
-              {/* Quick Actions */}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100 no-drag">
-                <div className="flex gap-1 flex-wrap">
-                  {task.status !== 'completed' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStatusChange('completed');
-                      }}
-                      className="h-7 px-2 text-xs font-medium text-green-700 hover:bg-green-50 hover:text-green-800"
-                    >
-                      <CheckCircle2 className="w-3 h-3 mr-1" />
-                      Complete
-                    </Button>
-                  )}
-
-                  {task.status === 'new' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStatusChange('in_progress');
-                      }}
-                      className="h-7 px-2 text-xs font-medium text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                    >
-                      <ArrowRight className="w-3 h-3 mr-1" />
-                      Start
-                    </Button>
-                  )}
-
-                  {task.status === 'completed' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStatusChange('in_progress');
-                      }}
-                      className="h-7 px-2 text-xs font-medium text-gray-600 hover:bg-gray-100"
-                    >
-                      <RotateCw className="w-3 h-3 mr-1" />
-                      Reopen
-                    </Button>
-                  )}
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -336,3 +257,10 @@ export function TaskCard({
     </div>
   );
 }
+
+const PRIORITY_TONE: Record<Task['priority'], DsTone> = {
+  low: 'neutral',
+  medium: 'warn',
+  high: 'bad',
+  critical: 'bad',
+};

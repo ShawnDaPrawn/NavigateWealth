@@ -124,8 +124,8 @@ describe('NewsletterList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'From the routine' }));
     expect(onOpen).toHaveBeenCalledWith('r1');
 
-    expect(screen.getByText('198 delivered')).toBeTruthy();
-    expect(screen.getByText('25.3% read')).toBeTruthy();
+    // The board puts delivery figures in the row's meta line.
+    expect(screen.getByText(/198 delivered · 25\.3% read/)).toBeTruthy();
     fireEvent.click(screen.getByRole('link', { name: /August issue/ }));
     expect(onOpen).toHaveBeenCalledWith('s1');
   });

@@ -2,8 +2,7 @@ import React, { useMemo } from 'react';
 import { DataTable, Column } from '../../../components/DataTable';
 import { Personnel, PermissionSet } from '../types';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../../ui/avatar';
-import { Badge } from '../../../../ui/badge';
-import { CheckCircle, XCircle, Clock } from 'lucide-react';
+
 import { cn } from '../../../../ui/utils';
 import { PermissionSummaryBadge } from './PermissionSummaryBadge';
 import { useAllPermissions } from '../hooks';
@@ -14,21 +13,15 @@ interface PersonnelTableProps {
   roles: Record<string, { label: string; color: string }>;
 }
 
-/** Map status to a visual indicator */
+/** Status as the board's pill (PE-List). */
 function StatusIndicator({ status }: { status: string }) {
-  const config: Record<string, { icon: React.ElementType; color: string; label: string }> = {
-    active: { icon: CheckCircle, color: 'text-green-500', label: 'Active' },
-    suspended: { icon: XCircle, color: 'text-red-500', label: 'Suspended' },
-    pending: { icon: Clock, color: 'text-amber-500', label: 'Pending' },
+  const config: Record<string, { tone: string; label: string }> = {
+    active: { tone: 'ok', label: 'Active' },
+    suspended: { tone: 'bad', label: 'Suspended' },
+    pending: { tone: 'warn', label: 'Pending' },
   };
   const c = config[status] || config.pending;
-  const Icon = c.icon;
-  return (
-    <div className="flex items-center gap-1.5">
-      <Icon className={cn('h-3.5 w-3.5', c.color)} />
-      <span className="text-sm capitalize">{c.label}</span>
-    </div>
-  );
+  return <span className={cn('ds-pill', c.tone)}>{c.label}</span>;
 }
 
 export function PersonnelTable({ data, onRowClick, roles }: PersonnelTableProps) {
@@ -53,9 +46,9 @@ export function PersonnelTable({ data, onRowClick, roles }: PersonnelTableProps)
       sortable: true,
       render: (_, person) => (
         <div className="flex items-center gap-3">
-          <Avatar className="h-9 w-9 border border-gray-200">
-            <AvatarImage src={`/api/placeholder/36/36`} />
-            <AvatarFallback className="text-xs font-medium bg-purple-50 text-purple-700">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={`/api/placeholder/32/32`} />
+            <AvatarFallback className="bg-nw-violet-100 text-xs font-semibold text-nw-violet-600">
               {(person.firstName?.[0] || '').toUpperCase()}
               {(person.lastName?.[0] || '').toUpperCase()}
             </AvatarFallback>
@@ -79,14 +72,7 @@ export function PersonnelTable({ data, onRowClick, roles }: PersonnelTableProps)
           label: role as string,
           color: 'bg-gray-100 text-gray-700',
         };
-        return (
-          <Badge
-            variant="secondary"
-            className={cn('text-[11px] font-medium border-0 px-2 py-0.5', roleInfo.color)}
-          >
-            {roleInfo.label}
-          </Badge>
-        );
+        return <span>{roleInfo.label}</span>;
       },
       width: '150px',
     },

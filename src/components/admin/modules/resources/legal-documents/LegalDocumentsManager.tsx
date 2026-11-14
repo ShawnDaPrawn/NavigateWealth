@@ -222,7 +222,7 @@ export default function LegalDocumentsManager() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="ds-stats">
         <StatCard label="Versioned" value={migrationSummary.migrated} />
         <StatCard label="Draft ready" value={migrationSummary.draftReady} />
         <StatCard label="Legacy only" value={migrationSummary.legacyOnly} />

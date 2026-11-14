@@ -23,9 +23,8 @@ import { useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { DragDropContext, Droppable, type DropResult } from '@hello-pangea/dnd';
 import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
 import { Skeleton } from '../../../ui/skeleton';
-import { Inbox, RefreshCw, Search, Send } from 'lucide-react';
+import { Inbox, RefreshCw, Send } from 'lucide-react';
 import { cn } from '../../../ui/utils';
 import { toast } from 'sonner';
 import { useSubmissions } from './hooks/useSubmissions';
@@ -39,6 +38,8 @@ import type { Submission, SubmissionStatus, SubmissionType } from './types';
 import { useSearchInputAutofillGuard } from '@/shared/forms/useSearchInputAutofillGuard';
 import { Tabs } from '../../../ui/tabs';
 import {
+  DsCount,
+  DsPage,
   ErrorState,
   NavTabsList,
   NavTabsTrigger,
@@ -117,34 +118,25 @@ function KanbanColumn({
   const config = COLUMN_STATUS_CONFIG[columnId];
 
   return (
-    <div className="flex h-full min-w-[calc(100vw-4.5rem)] flex-1 snap-start flex-col rounded-xl border border-gray-200 bg-gray-100/50 sm:min-w-[350px]">
-      {/* Column Header — matches TaskColumn */}
-      <div className="p-3 rounded-t-xl border-b bg-white flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <div className={cn('w-2 h-2 rounded-full', config.badge.split(' ')[0])} />
-          <h3 className="font-semibold text-gray-900 text-sm">{config.label}</h3>
-        </div>
-        <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
+    <div className="ds-col">
+      <div className="ds-col-h">
+        <span>{config.label}</span>
+        <DsCount attention={columnId === 'new' && submissions.length > 0}>
           {submissions.length}
-        </span>
+        </DsCount>
       </div>
 
-      {/* Droppable Area */}
       <Droppable droppableId={columnId}>
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={cn(
-              'flex-1 overflow-y-auto p-3',
-              'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent',
-              snapshot.isDraggingOver && 'bg-purple-50/50',
-            )}
+            className={cn('min-h-[80px] rounded-lg', snapshot.isDraggingOver && 'bg-nw-violet-50')}
           >
             {submissions.length === 0 ? (
-              <div className="m-1 flex h-32 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 px-4 text-center text-sm text-nw-text-3">
+              <p className="ds-meta px-2 py-8 text-center">
                 Drop a card here while you work on it.
-              </div>
+              </p>
             ) : (
               submissions.map((s, index) => (
                 <SubmissionCard
@@ -390,187 +382,183 @@ export function SubmissionsModule() {
   const isEmpty = !isLoading && !error && submissions.length === 0 && typeFilter === 'all';
 
   return (
-    <div className="min-h-screen bg-gray-50/30 pb-10">
-      <div className="mx-auto flex max-w-[1800px] flex-col gap-5 p-6 lg:p-8">
-        <PageHeader
-          title="Submissions"
-          description="Quotes, consultations, contact enquiries, client signups and change requests."
-          actions={
-            <>
-              {!showArchived && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => void refetch()}
-                  disabled={isLoading}
-                  aria-label="Refresh"
-                  title="Refresh"
-                >
-                  <RefreshCw
-                    className={cn('h-4 w-4', isLoading && 'animate-spin')}
-                    aria-hidden="true"
-                  />
-                </Button>
-              )}
-              <Button onClick={() => setShowInviteModal(true)}>
-                <Send className="h-4 w-4" aria-hidden="true" />
-                Invite a client
-              </Button>
-            </>
-          }
-        />
-
-        <Tabs value={tab} onValueChange={(v) => setTab(v as (typeof SUBMISSION_TABS)[number])}>
-          <NavTabsList aria-label="Submissions views">
-            <NavTabsTrigger value="board" count={isLoading || error ? undefined : activeCount}>
-              Board
-            </NavTabsTrigger>
-            <NavTabsTrigger
-              value="archived"
-              count={isLoading || error ? undefined : counts.archived.length}
-            >
-              Archived
-            </NavTabsTrigger>
-          </NavTabsList>
-        </Tabs>
-
-        {isLoading ? (
-          <div role="status" aria-label="Loading submissions" className="space-y-5">
-            <span className="sr-only">Loading submissions…</span>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {[0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-[92px] rounded-xl" />
-              ))}
-            </div>
-            <div className="flex h-[420px] gap-6">
-              {[0, 1, 2].map((i) => (
-                <Skeleton key={i} className="min-w-[300px] flex-1 rounded-xl" />
-              ))}
-            </div>
-          </div>
-        ) : error ? (
-          <ErrorState
-            title="Unable to load submissions"
-            description="Something went wrong while loading submissions. Nothing you entered was lost."
-            onRetry={() => void refetch()}
-            details={error}
-          />
-        ) : isEmpty ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-nw-line bg-white px-6 py-16 text-center">
-            <Inbox className="mb-4 h-10 w-10 text-gray-300" aria-hidden="true" />
-            <h3 className="text-base font-semibold text-nw-ink">No submissions yet</h3>
-            <p className="mt-1 mb-5 max-w-sm text-sm text-nw-text-3">
-              Website form submissions appear here as they arrive.
-            </p>
-            <Button onClick={() => setShowInviteModal(true)}>Send a form link</Button>
-          </div>
-        ) : showArchived ? (
-          <ArchivedSubmissionsView
-            submissions={counts.archived}
-            onView={setSelectedSubmission}
-            onStatusChange={handleStatusChange}
-            onDelete={(id) => void deleteNow(id, 'Submission permanently deleted')}
-          />
-        ) : (
+    <DsPage>
+      <PageHeader
+        title="Submissions"
+        description="Quotes, consultations, contact enquiries, client signups and change requests."
+        actions={
           <>
-            <div
-              role="group"
-              aria-label="Filter submissions by status"
-              className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-            >
-              <FilterStatCard
-                label="Active"
-                value={activeCount}
-                meta="On the board"
-                active={statusFilter === 'all'}
-                onClick={() => toggleStatus('all')}
-              />
-              <FilterStatCard
-                label="New"
-                value={counts.new.length}
-                meta="Needs attention"
-                tone={counts.new.length > 0 ? 'attention' : 'default'}
-                active={statusFilter === 'new'}
-                onClick={() => toggleStatus('new')}
-              />
-              <FilterStatCard
-                label="Pending"
-                value={counts.pending.length}
-                meta="Being reviewed"
-                active={statusFilter === 'pending'}
-                onClick={() => toggleStatus('pending')}
-              />
-              <FilterStatCard
-                label="Completed"
-                value={counts.completed.length}
-                meta="Fully resolved"
-                active={statusFilter === 'completed'}
-                onClick={() => toggleStatus('completed')}
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative w-full sm:max-w-md">
-                <Search
-                  className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400"
+            {!showArchived && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => void refetch()}
+                disabled={isLoading}
+                aria-label="Refresh"
+                title="Refresh"
+              >
+                <RefreshCw
+                  className={cn('h-4 w-4', isLoading && 'animate-spin')}
                   aria-hidden="true"
                 />
-                <Input
-                  {...searchInputGuard}
-                  aria-label="Search submissions"
-                  placeholder="Search name, email or submission ID…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-white pl-9"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <FilterChip
-                  label="Type"
-                  value={typeFilter}
-                  allValue="all"
-                  onChange={setTypeFilter}
-                  options={SUBMISSION_TYPES.map((t) => ({
-                    value: t,
-                    label: SUBMISSION_TYPE_CONFIG[t].label,
-                  }))}
-                />
-                {filtersActive && <ClearFiltersButton onClick={clearAllFilters} />}
-              </div>
-            </div>
-
-            {filtersActive && visibleColumns.every((col) => byStatus[col.id].length === 0) && (
-              <div
-                role="status"
-                className="flex flex-wrap items-center gap-3 rounded-xl border border-nw-line bg-white px-4 py-3 text-sm text-nw-text-2"
-              >
-                <span className="flex-1">No submissions match your filters.</span>
-                <ClearFiltersButton onClick={clearAllFilters} />
-              </div>
+              </Button>
             )}
-
-            <div className="h-[calc(100vh-380px)] min-h-[500px] overflow-hidden">
-              <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="flex h-full gap-6 overflow-x-auto px-1 pb-4">
-                  {visibleColumns.map((col) => (
-                    <KanbanColumn
-                      key={col.id}
-                      columnId={col.id}
-                      submissions={byStatus[col.id]}
-                      onView={setSelectedSubmission}
-                      onStatusChange={handleStatusChange}
-                      onDelete={(sub) => void handleDeleteFromBoard(sub)}
-                    />
-                  ))}
-                </div>
-              </DragDropContext>
-            </div>
+            <Button onClick={() => setShowInviteModal(true)}>
+              <Send className="h-4 w-4" aria-hidden="true" />
+              Invite a client
+            </Button>
           </>
-        )}
+        }
+      />
 
-        {inviteDialog}
-        {confirmDialog}
-      </div>
-    </div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as (typeof SUBMISSION_TABS)[number])}>
+        <NavTabsList aria-label="Submissions views">
+          <NavTabsTrigger value="board" count={isLoading || error ? undefined : activeCount}>
+            Board
+          </NavTabsTrigger>
+          <NavTabsTrigger
+            value="archived"
+            count={isLoading || error ? undefined : counts.archived.length}
+          >
+            Archived
+          </NavTabsTrigger>
+        </NavTabsList>
+      </Tabs>
+
+      {isLoading ? (
+        <div role="status" aria-label="Loading submissions" className="space-y-5">
+          <span className="sr-only">Loading submissions…</span>
+          <div className="ds-stats">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[92px] rounded-xl" />
+            ))}
+          </div>
+          <div className="flex h-[420px] gap-6">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="min-w-[300px] flex-1 rounded-xl" />
+            ))}
+          </div>
+        </div>
+      ) : error ? (
+        <ErrorState
+          title="Unable to load submissions"
+          description="Something went wrong while loading submissions. Nothing you entered was lost."
+          onRetry={() => void refetch()}
+          details={error}
+        />
+      ) : isEmpty ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-nw-line bg-white px-6 py-16 text-center">
+          <Inbox className="mb-4 h-10 w-10 text-gray-300" aria-hidden="true" />
+          <h3 className="text-base font-semibold text-nw-ink">No submissions yet</h3>
+          <p className="mt-1 mb-5 max-w-sm text-sm text-nw-text-3">
+            Website form submissions appear here as they arrive.
+          </p>
+          <Button onClick={() => setShowInviteModal(true)}>Send a form link</Button>
+        </div>
+      ) : showArchived ? (
+        <ArchivedSubmissionsView
+          submissions={counts.archived}
+          onView={setSelectedSubmission}
+          onStatusChange={handleStatusChange}
+          onDelete={(id) => void deleteNow(id, 'Submission permanently deleted')}
+        />
+      ) : (
+        <>
+          <div role="group" aria-label="Filter submissions by status" className="ds-stats">
+            <FilterStatCard
+              label="Active"
+              value={activeCount}
+              meta="On the board"
+              active={statusFilter === 'all'}
+              onClick={() => toggleStatus('all')}
+            />
+            <FilterStatCard
+              label="New"
+              value={counts.new.length}
+              meta="Needs attention"
+              tone={counts.new.length > 0 ? 'attention' : 'default'}
+              active={statusFilter === 'new'}
+              onClick={() => toggleStatus('new')}
+            />
+            <FilterStatCard
+              label="Pending"
+              value={counts.pending.length}
+              meta="Being reviewed"
+              active={statusFilter === 'pending'}
+              onClick={() => toggleStatus('pending')}
+            />
+            <FilterStatCard
+              label="Completed"
+              value={counts.completed.length}
+              meta="Fully resolved"
+              active={statusFilter === 'completed'}
+              onClick={() => toggleStatus('completed')}
+            />
+          </div>
+
+          <div className="ds-toolbar">
+            <input
+              {...searchInputGuard}
+              type="search"
+              aria-label="Search submissions"
+              placeholder="Search name, email or submission ID…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="ds-input sm:min-w-[320px]"
+            />
+            <div className="flex items-center gap-2">
+              <FilterChip
+                label="Type"
+                value={typeFilter}
+                allValue="all"
+                onChange={setTypeFilter}
+                options={SUBMISSION_TYPES.map((t) => ({
+                  value: t,
+                  label: SUBMISSION_TYPE_CONFIG[t].label,
+                }))}
+              />
+              {filtersActive && <ClearFiltersButton onClick={clearAllFilters} />}
+            </div>
+          </div>
+
+          {filtersActive && visibleColumns.every((col) => byStatus[col.id].length === 0) && (
+            <div
+              role="status"
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-nw-line bg-white px-4 py-3 text-sm text-nw-text-2"
+            >
+              <span className="flex-1">No submissions match your filters.</span>
+              <ClearFiltersButton onClick={clearAllFilters} />
+            </div>
+          )}
+
+          <div>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div
+                className="ds-board"
+                style={
+                  visibleColumns.length !== 3
+                    ? { gridTemplateColumns: `repeat(${visibleColumns.length}, minmax(0, 1fr))` }
+                    : undefined
+                }
+              >
+                {visibleColumns.map((col) => (
+                  <KanbanColumn
+                    key={col.id}
+                    columnId={col.id}
+                    submissions={byStatus[col.id]}
+                    onView={setSelectedSubmission}
+                    onStatusChange={handleStatusChange}
+                    onDelete={(sub) => void handleDeleteFromBoard(sub)}
+                  />
+                ))}
+              </div>
+            </DragDropContext>
+          </div>
+        </>
+      )}
+
+      {inviteDialog}
+      {confirmDialog}
+    </DsPage>
   );
 }

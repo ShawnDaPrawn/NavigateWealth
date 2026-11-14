@@ -12,11 +12,7 @@ import { Skeleton } from '../../../../ui/skeleton';
 
 export function CommunicationSkeleton() {
   return (
-    <div
-      className="mx-auto flex max-w-[1600px] flex-col gap-6 p-6 lg:p-8"
-      role="status"
-      aria-label="Loading communication"
-    >
+    <div className="ds-page" role="status" aria-label="Loading communication">
       <span className="sr-only">Loading communication module, please wait…</span>
       {/* Header */}
       <div>

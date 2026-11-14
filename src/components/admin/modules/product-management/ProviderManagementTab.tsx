@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
-import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
+
 import {
   Provider,
   SaveProviderRequest,
@@ -10,7 +8,7 @@ import {
   type ProductCategoryId,
 } from './types';
 import { useProviders } from './hooks/useProviders';
-import { ErrorState, useBreadcrumbTrail } from '../../layout/page';
+import { DsButton, ErrorState, useBreadcrumbTrail } from '../../layout/page';
 import { ProviderList } from './components/ProviderList';
 import { ProviderFormDialog } from './components/ProviderFormDialog';
 import { ProviderDeleteDialog } from './components/ProviderDeleteDialog';
@@ -97,44 +95,49 @@ export function ProviderManagementTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-          <span className="text-sm font-medium text-nw-text-2 tabular-nums">
-            {isLoading
-              ? 'Providers'
-              : `${providers.length} ${providers.length === 1 ? 'provider' : 'providers'}`}
-          </span>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search providers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8"
-              aria-label="Search providers"
-            />
-          </div>
-        </div>
-        <Button onClick={() => handleOpenModal()}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Add provider
-        </Button>
-      </div>
-
       {error ? (
         <ErrorState
           title="Unable to load providers"
           onRetry={() => void fetchProviders()}
           details={(error as Error).message}
         />
-      ) : (
+      ) : !isLoading && providers.length === 0 ? (
         <ProviderList
-          providers={filteredProviders}
-          isLoading={isLoading}
+          providers={[]}
+          isLoading={false}
           onEdit={handleOpenModal}
-          isFiltered={searchQuery.trim().length > 0}
           onAdd={() => handleOpenModal()}
         />
+      ) : (
+        <section className="ds-card overflow-hidden">
+          {/* PM-Providers: search, count and Add provider sit in the card's toolbar */}
+          <div className="ds-toolbar">
+            <input
+              className="ds-input"
+              placeholder="Search providers…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search providers"
+            />
+            <span className="grow" />
+            <span className="ds-meta tabular-nums">
+              {isLoading
+                ? 'Providers'
+                : `${providers.length} ${providers.length === 1 ? 'provider' : 'providers'}`}
+            </span>
+            <DsButton size="sm" variant="primary" onClick={() => handleOpenModal()}>
+              Add provider
+            </DsButton>
+          </div>
+          <ProviderList
+            providers={filteredProviders}
+            isLoading={isLoading}
+            onEdit={handleOpenModal}
+            onDelete={handleDeleteClick}
+            isFiltered={searchQuery.trim().length > 0}
+            onAdd={() => handleOpenModal()}
+          />
+        </section>
       )}
 
       <ProviderFormDialog

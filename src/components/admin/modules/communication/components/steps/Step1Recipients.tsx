@@ -157,7 +157,7 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-0 shadow-sm">
+      <Card>
         <CardHeader className="pb-4">
           <CardTitle>Who are you sending this to?</CardTitle>
           <CardDescription>

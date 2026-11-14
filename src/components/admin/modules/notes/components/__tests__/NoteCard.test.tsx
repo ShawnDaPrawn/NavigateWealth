@@ -65,7 +65,7 @@ describe('NoteCard', () => {
     expect(screen.getByText(/note content/i)).toBeDefined();
   });
 
-  it('renders tags', () => {
+  it('shows the linked client and date, not tags, as on the board', () => {
     render(
       <NoteCard
         note={mockNote}
@@ -77,7 +77,8 @@ describe('NoteCard', () => {
         viewMode="grid"
       />,
     );
-    expect(screen.getByText('finance')).toBeDefined();
+    expect(screen.queryByText('finance')).toBeNull();
+    expect(screen.getByText(new RegExp(`^${mockNote.clientName ?? 'No client'} · `))).toBeDefined();
   });
 
   it('calls onOpen when card content is clicked', () => {
@@ -191,7 +192,46 @@ describe('NoteCard', () => {
         viewMode="grid"
       />,
     );
-    const text = screen.getByText(/A+\.\.\./);
+    const text = screen.getByText(/A+…/);
     expect(text).toBeDefined();
+  });
+});
+
+describe('NoteCard keyboard', () => {
+  it('Enter on the ⋯ button does not open the note', () => {
+    const onOpen = vi.fn();
+    render(
+      <NoteCard
+        note={mockNote}
+        onOpen={onOpen}
+        onPin={noop}
+        onArchive={noop}
+        onDelete={noop}
+        onConvertToTask={noop}
+        viewMode="grid"
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions for Test Note' }), {
+      key: 'Enter',
+    });
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('Enter on the card itself still opens the note', () => {
+    const onOpen = vi.fn();
+    render(
+      <NoteCard
+        note={mockNote}
+        onOpen={onOpen}
+        onPin={noop}
+        onArchive={noop}
+        onDelete={noop}
+        onConvertToTask={noop}
+        viewMode="grid"
+      />,
+    );
+    const card = screen.getByText('Test Note').closest('[role="button"]') as HTMLElement;
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 });

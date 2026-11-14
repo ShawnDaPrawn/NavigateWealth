@@ -250,7 +250,7 @@ describe('Personnel page', () => {
 
   it('filters the list from the stat tiles, and the active tile clears it again', async () => {
     renderAt();
-    const tile = screen.getByText('Suspended', { selector: 'p' }).closest('button')!;
+    const tile = screen.getByText('Suspended', { selector: 'span.k' }).closest('button')!;
     fireEvent.click(tile);
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Naledi Khumalo' })).toBeNull(),

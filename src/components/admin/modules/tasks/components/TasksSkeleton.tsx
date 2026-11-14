@@ -68,7 +68,7 @@ export function TaskBoardBodySkeleton() {
   return (
     <div className="space-y-5" role="status" aria-label="Loading tasks">
       <span className="sr-only">Loading tasks, please wait…</span>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="ds-stats">
         <TaskStatCardSkeleton />
         <TaskStatCardSkeleton />
         <TaskStatCardSkeleton />

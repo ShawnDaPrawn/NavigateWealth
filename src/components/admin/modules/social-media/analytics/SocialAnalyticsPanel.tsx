@@ -91,7 +91,7 @@ export const SocialAnalyticsPanel = forwardRef<HTMLElement>(
         </div>
 
         {query.isLoading ? (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" data-testid="analytics-loading">
+          <div className="ds-stats" data-testid="analytics-loading">
             {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
@@ -104,7 +104,7 @@ export const SocialAnalyticsPanel = forwardRef<HTMLElement>(
           />
         ) : summary ? (
           <>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="ds-stats">
               <StatCard label="Total impressions" value={formatMetric(totals?.impressions)} />
               <StatCard label="Engagements" value={formatMetric(engagementTotal(totals))} />
               <StatCard label="Link clicks" value={formatMetric(totals?.clicks)} />

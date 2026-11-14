@@ -33,17 +33,17 @@ export const PERSONNEL_ROLES = [
 export const ACCOUNT_STATUS_CONFIG = {
   active: {
     label: 'Active',
-    badgeClass: 'bg-green-600 hover:bg-green-700 text-white',
+    badgeClass: 'ds-pill ok',
     dotClass: 'bg-green-500',
   },
   suspended: {
     label: 'Suspended',
-    badgeClass: 'bg-amber-500 hover:bg-amber-600 text-white',
+    badgeClass: 'ds-pill warn',
     dotClass: 'bg-amber-500',
   },
   closed: {
     label: 'Closed',
-    badgeClass: 'bg-red-600 hover:bg-red-700 text-white',
+    badgeClass: 'ds-pill bad',
     dotClass: 'bg-red-500',
   },
 } as const;

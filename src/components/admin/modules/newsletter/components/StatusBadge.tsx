@@ -11,15 +11,21 @@ export function CampaignStatusBadge({
   className?: string;
 }) {
   const config = CAMPAIGN_STATUS_CONFIG[status] ?? CAMPAIGN_STATUS_CONFIG.draft;
+  // NL-List: the board's pills.
+  const tone =
+    status === 'finished'
+      ? 'ok'
+      : status === 'scheduled' || status === 'queued' || status === 'sending'
+        ? 'info'
+        : status === 'paused'
+          ? 'warn'
+          : status === 'cancelled'
+            ? 'bad'
+            : '';
   return (
-    <Badge
-      variant="outline"
-      title={config.description}
-      className={cn('gap-1.5 border-transparent font-medium', config.className, className)}
-    >
-      <span className={cn('h-1.5 w-1.5 rounded-full', config.dot)} aria-hidden />
+    <span title={config.description} className={cn('ds-pill', tone, className)}>
       {config.label}
-    </Badge>
+    </span>
   );
 }
 

@@ -54,7 +54,7 @@ describe('admin page components', () => {
     render(<StatCard label="Drafts" value={4} meta="Not yet sent" tone="attention" />);
     expect(screen.getByText('Drafts')).toBeDefined();
     expect(screen.getByText('4')).toBeDefined();
-    expect(screen.getByText('Not yet sent').className).toContain('amber');
+    expect(screen.getByText('Not yet sent').style.color).toBe('rgb(146, 64, 14)');
   });
 
   it('keeps the open tab in the address bar and ignores unknown values', () => {

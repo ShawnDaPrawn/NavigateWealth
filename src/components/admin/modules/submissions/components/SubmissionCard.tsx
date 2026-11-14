@@ -12,22 +12,8 @@
 
 import React from 'react';
 import { Draggable } from '@hello-pangea/dnd';
-import {
-  FileText,
-  Calculator,
-  MoreHorizontal,
-  Eye,
-  Archive,
-  Shield,
-  Stethoscope,
-  TrendingUp,
-  Target,
-  Building2,
-  Briefcase,
-  ClipboardList,
-} from 'lucide-react';
+import { MoreHorizontal, Eye, Archive } from 'lucide-react';
 import { cn } from '../../../../ui/utils';
-import { Button } from '../../../../ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,51 +35,19 @@ interface SubmissionCardProps {
 
 // ── Left strip colour per type (restrained, single accent) ────────────────────
 
-const TYPE_STRIP_COLOR: Record<SubmissionType, string> = {
-  quote: 'bg-purple-500',
-  will_draft: 'bg-blue-500',
-  tax_planning: 'bg-emerald-500',
-  consultation: 'bg-amber-500',
-  contact: 'bg-sky-500',
-  client_signup: 'bg-violet-500',
-  change_request: 'bg-fuchsia-500',
+/** Each submission type's pill colour (SU-Board). */
+const TYPE_TONE: Record<SubmissionType, string> = {
+  quote: 'brand',
+  will_draft: 'warn',
+  tax_planning: 'warn',
+  consultation: 'ok',
+  contact: '',
+  client_signup: 'info',
+  change_request: 'bad',
 };
 
-// ── Service icon for quote submissions ────────────────────────────────────────
-
-function ServiceIcon({ service }: { service: string }) {
-  const s = service.toLowerCase();
-  const c = 'h-3 w-3';
-  if (s.includes('change')) return <ClipboardList className={c} />;
-  if (s.includes('risk')) return <Shield className={c} />;
-  if (s.includes('medical')) return <Stethoscope className={c} />;
-  if (s.includes('investment')) return <TrendingUp className={c} />;
-  if (s.includes('retirement')) return <Target className={c} />;
-  if (s.includes('employee') || s.includes('benefit')) return <Building2 className={c} />;
-  if (s.includes('estate')) return <FileText className={c} />;
-  if (s.includes('tax')) return <Calculator className={c} />;
-  return <Briefcase className={c} />;
-}
-
-// ── Time formatting ───────────────────────────────────────────────────────────
-
-function formatRelativeTime(dateStr: string): string {
-  try {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60_000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    if (days < 7) return `${days}d ago`;
-    return new Date(dateStr).toLocaleDateString('en-ZA', {
-      day: '2-digit',
-      month: 'short',
-    });
-  } catch {
-    return '';
-  }
+function formatShortDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
 }
 
 // ── Extract meaningful preview info ───────────────────────────────────────────
@@ -217,7 +171,6 @@ export function SubmissionCard({
 }: SubmissionCardProps) {
   const typeCfg = SUBMISSION_TYPE_CONFIG[submission.type];
   const preview = extractPreview(submission);
-  const stripColor = TYPE_STRIP_COLOR[submission.type];
 
   // Track whether a drag occurred so we can suppress the click that fires on mouseup
   const wasDragged = React.useRef(false);
@@ -236,9 +189,8 @@ export function SubmissionCard({
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             className={cn(
-              'group bg-white rounded-lg border border-gray-200 p-4 relative mb-3',
-              'hover:border-purple-300 hover:shadow-md transition-all cursor-grab active:cursor-grabbing',
-              snapshot.isDragging && 'shadow-xl ring-2 ring-purple-500 rotate-2 z-50',
+              'ds-kcard group mb-2 cursor-grab active:cursor-grabbing',
+              snapshot.isDragging && 'sel z-50',
             )}
             onClick={(e) => {
               // Suppress click if the card was just dragged
@@ -263,141 +215,95 @@ export function SubmissionCard({
             }}
             aria-label={`View ${typeCfg.label} from ${submission.submitterName || 'unknown submitter'}`}
           >
-            {/* Type Strip — like TaskCard's priority strip */}
-            <div className={cn('absolute left-0 top-4 bottom-4 w-1 rounded-r-full', stripColor)} />
-
-            <div className="pl-3">
-              {/* Header Row */}
-              <div className="flex items-start justify-between mb-1.5 gap-2">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm text-gray-900 leading-snug truncate">
-                    {submission.submitterName || 'Unknown'}
-                  </h3>
-                </div>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={`More actions for ${submission.submitterName || 'this submission'}`}
-                      className="h-6 w-6 p-0 -mr-2 text-gray-400 hover:text-gray-600 no-drag opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 transition-opacity"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onView(submission);
-                      }}
-                    >
-                      <Eye className="mr-2 h-4 w-4" />
-                      View
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {submission.status !== 'new' && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onStatusChange(submission.id, 'new');
-                        }}
-                      >
-                        Move to New
-                      </DropdownMenuItem>
-                    )}
-                    {submission.status !== 'pending' && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onStatusChange(submission.id, 'pending');
-                        }}
-                      >
-                        Move to Pending
-                      </DropdownMenuItem>
-                    )}
-                    {submission.status !== 'completed' && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onStatusChange(submission.id, 'completed');
-                        }}
-                      >
-                        Move to Completed
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onStatusChange(submission.id, 'archived');
-                      }}
-                    >
-                      <Archive className="mr-2 h-4 w-4" />
-                      Archive
-                    </DropdownMenuItem>
-                    {onDelete && (
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(submission);
-                        }}
-                        className="text-red-600 focus:bg-red-50 focus:text-red-700"
-                      >
-                        Delete…
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              {/* Type label + timestamp */}
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
-                  {typeCfg.shortLabel}
-                </span>
-                <span className="text-[11px] text-gray-400">
-                  {formatRelativeTime(submission.submittedAt)}
-                </span>
-              </div>
-
-              {/* Email — subtle, single line */}
-              {submission.submitterEmail && (
-                <p className="text-xs text-gray-500 truncate mb-2">{submission.submitterEmail}</p>
-              )}
-
-              {/* Service / Stage tags — muted gray only */}
-              {(preview.serviceName || preview.stage) && (
-                <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                  {preview.serviceName && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-gray-50 text-gray-600 px-2 py-0.5 rounded border border-gray-100">
-                      <ServiceIcon service={preview.serviceName} />
-                      {preview.serviceName}
-                    </span>
-                  )}
-                  {preview.stage && (
-                    <span className="inline-flex items-center text-[11px] font-medium bg-gray-50 text-gray-600 px-2 py-0.5 rounded border border-gray-100">
-                      {preview.stage}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Highlights — muted chips */}
-              {preview.highlights.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {preview.highlights.map((h) => (
-                    <span
-                      key={h}
-                      className="inline-flex items-center text-[10px] font-medium text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded"
-                    >
-                      {h}
-                    </span>
-                  ))}
-                </div>
-              )}
+            <div className="row pr-8">
+              <span className={cn('ds-pill', TYPE_TONE[submission.type])}>{typeCfg.label}</span>
+              <span className="ds-meta">{formatShortDate(submission.submittedAt)}</span>
             </div>
+            <b className="truncate">{submission.submitterName || 'Unknown'}</b>
+            <span className="ds-meta break-words">
+              {[
+                submission.submitterEmail,
+                preview.serviceName,
+                preview.stage,
+                ...preview.highlights,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`More actions for ${submission.submitterName || 'this submission'}`}
+                  className="ds-btn ds-btn-ghost ds-btn-sm no-drag absolute right-2 top-2 !w-8 !justify-center !p-0"
+                >
+                  <MoreHorizontal aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onView(submission);
+                  }}
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {submission.status !== 'new' && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStatusChange(submission.id, 'new');
+                    }}
+                  >
+                    Move to New
+                  </DropdownMenuItem>
+                )}
+                {submission.status !== 'pending' && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStatusChange(submission.id, 'pending');
+                    }}
+                  >
+                    Move to Pending
+                  </DropdownMenuItem>
+                )}
+                {submission.status !== 'completed' && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStatusChange(submission.id, 'completed');
+                    }}
+                  >
+                    Move to Completed
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStatusChange(submission.id, 'archived');
+                  }}
+                >
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </DropdownMenuItem>
+                {onDelete && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(submission);
+                    }}
+                    className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                  >
+                    Delete…
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         );
       }}

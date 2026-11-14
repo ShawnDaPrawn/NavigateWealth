@@ -6,12 +6,9 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardList, Server } from 'lucide-react';
-import { Button } from '../../../../ui/button';
-import { cn } from '../../../../ui/utils';
 import { SystemHealthDialog } from './SystemHealthDialog';
 import type { DashboardHeaderProps } from '../types';
-import { PageHeader } from '../../../layout/page';
+import { DsButton, DsPill, PageHeader, type DsTone } from '../../../layout/page';
 import { systemHealthApi } from '../api';
 import { dashboardKeys } from '../hooks/queryKeys';
 import { getGreeting, getHealthStatus, type HealthStatus } from '../utils';
@@ -22,10 +19,10 @@ const HEALTH_LABEL: Record<HealthStatus, string> = {
   unknown: 'Not run',
 };
 
-const HEALTH_CLASS: Record<HealthStatus, string> = {
-  ok: 'bg-green-50 text-green-700',
-  overdue: 'bg-amber-50 text-amber-800',
-  unknown: 'bg-nw-bg text-nw-text-2',
+const HEALTH_TONE: Record<HealthStatus, DsTone> = {
+  ok: 'ok',
+  overdue: 'warn',
+  unknown: 'neutral',
 };
 
 export function DashboardHeader({ userName, onOpenAuditTrail }: DashboardHeaderProps) {
@@ -52,24 +49,15 @@ export function DashboardHeader({ userName, onOpenAuditTrail }: DashboardHeaderP
         description={`${getGreeting()}${userName ? `, ${userName}` : ''} · ${today}`}
         actions={
           <>
-            <Button variant="outline" onClick={onOpenAuditTrail}>
-              <ClipboardList className="h-4 w-4" aria-hidden="true" />
-              Audit trail
-            </Button>
-            <Button variant="outline" onClick={() => setHealthOpen(true)}>
-              <Server className="h-4 w-4" aria-hidden="true" />
+            <DsButton onClick={onOpenAuditTrail}>Audit trail</DsButton>
+            <DsButton onClick={() => setHealthOpen(true)}>
               System health
               {health && (
-                <span
-                  className={cn(
-                    'rounded-full px-1.5 py-0.5 text-[11px] font-medium',
-                    HEALTH_CLASS[health],
-                  )}
-                >
+                <DsPill tone={HEALTH_TONE[health]} className="!h-5">
                   {HEALTH_LABEL[health]}
-                </span>
+                </DsPill>
               )}
-            </Button>
+            </DsButton>
           </>
         }
       />

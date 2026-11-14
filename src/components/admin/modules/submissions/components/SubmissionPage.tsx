@@ -328,7 +328,7 @@ export function SubmissionPage({
     : ['new', 'pending', 'completed'];
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-4 p-6 lg:p-8">
+    <div className="ds-page">
       <BackLink label={`Back to ${backLabel}`} onClick={onClose} />
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">

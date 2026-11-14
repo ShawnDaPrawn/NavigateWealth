@@ -391,7 +391,7 @@ export function PublicationsModule() {
   // A failed status check is an error, never "not set up".
   if (initLoadError) {
     return (
-      <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <div className="ds-page">
         <PageHeader
           title="Publications"
           description="Articles, content pipeline, subscribers and website content."
@@ -407,7 +407,7 @@ export function PublicationsModule() {
 
   if (isInitialized === false) {
     return (
-      <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <div className="ds-page">
         <PageHeader
           title="Publications"
           description="Articles, content pipeline, subscribers and website content."
@@ -421,7 +421,7 @@ export function PublicationsModule() {
 
   if (showEditor) {
     return (
-      <div className="p-6 lg:p-8">
+      <div className="ds-page">
         <ArticleEditor
           key={
             selectedArticle?.id ||
@@ -441,7 +441,7 @@ export function PublicationsModule() {
 
   if (showAIGenerator) {
     return (
-      <div className="p-6 lg:p-8">
+      <div className="ds-page">
         <AIArticleGenerator
           isOpen
           onClose={handleBackFromAI}
@@ -455,7 +455,7 @@ export function PublicationsModule() {
   // ── Main module shell ────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="ds-page">
       {!subPage && (
         <PageHeader
           title="Publications"
@@ -628,7 +628,7 @@ export function PublicationsModule() {
 function LoadingPlaceholder({ message }: { message: string }) {
   return (
     <div aria-busy="true" aria-label={message} className="space-y-3" data-testid="tab-skeleton">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="ds-stats">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-20 rounded-xl" />
         ))}

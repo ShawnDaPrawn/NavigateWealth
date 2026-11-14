@@ -70,7 +70,7 @@ export function LockedModule() {
 /** The page frame: the module's header above one piece of content. */
 function LockedPage({ description, children }: { description: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[1800px] space-y-6 p-6 lg:p-8">
+    <div className="ds-page">
       <PageHeader title="Locked" description={description} />
       {children}
     </div>
@@ -101,7 +101,7 @@ function LockedWorkspace() {
   // New cardholder is a page of its own in place of the workspace.
   if (cardholderOpen) {
     return (
-      <div className="mx-auto w-full max-w-[1800px] p-6 lg:p-8">
+      <div className="ds-page">
         <Breadcrumb
           trail={[
             { label: 'Banking', onClick: () => setCardholderPage(false) },
@@ -120,7 +120,7 @@ function LockedWorkspace() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1800px] space-y-6 p-6 lg:p-8">
+    <div className="ds-page">
       {!clusterOpen && (
         <PageHeader
           title="Locked"

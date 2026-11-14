@@ -150,7 +150,7 @@ export function AIAnalyticsDashboard() {
   if (analyticsLoading) {
     return (
       <div aria-busy="true" aria-label="Loading analytics" className="space-y-3">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="ds-stats">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}

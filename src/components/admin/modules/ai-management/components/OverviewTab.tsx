@@ -92,7 +92,7 @@ function StatTile({
       <button
         type="button"
         onClick={onClick}
-        className="w-full rounded-xl text-left transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+        className="w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 [&>.ds-stat]:h-full [&>.ds-stat:hover]:border-violet-300"
       >
         {card}
       </button>

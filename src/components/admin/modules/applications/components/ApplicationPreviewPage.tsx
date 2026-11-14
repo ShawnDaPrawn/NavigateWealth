@@ -774,7 +774,7 @@ export function ApplicationPreviewPage({ onExit }: ApplicationPreviewPageProps) 
   };
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-4 p-6 lg:p-8">
+    <div className="ds-page">
       <BackLink label="Back to applications" onClick={onExit} />
       <div
         role="status"

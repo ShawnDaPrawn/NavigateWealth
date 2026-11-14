@@ -195,9 +195,9 @@ describe('Dashboard', () => {
 
   it('switches the period from the segmented control and keeps it in the address', async () => {
     renderAt();
-    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Last 30 days' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }));
     await waitFor(() => expect(screen.getByTestId('search').textContent).toBe('?period=30d'));
-    expect(screen.getByRole('tab', { name: 'Last 30 days' }).getAttribute('aria-selected')).toBe(
+    expect(screen.getByRole('button', { name: 'Last 30 days' }).getAttribute('aria-pressed')).toBe(
       'true',
     );
   });

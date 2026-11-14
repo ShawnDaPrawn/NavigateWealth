@@ -217,7 +217,7 @@ export function AuditTrailPage({ onBack }: AuditTrailPageProps) {
     categoryFilter !== 'all' || severityFilter !== 'all' || searchQuery.trim() !== '';
 
   return (
-    <div className="mx-auto flex max-w-[1600px] flex-col gap-6 p-6 lg:p-8">
+    <div className="ds-page">
       <button
         type="button"
         onClick={onBack}

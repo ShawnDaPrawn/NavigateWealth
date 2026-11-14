@@ -10,10 +10,10 @@
  */
 
 import React, { Suspense } from 'react';
-import { Button } from '../../../../ui/button';
-import { Plus, AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
 import {
+  DsButton,
   PageHeader,
   StatCard,
   NavTabsList,
@@ -170,31 +170,23 @@ export function EsignDashboard({
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="ds-page">
       <PageHeader
         title="E-Signature"
         description="Signature envelopes, templates and signer workflows."
         viewOnly={viewOnly}
         actions={
           <>
-            {onBulkSend && (
-              <Button variant="outline" onClick={onBulkSend}>
-                Bulk send from template
-              </Button>
-            )}
-            <Button onClick={onCreateNew}>
-              <Plus className="h-4 w-4" aria-hidden="true" />
+            {onBulkSend && <DsButton onClick={onBulkSend}>Bulk send from template</DsButton>}
+            <DsButton variant="primary" onClick={onCreateNew}>
               New envelope
-            </Button>
+            </DsButton>
           </>
         }
       />
 
       {metrics.expiringSoon > 0 && (
-        <div
-          role="status"
-          className="flex items-center gap-3 rounded-lg border border-amber-200 bg-nw-amber-100/40 px-4 py-2.5"
-        >
+        <div role="status" className="ds-notice attn">
           <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
           <span className="text-sm text-nw-amber-700">
             <strong>{metrics.expiringSoon}</strong> envelope{metrics.expiringSoon > 1 ? 's' : ''}{' '}
@@ -204,7 +196,7 @@ export function EsignDashboard({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
+      <div className="ds-stats lg:!grid-cols-5">
         <StatCard
           label="Action required"
           value={shown(metrics.pending)}
@@ -237,7 +229,7 @@ export function EsignDashboard({
         </NavTabsList>
 
         <TabsContent value="envelopes" className="mt-0">
-          <div className="rounded-xl border border-nw-line bg-white p-4">
+          <div className="ds-card p-4">
             <EnvelopesList
               onViewEnvelope={onViewEnvelope}
               onCreateNew={onCreateNew}
@@ -249,7 +241,7 @@ export function EsignDashboard({
         </TabsContent>
 
         <TabsContent value="templates" className="mt-0">
-          <div className="rounded-xl border border-nw-line bg-white p-4">
+          <div className="ds-card p-4">
             <TemplateLibrary
               onUseTemplate={(template) => onUseTemplate?.(template)}
               onStartTemplateBuilder={onStartTemplateBuilder}

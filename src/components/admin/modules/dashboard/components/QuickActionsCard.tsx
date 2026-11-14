@@ -1,119 +1,58 @@
-import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
-import { Button } from '../../../../ui/button';
 import {
-  Users,
-  FilePlus,
-  Search,
-  MessageSquare,
-  FileText,
+  BarChart3,
   Calendar,
-  Settings,
-  Shield,
-  ClipboardCheck,
+  FilePlus2,
+  ClipboardPlus,
+  Mail,
+  Search,
+  ShieldCheck,
+  UserPlus,
 } from 'lucide-react';
+import { DsCard, DsCardBody, DsCardHead } from '../../../layout/page';
 import type { QuickActionsCardProps, QuickAction } from '../types';
 
-export function QuickActionsCard({ onModuleChange, customActions }: QuickActionsCardProps) {
-  const defaultActions: QuickAction[] = [
-    {
-      id: 'new-client',
-      label: 'New client',
-      icon: Users,
-      module: 'clients',
-      variant: 'default',
-    },
-    {
-      id: 'new-application',
-      label: 'New application',
-      icon: FilePlus,
-      module: 'applications',
-      variant: 'outline',
-    },
-    {
-      id: 'new-advice',
-      label: 'New advice record',
-      icon: ClipboardCheck,
-      module: 'advice-engine',
-      variant: 'outline',
-    },
-    {
-      id: 'compliance',
-      label: 'Compliance check',
-      icon: Shield,
-      module: 'compliance',
-      variant: 'outline',
-    },
-    {
-      id: 'search-client',
-      label: 'Find client',
-      icon: Search,
-      module: 'clients',
-      variant: 'outline',
-    },
-    {
-      id: 'messages',
-      label: 'Messages',
-      icon: MessageSquare,
-      module: 'communication',
-      variant: 'outline',
-    },
-    {
-      id: 'calendar',
-      label: 'Calendar',
-      icon: Calendar,
-      module: 'calendar',
-      variant: 'outline',
-    },
-    {
-      id: 'reports',
-      label: 'Reports',
-      icon: FileText,
-      module: 'reporting',
-      variant: 'outline',
-    },
-  ];
+const DEFAULT_ACTIONS: QuickAction[] = [
+  { id: 'new-client', label: 'New client', icon: UserPlus, module: 'clients' },
+  { id: 'new-application', label: 'New application', icon: ClipboardPlus, module: 'applications' },
+  { id: 'new-advice', label: 'New advice record', icon: FilePlus2, module: 'advice-engine' },
+  { id: 'compliance', label: 'Compliance check', icon: ShieldCheck, module: 'compliance' },
+  { id: 'search-client', label: 'Find client', icon: Search, module: 'clients' },
+  { id: 'messages', label: 'Messages', icon: Mail, module: 'communication' },
+  { id: 'calendar', label: 'Calendar', icon: Calendar, module: 'calendar' },
+  { id: 'reports', label: 'Reports', icon: BarChart3, module: 'reporting' },
+];
 
-  const actions = customActions || defaultActions;
+/** Quick actions (DB-Main board): eight shortcuts in two columns, all alike. */
+export function QuickActionsCard({ onModuleChange, customActions }: QuickActionsCardProps) {
+  const actions = customActions || DEFAULT_ACTIONS;
 
   const handleAction = (action: QuickAction) => {
-    if (action.onClick) {
-      action.onClick();
-    } else if (action.module && onModuleChange) {
-      onModuleChange(action.module);
-    }
+    if (action.onClick) action.onClick();
+    else if (action.module && onModuleChange) onModuleChange(action.module);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center">
-          <Settings className="h-5 w-5 mr-2 text-primary" />
-          Quick actions
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-3">
-          {actions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Button
-                key={action.id}
-                variant={action.variant || 'outline'}
-                className="h-auto min-w-0 justify-start space-x-3 py-4 text-left whitespace-normal"
-                onClick={() => handleAction(action)}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="min-w-0 font-medium leading-tight">{action.label}</span>
-                {action.badgeCount ? (
-                  <span className="ml-auto bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-                    {action.badgeCount}
-                  </span>
-                ) : null}
-              </Button>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <DsCard aria-label="Quick actions" className="flex-[1_1_380px]">
+      <DsCardHead title="Quick actions" />
+      <DsCardBody className="grid grid-cols-2 gap-2">
+        {actions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <button
+              key={action.id}
+              type="button"
+              className="ds-qa"
+              onClick={() => handleAction(action)}
+            >
+              <Icon aria-hidden="true" />
+              <span className="min-w-0">{action.label}</span>
+              {action.badgeCount ? (
+                <span className="ds-count ml-auto">{action.badgeCount}</span>
+              ) : null}
+            </button>
+          );
+        })}
+      </DsCardBody>
+    </DsCard>
   );
 }

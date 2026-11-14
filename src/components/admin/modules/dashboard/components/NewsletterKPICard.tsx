@@ -10,11 +10,9 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
-import { Badge } from '../../../../ui/badge';
 import { Skeleton } from '../../../../ui/skeleton';
-import { ArrowRight, Mail, Send, Users, Calendar, TrendingUp } from 'lucide-react';
-import { Button } from '../../../../ui/button';
+import { DsButton, DsCard, DsCardBody, DsCardHead, DsMeta } from '../../../layout/page';
+import { CAMPAIGN_STATUS_CONFIG, useStudioDashboard } from '../../newsletter';
 import { CardError } from './CardError';
 import { api } from '../../../../../utils/api';
 import { newsletterKeys } from '../../../../../utils/queryKeys';
@@ -33,39 +31,6 @@ async function fetchNewsletterStats(): Promise<NewsletterStats | null> {
   );
   if (!json.success) throw new Error(json.error || 'Newsletter stats unavailable');
   return json.data ?? null;
-}
-
-function formatRelativeDate(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86_400_000);
-  if (days === 0) return 'Today';
-  if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return new Date(iso).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
-}
-
-function LastBroadcastBadge({ iso }: { iso: string }) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const days = Math.floor(diff / 86_400_000);
-  if (days > 30) {
-    return (
-      <Badge
-        variant="outline"
-        className="text-[10px] px-1.5 py-0 leading-4 text-amber-700 border-amber-300 bg-amber-50"
-      >
-        Overdue
-      </Badge>
-    );
-  }
-  return (
-    <Badge
-      variant="outline"
-      className="text-[10px] px-1.5 py-0 leading-4 text-green-700 border-green-300 bg-green-50"
-    >
-      Recent
-    </Badge>
-  );
 }
 
 interface NewsletterKPICardProps {
@@ -87,103 +52,69 @@ export function NewsletterKPICard({ onModuleChange }: NewsletterKPICardProps = {
     staleTime: 5 * 60 * 1000,
   });
 
-  const primaryStats = [
-    {
-      label: 'Subscribers',
-      value: stats?.activeSubscribers ?? 0,
-      icon: Users,
-      iconBg: 'bg-purple-50',
-      iconColor: 'text-purple-600',
-    },
-    {
-      label: 'Total sent',
-      value: stats?.totalBroadcasts ?? 0,
-      icon: Send,
-      iconBg: 'bg-blue-50',
-      iconColor: 'text-blue-600',
-    },
-    {
-      label: 'This month',
-      value: stats?.broadcastsThisMonth ?? 0,
-      icon: TrendingUp,
-      iconBg: 'bg-green-50',
-      iconColor: 'text-green-600',
-    },
+  // The newsletter module's own dashboard read, for the two latest broadcasts.
+  const { data: studio, isLoading: studioLoading } = useStudioDashboard();
+  const recent = (studio?.recentCampaigns ?? []).slice(0, 2);
+
+  const figures = [
+    { label: 'Subscribers', value: stats?.activeSubscribers ?? 0 },
+    { label: 'Total sent', value: stats?.totalBroadcasts ?? 0 },
+    { label: 'This month', value: stats?.broadcastsThisMonth ?? 0 },
   ];
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <div className="p-1.5 bg-purple-50 rounded-lg">
-              <Mail className="h-4 w-4 text-purple-600" />
-            </div>
-            Newsletter
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            {!loading && stats?.lastBroadcastAt && (
-              <LastBroadcastBadge iso={stats.lastBroadcastAt} />
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onModuleChange?.('newsletter')}
-              className="h-7 gap-1.5 text-xs"
-            >
-              Open
-              <ArrowRight className="h-3 w-3" aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-        <CardDescription>Subscriber &amp; broadcast overview</CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
+    <DsCard aria-label="Newsletter">
+      <DsCardHead
+        as="h3"
+        title="Newsletter"
+        actions={
+          <DsButton size="sm" variant="ghost" onClick={() => onModuleChange?.('newsletter')}>
+            Open
+          </DsButton>
+        }
+      />
+      <DsCardBody className="flex flex-col gap-3">
         {isError ? (
           <CardError title="Couldn't load newsletter figures" onRetry={() => void refetch()} />
         ) : (
-          <>
-            {/* Primary stat row */}
-            <div className="grid grid-cols-3 gap-3">
-              {primaryStats.map((item) => (
-                <div key={item.label} className="rounded-lg bg-gray-50 p-3 text-center">
-                  <div className={`inline-flex p-1.5 rounded-md ${item.iconBg} mb-2`}>
-                    <item.icon className={`h-3.5 w-3.5 ${item.iconColor}`} />
-                  </div>
-                  {loading ? (
-                    <Skeleton className="h-6 w-10 mx-auto mb-1" />
-                  ) : (
-                    <p className="text-xl font-bold leading-tight">{item.value}</p>
-                  )}
-                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                    {item.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Last broadcast row */}
-            <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2.5">
-              <div className="p-1.5 rounded-md bg-white border border-gray-100">
-                <Calendar className="h-3.5 w-3.5 text-gray-500" />
+          <div
+            className="ds-dl"
+            style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}
+          >
+            {figures.map((f) => (
+              <div key={f.label}>
+                <span>{f.label}</span>
+                {loading ? <Skeleton className="h-5 w-8" /> : f.value.toLocaleString()}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-700">Last broadcast</p>
-                {loading ? (
-                  <Skeleton className="h-3.5 w-20 mt-0.5" />
-                ) : (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {stats?.lastBroadcastAt
-                      ? formatRelativeDate(stats.lastBroadcastAt)
-                      : 'No broadcasts yet'}
-                  </p>
-                )}
-              </div>
-            </div>
-          </>
+            ))}
+          </div>
         )}
-      </CardContent>
-    </Card>
+        <div className="ds-divider" />
+        <span className="ds-lbl">Recent broadcasts</span>
+        {studioLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        ) : recent.length === 0 ? (
+          <DsMeta>No broadcasts yet.</DsMeta>
+        ) : (
+          recent.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className="min-w-0 text-left hover:text-nw-violet-600"
+              onClick={() => onModuleChange?.('newsletter')}
+            >
+              <b className="block truncate font-medium">{c.title}</b>
+              <DsMeta>
+                {CAMPAIGN_STATUS_CONFIG[c.status]?.label ?? c.status}
+                {c.status === 'draft' && c.reviewNotifiedAt ? ' · waiting for review' : ''}
+              </DsMeta>
+            </button>
+          ))
+        )}
+      </DsCardBody>
+    </DsCard>
   );
 }

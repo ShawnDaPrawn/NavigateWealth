@@ -8,6 +8,8 @@
 export { NewsletterModule } from './NewsletterModule';
 export { NewsletterSkeleton } from './components/NewsletterSkeleton';
 export { newsletterStudioApi } from './api';
+export { useStudioDashboard } from './hooks/useNewsletterStudio';
+export { CAMPAIGN_STATUS_CONFIG } from './constants';
 export type {
   NewsletterCampaign,
   NewsletterCampaignStats,

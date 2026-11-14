@@ -9,8 +9,7 @@
 
 import { Badge } from '../../../../ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../../../ui/tooltip';
-import { Shield, ShieldCheck, ShieldAlert, ShieldOff } from 'lucide-react';
-import { cn } from '../../../../ui/utils';
+
 import type { PermissionSet } from '../types';
 import { moduleConfig } from '../../../layout/config';
 import { SUPER_ADMIN_EMAIL, PERMISSIONED_MODULES } from '../constants';
@@ -43,13 +42,7 @@ export function PermissionSummaryBadge({
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="inline-flex">
-              <Badge
-                variant="outline"
-                className="text-[10px] px-1.5 py-0.5 h-5 bg-purple-50 text-purple-700 border-purple-200 gap-1 cursor-default"
-              >
-                <ShieldCheck className="h-3 w-3" />
-                Full Access
-              </Badge>
+              <span className="ds-pill brand cursor-default">Full access</span>
             </span>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs">
@@ -66,14 +59,7 @@ export function PermissionSummaryBadge({
 
   // ── Loading ────────────────────────────────────────────────────
   if (isLoading) {
-    return (
-      <Badge
-        variant="outline"
-        className="text-[10px] px-1.5 py-0.5 h-5 text-gray-400 border-gray-200 animate-pulse"
-      >
-        Loading...
-      </Badge>
-    );
+    return <span className="ds-pill animate-pulse">Loading…</span>;
   }
 
   // ── No permissions set ─────────────────────────────────────────
@@ -83,13 +69,7 @@ export function PermissionSummaryBadge({
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="inline-flex">
-              <Badge
-                variant="outline"
-                className="text-[10px] px-1.5 py-0.5 h-5 bg-red-50 text-red-600 border-red-200 gap-1 cursor-default"
-              >
-                <ShieldOff className="h-3 w-3" />
-                No Access
-              </Badge>
+              <span className="ds-pill bad cursor-default">No access</span>
             </span>
           </TooltipTrigger>
           <TooltipContent side="top">
@@ -122,13 +102,7 @@ export function PermissionSummaryBadge({
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="inline-flex">
-              <Badge
-                variant="outline"
-                className="text-[10px] px-1.5 py-0.5 h-5 bg-amber-50 text-amber-600 border-amber-200 gap-1 cursor-default"
-              >
-                <ShieldAlert className="h-3 w-3" />
-                View Only
-              </Badge>
+              <span className="ds-pill warn cursor-default">View only</span>
             </span>
           </TooltipTrigger>
           <TooltipContent side="top">
@@ -141,32 +115,14 @@ export function PermissionSummaryBadge({
     );
   }
 
-  // Determine color intensity based on coverage
-  const coverage = enabledCount / PERMISSIONED_MODULES.length;
-  const badgeStyle =
-    coverage >= 0.8
-      ? 'bg-green-50 text-green-700 border-green-200'
-      : coverage >= 0.4
-        ? 'bg-blue-50 text-blue-700 border-blue-200'
-        : 'bg-amber-50 text-amber-700 border-amber-200';
-
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="inline-flex">
-            <Badge
-              variant="outline"
-              className={cn('text-[10px] px-1.5 py-0.5 h-5 gap-1 cursor-default', badgeStyle)}
-            >
-              <Shield className="h-3 w-3" />
+            <span className="ds-pill cursor-default">
               {enabledCount} module{enabledCount !== 1 ? 's' : ''}
-              {totalCaps > 0 && (
-                <span className="opacity-60">
-                  · {totalCaps} cap{totalCaps !== 1 ? 's' : ''}
-                </span>
-              )}
-            </Badge>
+            </span>
           </span>
         </TooltipTrigger>
         <TooltipContent side="top" align="start" className="max-w-xs">
