@@ -70,6 +70,8 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
+  // Documents chosen in "Email documents to client" (the latest upload is preselected).
+  const [emailDocIds, setEmailDocIds] = useState<string[]>([]);
   // Documents & links | Activity timeline, in the address (?dview=).
   const [view, setView] = useUrlState<DocumentsView>('dview', 'docs', DOCUMENTS_VIEWS);
   useClientSubCrumbs(view === 'timeline' ? [{ label: 'Activity timeline' }] : []);
@@ -119,7 +121,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   }, [selectedClient?.id, fetchDocuments]);
 
   const handleSendEmail = async () => {
-    if (!selectedClient?.id || uploadedDocIds.length === 0) return;
+    if (!selectedClient?.id || emailDocIds.length === 0) return;
 
     // Get client details for email - Robust extraction
     // Check root email first, then profile email, then personal info email
@@ -144,7 +146,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
     try {
       setSendingEmail(true);
       await api.post(`/documents/${selectedClient.id}/email`, {
-        documentIds: uploadedDocIds,
+        documentIds: emailDocIds,
         email: clientEmail,
         idNumber: clientIdNumber,
         customMessage: uploadEmailMessage,
@@ -155,6 +157,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
       toast.success('Documents emailed to client successfully');
       setEmailComposeDialogOpen(false);
       setUploadedDocIds([]);
+      setEmailDocIds([]);
       setCcAdmin(false); // Reset CC preference
     } catch (error) {
       console.error('❌ Error sending email:', error);
@@ -335,6 +338,8 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
   });
 
   const groupedItems = groupDocumentsByPack(filteredDocuments);
+  // Links cannot be attached to an email; only uploaded files can.
+  const attachableDocuments = documents.filter((d) => d.type !== 'link');
 
   if (!selectedClient) {
     return (
@@ -372,14 +377,11 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
                 size="sm"
                 onClick={() => {
                   setUploadEmailMessage('');
+                  setEmailDocIds(uploadedDocIds);
                   setEmailComposeDialogOpen(true);
                 }}
-                disabled={uploadedDocIds.length === 0}
-                title={
-                  uploadedDocIds.length === 0
-                    ? 'Upload documents first; the email attaches the latest upload.'
-                    : undefined
-                }
+                disabled={attachableDocuments.length === 0}
+                title={attachableDocuments.length === 0 ? 'No documents to email yet.' : undefined}
               >
                 <Mail className="h-4 w-4" aria-hidden="true" />
                 Email documents to client
@@ -496,6 +498,7 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         }}
         onNotify={() => {
           setUploadSuccessDialogOpen(false);
+          setEmailDocIds(uploadedDocIds);
           setEmailComposeDialogOpen(true);
         }}
       />
@@ -510,6 +513,18 @@ export function DocumentsTab({ selectedClient }: DocumentsTabProps) {
         onCcAdminChange={setCcAdmin}
         sending={sendingEmail}
         onSend={handleSendEmail}
+        documents={attachableDocuments.map((d) => ({
+          id: d.id,
+          title: d.title,
+          meta: [
+            d.productCategory,
+            d.uploadDate && new Date(d.uploadDate).toLocaleDateString('en-ZA'),
+          ]
+            .filter(Boolean)
+            .join(' · '),
+        }))}
+        selectedIds={emailDocIds}
+        onSelectedIdsChange={setEmailDocIds}
       />
     </div>
   );
