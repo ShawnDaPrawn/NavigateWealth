@@ -446,7 +446,9 @@ export function PolicyCategoryTab({
     (hasFNA && !!fnaConfig && fnaManagement.wizardOpen) ||
     (hasFNA && !!fnaConfig && !!selectedHistoricalFnaId && viewFNADialogOpen) ||
     (categorySubtabId === 'estate-planning' &&
-      (willDraftingWizardOpen || livingWillDraftingWizardOpen));
+      (willDraftingWizardOpen ||
+        livingWillDraftingWizardOpen ||
+        (willPdfViewOpen && !!selectedWillId)));
   // These pages take the whole client page (no client header, tabs or rails);
   // the AI will builder does too. The add / edit policy page only hides the rail.
   usePageTakeover(

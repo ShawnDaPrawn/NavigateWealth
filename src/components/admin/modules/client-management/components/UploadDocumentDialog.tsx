@@ -673,27 +673,12 @@ export function UploadDocumentDialog({
                   <Input
                     id="link-url"
                     type="url"
-                    placeholder="https://example.com"
+                    placeholder="https://"
                     value={linkUrl}
                     onChange={(e) => setLinkUrl(e.target.value)}
                     className="pl-9 h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="link-description" className="font-medium text-slate-900">
-                  Description
-                </Label>
-
-                <Textarea
-                  id="link-description"
-                  placeholder="Brief description of this resource"
-                  value={linkDescription}
-                  onChange={(e) => setLinkDescription(e.target.value)}
-                  rows={3}
-                  className="resize-none border-slate-200 focus:border-violet-500 focus:ring-violet-500"
-                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -741,6 +726,20 @@ export function UploadDocumentDialog({
                     className="h-10 border-slate-200 focus:border-violet-500 focus:ring-violet-500"
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="link-description" className="font-medium text-slate-900">
+                  Description
+                </Label>
+
+                <Textarea
+                  id="link-description"
+                  placeholder="Brief description of this resource"
+                  value={linkDescription}
+                  onChange={(e) => setLinkDescription(e.target.value)}
+                  rows={3}
+                  className="resize-none border-slate-200 focus:border-violet-500 focus:ring-violet-500"
+                />
               </div>
             </TabsContent>
           </div>
