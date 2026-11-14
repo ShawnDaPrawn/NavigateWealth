@@ -192,7 +192,7 @@ export function CDDPanel({
           >
             {isRunning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <Shield className="mr-2 h-4 w-4" />
-            Run CDD Report
+            Run CDD report
           </Button>
 
           {/* Result */}
@@ -266,7 +266,7 @@ export function CDDPanel({
           >
             <CardTitle className="text-md font-medium flex items-center gap-2">
               <History className="h-5 w-5 text-gray-500" />
-              CDD Report History
+              History
               {history.length > 0 && (
                 <Badge variant="secondary" className="text-xs">
                   {history.length}

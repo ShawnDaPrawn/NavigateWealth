@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUrlState } from '../../../layout/page';
 import { useClientSubCrumbs } from '../../../layout/page';
+import { Button } from '../../../../ui/button';
+import { exportComplianceDossier } from './compliance/exportDossier';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Shield,
@@ -13,6 +15,7 @@ import {
   Building2,
   MapPin,
   FileCheck,
+  Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../../../../utils/api';
@@ -54,6 +57,53 @@ const SUB_TABS: {
   { id: 'activity-log', label: 'Reports', icon: History },
 ];
 const COMPLIANCE_SECTIONS = SUB_TABS.map((t) => t.id);
+/** Each section's heading and one-line description (design: CM 43–54). */
+const SECTION_COPY: Record<ComplianceSubTab, { title: string; description: string }> = {
+  overview: {
+    title: 'Compliance overview',
+    description: 'Run checks, see the latest result of each, and export the dossier.',
+  },
+  'identity-verification': {
+    title: 'Identity verification',
+    description: "Verify the client's identity using their SA ID number or passport via Honeycomb.",
+  },
+  cdd: {
+    title: 'Customer due diligence',
+    description:
+      'Run a CDD report for this client. Data provided by Honeycomb Information Services (Beeswax).',
+  },
+  'financial-intelligence': {
+    title: 'Financial intelligence',
+    description: 'Bank account verification and credit bureau checks. Client consent is required.',
+  },
+  'corporate-governance': {
+    title: 'Corporate & governance',
+    description:
+      "Company registrations, directorships and government tenders linked to the client's ID.",
+  },
+  'screening-sanctions': {
+    title: 'Screening & sanctions',
+    description: 'Search sanctions lists, enforcement actions and court records.',
+  },
+  'address-reports': {
+    title: 'Address',
+    description: 'Look up the best known address for the client from bureau records.',
+  },
+  'risk-assessment': {
+    title: 'Risk assessments',
+    description: 'Templates are configured in the Beeswax platform and pulled automatically.',
+  },
+  'activity-log': {
+    title: 'Reports',
+    description: 'Compliance readiness and the full log of checks run for this client.',
+  },
+};
+/** Sections that show the client identification card above their checks. */
+const IDENTIFICATION_SECTIONS: ReadonlySet<ComplianceSubTab> = new Set([
+  'identity-verification',
+  'cdd',
+  'address-reports',
+]);
 /** Rail groups (design: CM 12 — Overview, then Checks, then Outcome). */
 const RAIL_GROUPS: { title?: string; ids: ComplianceSubTab[] }[] = [
   { ids: ['overview'] },
@@ -97,6 +147,7 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
     'overview',
     COMPLIANCE_SECTIONS,
   );
+  const [exporting, setExporting] = useState(false);
   const sectionLabel = SUB_TABS.find((t) => t.id === activeSubTab)?.label ?? '';
   useClientSubCrumbs(sectionLabel ? [{ label: sectionLabel }] : []);
 
@@ -286,6 +337,63 @@ export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
       </nav>
 
       <div className="min-w-0 space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-[15px] font-semibold text-nw-ink">
+              {SECTION_COPY[activeSubTab].title}
+            </h2>
+            <p className="text-sm text-nw-text-3">{SECTION_COPY[activeSubTab].description}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={exporting}
+            onClick={async () => {
+              setExporting(true);
+              try {
+                await exportComplianceDossier(
+                  selectedClient.id,
+                  `${selectedClient.firstName} ${selectedClient.lastName}`,
+                );
+              } finally {
+                setExporting(false);
+              }
+            }}
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Download className="h-4 w-4" aria-hidden="true" />
+            )}
+            Export compliance dossier
+          </Button>
+        </div>
+
+        {IDENTIFICATION_SECTIONS.has(activeSubTab) && (
+          <section
+            aria-label="Client identification"
+            className="grid grid-cols-1 gap-3 rounded-xl border border-nw-line bg-white px-5 py-3 text-sm sm:grid-cols-3"
+          >
+            <div>
+              <p className="text-xs text-nw-text-3">SA ID</p>
+              <p className="font-mono text-nw-ink">
+                {resolvedIdNumber
+                  ? `${resolvedIdNumber.slice(0, 6)}•••••${resolvedIdNumber.slice(-2)}`
+                  : 'Not set'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-nw-text-3">Passport</p>
+              <p className="font-mono text-nw-ink">
+                {resolvedPassport ? `${resolvedPassport.slice(0, 3)}•••` : 'Not set'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-nw-text-3">Beeswax ID</p>
+              <p className="font-mono text-nw-ink">{honeycombId || '—'}</p>
+            </div>
+          </section>
+        )}
         {/* ──── Sub-tab Content ──── */}
 
         {activeSubTab === 'overview' && (

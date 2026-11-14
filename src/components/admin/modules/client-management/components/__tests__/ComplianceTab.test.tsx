@@ -156,4 +156,11 @@ describe('ComplianceTab — registered state', () => {
       expect(screen.getByTestId('search').textContent).toBe('?ksec=activity-log'),
     );
   });
+
+  it('heads each section with its description and Export compliance dossier', async () => {
+    renderCompliance('/?ksec=identity-verification');
+    expect(await screen.findByRole('heading', { name: 'Identity verification' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export compliance dossier' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Client identification' })).toBeTruthy();
+  });
 });

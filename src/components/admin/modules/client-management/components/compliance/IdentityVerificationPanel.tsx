@@ -211,7 +211,7 @@ export function IdentityVerificationPanel({
         <CardHeader className="pb-3">
           <CardTitle className="text-md font-medium flex items-center gap-2">
             <UserCheck className="h-5 w-5 text-blue-600" />
-            Identity Verification (IDV)
+            IDV check
           </CardTitle>
           <CardDescription>
             Verify the client's identity using their SA ID number or passport via the Honeycomb
@@ -272,7 +272,7 @@ export function IdentityVerificationPanel({
           >
             {isRunning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <Shield className="mr-2 h-4 w-4" />
-            Run IDV Check
+            Run IDV check
           </Button>
 
           {/* Result */}
@@ -291,7 +291,7 @@ export function IdentityVerificationPanel({
                   <AlertTriangle className="h-4 w-4 text-red-600" />
                 )}
                 <span className={result.success ? 'text-green-800' : 'text-red-800'}>
-                  {result.success ? 'Verification Complete' : 'Verification Failed'}
+                  {result.success ? 'Verification complete' : 'Verification failed'}
                 </span>
               </div>
 
@@ -347,7 +347,7 @@ export function IdentityVerificationPanel({
         <CardContent className="space-y-3">
           {/* Photo upload */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium">Client Photo</Label>
+            <Label className="text-xs font-medium">Client photo</Label>
             <div className="flex items-center gap-3">
               <label className="flex-1 cursor-pointer">
                 <div
@@ -406,7 +406,7 @@ export function IdentityVerificationPanel({
           >
             {isRunningPhoto && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <Camera className="mr-2 h-4 w-4" />
-            Run IDV with Photo
+            Run IDV with photo
           </Button>
 
           {!photoBase64 && hasIdentification && (
@@ -433,8 +433,8 @@ export function IdentityVerificationPanel({
                 )}
                 <span className={photoResult.success ? 'text-green-800' : 'text-red-800'}>
                   {photoResult.success
-                    ? 'Photo Verification Complete'
-                    : 'Photo Verification Failed'}
+                    ? 'Photo Verification complete'
+                    : 'Photo Verification failed'}
                 </span>
               </div>
 
@@ -507,7 +507,7 @@ export function IdentityVerificationPanel({
           >
             <CardTitle className="text-md font-medium flex items-center gap-2">
               <History className="h-5 w-5 text-gray-500" />
-              IDV Check History
+              History
               {history.length > 0 && (
                 <Badge variant="secondary" className="text-xs">
                   {history.length}
