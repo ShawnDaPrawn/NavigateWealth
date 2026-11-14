@@ -418,7 +418,7 @@ export function CalendarPDFExportModal({ open, onClose, events }: CalendarPDFExp
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 flex-wrap">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>

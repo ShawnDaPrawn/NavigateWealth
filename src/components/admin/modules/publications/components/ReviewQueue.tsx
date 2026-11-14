@@ -278,7 +278,7 @@ export function ReviewQueue({ articles, categories, onEditArticle, onRefresh }: 
   return (
     <div className="space-y-6">
       {/* ── Stat cards ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatCard
           label="Total Auto-Generated"
           value={autoArticles.length}
@@ -547,7 +547,7 @@ function ReviewRow({
       </div>
 
       {/* Actions */}
-      <div className="w-16 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="w-16 flex items-center justify-end gap-1 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity">
         <Button
           size="sm"
           variant="ghost"

@@ -155,7 +155,7 @@ export function VirtualizedClientList({
               </div>
 
               {showHoverAction && (
-                <UserCheck className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                <UserCheck className="h-4 w-4 text-muted-foreground [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity flex-shrink-0" />
               )}
             </div>
           );

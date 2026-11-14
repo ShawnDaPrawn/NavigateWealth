@@ -199,7 +199,7 @@ export function RefundManagerPanel() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatCard
           label={netStatus === 'refundable' ? 'Net refund due' : 'Net VAT payable'}
           value={<span className={NET_TEXT[netStatus]}>{formatZar(Math.abs(netTotal))}</span>}

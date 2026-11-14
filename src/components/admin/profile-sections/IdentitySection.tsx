@@ -360,8 +360,8 @@ export function IdentitySection({
                 <CardContent className="pt-6">
                   <div className="space-y-4">
                     {/* Header */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-start justify-between flex-wrap gap-x-3 gap-y-2">
+                      <div className="flex flex-wrap items-center gap-3">
                         <div
                           className={`h-12 w-12 rounded-xl ${config.bgColor} flex items-center justify-center`}
                         >
@@ -369,7 +369,7 @@ export function IdentitySection({
                         </div>
                         <div>
                           <h3 className="font-medium text-gray-900">{config.label}</h3>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
                             {doc.isVerified ? (
                               <Badge className="bg-green-100 text-green-800 border-green-300">
                                 <CheckCircle className="h-3 w-3 mr-1" />
@@ -395,7 +395,7 @@ export function IdentitySection({
                         </div>
                       </div>
                       {!isEditing && (
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Button
                             onClick={() => handleEdit(doc.id)}
                             variant="outline"
@@ -487,7 +487,7 @@ export function IdentitySection({
                           </div>
                         </div>
 
-                        <div className="flex gap-2 pt-2">
+                        <div className="flex gap-2 pt-2 flex-wrap">
                           <Button
                             onClick={() => handleSave(doc.id)}
                             className="bg-[#6d28d9] hover:bg-[#5b21b6]"
@@ -647,7 +647,7 @@ export function IdentitySection({
                                 </div>
                               </div>
                               {doc.fileUrl && (
-                                <div className="flex gap-2 flex-shrink-0">
+                                <div className="flex gap-2 flex-shrink-0 flex-wrap">
                                   <Button
                                     variant="outline"
                                     size="sm"

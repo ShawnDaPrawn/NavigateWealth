@@ -836,7 +836,7 @@ export function PrepareFormStudio({
                       <button
                         type="button"
                         onClick={() => handleRemoveDocument(d.document_id)}
-                        className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100"
+                        className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100"
                         title="Remove document"
                         aria-label={`Remove ${d.display_name}`}
                       >

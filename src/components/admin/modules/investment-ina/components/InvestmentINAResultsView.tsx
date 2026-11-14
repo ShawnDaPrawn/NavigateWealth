@@ -78,7 +78,7 @@ export function InvestmentINAResultsView({
             {new Date(session.createdAt).toLocaleDateString()}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {onEdit && (
             <Button variant="outline" onClick={onEdit}>
               <Edit className="h-4 w-4 mr-2" />
@@ -115,7 +115,7 @@ export function InvestmentINAResultsView({
           <Separator />
 
           {/* Key Metrics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Total Goals</p>
               <p className="text-2xl">{portfolioSummary.totalGoals}</p>
@@ -241,7 +241,7 @@ export function InvestmentINAResultsView({
           <Separator />
           <div className="space-y-2">
             <p className="text-sm font-medium">Expected Real Returns by Risk Profile</p>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
               {Object.entries(results.economicAssumptions.realReturnsByProfile).map(
                 ([profile, returnRate]) => (
                   <div key={profile} className="text-center p-2 bg-muted/50 rounded">

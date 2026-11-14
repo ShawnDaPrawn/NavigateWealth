@@ -190,7 +190,7 @@ function Overview({ caps }: { caps: NewsletterCaps }) {
   const reachable = data.subscribers.active;
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatTile
           icon={Users}
           label="Reachable subscribers"

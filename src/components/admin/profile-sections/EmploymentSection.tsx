@@ -160,7 +160,7 @@ export function EmploymentSection({
                           }`}
                         >
                           {/* Employer Card Header */}
-                          <div className="flex items-center justify-between px-5 py-4">
+                          <div className="flex items-center justify-between px-5 py-4 flex-wrap gap-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <div
                                 className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -192,7 +192,7 @@ export function EmploymentSection({
                                 )}
                               </div>
                             </div>
-                            <div className="flex gap-2 flex-shrink-0 ml-3">
+                            <div className="flex gap-2 flex-shrink-0 ml-3 flex-wrap">
                               {!isInEditMode ? (
                                 <div className="contents">
                                   <Button
@@ -315,7 +315,7 @@ export function EmploymentSection({
                           {/* View Mode Details */}
                           {!isInEditMode && (employer.industry || employer.jobTitle) && (
                             <div className="px-5 pb-4 pt-0">
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm border-t border-gray-100 pt-3">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm border-t border-gray-100 pt-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
                                 {employer.jobTitle && (
                                   <div>
                                     <p className="text-xs text-gray-500 font-medium">Job Title</p>
@@ -357,7 +357,7 @@ export function EmploymentSection({
                   }`}
                 >
                   {/* Self-Employed Card Header */}
-                  <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center justify-between px-5 py-4 flex-wrap gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div
                         className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -381,7 +381,7 @@ export function EmploymentSection({
                           )}
                       </div>
                     </div>
-                    <div className="flex gap-2 flex-shrink-0 ml-3">
+                    <div className="flex gap-2 flex-shrink-0 ml-3 flex-wrap">
                       {!selfEmployedInEditMode ? (
                         <Button
                           variant="outline"

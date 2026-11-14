@@ -182,7 +182,7 @@ export function NoteCard({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 p-0 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -320,7 +320,7 @@ export function NoteCard({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 -mr-1 -mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-7 w-7 p-0 -mr-1 -mt-0.5 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
               >
                 <MoreVertical className="h-3.5 w-3.5" />
               </Button>

@@ -452,7 +452,7 @@ export function PacketsDialog({
                         {p.steps.length} step{p.steps.length === 1 ? '' : 's'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                       <Button
                         size="sm"
                         variant="outline"

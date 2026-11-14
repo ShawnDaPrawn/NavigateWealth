@@ -536,7 +536,7 @@ export function CashflowWaterfallChart({
         </div>
 
         {/* Legend grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2 mt-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
           {segments.map((seg) => (
             <div key={seg.label} className="flex items-center gap-2">
               <div

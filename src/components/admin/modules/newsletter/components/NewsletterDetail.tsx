@@ -212,7 +212,7 @@ function DraftEditor({ campaign, caps }: { campaign: NewsletterCampaign; caps: N
         </div>
 
         {caps.create ? (
-          <div className="flex items-center justify-end gap-2 border-t border-border/60 pt-4">
+          <div className="flex items-center justify-end gap-2 border-t border-border/60 pt-4 flex-wrap">
             {dirty ? (
               <Button
                 variant="ghost"
@@ -356,7 +356,7 @@ function ActionsCard({
         ) : null}
 
         {caps.send && editable ? (
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <Button
               variant="outline"
               onClick={() => setTestOpen(true)}

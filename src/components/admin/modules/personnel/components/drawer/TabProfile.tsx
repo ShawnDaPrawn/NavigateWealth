@@ -117,7 +117,7 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
                     </span>
                   )}
                 </p>
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
                   <Button
                     type="button"
                     variant="outline"
@@ -224,7 +224,7 @@ export function TabProfile({ selectedPersonnel, onUpdate, onInviteCancelled }: T
         </CardContent>
       </Card>
 
-      <div className="flex gap-2 pt-4">
+      <div className="flex gap-2 pt-4 flex-wrap">
         {/* Neither action has a working endpoint yet, so both stay off. */}
         <Button type="button" variant="destructive" className="w-full" disabled>
           <Lock className="h-4 w-4 mr-2" />

@@ -165,7 +165,7 @@ export function DocumentSummaryTimeline({ clientId, refreshToken }: DocumentSumm
           </p>
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh timeline

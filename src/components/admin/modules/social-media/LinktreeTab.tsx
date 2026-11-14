@@ -398,7 +398,7 @@ export function LinktreeTab() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-3">
@@ -535,7 +535,7 @@ export function LinktreeTab() {
             <p className="text-sm text-muted-foreground max-w-xs mb-4">
               Add your company website, booking page, social profiles, and any other relevant links.
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button variant="outline" onClick={() => setQuickAddOpen(true)} className="gap-1.5">
                 <Zap className="h-4 w-4" style={{ color: BRAND.gold }} />
                 Quick Add Templates
@@ -611,7 +611,7 @@ export function LinktreeTab() {
                   />
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-wrap">
                     <Button
                       variant="ghost"
                       size="sm"

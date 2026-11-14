@@ -337,7 +337,7 @@ export function SignerManager({
                       </Label>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2">
+                    <div className="flex items-center gap-2 pt-2 flex-wrap">
                       <Button
                         type="button"
                         onClick={() => saveEditing(index)}
@@ -357,7 +357,7 @@ export function SignerManager({
                   // VIEW MODE
                   <div className="space-y-3">
                     <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
+                      <div className="flex flex-wrap items-start gap-3 flex-1">
                         {!disabled && (
                           <div
                             className="cursor-grab active:cursor-grabbing pt-1"
@@ -367,7 +367,7 @@ export function SignerManager({
                           </div>
                         )}
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{signer.name}</span>
                             {signer.role && (
                               <Badge variant="outline" className="text-xs">
@@ -405,7 +405,7 @@ export function SignerManager({
                       </div>
 
                       {!disabled && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-wrap">
                           {showFieldAssignment && (
                             <Button
                               type="button"
@@ -550,7 +550,7 @@ export function SignerManager({
                 </Label>
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex items-center gap-2 pt-2 flex-wrap">
                 <Button
                   type="button"
                   onClick={handleAddSigner}

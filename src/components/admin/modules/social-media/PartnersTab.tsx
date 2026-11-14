@@ -277,7 +277,7 @@ export function PartnersTab() {
                     </div>
 
                     {/* Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
                       <div className="space-y-1">
                         <p className="text-xs text-gray-500">Signups</p>
                         <p className="text-lg font-semibold text-gray-900">{partner.signups}</p>
@@ -315,7 +315,7 @@ export function PartnersTab() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-100 flex-wrap">
                       <Button variant="outline" size="sm" className="flex items-center gap-1">
                         <BarChart3 className="h-3 w-3" />
                         View Analytics

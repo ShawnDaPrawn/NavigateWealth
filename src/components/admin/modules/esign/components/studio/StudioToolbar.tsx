@@ -80,7 +80,7 @@ export function StudioToolbar({
   undo,
 }: StudioToolbarProps) {
   return (
-    <div className="h-14 bg-white border-b flex items-center justify-between px-4 shadow-sm z-10 shrink-0">
+    <div className="h-14 bg-white border-b flex items-center justify-between px-4 shadow-sm z-10 shrink-0 flex-wrap gap-3">
       <div className="flex items-center gap-3 min-w-0">
         <Button variant="ghost" size="sm" onClick={handleBack}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -126,7 +126,7 @@ export function StudioToolbar({
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         {/* Snap toggle — Magnet icon makes the metaphor self-explanatory. */}
         <Button
           variant={snapEnabled ? 'secondary' : 'ghost'}

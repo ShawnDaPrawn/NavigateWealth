@@ -246,7 +246,7 @@ export function RoAStepReview({ draft, onUpdate, onDraftReplaced, modules }: RoA
 
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Compiled RoA Sections</h3>
-          <div className="grid gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {compilation.documentSections.map(renderCompiledSection)}
           </div>
         </div>

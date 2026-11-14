@@ -412,7 +412,7 @@ export function EnvelopeDetailsDialog({
             </DialogHeader>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2 mt-4">
+            <div className="flex items-center gap-2 mt-4 flex-wrap">
               {isCompleted && (
                 <div className="contents">
                   <Button onClick={handleDownload} variant="outline" size="sm" className="h-8">

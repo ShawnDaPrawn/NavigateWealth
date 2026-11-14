@@ -783,7 +783,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
                           e.stopPropagation();
                           deleteScenario(s.id);
                         }}
-                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-gray-400 hover:text-red-500 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>

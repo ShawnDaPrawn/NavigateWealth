@@ -137,7 +137,7 @@ export function ProviderFormDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-6 py-4">
+        <div className="grid grid-cols-1 gap-6 py-4">
           <div className="flex items-start gap-6">
             <div className="flex-shrink-0">
               <Label className="mb-2 block">Provider Logo</Label>
@@ -191,7 +191,7 @@ export function ProviderFormDialog({
             </div>
 
             <div className="flex-1 space-y-4">
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <Label htmlFor="name">Provider Name</Label>
                 <Input
                   id="name"
@@ -201,7 +201,7 @@ export function ProviderFormDialog({
                 />
               </div>
               
-              <div className="grid gap-2">
+              <div className="grid grid-cols-1 gap-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
@@ -214,7 +214,7 @@ export function ProviderFormDialog({
             </div>
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <Label>Product Categories</Label>
             {unsupportedCategoryIds.length > 0 && (
               <p className="text-xs text-amber-700">

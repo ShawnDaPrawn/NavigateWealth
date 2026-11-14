@@ -996,7 +996,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
       {/* ================================================================ */}
       {/* ACTIONS                                                          */}
       {/* ================================================================ */}
-      <div className="flex items-center justify-between pt-2 pb-1">
+      <div className="flex items-center justify-between pt-2 pb-1 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <p className="text-[11px] text-gray-400">
             <span className="text-red-500">*</span> Required fields
@@ -1008,7 +1008,7 @@ export function SingleClientForm({ onSuccess, onClose }: SingleClientFormProps) 
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <Button variant="outline" onClick={onClose} disabled={isSubmitting} className="px-5">
             Cancel
           </Button>

@@ -221,7 +221,7 @@ export function EnvelopesList({
     <div className="space-y-4">
       {/* ==================== BULK ACTION BAR ==================== */}
       {hasSelection && (
-        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 animate-in slide-in-from-top-2">
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 animate-in slide-in-from-top-2 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-blue-800">
               {selectedIds.size} envelope{selectedIds.size > 1 ? 's' : ''} selected
@@ -236,7 +236,7 @@ export function EnvelopesList({
               Clear
             </Button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {canBulkRemind && (
               <Button
                 size="sm"
@@ -390,9 +390,9 @@ export function EnvelopesList({
                 />
               </TableHead>
               <TableHead>Envelope</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Recipients</TableHead>
-              <TableHead>Last Updated</TableHead>
+              <TableHead className="hidden sm:table-cell">Status</TableHead>
+              <TableHead className="hidden sm:table-cell">Recipients</TableHead>
+              <TableHead className="hidden sm:table-cell">Last Updated</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -424,24 +424,42 @@ export function EnvelopesList({
                       aria-label={`Select envelope ${envelope.title}`}
                     />
                   </TableCell>
-                  <TableCell className="max-w-[280px] sm:max-w-[340px]">
+                  <TableCell className="max-w-[calc(100vw-12rem)] whitespace-normal sm:max-w-[340px] sm:whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       {/* P8.1 — page-1 PDF thumbnail (60x80, lazy + cached). */}
-                      <EnvelopeThumbnail envelopeId={envelope.id} version={envelope.updated_at} />
+                      <div className="hidden shrink-0 sm:block">
+                        <EnvelopeThumbnail envelopeId={envelope.id} version={envelope.updated_at} />
+                      </div>
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium truncate" title={envelope.title}>
                           {envelope.title}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="hidden text-xs text-muted-foreground sm:inline">
                           ID: {envelope.id.slice(0, 8)}...
                         </span>
+                        {/* On a phone the status, signers and date columns are hidden,
+                            so their essentials sit under the title. */}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground sm:hidden">
+                          <StatusBadge status={envelope.status} type="envelope" size="sm" />
+                          {envelope.signedCount != null && (envelope.totalSigners ?? 0) > 0 && (
+                            <span>
+                              {envelope.signedCount}/{envelope.totalSigners} signed
+                            </span>
+                          )}
+                          <span>
+                            {format(
+                              new Date(envelope.updated_at || envelope.created_at),
+                              'd MMM yyyy',
+                            )}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <StatusBadge status={envelope.status} type="envelope" showIcon size="sm" />
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div className="flex flex-col gap-1">
                       {envelope.signers?.slice(0, 2).map((r) => (
                         <div key={r.id} className="text-sm flex items-center gap-1">
@@ -467,7 +485,7 @@ export function EnvelopesList({
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <div className="text-sm">
                       {format(
                         new Date(envelope.updated_at || envelope.created_at),

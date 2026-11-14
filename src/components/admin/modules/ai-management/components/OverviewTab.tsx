@@ -174,7 +174,7 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
       </section>
 
       {/* ── Stat tiles ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 [&>*:last-child:nth-child(odd)]:col-span-2 xl:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatTile
           label="Conversations, last 7 days"
           value={analyticsLoading ? '…' : (analytics?.totalSessions ?? 0)}

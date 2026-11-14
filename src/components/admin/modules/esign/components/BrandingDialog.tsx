@@ -263,7 +263,7 @@ export function BrandingDialog({ open, onOpenChange, inline = false }: Props) {
             <Button variant="ghost" onClick={handleReset} disabled={saving}>
               Revert to defaults
             </Button>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {!inline && (
                 <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                   Cancel

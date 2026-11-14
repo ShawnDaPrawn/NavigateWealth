@@ -500,7 +500,7 @@ export function ResourcesModule() {
                 Preview, pre-fill with client data, or build new form templates
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {/* Primary actions */}
               {canCreate && (
                 <div className="contents">

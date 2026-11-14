@@ -320,7 +320,7 @@ export function LinkedInConnector({ onStatusChange }: LinkedInConnectorProps) {
 
           <CardContent className="space-y-3 pt-0">
             {/* Profile row */}
-            <div className="flex items-center justify-between p-3.5 rounded-lg bg-gray-50 border">
+            <div className="flex items-center justify-between p-3.5 rounded-lg bg-gray-50 border flex-wrap gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div
                   className="flex items-center justify-center h-9 w-9 rounded-lg text-white shrink-0"

@@ -150,7 +150,7 @@ export default function LegalDocumentsManager() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-muted-foreground">
+          <div className="mb-4 grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-muted-foreground">
             <div>
               Versioned:{' '}
               <span className="font-medium text-gray-900">{migrationSummary.migrated}</span>

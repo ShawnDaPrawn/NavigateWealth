@@ -677,7 +677,7 @@ export function GoalFormDialog({
           ) : (
             <div></div>
           )}
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>

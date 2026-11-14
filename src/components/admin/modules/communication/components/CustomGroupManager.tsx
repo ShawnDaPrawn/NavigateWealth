@@ -313,8 +313,8 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
       </div>
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:gap-4">
+        <div className="relative col-span-2 sm:flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search groups by name or description..."
@@ -328,7 +328,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
           value={filterType}
           onValueChange={(v: string) => setFilterType(v as typeof filterType)}
         >
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue />
           </SelectTrigger>
@@ -340,7 +340,7 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
         </Select>
 
         <Select value={sortBy} onValueChange={(v: string) => setSortBy(v as typeof sortBy)}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

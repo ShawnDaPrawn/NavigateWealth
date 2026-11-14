@@ -81,7 +81,7 @@ export function ExternalProductsSection({
         </TooltipProvider>
       }
     >
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
         {existingProducts.map((product) => {
           const category = EXTERNAL_PRODUCT_CATEGORIES.find(
             (c) => c.label === product || c.id === product,

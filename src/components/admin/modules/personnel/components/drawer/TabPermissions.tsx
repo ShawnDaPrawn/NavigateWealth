@@ -291,7 +291,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Bulk actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" onClick={handleSelectAll} className="text-xs h-7">
               Grant All
             </Button>
@@ -371,7 +371,7 @@ export function TabPermissions({ selectedPersonnel }: TabPermissionsProps) {
                               </Label>
                               {/* Capability summary badges */}
                               {isEnabled && hasCaps && !isExpanded && (
-                                <div className="flex items-center gap-1 ml-1">
+                                <div className="flex flex-wrap items-center gap-1 ml-1">
                                   {/* View is always implicit */}
                                   <Badge
                                     variant="outline"

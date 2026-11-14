@@ -358,7 +358,7 @@ export function SubmissionsModule() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatCard label="Active" value={activeCount} meta="On the board" />
         <StatCard
           label="New"

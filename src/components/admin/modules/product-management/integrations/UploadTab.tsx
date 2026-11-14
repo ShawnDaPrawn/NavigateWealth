@@ -245,7 +245,7 @@ export function UploadTab({
         </div>
 
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
             <div className="rounded-lg border bg-gray-50 p-3">
               <p className="text-[10px] uppercase text-gray-500 font-medium">Rows</p>
               <p className="text-lg font-semibold text-gray-900">
@@ -486,7 +486,7 @@ export function UploadTab({
             </Table>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t flex-wrap">
             <Button variant="outline" onClick={onClear}>
               Clear
             </Button>
@@ -617,7 +617,7 @@ export function UploadTab({
               </Table>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className="flex justify-end gap-3 pt-4 border-t flex-wrap">
               <Button variant="outline" onClick={onClear}>
                 Cancel
               </Button>

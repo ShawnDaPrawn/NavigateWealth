@@ -564,7 +564,7 @@ export function RecipientsManager({
 
               {/* Actions */}
               {!disabled && (
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity flex-wrap">
                   <Button variant="ghost" size="sm" onClick={() => setEditingIndex(index)}>
                     <Edit2 className="h-4 w-4 text-gray-500" />
                   </Button>

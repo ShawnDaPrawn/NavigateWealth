@@ -43,7 +43,7 @@ export function VersionList({
         <div key={version.id} className="rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-gray-900">v{version.versionNumber}</span>
                 <StatusBadge value={version.status} />
                 <Badge variant="outline">

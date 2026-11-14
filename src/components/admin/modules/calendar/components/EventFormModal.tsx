@@ -815,7 +815,7 @@ export function EventFormModal({
               ) : (
                 <span />
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
                   Cancel
                 </Button>

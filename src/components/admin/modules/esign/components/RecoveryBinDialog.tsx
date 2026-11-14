@@ -203,7 +203,7 @@ export function RecoveryBinDialog({
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     <Button
                       size="sm"
                       variant="outline"

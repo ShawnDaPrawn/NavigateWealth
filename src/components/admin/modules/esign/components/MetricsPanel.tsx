@@ -138,7 +138,7 @@ export function MetricsPanel({
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 text-xs [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
             {(
               [
                 ['Draft', statusCounts.draft, 'bg-gray-100 text-gray-700'],

@@ -170,7 +170,7 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
       {isOpen && (
         <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden">
           {/* Header */}
-          <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
               <ArrowLeftRight className="h-4 w-4 text-purple-600" />
               <span className="text-sm font-semibold text-gray-700">Cross-Policy Comparison</span>
@@ -180,7 +180,7 @@ export function PolicyComparisonPanel({ clientId }: PolicyComparisonPanelProps) 
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="ghost"
                 size="sm"

@@ -269,7 +269,13 @@ export function ClientManagementModule() {
                   </Badge>
                 )}
               </div>
-              <div className="text-sm text-muted-foreground">{client.email}</div>
+              <div className="max-w-[calc(100vw-9rem)] truncate text-sm text-muted-foreground sm:max-w-none">
+                {client.email}
+              </div>
+              {/* On a phone the other columns are hidden; the account status shows here. */}
+              <div className="mt-1 sm:hidden">
+                <Badge className={cfg.badgeClass}>{cfg.label}</Badge>
+              </div>
             </div>
           </div>
         );
@@ -278,6 +284,7 @@ export function ClientManagementModule() {
     },
     {
       key: 'idNumber',
+      hideOnMobile: true,
       title: 'ID or Passport',
       render: (idNumber) => (
         <span className="font-mono text-sm">
@@ -292,6 +299,7 @@ export function ClientManagementModule() {
     },
     {
       key: 'createdAt',
+      hideOnMobile: true,
       title: 'Date Joined',
       render: (date) =>
         new Date(date as string).toLocaleDateString('en-ZA', {
@@ -303,6 +311,7 @@ export function ClientManagementModule() {
     },
     {
       key: 'accountStatus',
+      hideOnMobile: true,
       title: 'Account',
       render: (_, client) => {
         const status = deriveAccountStatus(client);
@@ -314,6 +323,7 @@ export function ClientManagementModule() {
     {
       key: 'status',
       title: 'Application',
+      hideOnMobile: true,
       render: (_, client) => {
         const isActive = client.applicationStatus === 'approved';
         return (
@@ -407,7 +417,7 @@ export function ClientManagementModule() {
         />
       </Suspense>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
         <StatCard
           label="All clients"
           value={baseClients.length}

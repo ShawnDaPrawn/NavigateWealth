@@ -215,7 +215,7 @@ export function RetentionPolicyDialog({ open, onOpenChange, inline = false }: Pr
             <Button variant="ghost" onClick={handleReset} disabled={saving}>
               Revert to default
             </Button>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {!inline && (
                 <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
                   Cancel
