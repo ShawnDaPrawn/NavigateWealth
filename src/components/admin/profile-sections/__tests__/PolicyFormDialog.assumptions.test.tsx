@@ -61,7 +61,7 @@ vi.mock('../PolicyDocumentUpload', () => ({
 
 import { PolicyFormDialog } from '../PolicyFormDialog';
 
-function renderDialog() {
+function renderDialog(openAssumptions = false) {
   // The dialog invalidates the client's cached policies after a save, so it
   // needs a QueryClient, as it always has one in the app.
   return renderWithQueryClient(
@@ -79,6 +79,7 @@ function renderDialog() {
         data: {},
       }}
       onSave={() => {}}
+      openAssumptions={openAssumptions}
     />,
   );
 }
@@ -144,5 +145,10 @@ describe('PolicyFormDialog assumptions tool', () => {
     expect(screen.getByRole('list', { name: 'Steps' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
     expect(screen.queryByRole('dialog', { name: /Edit policy/ })).toBeNull();
+  });
+
+  it('opens the assumptions tool straight away from the category Assumptions button', async () => {
+    renderDialog(true);
+    expect(await screen.findByText(/Retirement Assumptions/i)).toBeTruthy();
   });
 });

@@ -6,7 +6,7 @@
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
-import { Plus, Loader2, FileBarChart, EyeOff, History, Target } from 'lucide-react';
+import { Plus, Loader2, FileBarChart, EyeOff, History, Target, Calculator } from 'lucide-react';
 import { PolicyFormDialog } from './PolicyFormDialog';
 import { usePageTakeover } from '../layout/page';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
@@ -25,7 +25,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../ui/dialog';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { useFNAManagement } from '../modules/fna';
 import { useInvalidateFnaBatchStatus } from '@/shared/fna-intake/hooks/useFnaBatchStatus';
@@ -272,6 +278,25 @@ export function PolicyCategoryTab({
     setIsFormOpen(true);
   };
 
+  // Assumptions (design: category header): project a policy's maturity value.
+  // The tool lives on the policy form, so the button opens that policy's form
+  // with the tool open — after asking which policy when there are several.
+  const supportsAssumptions =
+    categorySubtabId === 'retirement' || categorySubtabId === 'investments';
+  const activePolicies = showArchived ? [] : policies.filter((p) => !p.archived);
+  const [assumptionsPickerOpen, setAssumptionsPickerOpen] = useState(false);
+  const [openAssumptions, setOpenAssumptions] = useState(false);
+  const openPolicyAssumptions = (policy: PolicyRecord) => {
+    setAssumptionsPickerOpen(false);
+    setEditingPolicy(policy);
+    setOpenAssumptions(true);
+    setIsFormOpen(true);
+  };
+  const handleAssumptions = () => {
+    if (activePolicies.length === 1) openPolicyAssumptions(activePolicies[0]);
+    else setAssumptionsPickerOpen(true);
+  };
+
   const handleEditPolicy = (policy: Record<string, unknown>) => {
     // onEdit hands back a loose record; it is in fact a PolicyRecord row.
     setEditingPolicy(policy as unknown as PolicyRecord);
@@ -443,7 +468,9 @@ export function PolicyCategoryTab({
             onClose={() => {
               setIsFormOpen(false);
               setEditingPolicy(null);
+              setOpenAssumptions(false);
             }}
+            openAssumptions={openAssumptions}
             categorySubtabId={categorySubtabId}
             categoryName={categoryName}
             clientId={clientId}
@@ -524,6 +551,22 @@ export function PolicyCategoryTab({
                 <p className="text-sm text-gray-600">{description}</p>
               </div>
               <div className="flex gap-2">
+                {supportsAssumptions && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAssumptions}
+                    disabled={activePolicies.length === 0}
+                    title={
+                      activePolicies.length === 0
+                        ? 'Add a policy first; assumptions project a policy’s value.'
+                        : 'Project a policy’s maturity value from growth and escalation assumptions'
+                    }
+                  >
+                    <Calculator className="h-4 w-4 mr-2" />
+                    Assumptions
+                  </Button>
+                )}
                 {categorySubtabId === 'investments' && (
                   <Button
                     variant="outline"
@@ -657,6 +700,36 @@ export function PolicyCategoryTab({
           </div>
         )}
       </Suspense>
+
+      {/* Assumptions: which policy to project */}
+      <Dialog open={assumptionsPickerOpen} onOpenChange={setAssumptionsPickerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assumptions</DialogTitle>
+            <DialogDescription>
+              Choose the policy whose maturity value you want to project.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="divide-y divide-gray-100 rounded-lg border">
+            {activePolicies.map((policy, i) => (
+              <li key={policy.id}>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2.5 text-left text-sm hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+                  onClick={() => openPolicyAssumptions(policy)}
+                >
+                  <span className="font-medium text-nw-ink">
+                    {String(policy.providerName ?? `Policy ${i + 1}`)}
+                  </span>
+                  {typeof policy.categoryId === 'string' && (
+                    <span className="ml-2 text-xs text-nw-text-3">{policy.categoryId}</span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
 
       {/* Goal Dashboard Dialog */}
       <Dialog open={isGoalDashboardOpen} onOpenChange={setIsGoalDashboardOpen}>
