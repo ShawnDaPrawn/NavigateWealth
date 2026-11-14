@@ -4,6 +4,12 @@
  */
 import { forwardRef, type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '../../../ui/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../ui/dropdown-menu';
 
 /* ---------- page ---------- */
 
@@ -283,5 +289,50 @@ export function DsSteps({
         );
       })}
     </ol>
+  );
+}
+
+export interface DsChipOption {
+  value: string;
+  label: string;
+  count?: number;
+}
+
+/**
+ * The boards' filter chip ("+ Category"): a dashed chip that opens a menu of
+ * options and turns solid violet once a value is picked.
+ */
+export function DsChipSelect({
+  label,
+  value,
+  options,
+  onChange,
+  anyLabel,
+}: {
+  label: string;
+  value: string;
+  options: DsChipOption[];
+  onChange: (value: string) => void;
+  /** The "no filter" item, e.g. "Any category". The chip's unset value is 'all'. */
+  anyLabel: string;
+}) {
+  const current = options.find((o) => o.value === value);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className={cn('ds-chip', current && 'on')}>
+          {current ? `${label}: ${current.label}` : `+ ${label}`}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-h-80 w-56 overflow-y-auto">
+        <DropdownMenuItem onSelect={() => onChange('all')}>{anyLabel}</DropdownMenuItem>
+        {options.map((o) => (
+          <DropdownMenuItem key={o.value} onSelect={() => onChange(o.value)}>
+            <span className="grow">{o.label}</span>
+            {o.count !== undefined && <span className="ds-meta tabular-nums">{o.count}</span>}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -35,5 +35,7 @@ export {
   DsState,
   DsMeta,
   DsSteps,
+  DsChipSelect,
+  type DsChipOption,
   type DsTone,
 } from './ds';
