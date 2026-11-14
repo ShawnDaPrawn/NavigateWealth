@@ -78,9 +78,12 @@ export function EmailSignatureGenerator() {
     }
   }, []);
 
+  // Any edit moves the form away from the loaded format, so the "Saved format"
+  // select lets go of it — choosing it again then re-applies it.
   const updateField = useCallback(
     <K extends keyof SignatureData>(field: K, value: SignatureData[K]) => {
       setData((prev) => ({ ...prev, [field]: value }));
+      setLoadedFormatId('');
     },
     [],
   );
@@ -88,6 +91,7 @@ export function EmailSignatureGenerator() {
   const resetForm = useCallback(() => {
     setData({ ...DEFAULT_DATA });
     setTemplate('modern');
+    setLoadedFormatId('');
     toast.success('Form reset to defaults');
   }, []);
 
@@ -236,7 +240,13 @@ export function EmailSignatureGenerator() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="sig-template">Template</Label>
-              <Select value={template} onValueChange={setTemplate}>
+              <Select
+                value={template}
+                onValueChange={(value) => {
+                  setTemplate(value);
+                  setLoadedFormatId('');
+                }}
+              >
                 <SelectTrigger id="sig-template">
                   <SelectValue />
                 </SelectTrigger>
