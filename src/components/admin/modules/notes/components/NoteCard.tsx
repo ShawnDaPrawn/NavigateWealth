@@ -150,6 +150,9 @@ export function NoteCard({
         aria-pressed={isSelecting ? isSelected : undefined}
         onClick={handleClick}
         onKeyDown={(e) => {
+          // Only the card itself: Enter/Space on a control inside it (the ⋯ menu,
+          // the selection box) must keep that control's own behaviour.
+          if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             handleClick();

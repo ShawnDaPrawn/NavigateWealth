@@ -7,7 +7,7 @@
  * a table of keys.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Tabs } from '../../../ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../ui/table';
@@ -102,42 +102,54 @@ export function UniversalKeyManager() {
 
   const hasKeys = KeyAPI.getKeyCount() > 0;
 
-  const filteredKeys = useMemo(() => {
+  /** The keys of one key type, before or after the Category chip is applied. */
+  const keysForView = useCallback(
+    (keys: ProductKey[]): ProductKey[] => {
+      const individual = KeyAPI.getIndividualKeys(keys);
+      switch (keyView) {
+        case 'client-keys':
+          return individual.filter((key) => KeyAPI.isClientProfileKey(key));
+        case 'product-keys':
+          return individual.filter((key) => !KeyAPI.isClientProfileKey(key));
+        case 'calculated-keys':
+          return KeyAPI.getCalculatedKeys(keys).filter(
+            (key) => !key.isRecommendation && !KeyAPI.isClientProfileKey(key),
+          );
+        case 'fna-recommendations':
+          return keys.filter((key) => key.isRecommendation);
+        case 'key-usage':
+          return keys.filter((key) => (KeyAPI.KEY_USAGE_MAP[key.id]?.length ?? 0) > 0);
+      }
+    },
+    [keyView],
+  );
+
+  // Search and Type apply first; the Category chip's own choices are built from
+  // that set, so picking one category never hides the others from the menu.
+  const keysBeforeCategory = useMemo(() => {
     if (!hasKeys) return [];
-    return KeyAPI.filterKeys({
-      category: selectedCategory,
-      dataType: selectedDataType,
-      searchTerm,
-    });
-  }, [searchTerm, selectedCategory, selectedDataType, hasKeys]);
+    return keysForView(
+      KeyAPI.filterKeys({ category: 'all', dataType: selectedDataType, searchTerm }),
+    );
+  }, [searchTerm, selectedDataType, hasKeys, keysForView]);
 
-  const individualKeys = useMemo(() => KeyAPI.getIndividualKeys(filteredKeys), [filteredKeys]);
-
-  const viewKeys: ProductKey[] = useMemo(() => {
-    switch (keyView) {
-      case 'client-keys':
-        return individualKeys.filter((key) => KeyAPI.isClientProfileKey(key));
-      case 'product-keys':
-        return individualKeys.filter((key) => !KeyAPI.isClientProfileKey(key));
-      case 'calculated-keys':
-        return KeyAPI.getCalculatedKeys(filteredKeys).filter(
-          (key) => !key.isRecommendation && !KeyAPI.isClientProfileKey(key),
-        );
-      case 'fna-recommendations':
-        return filteredKeys.filter((key) => key.isRecommendation);
-      case 'key-usage':
-        return filteredKeys.filter((key) => (KeyAPI.KEY_USAGE_MAP[key.id]?.length ?? 0) > 0);
-    }
-  }, [keyView, individualKeys, filteredKeys]);
+  const viewKeys: ProductKey[] = useMemo(
+    () =>
+      selectedCategory === 'all'
+        ? keysBeforeCategory
+        : keysBeforeCategory.filter((key) => key.category === selectedCategory),
+    [keysBeforeCategory, selectedCategory],
+  );
 
   // Category chip options: the categories present in this key type, with counts.
   const categoryOptions = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const key of viewKeys) counts.set(key.category, (counts.get(key.category) ?? 0) + 1);
+    for (const key of keysBeforeCategory)
+      counts.set(key.category, (counts.get(key.category) ?? 0) + 1);
     return KeyAPI.KEY_CATEGORIES.filter((c) => counts.has(c.id) || c.id === selectedCategory).map(
       (c) => ({ value: c.id, label: c.name, count: counts.get(c.id) ?? 0 }),
     );
-  }, [viewKeys, selectedCategory]);
+  }, [keysBeforeCategory, selectedCategory]);
 
   const typeOptions = KeyAPI.getDataTypes().map((t) => ({ value: t, label: typeLabel(t) }));
 

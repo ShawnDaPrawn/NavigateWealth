@@ -80,6 +80,9 @@ export function MonthView({
                 onViewChange('day');
               }}
               onKeyDown={(e) => {
+                // Only the day cell itself: an event button inside it keeps its own
+                // Enter/Space, which opens the event.
+                if (e.target !== e.currentTarget) return;
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
                   onDateChange(day);
