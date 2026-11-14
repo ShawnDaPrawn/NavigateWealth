@@ -48,7 +48,7 @@ export function SubmissionsSkeleton() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="flex-1 min-w-[350px] rounded-xl bg-gray-100/50 border border-gray-200"
+              className="flex-1 min-w-[calc(100vw-4.5rem)] sm:min-w-[350px] rounded-xl bg-gray-100/50 border border-gray-200"
             >
               <div className="p-3 bg-white rounded-t-xl border-b flex items-center justify-between">
                 <Skeleton className="h-4 w-20" />

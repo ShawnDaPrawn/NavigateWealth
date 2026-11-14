@@ -163,15 +163,21 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 h-12 mb-6 bg-muted/50 p-1">
+            <TabsList className="w-full h-12 mb-6 bg-muted/50 p-1">
               <TabsTrigger value="single" className="flex items-center gap-2">
-                <User className="h-4 w-4" /> Single Client
+                <User className="hidden h-4 w-4 sm:block" />
+                <span className="sm:hidden">Single</span>
+                <span className="hidden sm:inline">Single Client</span>
               </TabsTrigger>
               <TabsTrigger value="multiple" className="flex items-center gap-2">
-                <Users className="h-4 w-4" /> Multiple Clients
+                <Users className="hidden h-4 w-4 sm:block" />
+                <span className="sm:hidden">Multiple</span>
+                <span className="hidden sm:inline">Multiple Clients</span>
               </TabsTrigger>
               <TabsTrigger value="group" className="flex items-center gap-2">
-                <Filter className="h-4 w-4" /> Client Groups
+                <Filter className="hidden h-4 w-4 sm:block" />
+                <span className="sm:hidden">Groups</span>
+                <span className="hidden sm:inline">Client Groups</span>
               </TabsTrigger>
             </TabsList>
 
@@ -191,12 +197,12 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
 
                 <div className="border rounded-md overflow-hidden">
                   {/* Sticky header */}
-                  <div className="grid grid-cols-[50px_1fr_1fr_100px_100px] bg-muted/50 border-b text-sm font-medium text-muted-foreground">
+                  <div className="grid grid-cols-[44px_minmax(0,1fr)] sm:grid-cols-[50px_minmax(0,1fr)_minmax(0,1fr)_100px_100px] bg-muted/50 border-b text-sm font-medium text-muted-foreground">
                     <div className="px-4 py-3" />
                     <div className="px-4 py-3">Name</div>
-                    <div className="px-4 py-3">Email</div>
-                    <div className="px-4 py-3">Status</div>
-                    <div className="px-4 py-3">Category</div>
+                    <div className="hidden px-4 py-3 sm:block">Email</div>
+                    <div className="hidden px-4 py-3 sm:block">Status</div>
+                    <div className="hidden px-4 py-3 sm:block">Category</div>
                   </div>
 
                   {/* Scrollable virtualised body */}
@@ -219,7 +225,7 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                               key={client.id}
                               role="row"
                               tabIndex={0}
-                              className={`grid grid-cols-[50px_1fr_1fr_100px_100px] border-b border-muted/30 cursor-pointer hover:bg-muted/50 items-center ${isSelected(client.id) ? 'bg-primary/5' : ''}`}
+                              className={`grid grid-cols-[44px_minmax(0,1fr)] sm:grid-cols-[50px_minmax(0,1fr)_minmax(0,1fr)_100px_100px] border-b border-muted/30 cursor-pointer hover:bg-muted/50 items-center ${isSelected(client.id) ? 'bg-primary/5' : ''}`}
                               onClick={() => handleClientSelect(client)}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
@@ -253,13 +259,18 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                                   <Checkbox checked={isSelected(client.id)} />
                                 )}
                               </div>
-                              <div className="px-4 font-medium text-sm truncate">
-                                {client.firstName} {client.surname || client.lastName}
+                              <div className="min-w-0 px-4">
+                                <div className="truncate text-sm font-medium">
+                                  {client.firstName} {client.surname || client.lastName}
+                                </div>
+                                <div className="truncate text-xs text-muted-foreground sm:hidden">
+                                  {client.email}
+                                </div>
                               </div>
-                              <div className="px-4 text-sm text-muted-foreground truncate">
+                              <div className="hidden truncate px-4 text-sm text-muted-foreground sm:block">
                                 {client.email}
                               </div>
-                              <div className="px-4">
+                              <div className="hidden px-4 sm:block">
                                 <Badge
                                   variant="outline"
                                   className={
@@ -273,7 +284,7 @@ export function Step1Recipients({ draft, updateDraft, onNext }: Step1Props) {
                                   {client.status || 'Active'}
                                 </Badge>
                               </div>
-                              <div className="px-4 text-sm text-muted-foreground truncate">
+                              <div className="hidden truncate px-4 text-sm text-muted-foreground sm:block">
                                 {client.category}
                               </div>
                             </div>

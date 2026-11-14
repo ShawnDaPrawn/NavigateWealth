@@ -333,6 +333,52 @@ body.schedule-consultation-modal-open footer.bg-black {
     display: none; /* Safari and Chrome */
   }
 
+  /*
+   * A row of tabs that scrolls sideways when it is wider than the screen,
+   * instead of squeezing the labels into each other. useTabStrip() sets the
+   * data-fade-* attributes; the fade shows there are more tabs past the edge.
+   */
+  .tab-strip {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .tab-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .tab-strip > * {
+    flex-shrink: 0;
+  }
+  .tab-strip[data-fade-end='true'] {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  }
+  .tab-strip[data-fade-start='true'] {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 32px);
+    mask-image: linear-gradient(to right, transparent, #000 32px);
+  }
+  .tab-strip[data-fade-start='true'][data-fade-end='true'] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 32px,
+      #000 calc(100% - 32px),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 32px,
+      #000 calc(100% - 32px),
+      transparent
+    );
+  }
+
   /* Custom scrollbar for dark sidebar */
   .sidebar-scrollbar {
     scrollbar-width: thin;

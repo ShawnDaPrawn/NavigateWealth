@@ -58,7 +58,7 @@ export function AuditList({
               <div className="text-xs text-muted-foreground">{formatDate(entry.timestamp)}</div>
             </div>
             <p className="mt-3 text-sm font-medium text-gray-900">{entry.summary}</p>
-            <div className="mt-2 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+            <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-2">
               <div>
                 Actor role: <span className="font-medium text-gray-900">{entry.actorRole}</span>
               </div>

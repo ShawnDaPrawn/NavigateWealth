@@ -130,7 +130,7 @@ export function ConversationEditor({
           {conversation.narrativeSections.map((section, index) => (
             <div
               key={`${section.id}-${index}`}
-              className="grid gap-3 rounded-md border p-3 md:grid-cols-[100px_1fr_1fr_auto_auto]"
+              className="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-[100px_1fr_1fr_auto_auto]"
             >
               <NumberInputField
                 value={section.order}
@@ -231,7 +231,7 @@ export function ConversationEditor({
           )}
           {conversation.uploads.map((upload, index) => (
             <div key={`${upload.id}-${index}`} className="space-y-3 rounded-md border p-3">
-              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
                 <Input
                   value={upload.id}
                   onChange={(event) => updateUpload(index, { id: toId(event.target.value) })}
@@ -267,7 +267,7 @@ export function ConversationEditor({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <Input
                   value={(upload.acceptedMimeTypes || []).join(', ')}
                   onChange={(event) =>
@@ -307,7 +307,7 @@ export function ConversationEditor({
         <CardHeader>
           <CardTitle className="text-base">Completion</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
+        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label>Mode</Label>
             <Select

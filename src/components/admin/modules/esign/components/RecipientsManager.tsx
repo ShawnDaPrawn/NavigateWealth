@@ -406,7 +406,7 @@ export function RecipientsManager({
                   </div>
 
                   {/* Name & Email (read-only if system client) */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label>Name</Label>
                       <Input
@@ -454,7 +454,7 @@ export function RecipientsManager({
                   </div>
 
                   {/* Security */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label>Access Code (Optional)</Label>
                       <div className="relative">

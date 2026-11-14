@@ -22,7 +22,7 @@ export function DisclosuresEditor({
       <CardHeader>
         <CardTitle className="text-base">Disclosures and Validation</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-4 md:grid-cols-2">
+      <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label>Disclosures</Label>
           <Textarea

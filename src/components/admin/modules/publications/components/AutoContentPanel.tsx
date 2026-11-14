@@ -315,7 +315,7 @@ export function AutoContentPanel({ onArticlesGenerated }: AutoContentPanelProps)
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Automated Content Pipelines</h2>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -355,7 +355,7 @@ export function AutoContentPanel({ onArticlesGenerated }: AutoContentPanelProps)
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         {configs.map((config) => {
           const meta = PIPELINE_META[config.id];
           return (
@@ -534,7 +534,7 @@ export function AutoContentPanel({ onArticlesGenerated }: AutoContentPanelProps)
                   )}
 
                   {/* Config Summary */}
-                  <div className="grid grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mb-4">
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">
                         Audience

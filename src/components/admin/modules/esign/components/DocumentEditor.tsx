@@ -163,7 +163,7 @@ export function DocumentEditor({
     <div className="space-y-4">
       {/* Header */}
       <Card className="p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             {onBack && (
               <Button variant="ghost" size="sm" onClick={onBack} className="h-8">

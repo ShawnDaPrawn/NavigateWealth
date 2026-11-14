@@ -235,7 +235,7 @@ export function FilterPresetBar({
               {presets.map((preset) => (
                 <div key={preset.id} className="contents">
                   {editingPresetId === preset.id ? (
-                    <div className="flex items-center gap-1 px-2 py-1">
+                    <div className="flex flex-wrap items-center gap-1 px-2 py-1">
                       <Input
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
@@ -287,7 +287,7 @@ export function FilterPresetBar({
                           {describeFilters(preset.filters)}
                         </div>
                       </div>
-                      <div className="flex items-center gap-0.5 shrink-0 ml-2">
+                      <div className="flex flex-wrap items-center gap-0.5 shrink-0 ml-2">
                         <button
                           type="button"
                           onClick={(e) => {

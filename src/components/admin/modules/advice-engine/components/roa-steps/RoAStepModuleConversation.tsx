@@ -108,7 +108,7 @@ export function RoAStepModuleConversation({
       {/* Module stepper (mirrors RoAStepModuleDetails) */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Bot className="h-5 w-5" />
@@ -302,7 +302,7 @@ function ModuleConversationPanel({
   const canComplete = completionMode === 'manual' || isComplete;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
       <Card className="flex flex-col">
         <CardHeader>
           <CardTitle className="text-base">Conversation</CardTitle>

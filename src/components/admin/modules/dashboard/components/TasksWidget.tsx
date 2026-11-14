@@ -30,7 +30,7 @@ export function TasksWidget({
 
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-wrap gap-x-4 gap-y-2">
         <div>
           <CardTitle className="text-lg font-semibold flex items-center">
             <CheckSquare className="h-5 w-5 mr-2 text-primary" />

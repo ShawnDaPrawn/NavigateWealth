@@ -153,7 +153,7 @@ export function DocumentSummaryTimeline({ clientId, refreshToken }: DocumentSumm
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 flex-wrap gap-y-2">
         <div>
           <CardTitle className="flex items-center gap-2 text-lg">
             <History className="h-5 w-5" />

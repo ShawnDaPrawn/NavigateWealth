@@ -286,14 +286,14 @@ export function CustomGroupManager({ onClose, onSelectGroup }: CustomGroupManage
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Groups</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Manage custom groups and newsletter external contacts
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="ghost" size="sm" onClick={handleDebug} className="gap-2 hidden">
             🐛 Debug
           </Button>

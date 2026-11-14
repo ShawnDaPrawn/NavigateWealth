@@ -266,7 +266,7 @@ export function TemplateLibrary({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             className="h-9 gap-1.5 bg-purple-600 hover:bg-purple-700 text-white"
@@ -736,7 +736,7 @@ function TemplateRow({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
         <Badge
           variant="outline"
           className={cn(

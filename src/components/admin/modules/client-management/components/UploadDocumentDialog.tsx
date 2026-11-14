@@ -364,7 +364,7 @@ export function UploadDocumentDialog({
           className="w-full flex-1 flex flex-col min-h-0"
         >
           <div className="px-6 flex-none">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-xl">
+            <TabsList className="w-full bg-slate-100 p-1 rounded-xl">
               <TabsTrigger
                 value="document"
                 className="rounded-lg data-[state=active]:bg-[#7c3aed] data-[state=active]:text-white data-[state=inactive]:text-slate-600 font-medium transition-all"
@@ -626,7 +626,7 @@ export function UploadDocumentDialog({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="doc-category" className="font-medium text-slate-900">
                     Category *
@@ -723,7 +723,7 @@ export function UploadDocumentDialog({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="link-category" className="font-medium text-slate-900">
                     Category *

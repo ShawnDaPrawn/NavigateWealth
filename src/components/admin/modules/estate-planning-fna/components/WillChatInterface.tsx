@@ -535,7 +535,7 @@ export function WillChatInterface({
                         <p className="text-xs text-muted-foreground">{s.messageCount} messages</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
                       <Badge
                         variant={s.willReady ? 'default' : 'secondary'}
                         className={s.willReady ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
@@ -706,7 +706,7 @@ export function WillChatInterface({
       {/* Main content */}
       {willReady && outputPack ? (
         <Tabs defaultValue="chat" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="w-full">
             <TabsTrigger value="chat" className="flex items-center gap-1.5">
               <Bot className="h-3.5 w-3.5" />
               Chat

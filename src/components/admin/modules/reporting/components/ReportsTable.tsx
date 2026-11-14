@@ -160,7 +160,7 @@ export function ReportsTable({
             {filteredReports.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5}>
-                  <div className="text-center py-12">
+                  <div className="sticky left-0 w-[calc(100vw-5rem)] sm:static sm:w-auto text-center py-12">
                     <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground opacity-50 mb-4" />
                     <h3 className="text-lg font-medium mb-2">No reports found</h3>
                     <p className="text-muted-foreground mb-4">

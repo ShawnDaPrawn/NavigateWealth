@@ -48,7 +48,7 @@ export function ClientOverviewSection({ inputs, updateInputs }: INASectionProps)
         <CardDescription>From the client record — review before continuing</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="ina-current-age">Current Age *</Label>
             <NumberInputField
@@ -67,7 +67,7 @@ export function ClientOverviewSection({ inputs, updateInputs }: INASectionProps)
             />
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="ina-dependants">Household Dependants</Label>
             <NumberInputField
@@ -221,7 +221,7 @@ export function GoalsSection({ inputs, updateInputs }: INASectionProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-medium">Investment Goals *</h3>
           <p className="text-sm text-muted-foreground">Add at least one goal</p>
@@ -365,7 +365,7 @@ function GoalEditorCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor={id('amount')}>Required Capital (Today&apos;s Rands) *</Label>
             <CurrencyInputField

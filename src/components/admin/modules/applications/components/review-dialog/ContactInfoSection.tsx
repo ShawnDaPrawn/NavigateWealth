@@ -12,7 +12,7 @@ export function ContactInfoSection({
     <ReviewSection icon={Mail} title="Contact Information">
       {isEditing ? (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <EditField
               label="Email Address"
               value={fv('emailAddress')}
@@ -29,7 +29,7 @@ export function ContactInfoSection({
               placeholder="+27 82 123 4567"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <EditField
               label="Alternative Email"
               value={fv('alternativeEmail')}
@@ -43,7 +43,7 @@ export function ContactInfoSection({
               icon={MessageSquare}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <EditField
               label="Alternative Cellphone"
               value={fv('alternativeCellphone')}

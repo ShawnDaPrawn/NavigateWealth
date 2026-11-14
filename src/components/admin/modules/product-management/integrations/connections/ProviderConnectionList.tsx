@@ -71,7 +71,7 @@ export function ProviderConnectionList({
   });
 
   return (
-    <Card className="w-1/3 min-w-[300px] flex flex-col h-full overflow-hidden">
+    <Card className="flex max-h-[420px] w-full flex-col overflow-hidden lg:h-full lg:max-h-none lg:w-1/3 lg:min-w-[300px]">
       <CardHeader className="pb-4 border-b bg-gray-50/50">
         <CardTitle className="text-lg">Connections</CardTitle>
         <CardDescription>

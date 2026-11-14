@@ -101,7 +101,7 @@ export function SchemaLivePreview({ currentFields, selectedCategoryName }: Schem
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
                 <TableIcon className="h-5 w-5 text-[#6d28d9]" />

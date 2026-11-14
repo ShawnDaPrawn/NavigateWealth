@@ -55,7 +55,7 @@ export function SignInEmailCard({
           must provide the code sent to the new email before sign-in switches over.
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="currentClientAuthEmail">Current sign-in email</Label>
             <Input

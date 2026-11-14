@@ -169,7 +169,7 @@ export function RoAStepClient({ draft, onUpdate }: RoAStepClientProps) {
 
       {/* Client Selection Interface */}
       <Tabs defaultValue="existing" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="w-full">
           <TabsTrigger value="existing" className="flex items-center gap-2">
             <Search className="h-4 w-4" />
             Select Existing Client

@@ -221,7 +221,7 @@ export function ProviderFormDialog({
                 {unsupportedCategoryIds.map(getProductCategoryLabel).join(', ')} {unsupportedCategoryIds.length === 1 ? 'is a group' : 'are groups'} and will be removed from provider automation. Select the specific subcategory instead.
               </p>
             )}
-            <div className="grid grid-cols-2 gap-4 border rounded-lg p-4 bg-gray-50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border rounded-lg p-4 bg-gray-50">
               {automationCategories.map((category) => (
                 <div key={category.id} className="flex items-center space-x-2">
                   <Checkbox 

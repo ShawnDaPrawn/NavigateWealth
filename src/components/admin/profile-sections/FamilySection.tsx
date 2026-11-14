@@ -63,7 +63,7 @@ export function FamilySection({
     <div className="contents">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-[#6d28d9]/10 flex items-center justify-center">
                 <Users className="h-5 w-5 text-[#6d28d9]" />

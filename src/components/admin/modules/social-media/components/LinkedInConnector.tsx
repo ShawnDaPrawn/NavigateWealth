@@ -296,7 +296,7 @@ export function LinkedInConnector({ onStatusChange }: LinkedInConnectorProps) {
     return (
       <div className="contents">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-x-4 gap-y-2">
             <div className="flex items-center gap-3">
               <div
                 className="flex items-center justify-center h-10 w-10 rounded-xl text-white"
@@ -353,7 +353,7 @@ export function LinkedInConnector({ onStatusChange }: LinkedInConnectorProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                 <Button
                   size="sm"
                   onClick={() => setShowShareDialog(true)}
@@ -424,7 +424,7 @@ export function LinkedInConnector({ onStatusChange }: LinkedInConnectorProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
+      <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-x-4 gap-y-2">
         <div className="flex items-center gap-3">
           <div
             className="flex items-center justify-center h-10 w-10 rounded-xl text-white"
@@ -568,7 +568,7 @@ export function LinkedInConnector({ onStatusChange }: LinkedInConnectorProps) {
                     className="text-sm"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="share-title" className="text-xs font-medium">
                       Title
@@ -616,7 +616,7 @@ export function LinkedInConnector({ onStatusChange }: LinkedInConnectorProps) {
                     The server will download and upload the image to LinkedIn on your behalf.
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="share-img-title" className="text-xs font-medium">
                       Title

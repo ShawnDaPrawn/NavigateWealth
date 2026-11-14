@@ -104,7 +104,7 @@ export function SignatureFormPanel({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Email</Label>
               <Input
@@ -124,7 +124,7 @@ export function SignatureFormPanel({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Office Phone</Label>
               <Input
@@ -167,7 +167,7 @@ export function SignatureFormPanel({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs flex items-center gap-1.5">
                 <Linkedin className="h-3 w-3 text-[#0A66C2]" /> LinkedIn
@@ -191,7 +191,7 @@ export function SignatureFormPanel({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs flex items-center gap-1.5">
                 <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
@@ -369,7 +369,7 @@ export function SignatureFormPanel({
                 Leave blank to use template defaults
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Name Colour */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">

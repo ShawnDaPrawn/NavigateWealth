@@ -202,7 +202,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       {/* Brand Rules */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-sm">Quick Reference Rules</CardTitle>
               <CardDescription className="text-xs">
@@ -252,7 +252,7 @@ export function GuidelinesSection({ onUpdate }: { onUpdate: () => void }) {
       {/* Brand Voice */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-sm">Brand Voice</CardTitle>
               <CardDescription className="text-xs">

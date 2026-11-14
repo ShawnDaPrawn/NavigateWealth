@@ -38,8 +38,8 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClient
             {/* Purple accent stripe */}
             <div className="h-1 bg-gradient-to-r from-[#6d28d9] via-purple-500 to-[#6d28d9]/60" />
 
-            <DialogHeader className="px-7 pr-14 pt-5 pb-4">
-              <div className="flex items-center gap-3.5">
+            <DialogHeader className="px-5 pr-12 pt-5 pb-4 text-left sm:px-7 sm:pr-14">
+              <div className="flex items-start gap-3.5 sm:items-center">
                 <div className="h-10 w-10 rounded-xl bg-[#6d28d9]/10 flex items-center justify-center shrink-0">
                   <Users className="h-5 w-5 text-[#6d28d9]" />
                 </div>
@@ -54,7 +54,7 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClient
                 </div>
                 <Badge
                   variant="outline"
-                  className="text-[10px] font-medium text-[#6d28d9] border-[#6d28d9]/20 bg-[#6d28d9]/5 shrink-0"
+                  className="hidden shrink-0 border-[#6d28d9]/20 bg-[#6d28d9]/5 text-[10px] font-medium text-[#6d28d9] sm:inline-flex"
                 >
                   Client Onboarding
                 </Badge>
@@ -62,7 +62,7 @@ export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClient
             </DialogHeader>
 
             {/* Tab triggers */}
-            <div className="px-7 border-b border-gray-200">
+            <div className="border-b border-gray-200 px-5 sm:px-7">
               <TabsList className="h-10 bg-transparent p-0 gap-0 w-auto rounded-none">
                 <TabsTrigger
                   value="single"

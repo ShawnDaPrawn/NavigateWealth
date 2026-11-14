@@ -16,7 +16,7 @@ export function NewsletterSkeleton() {
         <Skeleton className="h-10 w-36 rounded-lg" />
       </div>
       <Skeleton className="h-10 w-96 rounded-xl" />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i} className="gap-0">
             <CardContent className="p-5">
@@ -27,7 +27,7 @@ export function NewsletterSkeleton() {
           </Card>
         ))}
       </div>
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card className="gap-0 lg:col-span-2">
           <CardContent className="space-y-3 p-6">
             <Skeleton className="h-5 w-40" />

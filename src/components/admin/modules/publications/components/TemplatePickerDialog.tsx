@@ -268,7 +268,7 @@ export function TemplatePickerDialog({
           <p className="text-xs text-gray-400">
             {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''} available
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>
               Cancel
             </Button>

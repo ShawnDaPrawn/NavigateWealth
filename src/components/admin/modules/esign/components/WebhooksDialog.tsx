@@ -333,7 +333,7 @@ export function WebhooksDialog({ open, onOpenChange, inline = false }: WebhooksD
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Events</Label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {ALL_EVENTS.map((evt) => (
                       <label key={evt.value} className="flex items-center gap-2 text-xs">
                         <Checkbox
@@ -406,7 +406,7 @@ export function WebhooksDialog({ open, onOpenChange, inline = false }: WebhooksD
                             </p>
                           ) : null}
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1">
                           <Button
                             size="sm"
                             variant="ghost"

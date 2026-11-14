@@ -70,7 +70,7 @@ export function VersionList({
             </div>
           </div>
           <Separator className="my-3" />
-          <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 text-sm text-muted-foreground md:grid-cols-2">
             <div>Created by: {version.createdBy || 'Unknown'}</div>
             <div>Published by: {version.publishedBy || 'Not published'}</div>
             <div className="md:col-span-2">

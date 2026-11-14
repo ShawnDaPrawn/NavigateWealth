@@ -217,7 +217,7 @@ export function ContentCalendar({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
             <CalendarIcon className="h-5 w-5 text-purple-600" />
@@ -258,7 +258,7 @@ export function ContentCalendar({
       </div>
 
       {/* Month stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {[
           { label: 'Published', count: monthStats.published, color: 'bg-green-500' },
           { label: 'Scheduled', count: monthStats.scheduled, color: 'bg-blue-500' },

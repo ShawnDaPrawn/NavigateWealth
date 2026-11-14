@@ -344,7 +344,7 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
             <Rss className="h-4.5 w-4.5 text-orange-500" />
@@ -543,7 +543,7 @@ export function ContentSourcesManager({ onArticlesGenerated }: ContentSourcesMan
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-1 ml-3 flex-shrink-0">
+                      <div className="flex flex-wrap items-center gap-1 ml-3 flex-shrink-0">
                         <Button
                           variant="ghost"
                           size="sm"

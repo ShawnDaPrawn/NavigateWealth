@@ -735,7 +735,7 @@ function EntityCard({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex flex-wrap items-center gap-1 shrink-0">
             <Button size="icon" variant="ghost" aria-label="Edit entity" onClick={onEdit}>
               <Pencil className="h-4 w-4" />
             </Button>

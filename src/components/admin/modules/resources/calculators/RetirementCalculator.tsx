@@ -622,7 +622,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="contribution">Contribution</Label>
                       <CurrencyInputField
@@ -688,7 +688,7 @@ export function RetirementCalculator({ onBack }: RetirementCalculatorProps) {
 
                 {showAssumptions && (
                   <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="nominalReturn">Nominal Return (%)</Label>
                         <NumberInputField

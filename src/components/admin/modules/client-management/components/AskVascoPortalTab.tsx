@@ -135,7 +135,7 @@ function InlineChatCard({
 
   return (
     <div className="flex h-[min(700px,calc(100vh-21rem))] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+      <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <VascoAvatar size="md" />
           <div className="min-w-0">
@@ -150,7 +150,7 @@ function InlineChatCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -506,9 +506,11 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
       <Alert className="border-purple-100 bg-purple-50/80">
         <Bot className="h-4 w-4 text-purple-700" />
         <AlertDescription className="text-sm text-gray-800">
-          You are viewing <strong>{clientLabel}</strong>&apos;s Ask Vasco workspace from the client
-          portal. Messages, clears, and deletions here affect the same conversations visible to the
-          client.
+          <span className="block">
+            You are viewing <strong>{clientLabel}</strong>&apos;s Ask Vasco workspace from the
+            client portal. Messages, clears, and deletions here affect the same conversations
+            visible to the client.
+          </span>
         </AlertDescription>
       </Alert>
 

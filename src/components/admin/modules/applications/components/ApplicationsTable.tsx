@@ -323,7 +323,7 @@ export function ApplicationsTable({
             {filteredApplications.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={7} className="text-center py-16">
-                  <div className="flex flex-col items-center gap-3">
+                  <div className="sticky left-0 w-[calc(100vw-5rem)] sm:static sm:w-auto flex flex-col items-center gap-3">
                     <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center">
                       <EmptyIcon className="h-6 w-6 text-gray-400" />
                     </div>

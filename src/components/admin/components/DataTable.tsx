@@ -312,7 +312,7 @@ export function DataTable<T extends Record<string, unknown>>({
       {/* Pagination */}
       {!loading && sortedData.length > 0 && paginate && (
         <nav
-          className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
           aria-label="Table pagination"
         >
           <div className="text-sm text-muted-foreground" aria-live="polite">

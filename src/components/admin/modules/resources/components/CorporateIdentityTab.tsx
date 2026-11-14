@@ -93,7 +93,7 @@ export function CorporateIdentityTab() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         {(Object.keys(STAT_CONFIG) as Array<keyof typeof STAT_CONFIG>).map((key) => {
           const cfg = STAT_CONFIG[key];
           const Icon = cfg.icon;
@@ -131,7 +131,7 @@ export function CorporateIdentityTab() {
 
       {/* Section Tabs */}
       <Tabs defaultValue="logos" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6 h-10">
+        <TabsList className="w-full h-10">
           <TabsTrigger value="logos" className="flex items-center gap-1.5 text-sm">
             <Image className="h-3.5 w-3.5" />
             Logos

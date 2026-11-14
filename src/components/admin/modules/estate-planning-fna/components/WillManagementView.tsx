@@ -375,7 +375,7 @@ export function WillManagementView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
@@ -664,7 +664,7 @@ export function WillManagementView({
 
       {/* Summary Cards */}
       {!isLoading && wills.length > 0 && (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">

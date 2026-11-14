@@ -124,10 +124,10 @@ export default function LegalDocumentsManager() {
   });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
       <Card className="h-fit">
         <CardHeader>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <CardTitle className="text-xl">Legal Documents</CardTitle>
               <CardDescription>

@@ -30,7 +30,7 @@ export function TaxPlanningResultsView({ plan }: TaxPlanningResultsViewProps) {
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
       {/* 1. HEADER & META */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Tax Planning Record of Advice</h1>
           <p className="text-slate-500">

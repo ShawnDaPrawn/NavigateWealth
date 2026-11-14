@@ -479,7 +479,7 @@ export function PolicyCategoryTab({
         ) : (
           <div className="contents">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-lg font-medium flex items-center gap-2">
                   <Icon className={`h-5 w-5 ${iconColor}`} />

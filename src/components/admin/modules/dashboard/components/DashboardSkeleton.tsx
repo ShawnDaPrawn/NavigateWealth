@@ -17,7 +17,7 @@ import { Skeleton } from '../../../../ui/skeleton';
 function KPICardSkeleton() {
   return (
     <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 flex-wrap gap-x-4 gap-y-2">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-8 w-8 rounded-full" />
       </CardHeader>
@@ -86,7 +86,7 @@ function QuickActionsSkeleton() {
 function TasksSkeleton() {
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 flex-wrap gap-x-4 gap-y-2">
         <div>
           <div className="flex items-center gap-2">
             <Skeleton className="h-5 w-5 rounded" />
@@ -137,13 +137,13 @@ export function DashboardSkeleton() {
       </div>
 
       {/* Middle section — System Activity + Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <SystemActivitySkeleton />
         <QuickActionsSkeleton />
       </div>
 
       {/* Bottom section — Tasks + Recent Notes */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <TasksSkeleton />
         <TasksSkeleton />
       </div>

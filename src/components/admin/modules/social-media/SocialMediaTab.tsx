@@ -303,7 +303,7 @@ export function SocialMediaTab() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex flex-wrap h-auto">
+        <TabsList className="h-auto">
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="weekly">Weekly pipeline</TabsTrigger>
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -357,7 +357,7 @@ export function SocialMediaTab() {
         <TabsContent value="ai-generator" className="mt-6">
           <div className="max-w-5xl">
             <Tabs value={aiSubTab} onValueChange={setAiSubTab} className="w-full">
-              <TabsList className="mb-4 flex flex-wrap h-auto">
+              <TabsList className="mb-4 h-auto">
                 <TabsTrigger value="text" className="flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5" />
                   Post Text

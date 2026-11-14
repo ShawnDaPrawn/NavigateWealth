@@ -32,7 +32,7 @@ export function PreviewPanel({ draft }: { draft: RoAModuleContract }) {
         {draft.formSchema.sections.map((section) => (
           <div key={section.id} className="space-y-3">
             <h4 className="font-medium">{section.title}</h4>
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {section.fields.map((field) => (
                 <div key={field.key} className="rounded-md border p-3">
                   <div className="flex items-center justify-between gap-2">
@@ -48,7 +48,7 @@ export function PreviewPanel({ draft }: { draft: RoAModuleContract }) {
           </div>
         ))}
         <Separator />
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
             <div className="text-sm font-medium">Required Fields</div>
             <div className="text-2xl font-semibold">{getRequiredFieldCount(draft)}</div>

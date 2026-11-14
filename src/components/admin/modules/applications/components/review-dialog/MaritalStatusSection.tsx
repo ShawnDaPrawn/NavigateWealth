@@ -17,7 +17,7 @@ export function MaritalStatusSection({
     <ReviewSection icon={Heart} title="Marital Status">
       {isEditing ? (
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <EditSelect
               label="Marital Status"
               value={fv('maritalStatus')}
@@ -41,7 +41,7 @@ export function MaritalStatusSection({
               <Label className="text-[11px] text-gray-400 uppercase tracking-wider font-medium flex items-center gap-1.5">
                 <Users className="h-3 w-3" /> Spouse / Partner Details
               </Label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <EditField
                   label="Spouse First Name"
                   value={fv('spouseFirstName')}

@@ -223,7 +223,7 @@ export function UploadTab({
   const renderStagedRun = () => (
     <Card>
       <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
               <FileSpreadsheet className="w-6 h-6 text-green-600" />
@@ -281,7 +281,7 @@ export function UploadTab({
           </div>
 
           <div className="rounded-lg border bg-white p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 text-green-600" />
                 <div>
@@ -513,7 +513,7 @@ export function UploadTab({
   const renderUploadedFile = () => (
     <Card>
       <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
               <FileSpreadsheet className="w-6 h-6 text-green-600" />
@@ -634,7 +634,7 @@ export function UploadTab({
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="bg-gray-50 border-gray-200 shadow-none">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500 uppercase mb-1">Last Attempted</p>

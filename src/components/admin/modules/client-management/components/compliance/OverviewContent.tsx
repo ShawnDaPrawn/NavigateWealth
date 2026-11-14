@@ -168,7 +168,7 @@ export function OverviewContent({
       {/* Recent activity snapshot */}
       {activities.length > 0 && (
         <Card>
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between flex-wrap gap-x-4 gap-y-2">
             <CardTitle className="text-md font-medium flex items-center gap-2">
               <History className="h-5 w-5 text-gray-500" />
               Recent Activity

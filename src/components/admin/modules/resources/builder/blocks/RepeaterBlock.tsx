@@ -189,7 +189,7 @@ export const RepeaterBlock: BlockDefinition = {
           <Label className="text-xs">Columns ({columns.length})</Label>
           {columns.map((col: RepeaterColumn, i: number) => (
             <div key={i} className="border border-gray-200 rounded-md p-2 bg-gray-50 space-y-2">
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <span className="text-[10px] text-gray-400 font-mono w-5 text-center">{i + 1}</span>
                 <Input
                   placeholder="Header"

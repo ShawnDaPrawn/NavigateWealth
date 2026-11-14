@@ -211,7 +211,7 @@ export function PublishProgressDialog({
             </>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                 <div>
                   <h3 id="publish-dialog-title" className="text-xl text-gray-900">
                     {publishInFlight ? 'Publishing And Sending' : 'Publish Delivery Summary'}
