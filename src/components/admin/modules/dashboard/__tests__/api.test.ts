@@ -332,3 +332,18 @@ describe('adminAuditApi.getSummary', () => {
     expect(result).toBeNull();
   });
 });
+
+describe('dashboard period', () => {
+  it('asks the stats and metrics endpoints for the period (month needs no parameter)', async () => {
+    mockApiGet.mockResolvedValue({ stats: {}, activePolicies: 0 });
+    await dashboardStatsApi.getStats(undefined, '30d');
+    expect(mockApiGet).toHaveBeenLastCalledWith('/admin/stats?period=30d', undefined);
+    await dashboardStatsApi.getStats();
+    expect(mockApiGet).toHaveBeenLastCalledWith('/admin/stats', undefined);
+    await dashboardMetricsApi.getMetrics(undefined, 'year');
+    expect(mockApiGet).toHaveBeenLastCalledWith(
+      '/integrations/dashboard-stats?period=year',
+      undefined,
+    );
+  });
+});

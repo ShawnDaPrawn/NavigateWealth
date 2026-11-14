@@ -24,6 +24,9 @@ export interface DashboardStats {
   pending_tasks: number;
   new_this_month: number;
   new_last_month: number;
+  /** New applications in the asked-for dashboard period and the one before it. */
+  new_in_period?: number;
+  new_previous_period?: number;
   total_completed?: number;
   avg_completion_time?: number;
 }
@@ -152,6 +155,9 @@ export interface SystemActivityResponse {
 
 export type ValueFormat = 'number' | 'currency' | 'percentage';
 export type TrendDirection = 'up' | 'down' | 'neutral';
+/** The "Practice at a glance" period (?period= in the address). */
+export type DashboardPeriod = 'month' | '30d' | 'year';
+
 export type TimePeriod = 'today' | 'week' | 'month' | 'quarter' | 'year';
 export type DashboardViewMode = 'standard' | 'compact' | 'detailed';
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';

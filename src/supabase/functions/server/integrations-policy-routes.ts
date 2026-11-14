@@ -41,6 +41,7 @@ import type {
   PolicyRenewal,
 } from './integrations-types.ts';
 import { recalculateClientTotals } from './integrations-derive.ts';
+import { parseDashboardPeriod, periodWindow } from './dashboard-period.ts';
 import { isValidDate } from './integrations-field-utils.ts';
 import { POLICY_DOC_BUCKET, POLICY_CATEGORY_LABELS } from './integrations-document-storage.ts';
 import { requireClientAccess } from './client-access.ts';
@@ -462,6 +463,9 @@ const FNA_NAMESPACES = [
 
 // GET /dashboard-stats
 app.get('/dashboard-stats', requireAdmin, async (c) => {
+  // ?period=month|30d|year picks the window for "new policies".
+  const period = parseDashboardPeriod(c.req.query('period'));
+  if (!period) return c.json({ error: 'period must be month, 30d or year' }, 400);
   try {
     // Seven independent namespace scans. They used to be awaited one at a
     // time, so this route cost the sum of seven round trips while the admin
@@ -474,15 +478,14 @@ app.get('/dashboard-stats', requireAdmin, async (c) => {
     let totalActivePolicies = 0;
     let newPoliciesCount = 0;
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const { start } = periodWindow(period);
 
     for (const policies of allPoliciesKeys) {
       if (Array.isArray(policies)) {
         totalActivePolicies += policies.length;
 
         newPoliciesCount += policies.filter((p: KvPolicy) => {
-          return p.createdAt && new Date(p.createdAt) >= startOfMonth;
+          return p.createdAt && new Date(p.createdAt) >= start;
         }).length;
       }
     }
@@ -507,6 +510,7 @@ app.get('/dashboard-stats', requireAdmin, async (c) => {
       activePolicies: totalActivePolicies,
       newPoliciesCount,
       publishedFnas: publishedFnasCount,
+      period,
     });
   } catch (e) {
     log.error('Error fetching dashboard stats:', e);
