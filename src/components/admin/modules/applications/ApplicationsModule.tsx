@@ -15,7 +15,6 @@ import { Button } from '../../../ui/button';
 import { Tabs } from '../../../ui/tabs';
 import { toast } from 'sonner';
 import { useAuth } from '../../../auth/AuthContext';
-import { Eye, Send } from 'lucide-react';
 
 import { Application, TabStatus, ApplicationStats } from './types';
 import { applicationsApi } from './api';
@@ -38,6 +37,7 @@ import {
   useConfirm,
   useRecordInUrl,
   useUrlState,
+  DsButton,
 } from '../../layout/page';
 import { moduleSearchParams } from '../../layout/moduleSearchParams';
 import { communicationApi } from '../communication';
@@ -559,14 +559,14 @@ export function ApplicationsModule() {
         description="Review, approve and manage client applications."
         actions={
           <>
-            <Button variant="outline" onClick={() => setPreviewOpen(true)}>
-              <Eye className="h-4 w-4" aria-hidden="true" />
-              Preview form
-            </Button>
-            <Button onClick={() => setInviteDialogOpen(true)} disabled={!canCreateApp}>
-              <Send className="h-4 w-4" aria-hidden="true" />
+            <DsButton onClick={() => setPreviewOpen(true)}>Preview form</DsButton>
+            <DsButton
+              variant="primary"
+              onClick={() => setInviteDialogOpen(true)}
+              disabled={!canCreateApp}
+            >
               Invite applicant
-            </Button>
+            </DsButton>
           </>
         }
       />
