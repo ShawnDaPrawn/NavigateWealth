@@ -146,3 +146,30 @@ describe('ClientOverviewTab adviser mode', () => {
     expect(screen.queryByText('Portfolio summary')).toBeNull();
   });
 });
+
+describe('ClientOverviewTab header actions', () => {
+  it('hands up Download PDF only once the profile and policies have loaded', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ policies: [], logs: [] }),
+    }) as typeof fetch;
+    const onRegisterActions = vi.fn();
+    render(
+      <QueryClientProvider client={qc}>
+        <ClientOverviewTab
+          client={mockClient}
+          mode="adviser"
+          onRegisterActions={onRegisterActions}
+        />
+      </QueryClientProvider>,
+    );
+    // While loading, nothing that could export an empty report is registered.
+    expect(onRegisterActions.mock.calls[0]?.[0] ?? null).toBeNull();
+    await waitFor(() =>
+      expect(onRegisterActions.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({ downloadPdf: expect.any(Function) }),
+      ),
+    );
+  });
+});

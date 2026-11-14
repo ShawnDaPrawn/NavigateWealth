@@ -172,14 +172,22 @@ export function ClientOverviewTab({
   const isClient = mode === 'client';
   const inRecordPage = !!onRegisterActions;
 
+  // Hand the actions up only once the figures the PDF is built from have
+  // loaded: a Download PDF clicked from another tab waits for them, instead
+  // of exporting an empty profile and zero balances.
+  const pdfDataReady = !loadingProfile && !loadingPolicies;
   useEffect(() => {
     if (!onRegisterActions) return;
+    if (!pdfDataReady) {
+      onRegisterActions(null);
+      return;
+    }
     onRegisterActions({
       refresh: refreshAll,
       downloadPdf: handleDownloadPDF,
       generatingPdf: generatingPDF,
     });
-  }, [onRegisterActions, refreshAll, handleDownloadPDF, generatingPDF]);
+  }, [onRegisterActions, pdfDataReady, refreshAll, handleDownloadPDF, generatingPDF]);
   useEffect(() => {
     if (!onRegisterActions) return;
     return () => onRegisterActions(null);
