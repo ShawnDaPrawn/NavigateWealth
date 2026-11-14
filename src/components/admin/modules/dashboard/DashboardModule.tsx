@@ -5,7 +5,6 @@ import {
   NoAccess,
   SegmentedList,
   SegmentedTrigger,
-  SoonBadge,
   useBreadcrumbTrail,
   useUrlState,
 } from '../../layout/page';
@@ -22,21 +21,23 @@ import { PublicationsCard } from './components/PublicationsCard';
 import { useDashboardData, useDashboardKPIs } from './hooks';
 import { dashboardKeys } from './hooks/queryKeys';
 import { taskStatsApi } from './api';
-import type { DashboardModuleProps } from './types';
+import type { DashboardModuleProps, DashboardPeriod } from './types';
 
 /** The dashboard home, or the audit trail page (?view=audit). */
 const DASHBOARD_VIEWS = ['home', 'audit'] as const;
+const DASHBOARD_PERIODS = ['month', '30d', 'year'] as const;
 type DashboardView = (typeof DASHBOARD_VIEWS)[number];
 
 export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleProps = {}) {
   const { isAuthenticated, user } = useAuth();
   const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'super_admin');
   const [view, setView] = useUrlState<DashboardView>('view', 'home', DASHBOARD_VIEWS);
+  const [period, setPeriod] = useUrlState<DashboardPeriod>('period', 'month', DASHBOARD_PERIODS);
   // Top-bar breadcrumb: Dashboard / Audit trail.
   useBreadcrumbTrail(view === 'audit' ? [{ label: 'Audit trail' }] : []);
 
   // Fetch all dashboard data
-  const { stats, metrics, tasks, errors, refetchStats, loadingStates } = useDashboardData();
+  const { stats, metrics, tasks, errors, refetchStats, loadingStates } = useDashboardData(period);
 
   // Open / completed totals for the Tasks figure (was a System Activity tile).
   const { data: taskTotals = null } = useQuery({
@@ -53,6 +54,7 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
     stats,
     metrics,
     taskTotals,
+    period,
     loading: loadingStates.stats || loadingStates.metrics,
     loadingStates: {
       stats: loadingStates.stats,
@@ -86,16 +88,11 @@ export function DashboardModule({ onModuleChange, onViewTask }: DashboardModuleP
           <h2 id="practice-at-a-glance" className="text-base font-semibold text-nw-ink">
             Practice at a glance
           </h2>
-          {/* Only "this month" exists on the server today. */}
-          <Tabs value="month">
+          <Tabs value={period} onValueChange={(v) => setPeriod(v as DashboardPeriod)}>
             <SegmentedList aria-label="Period">
               <SegmentedTrigger value="month">This month</SegmentedTrigger>
-              <SegmentedTrigger value="30d" disabled>
-                Last 30 days <SoonBadge />
-              </SegmentedTrigger>
-              <SegmentedTrigger value="year" disabled>
-                This year <SoonBadge />
-              </SegmentedTrigger>
+              <SegmentedTrigger value="30d">Last 30 days</SegmentedTrigger>
+              <SegmentedTrigger value="year">This year</SegmentedTrigger>
             </SegmentedList>
           </Tabs>
         </div>

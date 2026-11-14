@@ -4,7 +4,13 @@ import { useAuth } from '../../../../auth/AuthContext';
 import { dashboardApi } from '../api';
 import { buildSystemActivity } from '../utils';
 import { dashboardKeys } from './queryKeys';
-import type { DashboardStats, DashboardMetrics, TaskDueToday, SystemActivity } from '../types';
+import type {
+  DashboardPeriod,
+  DashboardStats,
+  DashboardMetrics,
+  TaskDueToday,
+  SystemActivity,
+} from '../types';
 
 export interface UseDashboardDataReturn {
   stats: DashboardStats | null;
@@ -39,7 +45,12 @@ export interface UseDashboardDataReturn {
  * widget wait for the slowest request, which is what made the whole page
  * appear at once, late, rather than filling in as its data arrived.
  */
-export function useDashboardData(): UseDashboardDataReturn {
+export function useDashboardData(period: DashboardPeriod = 'month'): UseDashboardDataReturn {
+  // "This month" keeps the shared keys (the sidebar's counts read the same
+  // /admin/stats query); other periods get their own entries.
+  const statsKey = period === 'month' ? dashboardKeys.stats() : [...dashboardKeys.stats(), period];
+  const metricsKey =
+    period === 'month' ? dashboardKeys.metrics() : [...dashboardKeys.metrics(), period];
   const { isAuthenticated, user } = useAuth();
   const isAdmin = isAuthenticated && (user?.role === 'admin' || user?.role === 'super_admin');
 
@@ -50,8 +61,8 @@ export function useDashboardData(): UseDashboardDataReturn {
     error: statsError,
     refetch: refetchStats,
   } = useQuery({
-    queryKey: dashboardKeys.stats(),
-    queryFn: () => dashboardApi.stats.getStats(),
+    queryKey: statsKey,
+    queryFn: () => dashboardApi.stats.getStats(undefined, period),
     enabled: isAdmin,
     refetchInterval: isAdmin ? 60000 : false, // Refresh every minute if admin
     retry: false,
@@ -65,8 +76,8 @@ export function useDashboardData(): UseDashboardDataReturn {
     error: metricsError,
     refetch: refetchMetrics,
   } = useQuery({
-    queryKey: dashboardKeys.metrics(),
-    queryFn: () => dashboardApi.metrics.getMetrics(),
+    queryKey: metricsKey,
+    queryFn: () => dashboardApi.metrics.getMetrics(undefined, period),
     enabled: isAdmin,
     refetchInterval: isAdmin ? 60000 : false,
     retry: false,

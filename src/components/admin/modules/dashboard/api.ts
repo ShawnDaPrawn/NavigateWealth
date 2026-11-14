@@ -3,6 +3,7 @@ import { logger } from '../../../../utils/logger';
 import { getErrorMessage } from '../../../../utils/errorUtils';
 import { ENDPOINTS } from './constants';
 import type {
+  DashboardPeriod,
   DashboardStats,
   DashboardMetrics,
   TaskDueToday,
@@ -24,9 +25,14 @@ import type {
 export type DashboardFetchOptions = Pick<APIRequestOptions, 'accessToken'>;
 
 export const dashboardStatsApi = {
-  async getStats(options?: DashboardFetchOptions): Promise<DashboardStats> {
+  async getStats(
+    options?: DashboardFetchOptions,
+    period: DashboardPeriod = 'month',
+  ): Promise<DashboardStats> {
     try {
-      const response = await api.get<{ stats: DashboardStats }>(ENDPOINTS.ADMIN_STATS, options);
+      const url =
+        period === 'month' ? ENDPOINTS.ADMIN_STATS : `${ENDPOINTS.ADMIN_STATS}?period=${period}`;
+      const response = await api.get<{ stats: DashboardStats }>(url, options);
       return response.stats;
     } catch (error) {
       const message = getErrorMessage(error);
@@ -103,13 +109,21 @@ export const dashboardStatsApi = {
 };
 
 export const dashboardMetricsApi = {
-  async getMetrics(options?: DashboardFetchOptions): Promise<DashboardMetrics> {
+  async getMetrics(
+    options?: DashboardFetchOptions,
+    period: DashboardPeriod = 'month',
+  ): Promise<DashboardMetrics> {
     try {
       const response = await api.get<{
         activePolicies: number;
         newPoliciesCount: number;
         publishedFnas: number;
-      }>(ENDPOINTS.DASHBOARD_STATS, options);
+      }>(
+        period === 'month'
+          ? ENDPOINTS.DASHBOARD_STATS
+          : `${ENDPOINTS.DASHBOARD_STATS}?period=${period}`,
+        options,
+      );
 
       return {
         activePolicies: response.activePolicies || 0,
@@ -296,8 +310,10 @@ export const adminAuditApi = {
       const response = await api.get<{ success: boolean; entries: AdminAuditEntry[] }>(url);
       return response.entries ?? [];
     } catch (error) {
+      // Rethrown so the audit trail can show an error with Try again rather
+      // than an empty log that looks like nothing happened.
       logger.error('Failed to fetch admin audit log', error);
-      return [];
+      throw error;
     }
   },
 

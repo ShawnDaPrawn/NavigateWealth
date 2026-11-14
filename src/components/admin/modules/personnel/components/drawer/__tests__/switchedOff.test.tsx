@@ -1,6 +1,23 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ClientSummary, Personnel } from '../../../types';
+const perms = vi.hoisted(() => ({ isSuperAdmin: true }));
+const reassign = vi.hoisted(() => vi.fn());
+vi.mock('../../../hooks', () => ({
+  usePersonnel: () => ({
+    data: [
+      { id: 'p-1', firstName: 'Ruan', lastName: 'Steyn', status: 'active' },
+      { id: 'p-2', firstName: 'Priya', lastName: 'Naidoo', status: 'active' },
+    ],
+  }),
+  useReassignPersonnelClients: () => ({ mutate: reassign, isPending: false }),
+  useUploadPersonnelDocument: () => ({ mutate: upload, isPending: false }),
+}));
+vi.mock('../../../hooks/usePermissions', () => ({
+  useCurrentUserPermissions: () => ({ isSuperAdmin: perms.isSuperAdmin, canDo: () => true }),
+}));
+const upload = vi.hoisted(() => vi.fn());
+
 import { TabCompliance, UploadComplianceDocumentDialog } from '../TabCompliance';
 import { ReassignClientsDialog, TabClientBook } from '../TabClientBook';
 
@@ -20,18 +37,35 @@ const clients: ClientSummary[] = [
   { id: 'c-2', name: 'Annelie de Villiers', email: 'a@example.com', status: 'pending' },
 ] as ClientSummary[];
 
-describe('switched-off staff actions (no endpoint yet)', () => {
-  it('shows Upload and Bulk reassign disabled with a Soon tag', () => {
+describe('staff documents and client book actions', () => {
+  it('uploads a compliance document from the Upload dialog', () => {
     render(<TabCompliance selectedPersonnel={staff} />);
-    const upload = screen.getByRole('button', { name: /Upload/ }) as HTMLButtonElement;
-    expect(upload.disabled).toBe(true);
-    expect(upload.textContent).toContain('Soon');
+    fireEvent.click(screen.getByRole('button', { name: /Upload/ }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.textContent).toContain('Upload compliance document');
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'RE5 certificate' } });
+    const file = new File(['%PDF'], 're5.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Choose file'), { target: { files: [file] } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Upload' }).at(-1)!);
+    expect(upload).toHaveBeenCalledWith(
+      { personnelId: 'p-1', file, name: 'RE5 certificate', type: 'qualification' },
+      expect.any(Object),
+    );
+  });
+
+  it('lets the super admin open Bulk reassign; others do not see it', () => {
+    render(<TabClientBook personnelId="p-1" clients={clients} loading={false} />);
+    const button = screen.getByRole('button', { name: 'Bulk reassign' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    fireEvent.click(button);
+    expect(screen.getByRole('dialog').textContent).toContain('Bulk reassign clients');
+    expect(screen.getByRole('button', { name: 'Reassign 2 clients' })).toBeDefined();
     cleanup();
 
-    render(<TabClientBook clients={clients} loading={false} />);
-    const reassign = screen.getByRole('button', { name: /Bulk reassign/ }) as HTMLButtonElement;
-    expect(reassign.disabled).toBe(true);
-    expect(reassign.textContent).toContain('Soon');
+    perms.isSuperAdmin = false;
+    render(<TabClientBook personnelId="p-1" clients={clients} loading={false} />);
+    expect(screen.queryByRole('button', { name: 'Bulk reassign' })).toBeNull();
+    perms.isSuperAdmin = true;
   });
 
   it('upload dialog checks the name and file before uploading', () => {

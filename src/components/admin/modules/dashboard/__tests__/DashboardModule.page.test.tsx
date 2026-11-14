@@ -192,4 +192,23 @@ describe('Dashboard', () => {
     );
     await waitFor(() => expect(setTrail).toHaveBeenLastCalledWith([{ label: 'Audit trail' }]));
   });
+
+  it('switches the period from the segmented control and keeps it in the address', async () => {
+    renderAt();
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Last 30 days' }));
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe('?period=30d'));
+    expect(screen.getByRole('tab', { name: 'Last 30 days' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
+  it('shows the error state with Try again when the audit trail cannot load', async () => {
+    api.getLog.mockRejectedValueOnce(new Error('Gateway timeout'));
+    api.getLog.mockResolvedValueOnce([]);
+    renderAt('/admin?view=audit');
+    expect(await screen.findByText("Couldn't load the audit trail")).toBeDefined();
+    expect(screen.queryByText('No audit entries yet')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Try again/ }));
+    expect(await screen.findByText('No audit entries yet')).toBeDefined();
+  });
 });

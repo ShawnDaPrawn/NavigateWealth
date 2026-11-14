@@ -44,7 +44,7 @@ import {
   AlertOctagon,
   X,
 } from 'lucide-react';
-import { PageHeader, useUrlState } from '../../../layout/page';
+import { ErrorState, PageHeader, useUrlState } from '../../../layout/page';
 import { adminAuditApi } from '../api';
 import { auditEntriesToCsv } from '../utils';
 import type { AdminAuditEntry, AuditActionCategory, AuditSeverity } from '../types';
@@ -155,17 +155,25 @@ export function AuditTrailPage({ onBack }: AuditTrailPageProps) {
   );
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const fetchEntries = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     const filters: { category?: AuditActionCategory; severity?: AuditSeverity; limit?: number } = {
       limit: 200,
     };
     if (categoryFilter !== 'all') filters.category = categoryFilter;
     if (severityFilter !== 'all') filters.severity = severityFilter;
 
-    const data = await adminAuditApi.getLog(filters);
-    setEntries(data);
-    setLoading(false);
+    try {
+      setEntries(await adminAuditApi.getLog(filters));
+    } catch (error) {
+      setEntries([]);
+      setLoadError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
   }, [categoryFilter, severityFilter]);
 
   useEffect(() => {
@@ -308,7 +316,13 @@ export function AuditTrailPage({ onBack }: AuditTrailPageProps) {
 
       {/* ── Table ──────────────────────────────────────────────────── */}
       <div className="overflow-auto rounded-xl border border-nw-line bg-white">
-        {loading ? (
+        {loadError && !loading ? (
+          <ErrorState
+            title="Couldn't load the audit trail"
+            details={loadError}
+            onRetry={() => void fetchEntries()}
+          />
+        ) : loading ? (
           <div
             className="flex items-center justify-center py-12 text-sm text-muted-foreground"
             aria-busy="true"

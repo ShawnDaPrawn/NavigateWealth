@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../../../../ui/button';
-import { SoonBadge } from '../../../../layout/page';
+import { usePersonnel, useReassignPersonnelClients } from '../../hooks';
+import { useCurrentUserPermissions } from '../../hooks/usePermissions';
 import { Avatar, AvatarFallback } from '../../../../../ui/avatar';
 import { Badge } from '../../../../../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../../ui/card';
@@ -25,60 +26,91 @@ import { Briefcase, Users } from 'lucide-react';
 import { ClientSummary, Personnel } from '../../types';
 
 interface TabClientBookProps {
+  /** Whose client book this is. */
+  personnelId: string;
   clients: ClientSummary[];
   loading: boolean;
 }
 
 /**
- * Assigned client book. "Bulk reassign" stays switched off: there is no
- * endpoint that moves clients from one adviser to another yet. Its dialog is
- * built (see ReassignClientsDialog) so it only needs wiring.
+ * Assigned client book. The super admin can move some or all of the clients
+ * to another active staff member (Bulk reassign).
  */
-export function TabClientBook({ clients, loading }: TabClientBookProps) {
+export function TabClientBook({ personnelId, clients, loading }: TabClientBookProps) {
+  const { isSuperAdmin } = useCurrentUserPermissions();
+  const { data: personnel = [] } = usePersonnel();
+  const { mutate: reassign, isPending } = useReassignPersonnelClients();
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const candidates = personnel.filter((p) => p.id !== personnelId && p.status === 'active');
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">Assigned client book</CardTitle>
-        <Button variant="outline" size="sm" disabled>
-          <Briefcase className="h-4 w-4" aria-hidden="true" />
-          Bulk reassign <SoonBadge />
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="py-8 text-center" aria-busy="true">
-            Loading clients…
-          </div>
-        ) : clients.length > 0 ? (
-          <div className="space-y-2">
-            {clients.map((client) => (
-              <div
-                key={client.id}
-                className="flex items-center justify-between rounded border p-3 hover:bg-slate-50"
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{client.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="text-sm font-medium">{client.name}</div>
-                    <div className="text-xs text-muted-foreground">{client.email}</div>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">Assigned client book</CardTitle>
+          {isSuperAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loading || clients.length === 0 || candidates.length === 0}
+              onClick={() => setReassignOpen(true)}
+            >
+              <Briefcase className="h-4 w-4" aria-hidden="true" />
+              Bulk reassign
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="py-8 text-center" aria-busy="true">
+              Loading clients…
+            </div>
+          ) : clients.length > 0 ? (
+            <div className="space-y-2">
+              {clients.map((client) => (
+                <div
+                  key={client.id}
+                  className="flex items-center justify-between rounded border p-3 hover:bg-slate-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>{client.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="text-sm font-medium">{client.name}</div>
+                      <div className="text-xs text-muted-foreground">{client.email}</div>
+                    </div>
                   </div>
+                  <Badge variant={client.status === 'approved' ? 'default' : 'outline'}>
+                    {client.status}
+                  </Badge>
                 </div>
-                <Badge variant={client.status === 'approved' ? 'default' : 'outline'}>
-                  {client.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="py-12 text-center text-muted-foreground">
-            <Users className="mx-auto mb-4 h-12 w-12 opacity-20" aria-hidden="true" />
-            <p>No clients currently assigned to this profile.</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-muted-foreground">
+              <Users className="mx-auto mb-4 h-12 w-12 opacity-20" aria-hidden="true" />
+              <p>No clients currently assigned to this profile.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      {reassignOpen && (
+        <ReassignClientsDialog
+          open
+          onOpenChange={setReassignOpen}
+          clients={clients}
+          candidates={candidates}
+          submitting={isPending}
+          onReassign={(toId, clientIds) =>
+            reassign(
+              { fromId: personnelId, toId, clientIds },
+              { onSuccess: () => setReassignOpen(false) },
+            )
+          }
+        />
+      )}
+    </>
   );
 }
 

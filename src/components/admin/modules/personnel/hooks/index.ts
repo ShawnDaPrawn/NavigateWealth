@@ -26,6 +26,8 @@ export {
   useSuspendPersonnelAccess,
   useRestorePersonnelAccess,
   useSendPersonnelPasswordReset,
+  useReassignPersonnelClients,
+  useUploadPersonnelDocument,
   useUpdateSuperAdmin,
   useBackfillAuthRoles,
 } from './usePersonnelMutations';

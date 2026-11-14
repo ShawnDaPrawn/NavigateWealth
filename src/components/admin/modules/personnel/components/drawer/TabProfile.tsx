@@ -31,6 +31,7 @@ import {
   useSuspendPersonnelAccess,
   useRestorePersonnelAccess,
   useSendPersonnelPasswordReset,
+  usePersonnel,
 } from '../../hooks';
 import { useCurrentUserPermissions } from '../../hooks/usePermissions';
 import { z } from 'zod';
@@ -79,6 +80,11 @@ export function TabProfile({
   const { mutate: restoreAccess, isPending: isRestoring } = useRestorePersonnelAccess();
   const { mutate: sendReset, isPending: isSendingReset } = useSendPersonnelPasswordReset();
 
+  const { data: allPersonnel = [] } = usePersonnel();
+  // Anyone active (or suspended) other than this person can be their manager.
+  const managerOptions = allPersonnel.filter(
+    (p) => p.id !== selectedPersonnel.id && p.status !== 'pending',
+  );
   const fullName = `${selectedPersonnel.firstName} ${selectedPersonnel.lastName}`.trim();
   const isSelf = permissions?.personnelId === selectedPersonnel.id;
   // Only a super admin may act on a super admin account (the server agrees).
@@ -255,6 +261,11 @@ export function TabProfile({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
+                  {managerOptions.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {`${p.firstName} ${p.lastName}`.trim() || p.email}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

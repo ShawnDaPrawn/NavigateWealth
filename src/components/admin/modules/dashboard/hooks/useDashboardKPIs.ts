@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Users, FileText, CheckSquare, TrendingUp } from 'lucide-react';
-import type { DashboardKPI, DashboardStats, DashboardMetrics } from '../types';
+import type { DashboardKPI, DashboardPeriod, DashboardStats, DashboardMetrics } from '../types';
 import { calculateGrowth } from '../utils';
 
 export interface UseDashboardKPIsReturn {
@@ -13,6 +13,8 @@ export interface UseDashboardKPIsOptions {
   metrics: DashboardMetrics | null;
   /** Open and completed task totals (the Tasks figure's second line). */
   taskTotals?: { open: number; completed: number } | null;
+  /** The period the figures cover (labels follow it). */
+  period?: DashboardPeriod;
   loading?: boolean;
   /** Granular loading states per data source — allows per-card skeleton rendering */
   loadingStates?: {
@@ -27,8 +29,22 @@ export interface UseDashboardKPIsOptions {
  * their backing data source hasn't resolved yet, preventing the "pop-in"
  * effect where the 4th card appears only after metrics load.
  */
+const PERIOD_LABELS: Record<DashboardPeriod, string> = {
+  month: 'this month',
+  '30d': 'last 30 days',
+  year: 'this year',
+};
+
 export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboardKPIsReturn {
-  const { stats, metrics, taskTotals = null, loading = false, loadingStates } = options;
+  const {
+    stats,
+    metrics,
+    taskTotals = null,
+    period = 'month',
+    loading = false,
+    loadingStates,
+  } = options;
+  const periodLabel = PERIOD_LABELS[period];
 
   const kpis = useMemo<DashboardKPI[]>(() => {
     const statsLoading = loadingStates?.stats ?? (!stats && loading);
@@ -55,8 +71,9 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
         };
 
     // KPI 2: New Applications
-    const newThisMonth = stats?.new_this_month || 0;
-    const newLastMonth = stats?.new_last_month || 0;
+    // The period's own counts when the server sent them (older servers: month).
+    const newThisMonth = stats?.new_in_period ?? stats?.new_this_month ?? 0;
+    const newLastMonth = stats?.new_previous_period ?? stats?.new_last_month ?? 0;
     const appsGrowth = stats ? calculateGrowth(newThisMonth, newLastMonth) : 0;
 
     const newApplicationsKpi: DashboardKPI = stats
@@ -66,7 +83,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
           change: appsGrowth,
           icon: FileText,
           format: 'number',
-          subtitle: 'this month',
+          subtitle: periodLabel,
           trend: appsGrowth > 0 ? 'up' : appsGrowth < 0 ? 'down' : 'neutral',
         }
       : {
@@ -75,7 +92,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
           change: 0,
           icon: FileText,
           format: 'number',
-          subtitle: 'this month',
+          subtitle: periodLabel,
           loading: statsLoading,
         };
 
@@ -116,7 +133,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
           change: policiesGrowth,
           icon: TrendingUp,
           format: 'number',
-          subtitle: `${newPolicies} new this period`,
+          subtitle: `${newPolicies} new ${periodLabel}`,
           trend: policiesGrowth > 0 ? 'up' : policiesGrowth < 0 ? 'down' : 'neutral',
         }
       : {
@@ -130,7 +147,7 @@ export function useDashboardKPIs(options: UseDashboardKPIsOptions): UseDashboard
         };
 
     return [totalClientsKpi, newApplicationsKpi, pendingTasksKpi, activePoliciesKpi];
-  }, [stats, metrics, taskTotals, loading, loadingStates]);
+  }, [stats, metrics, taskTotals, periodLabel, loading, loadingStates]);
 
   return {
     kpis,
