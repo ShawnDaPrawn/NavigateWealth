@@ -7,7 +7,6 @@
  * this only changes which file it lives in.
  */
 
-
 const sentence = (v: string) => (v ? v.charAt(0).toUpperCase() + v.slice(1).toLowerCase() : v);
 
 export function StatusBadge({ value }: { value: string }) {

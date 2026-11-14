@@ -28,9 +28,7 @@ import {
   type RecordOpenResult,
 } from '../../layout/page';
 
-
 import { Skeleton } from '../../../ui/skeleton';
-
 
 // Existing module components
 import { ArticlesListView } from './ArticlesListView';
