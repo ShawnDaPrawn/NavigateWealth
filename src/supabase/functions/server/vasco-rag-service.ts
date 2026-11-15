@@ -149,6 +149,19 @@ export interface IndexResult {
   durationMs: number;
 }
 
+export interface IndexBatchResult extends IndexResult {
+  /** False while the client should call again with `nextCursor`. */
+  done: boolean;
+  nextCursor: string | null;
+}
+
+/**
+ * Sources embedded in one request. A full rebuild of every published article
+ * plus the live knowledge base exceeds the Edge Function's 2s CPU limit and
+ * the platform answers 546. Eight keeps one invocation well inside that.
+ */
+export const REINDEX_BATCH_SIZE = 8;
+
 export interface SourceSyncResult {
   indexed: boolean;
   chunkCount: number;
@@ -610,33 +623,82 @@ function articleSourceMeta(
 // FULL REBUILD
 // ============================================================================
 
+function parseReindexCursor(raw: string | null): {
+  phase: 'article' | 'kb' | 'cleanup';
+  after: string;
+} {
+  if (!raw || raw.length > 200) return { phase: 'article', after: '' };
+  if (raw === 'cleanup') return { phase: 'cleanup', after: '' };
+  if (raw.startsWith('k:')) return { phase: 'kb', after: raw.slice(2) };
+  if (raw.startsWith('a:')) return { phase: 'article', after: raw.slice(2) };
+  return { phase: 'article', after: '' };
+}
+
 /**
- * Bring the whole index in line with reality: every published article and
- * every live KB entry is (re-)indexed, and anything indexed that is no longer
- * published / live is removed. Each source is replaced non-destructively, so a
- * rebuild that fails part-way leaves the previous versions in place rather
- * than a half-empty index. Processes sources one-at-a-time to keep memory
- * bounded.
+ * Drop indexed sources that are no longer a published article or a live KB
+ * entry. Runs only as the last step of a rebuild: doing it in the middle
+ * would delete sources the later pages have not visited yet.
  *
- * The name predates KB entries joining the index; it is what the admin route,
- * the frontend and the tests call, so it stays.
+ * A source that failed to embed on this pass is still wanted when its
+ * article is published (or its entry is live), so a partial failure does
+ * not wipe the previous copy.
  */
-export async function indexAllArticles(): Promise<IndexResult> {
-  const startTime = Date.now();
-  const errors: string[] = [];
-  let articlesIndexed = 0;
-  let kbEntriesIndexed = 0;
-  let totalChunks = 0;
-  const wanted = new Set<string>();
+async function removeStaleIndexedSources(): Promise<void> {
+  const publishedIds = (await articleRepo.listAll('vasco re-index cleanup'))
+    .filter((article) => article.status === 'published' && articleToText(article))
+    .map((article) => sourceKey('article', article.id));
+  const liveIds = (await getAllEntries())
+    .filter((entry) => entry.status === 'active')
+    .map((entry) => sourceKey('kb', entry.id));
+  const wanted = new Set<string>([...publishedIds, ...liveIds]);
 
-  try {
-    // ── Articles ──────────────────────────────────────────────────────────
-    const allArticles = await articleRepo.listAll('vasco full re-index');
-    const publishedArticles = allArticles.filter((a) => a.status === 'published');
+  const { sources } = await loadSources('vasco full re-index cleanup');
+  for (const source of sources) {
+    if (!wanted.has(sourceKey(source.sourceType, source.sourceId))) {
+      await removeSource(source);
+      log.info(`Removed stale ${source.sourceType} "${source.title}" from index`);
+    }
+  }
+  await touchIndex(new Date().toISOString());
+}
 
-    log.info(`Starting knowledge indexing: ${publishedArticles.length} published articles`);
+/**
+ * Index one page of the rebuild.
+ *
+ * Cursor shape: `a:<articleId>` articles strictly after that id, `k:` the
+ * start of the knowledge base, `k:<entryId>` entries after that id,
+ * `cleanup` the stale-source removal. An empty cursor starts at the first
+ * article. `indexAllArticles` walks these until `done`.
+ */
+export async function indexArticleBatch(rawCursor: string | null): Promise<IndexBatchResult> {
+  const started = Date.now();
+  const cursor = parseReindexCursor(rawCursor);
+  const result: IndexBatchResult = {
+    articlesIndexed: 0,
+    kbEntriesIndexed: 0,
+    totalChunks: 0,
+    errors: [],
+    durationMs: 0,
+    done: false,
+    nextCursor: null,
+  };
 
-    for (const article of publishedArticles) {
+  if (cursor.phase === 'cleanup') {
+    await removeStaleIndexedSources();
+    result.done = true;
+    result.durationMs = Date.now() - started;
+    return result;
+  }
+
+  if (cursor.phase === 'article') {
+    const pending = (await articleRepo.listAll('vasco re-index batch'))
+      .filter((article) => article.status === 'published')
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .filter((article) => !cursor.after || article.id > cursor.after);
+    const slice = pending.slice(0, REINDEX_BATCH_SIZE);
+    log.info(`Knowledge index batch: ${slice.length} article(s), ${pending.length} remaining`);
+
+    for (const article of slice) {
       try {
         const text = articleToText(article);
         if (!text) {
@@ -645,59 +707,96 @@ export async function indexAllArticles(): Promise<IndexResult> {
         }
         const chunkCount = await upsertSource(articleSourceMeta(article), text);
         if (chunkCount === 0) continue;
-        wanted.add(sourceKey('article', article.id));
-        articlesIndexed++;
-        totalChunks += chunkCount;
+        result.articlesIndexed++;
+        result.totalChunks += chunkCount;
         log.info(`Indexed article "${article.title}": ${chunkCount} chunks`);
       } catch (err) {
         const msg = `Failed to index article "${article.title || article.id}": ${getErrMsg(err)}`;
-        errors.push(msg);
+        result.errors.push(msg);
         log.error(msg);
-        // Keep whatever was indexed for it before — do not remove it below.
-        wanted.add(sourceKey('article', article.id));
       }
     }
 
-    // ── Knowledge base entries ────────────────────────────────────────────
-    const liveEntries = (await getAllEntries()).filter((e) => e.status === 'active');
-    log.info(`Indexing ${liveEntries.length} live knowledge base entries`);
+    const lastArticle = slice.at(-1);
+    result.nextCursor = pending.length > slice.length && lastArticle ? `a:${lastArticle.id}` : 'k:';
+    result.durationMs = Date.now() - started;
+    return result;
+  }
 
-    for (const entry of liveEntries) {
-      try {
-        const chunkCount = await upsertSource(
-          knowledgeSourceMeta(entry),
-          knowledgeEntryToText(entry),
-        );
-        if (chunkCount === 0) continue;
-        wanted.add(sourceKey('kb', entry.id));
-        kbEntriesIndexed++;
-        totalChunks += chunkCount;
-        log.info(`Indexed knowledge entry "${entry.title}": ${chunkCount} chunks`);
-      } catch (err) {
-        const msg = `Failed to index knowledge entry "${entry.title || entry.id}": ${getErrMsg(err)}`;
-        errors.push(msg);
-        log.error(msg);
-        wanted.add(sourceKey('kb', entry.id));
+  const pending = (await getAllEntries())
+    .filter((entry) => entry.status === 'active')
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .filter((entry) => !cursor.after || entry.id > cursor.after);
+  const slice = pending.slice(0, REINDEX_BATCH_SIZE);
+  log.info(`Knowledge index batch: ${slice.length} KB entry(ies), ${pending.length} remaining`);
+
+  for (const entry of slice) {
+    try {
+      const chunkCount = await upsertSource(
+        knowledgeSourceMeta(entry),
+        knowledgeEntryToText(entry),
+      );
+      if (chunkCount === 0) continue;
+      result.kbEntriesIndexed++;
+      result.totalChunks += chunkCount;
+      log.info(`Indexed knowledge entry "${entry.title}": ${chunkCount} chunks`);
+    } catch (err) {
+      const msg = `Failed to index knowledge entry "${entry.title || entry.id}": ${getErrMsg(err)}`;
+      result.errors.push(msg);
+      log.error(msg);
+    }
+  }
+
+  const lastEntry = slice.at(-1);
+  result.nextCursor = pending.length > slice.length && lastEntry ? `k:${lastEntry.id}` : 'cleanup';
+  result.durationMs = Date.now() - started;
+  return result;
+}
+
+/**
+ * Bring the whole index in line with reality: every published article and
+ * every live KB entry is (re-)indexed, and anything indexed that is no longer
+ * published / live is removed. Each source is replaced non-destructively, so a
+ * rebuild that fails part-way leaves the previous versions in place rather
+ * than a half-empty index.
+ *
+ * Walks `indexArticleBatch` so the HTTP route can do the same work one page
+ * at a time. The name predates KB entries joining the index; it is what the
+ * tests call, so it stays.
+ */
+export async function indexAllArticles(): Promise<IndexResult> {
+  const started = Date.now();
+  const totals: IndexResult = {
+    articlesIndexed: 0,
+    kbEntriesIndexed: 0,
+    totalChunks: 0,
+    errors: [],
+    durationMs: 0,
+  };
+  let cursor: string | null = null;
+  const seen = new Set<string>();
+
+  try {
+    for (let step = 0; step < 10000; step++) {
+      const key = cursor ?? '';
+      if (seen.has(key)) {
+        throw new Error(`Reindex cursor repeated: ${key}`);
       }
+      seen.add(key);
+      const batch = await indexArticleBatch(cursor);
+      totals.articlesIndexed += batch.articlesIndexed;
+      totals.kbEntriesIndexed += batch.kbEntriesIndexed;
+      totals.totalChunks += batch.totalChunks;
+      totals.errors.push(...batch.errors);
+      if (batch.done || !batch.nextCursor) break;
+      cursor = batch.nextCursor;
     }
 
-    // ── Remove what is no longer wanted ───────────────────────────────────
-    const { sources } = await loadSources('vasco full re-index cleanup');
-    for (const source of sources) {
-      if (!wanted.has(sourceKey(source.sourceType, source.sourceId))) {
-        await removeSource(source);
-        log.info(`Removed stale ${source.sourceType} "${source.title}" from index`);
-      }
-    }
-
-    await touchIndex(new Date().toISOString());
-
-    const durationMs = Date.now() - startTime;
+    totals.durationMs = Date.now() - started;
     log.info(
-      `Indexing complete: ${articlesIndexed} articles, ${kbEntriesIndexed} KB entries, ${totalChunks} chunks in ${durationMs}ms`,
+      `Indexing complete: ${totals.articlesIndexed} articles, ${totals.kbEntriesIndexed} KB entries, ${totals.totalChunks} chunks in ${totals.durationMs}ms`,
     );
-
-    return { articlesIndexed, kbEntriesIndexed, totalChunks, errors, durationMs };
+    return totals;
   } catch (err) {
     log.error('Fatal indexing error', err);
     throw err;

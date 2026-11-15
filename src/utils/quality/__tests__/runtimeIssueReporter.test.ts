@@ -222,6 +222,23 @@ describe('reportHandledError', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it('skips a wrong password, the staff Ask Vasco refusal, and a stale chunk', async () => {
+    reportHandledError(
+      'sign-in',
+      Object.assign(new Error('Invalid credentials'), { code: 'invalid_credentials' }),
+    );
+    reportHandledError(
+      'sessions',
+      Object.assign(new Error('Cannot open Ask Vasco for staff accounts'), { statusCode: 403 }),
+    );
+    reportHandledError(
+      'render',
+      new TypeError("Cannot read properties of undefined (reading 'LockedModule')"),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });
 
 // ── Global capture ────────────────────────────────────────────────────────────
@@ -265,6 +282,15 @@ describe('installRuntimeIssueCapture', () => {
       path: '/clients/12/policies',
       statusCode: 504,
     });
+  });
+
+  it('does not report a Failed to fetch the API client will retry', async () => {
+    upstream.mockImplementationOnce(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    await expect(window.fetch(`${API}/admin/stats`)).rejects.toThrow('Failed to fetch');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(reports).toHaveLength(0);
   });
 
   it('leaves 5xx answers from our own function to the server-side recorder', async () => {

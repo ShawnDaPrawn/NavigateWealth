@@ -61,4 +61,23 @@ describe('ErrorBoundary reporting', () => {
     );
     expect(kinds).toEqual(['react-error-boundary']);
   });
+
+  it('does not file a definitive stale-chunk crash', async () => {
+    vi.stubGlobal('location', { reload: vi.fn() });
+    function StaleChunk(): never {
+      throw new TypeError("Cannot read properties of undefined (reading 'ClientGroupsTab')");
+    }
+
+    render(
+      <ErrorBoundary>
+        <StaleChunk />
+      </ErrorBoundary>,
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const reports = fetchSpy.mock.calls.filter((call: unknown[]) =>
+      String(call[0]).includes('runtime-client'),
+    );
+    expect(reports).toHaveLength(0);
+  });
 });

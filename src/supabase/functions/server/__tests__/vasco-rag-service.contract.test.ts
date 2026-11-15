@@ -26,6 +26,8 @@ import { kvStore } from './helpers/contract-harness.ts';
 
 const {
   indexAllArticles,
+  indexArticleBatch,
+  REINDEX_BATCH_SIZE,
   syncKnowledgeEntry,
   removeKnowledgeEntryFromIndex,
   syncArticle,
@@ -335,6 +337,30 @@ describe('full rebuild', () => {
     expect(result.kbEntriesIndexed).toBe(1);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toContain('Understanding TFSA limits');
+  });
+
+  it('indexes one page per call and continues from the cursor', async () => {
+    for (let i = 1; i <= REINDEX_BATCH_SIZE + 1; i++) {
+      const id = `art-${String(i).padStart(2, '0')}`;
+      kvStore.set(`article:${id}`, article({ id, slug: id, title: `TFSA note ${id}` }));
+    }
+
+    const first = await indexArticleBatch(null);
+    expect(first.articlesIndexed).toBe(REINDEX_BATCH_SIZE);
+    expect(first.done).toBe(false);
+    expect(first.nextCursor?.startsWith('a:')).toBe(true);
+
+    const second = await indexArticleBatch(first.nextCursor);
+    expect(second.articlesIndexed).toBe(1);
+    expect(second.nextCursor).toBe('k:');
+
+    const kb = await indexArticleBatch('k:');
+    expect(kb.kbEntriesIndexed).toBe(0);
+    expect(kb.nextCursor).toBe('cleanup');
+
+    const done = await indexArticleBatch('cleanup');
+    expect(done.done).toBe(true);
+    expect(done.nextCursor).toBeNull();
   });
 
   it('clearArticleIndex removes everything', async () => {

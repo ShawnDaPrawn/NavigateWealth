@@ -9,6 +9,7 @@
 
 import { api } from '../../../../utils/api/client';
 import { logger } from '../../../../utils/logger';
+import { reindexKnowledge } from '../../../../utils/vasco/reindexKnowledge';
 import { getErrorMessage } from '../../../../utils/errorUtils';
 import { ENDPOINTS, DEFAULT_AGENTS } from './constants';
 import type {
@@ -202,8 +203,12 @@ export const ragIndexApi = {
    * Rebuild the whole index: every published article and every live KB entry.
    */
   async triggerReindex(): Promise<IndexResult> {
-    const response = await api.post<IndexResult>(ENDPOINTS.RAG_INDEX, {});
-    return response;
+    return reindexKnowledge((cursor) =>
+      api.post<IndexResult & { done?: boolean; nextCursor?: string | null }>(
+        ENDPOINTS.RAG_INDEX,
+        cursor ? { cursor } : {},
+      ),
+    );
   },
 
   /**

@@ -15,6 +15,7 @@ import { createClient } from '../utils/supabase/client';
 import { createAppRouter } from './router/createAppRouter';
 import { AppRoutes } from './AppRoutes';
 import { logger } from '../utils/logger';
+import { isExpectedClientError } from '../utils/quality/runtimeIssueReporter';
 import { MAX_AGE_MS } from '../utils/query/persistedQueryCache';
 
 const queryClient = new QueryClient({
@@ -66,11 +67,13 @@ const queryClient = new QueryClient({
         });
         return;
       }
+      if (isExpectedClientError(error)) return;
       console.error('React Query error:', error);
     },
   }),
   mutationCache: new MutationCache({
     onError: (error: unknown) => {
+      if (isExpectedClientError(error)) return;
       console.error('React Query mutation error:', error);
     },
   }),

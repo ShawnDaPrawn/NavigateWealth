@@ -20,7 +20,8 @@
  * `somePdfLib.GlobalWorkerOptions.workerSrc = ...` failing for a real
  * reason.
  *
- * The suffix list is exactly the set found by scanning every
+ * The suffix list lives in `src/shared/quality/staleChunk.ts` (so the Edge
+ * Function can use it too) and is exactly the set found by scanning every
  * `.then((m) => ({ default: m.<Name> }))` call (the `.then(...)` can wrap
  * onto its own line — the scan tolerates that, it is not a single-line grep).
  * `src/utils/__tests__/staleChunkRecovery.test.ts` re-runs that scan and
@@ -54,94 +55,13 @@ import {
   subscribeConnectivity,
 } from './network/connectivity';
 
+export {
+  isDefinitiveStaleChunkLoadFailure,
+  isStaleChunkLoadFailure,
+} from '../shared/quality/staleChunk';
+
 const RELOAD_KEY = 'navigate-wealth:chunk-load-reload-at';
 const RELOAD_WINDOW_MS = 60_000;
-
-// Suffixes used by this codebase's lazy-loaded `.then((m) => ({ default:
-// m.<Name> }))` exports. See the module-level comment above for how this
-// list is derived and kept honest.
-const LAZY_EXPORT_SUFFIXES = [
-  'Builder',
-  'Dashboard',
-  'Dialog',
-  'Drawer',
-  'Form',
-  'Full',
-  'Gathering',
-  'Generator',
-  'Handoff',
-  'History',
-  'Insights',
-  'Inspector',
-  'Interface',
-  'Manager',
-  'Modal',
-  'Module',
-  'Page',
-  'Panel',
-  'Picker',
-  'Queue',
-  'Renderer',
-  'Repository',
-  'Route',
-  'Section',
-  'Selection',
-  'Step',
-  'Studio',
-  'Subscribers',
-  'Tab',
-  'Tool',
-  'View',
-  'Viewer',
-  'Wizard',
-];
-
-// These mean "definitely a stale chunk" — safe to reload AND to skip
-// reporting entirely.
-const DEFINITIVE_STALE_CHUNK_PATTERNS = [
-  /failed to fetch dynamically imported module/i,
-  /importing a module script failed/i,
-  /chunkloaderror/i,
-  new RegExp(
-    `[Cc]annot read propert(?:y|ies) of undefined \\(reading ["'](?:default|[A-Z][A-Za-z0-9]*(?:${LAZY_EXPORT_SUFFIXES.join('|')}))["']\\)`,
-  ),
-];
-
-// Minified React errors #283 and #306: a promise (from React.lazy or a bare
-// promise-as-element) resolved to something other than a class or function.
-// Ambiguous — see the module comment above for why this is not definitive.
-const AMBIGUOUS_LAZY_INVARIANT_PATTERN = /minified react error #(?:283|306)\b/i;
-
-function errorText(value: unknown): string {
-  if (value instanceof Error) {
-    return `${value.name} ${value.message}`;
-  }
-  if (typeof value === 'string') {
-    return value;
-  }
-  return String(value ?? '');
-}
-
-/** True for a definitive OR ambiguous stale-chunk shape — use this to decide whether to reload. */
-export function isStaleChunkLoadFailure(value: unknown): boolean {
-  const text = errorText(value);
-  return (
-    DEFINITIVE_STALE_CHUNK_PATTERNS.some((pattern) => pattern.test(text)) ||
-    AMBIGUOUS_LAZY_INVARIANT_PATTERN.test(text)
-  );
-}
-
-/**
- * True only for the patterns that can *only* mean a stale chunk. Use this to
- * decide whether to also skip reporting to Issue Manager — the ambiguous
- * #283/#306 case should still reload (see `isStaleChunkLoadFailure`) but
- * keeps being reported, since it can also be a genuine miswiring bug that a
- * reload will not fix and that would otherwise go completely unreported.
- */
-export function isDefinitiveStaleChunkLoadFailure(value: unknown): boolean {
-  const text = errorText(value);
-  return DEFINITIVE_STALE_CHUNK_PATTERNS.some((pattern) => pattern.test(text));
-}
 
 let reloadPending = false;
 

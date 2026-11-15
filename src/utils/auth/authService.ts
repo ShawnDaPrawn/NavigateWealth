@@ -185,7 +185,11 @@ export async function authenticateWithPassword(
       refreshToken: result.session.refresh_token,
     };
   } catch (error) {
-    console.error('❌ Exception in signIn:', error);
+    // A wrong password is the ordinary outcome of this form. Logging it
+    // filed an Issues-panel row for every failed attempt.
+    if (!(error instanceof AuthError && error.code === 'invalid_credentials')) {
+      console.error('❌ Exception in signIn:', error);
+    }
     if (error instanceof AuthError) throw error;
     throw parseAuthError(error);
   }

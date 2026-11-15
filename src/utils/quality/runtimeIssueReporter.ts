@@ -11,10 +11,12 @@
  *     object passed to `console.error(...)`. Most failures in this app are
  *     caught, logged and turned into a toast; before this they never reached
  *     the dashboard even though the user saw them fail;
- *   - API failures the server cannot report itself: network failures and
- *     gateway 5xx responses (function crashed, timed out or out of memory) —
- *     recognisable because they lack our `x-request-id` header. 5xx answers
- *     our own function produced are recorded server-side, not here;
+ *   - API failures the server cannot report itself: gateway 5xx responses
+ *     (function crashed, timed out or ran out of CPU) — recognisable because
+ *     they lack our `x-request-id` header. A thrown "Failed to fetch" is not
+ *     filed here; the API client retries it, and the query layer reports the
+ *     error the user was left with. 5xx answers our own function produced
+ *     are recorded server-side, not here;
  *   - errors raised while SIGNED OUT (public site, login, e-sign signer),
  *     through a rate-limited public ingest route.
  *
@@ -28,6 +30,8 @@
 import { supabaseUrl } from '../supabase/info';
 import { createClient } from '../supabase/client';
 import { setLoggerErrorSink } from '../logger';
+import { isDefinitiveStaleChunkLoadFailure } from '../../shared/quality/staleChunk';
+import { shouldDropLoopbackReport } from '../../shared/quality/runtimeNoise';
 import { isAutomatedUserAgent } from '../../shared/quality/automatedUserAgent';
 
 const API_BASE = `${supabaseUrl}/functions/v1/make-server-91ed8379`;
@@ -189,6 +193,11 @@ export async function reportRuntimeClientIssue(issue: RuntimeClientIssueInput): 
   if (isAutomatedUserAgent(window.navigator?.userAgent)) {
     return;
   }
+  // `vite preview` is a production build on localhost. Headless runs of it
+  // were the publications "Failed to fetch" issue (87 occurrences).
+  if (shouldDropLoopbackReport(import.meta.env.PROD, window.location.hostname)) {
+    return;
+  }
   if (!shouldSend(issue)) {
     return;
   }
@@ -258,17 +267,30 @@ export function runtimeIssueFromUnknown(
 // Handled errors (logger.error / console.error)
 // ----------------------------------------------------------------------------
 
-/** Errors that are expected in normal use and not worth an issue. */
-function isExpectedError(error: unknown): boolean {
+/**
+ * Errors that are expected in normal use and not worth an issue.
+ * Exported so the React Query cache can stay quiet for the same cases.
+ */
+export function isExpectedClientError(error: unknown): boolean {
+  if (isDefinitiveStaleChunkLoadFailure(error)) return true;
   if (!error || typeof error !== 'object') return false;
-  const { name, statusCode, status } = error as {
+  const { name, statusCode, status, code, message } = error as {
     name?: string;
     statusCode?: number;
     status?: number;
+    code?: string;
+    message?: unknown;
   };
   if (name === 'AbortError') return true;
   // Session expiry is handled by the auth layer and self-heals on re-login.
-  return statusCode === 401 || status === 401;
+  if (statusCode === 401 || status === 401) return true;
+  // A wrong password on the login page. The server says "Invalid credentials".
+  if (code === 'invalid_credentials') return true;
+  const text = typeof message === 'string' ? message : '';
+  if (/invalid credentials|incorrect username or password/i.test(text)) return true;
+  // Staff accounts are refused on purpose. The client tab explains it.
+  if (text.includes('Cannot open Ask Vasco for staff accounts')) return true;
+  return false;
 }
 
 function describeContext(parts: unknown[]): string | undefined {
@@ -286,7 +308,7 @@ function describeContext(parts: unknown[]): string | undefined {
  * becomes the issue's headline, which is why it matters so much for labels.
  */
 export function reportHandledError(context: string | undefined, error: unknown): void {
-  if (wasErrorReported(error) || isExpectedError(error)) return;
+  if (wasErrorReported(error) || isExpectedClientError(error)) return;
   if (!(error instanceof Error) && !context) return;
   markErrorReported(error);
 
@@ -401,17 +423,10 @@ function instrumentFetch(): void {
       return response;
     } catch (error) {
       addBreadcrumb(`api ${method} ${path} → network error`);
-      const aborted = error instanceof Error && error.name === 'AbortError';
-      if (!aborted && navigator.onLine !== false) {
-        markErrorReported(error);
-        void reportRuntimeClientIssue({
-          kind: 'api-failure',
-          title: error instanceof Error ? error.name : 'NetworkError',
-          message: error instanceof Error ? error.message : 'Network request failed',
-          method,
-          path,
-        });
-      }
+      // Do not file this TypeError. The API client retries "Failed to fetch",
+      // and when the retry also fails the query or mutation reports the error
+      // the user was actually left with. Filing the first attempt opened
+      // issues for calls the server had already answered 200.
       throw error;
     }
   };

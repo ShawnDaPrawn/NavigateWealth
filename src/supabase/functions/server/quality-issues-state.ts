@@ -30,6 +30,7 @@ import {
   normalizeWorkflowMap,
 } from './quality-issues-normalize.ts';
 import { reopenRecurringWorkflows, runIssueAutomation } from './quality-issues-automation.ts';
+import { isSuppressedRuntimeIssue } from '../../../shared/quality/runtimeNoise.ts';
 
 const log = createModuleLogger('quality-issues');
 
@@ -166,7 +167,9 @@ export function combineSnapshots(
     ...ciIssues,
     ...normalizedRuntimeIssues,
     ...normalizedSecurityIssues,
-  ]).map((issue) => applyQualityIssueWorkflow(issue, workflowState[issue.fingerprint]));
+  ])
+    .map((issue) => applyQualityIssueWorkflow(issue, workflowState[issue.fingerprint]))
+    .filter((issue) => !isSuppressedRuntimeIssue(issue));
 
   return {
     ...ciSnapshot,
