@@ -64,6 +64,13 @@ describe('isSuppressedRuntimeIssue', () => {
         title: 'Failed to publish',
       }),
     ).toBe(false);
+    expect(
+      isSuppressedRuntimeIssue({
+        ruleId: 'api-failure',
+        message: 'POST /requests/req-1/submit did not get a response: Failed to fetch',
+        title: 'POST /requests/req-1/submit failed: Network request failed',
+      }),
+    ).toBe(false);
   });
 });
 

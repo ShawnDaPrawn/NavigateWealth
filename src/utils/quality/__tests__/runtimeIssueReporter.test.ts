@@ -30,6 +30,7 @@ import {
   reportRuntimeClientIssue,
   runtimeIssueFromUnknown,
 } from '../runtimeIssueReporter';
+import { ownRetryFetch } from '../fetchRetryOwnership';
 import { logger } from '../../logger';
 
 // ── runtimeIssueFromUnknown ───────────────────────────────────────────────────
@@ -288,9 +289,29 @@ describe('installRuntimeIssueCapture', () => {
     upstream.mockImplementationOnce(async () => {
       throw new TypeError('Failed to fetch');
     });
-    await expect(window.fetch(`${API}/admin/stats`)).rejects.toThrow('Failed to fetch');
+    await expect(window.fetch(`${API}/admin/stats`, ownRetryFetch({}))).rejects.toThrow(
+      'Failed to fetch',
+    );
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(reports).toHaveLength(0);
+    const forwarded = upstream.mock.calls[0]?.[1] as RequestInit | undefined;
+    expect(forwarded && Object.getOwnPropertySymbols(forwarded)).toEqual([]);
+  });
+
+  it('reports a Failed to fetch from a caller that does not retry', async () => {
+    upstream.mockImplementationOnce(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    await expect(window.fetch(`${API}/requests/req-1/submit`, { method: 'POST' })).rejects.toThrow(
+      'Failed to fetch',
+    );
+    await vi.waitFor(() => expect(reports).toHaveLength(1));
+    expect(reports[0]).toMatchObject({
+      kind: 'api-failure',
+      method: 'POST',
+      path: '/requests/req-1/submit',
+      message: 'POST /requests/req-1/submit did not get a response: Failed to fetch',
+    });
   });
 
   it('leaves 5xx answers from our own function to the server-side recorder', async () => {

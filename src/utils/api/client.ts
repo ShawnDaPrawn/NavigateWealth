@@ -10,6 +10,7 @@
 
 import { supabaseUrl } from '../supabase/info';
 import { createClient } from '../supabase/client';
+import { ownRetryFetch } from '../quality/fetchRetryOwnership';
 
 /**
  * Custom event dispatched when the API client detects the auth session is
@@ -255,7 +256,7 @@ class APIClient {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const response = await fetch(url, config);
+        const response = await fetch(url, ownRetryFetch(config));
 
         // Handle 204 No Content
         if (response.status === 204) {

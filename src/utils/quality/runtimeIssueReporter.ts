@@ -13,10 +13,11 @@
  *     the dashboard even though the user saw them fail;
  *   - API failures the server cannot report itself: gateway 5xx responses
  *     (function crashed, timed out or ran out of CPU) — recognisable because
- *     they lack our `x-request-id` header. A thrown "Failed to fetch" is not
- *     filed here; the API client retries it, and the query layer reports the
- *     error the user was left with. 5xx answers our own function produced
- *     are recorded server-side, not here;
+ *     they lack our `x-request-id` header — and a network error on a fetch
+ *     the caller does not retry. The API client marks its own fetches
+ *     (`ownRetryFetch`): it retries "Failed to fetch" and the query layer
+ *     reports the error the user was left with. 5xx answers our own function
+ *     produced are recorded server-side, not here;
  *   - errors raised while SIGNED OUT (public site, login, e-sign signer),
  *     through a rate-limited public ingest route.
  *
@@ -32,6 +33,7 @@ import { createClient } from '../supabase/client';
 import { setLoggerErrorSink } from '../logger';
 import { isDefinitiveStaleChunkLoadFailure } from '../../shared/quality/staleChunk';
 import { shouldDropLoopbackReport } from '../../shared/quality/runtimeNoise';
+import { isRetryOwnedFetch, withoutRetryOwnership } from './fetchRetryOwnership';
 import { isAutomatedUserAgent } from '../../shared/quality/automatedUserAgent';
 
 const API_BASE = `${supabaseUrl}/functions/v1/make-server-91ed8379`;
@@ -404,8 +406,10 @@ function instrumentFetch(): void {
     if (!path) return original(input, init);
 
     const method = requestMethod(input, init);
+    const retryOwned = isRetryOwnedFetch(init);
+    const forwarded = withoutRetryOwnership(init);
     try {
-      const response = await original(input, init);
+      const response = await original(input, forwarded);
       addBreadcrumb(`api ${method} ${path} → ${response.status}`);
       // A 5xx WITHOUT our request id was produced by the platform in front of
       // the function (crash, timeout, out of memory) — the server never saw it.
@@ -423,10 +427,23 @@ function instrumentFetch(): void {
       return response;
     } catch (error) {
       addBreadcrumb(`api ${method} ${path} → network error`);
-      // Do not file this TypeError. The API client retries "Failed to fetch",
-      // and when the retry also fails the query or mutation reports the error
-      // the user was actually left with. Filing the first attempt opened
-      // issues for calls the server had already answered 200.
+      const aborted = error instanceof Error && error.name === 'AbortError';
+      // The API client owns these: it retries, and reports the failure the
+      // user was left with. Every other caller (a form that only toasts, a
+      // section that hides itself) has no second report.
+      if (!retryOwned && !aborted && navigator.onLine !== false) {
+        markErrorReported(error);
+        const detail = error instanceof Error ? error.message : 'Network request failed';
+        void reportRuntimeClientIssue({
+          kind: 'api-failure',
+          title: error instanceof Error ? error.name : 'NetworkError',
+          // Not the bare "Failed to fetch". Ingest drops that exact string:
+          // it is the pre-retry blip old bundles still send.
+          message: `${method} ${path} did not get a response: ${detail}`,
+          method,
+          path,
+        });
+      }
       throw error;
     }
   };
