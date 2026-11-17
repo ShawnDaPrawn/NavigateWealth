@@ -35,11 +35,8 @@ vi.mock('../esign-storage.ts', () => ({
 
 import { kvStore } from './helpers/contract-harness.ts';
 import { EsignKeys } from '../esign-keys.ts';
-import {
-  addFieldsToEnvelope,
-  getEnvelopeDetails,
-  remapFieldReferences,
-} from '../esign-services.ts';
+import { addFieldsToEnvelope, getEnvelopeDetails } from '../esign-services.ts';
+import { remapFieldReferences } from '../../../../shared/esign/fieldReferences.ts';
 import { createTemplateFromEnvelope } from '../esign-template-service.ts';
 import type { EsignField } from '../esign-types.ts';
 

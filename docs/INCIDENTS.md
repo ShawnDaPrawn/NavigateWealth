@@ -14,6 +14,43 @@ that changes behaviour next time. An entry without a lesson is just a story.
 
 events that future agents could repeat.
 
+### 2026-11-17 - Merged E-Sign Fixes (#517) Sat Undeployed: Supabase Deploy API Answered 500 Twelve Times
+
+- **Symptom:** `Deploy Supabase Edge Function` run 309 (#517, `45ad0fb`)
+  failed all three attempts with
+  `500 {"message":"Function deploy failed due to an internal error"}`. Three
+  reruns over 45 minutes failed the same way: twelve attempts, twelve 500s.
+  Production stayed on #516 (version 1395), healthy; only #517's backend
+  changes were missing. The SPA had already shipped #517 and degrades
+  cleanly against the older backend (`completed_fields ?? []`).
+- **What was ruled out, locally:** payload size (3.90 MB stripped, identical
+  to the last green deploy; the 5 MB limit answers 413, not 500); module
+  resolution (`deno info` on the stripped tree: 581 modules, 0 errors, the
+  new `src/shared/esign/fieldReferences.ts` uploaded once); types
+  (`deno check` 0 errors); boot (the stripped tree starts under Deno in ~1 s
+  and answers `/health`); and every construct #517 introduced already ships
+  elsewhere in the live graph.
+- **What the logs show:** the same opaque 500 has hit this pipeline before.
+  Run 305 (#504, 14 Nov) failed all three attempts; runs 307 and 308 (#515,
+  #516, earlier on 17 Nov) each needed a retry. Every failing attempt ends
+  14-16 s after the upload; every success takes ~21 s. Redeploying the
+  already-live #516 revision (run 311) succeeded first try between two of
+  #517's failing reruns, so the failure is tied to the tree being deployed,
+  not only to the time of day. Supabase returns no detail, so the root cause
+  on their side is not established.
+- **Why it was not caught:** nothing before the deploy exercises Supabase's
+  server-side bundling; every local gate passed. Three attempts 15-30 s
+  apart were also too few to ride out a flaky endpoint.
+- **Fix:** the deploy step now makes six attempts with 20-100 s spacing
+  (~5.5 min), and the redundant re-export of `remapFieldReferences` from
+  `esign-services.ts` was removed, which changes the tree the pipeline sees.
+- **Lesson:** a red deploy after a green Quality Check is not "CI flakiness"
+  to rerun once and forget. Rerun it, and if it fails again, redeploy the
+  last green revision through the workflow's `revision` input. If that
+  passes while the new revision keeps failing, the trigger is in the new
+  tree and retries alone will not ship it. Check the deploy run after every
+  merge; this one was found by a scheduled check, not by the merge.
+
 ### 2026-11-17 - E-Sign Could Not Complete An Envelope End To End; Every Layer's Tests Passed
 
 - **Symptom:** The owner reported prepare-screen problems (fields that could

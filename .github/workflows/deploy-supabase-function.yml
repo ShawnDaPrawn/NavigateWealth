@@ -80,7 +80,7 @@ jobs:
           # the stripper landing and that move as having no stripper, and deploy
           # its payload unstripped — those are exactly the revisions that need
           # it, because their upload exceeds Supabase's 5 MB limit. An emergency
-          # rollback would then fail all three deploy attempts.
+          # rollback would then fail every deploy attempt.
           STRIP=""
           for candidate in ./scripts/build/strip-edge-function.mjs ./scripts/strip-edge-function.mjs; do
             if [ -f "$candidate" ]; then STRIP="$candidate"; break; fi
@@ -111,20 +111,34 @@ jobs:
           # --yes: Supabase CLI 3.1.0 (this job installs `latest`) asks to confirm
           # a production deploy and, with no terminal, exits "Nothing was changed"
           # instead of deploying. That failed run 302 (#493) on all three attempts.
+          #
+          # Six attempts over ~5.5 minutes, not three over 45 seconds. Supabase's
+          # deploy endpoint intermittently answers
+          #   500 {"message":"Function deploy failed due to an internal error"}
+          # about 15 s after the upload, for code that resolves and type-checks
+          # cleanly and deploys unchanged on a later try (a success takes ~21 s).
+          # Run 305 (14 Nov) failed all three; runs 307 and 308 (17 Nov) needed
+          # a second and a third; run 309 failed nine in a row across three
+          # reruns over 45 minutes. Three quick tries were not enough to ride it
+          # out, and every miss left a merged change undeployed until someone
+          # noticed. A longer, spaced-out budget costs nothing when the first
+          # attempt succeeds.
+          max=6
           status=0
-          for attempt in 1 2 3; do
-            echo "Deploy attempt $attempt of 3"
-            if [ "$attempt" -eq 3 ]; then
+          for attempt in $(seq 1 "$max"); do
+            echo "Deploy attempt $attempt of $max"
+            if [ "$attempt" -eq "$max" ]; then
               supabase --debug functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . --yes && exit 0
             else
               supabase functions deploy make-server-91ed8379 --project-ref vpjmdsltwrnpefzcgdmz --use-api --workdir . --yes && exit 0
             fi
             status=$?
-            if [ "$attempt" -lt 3 ]; then
-              sleep $((attempt * 15))
+            if [ "$attempt" -lt "$max" ]; then
+              # 20, 40, 60, 80, 100 seconds.
+              sleep $((attempt * 20))
             fi
           done
-          echo "::error::Supabase Edge Function deploy failed after 3 attempts."
+          echo "::error::Supabase Edge Function deploy failed after $max attempts."
           exit "$status"
 
       # Blocking smoke (roadmap §8.1 / A8). Health must be 200; gated routes
