@@ -7,13 +7,13 @@
  * sign/reject endpoints these once wrapped took no credential and were removed.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { esignApi } from '../api';
 import { logger } from '../../../../../utils/logger';
 import type {
   UploadDocumentRequest,
   SendInvitesRequest,
-  SaveTemplateRequest,
   EsignEnvelope,
   EsignField,
 } from '../types';
@@ -22,14 +22,16 @@ interface UseEnvelopeActionsReturn {
   uploading: boolean;
   uploadError: string | null;
   uploadDocument: (request: UploadDocumentRequest) => Promise<EsignEnvelope | null>;
+  /**
+   * The message from the last failed upload. `uploadError` is state, so a
+   * caller that awaited `uploadDocument` still sees the old value; this reads
+   * the one just set.
+   */
+  getLastUploadError: () => string | null;
 
   sending: boolean;
   sendError: string | null;
   sendInvites: (envelopeId: string, request: SendInvitesRequest) => Promise<boolean>;
-
-  savingTemplate: boolean;
-  templateError: string | null;
-  saveAsTemplate: (envelopeId: string, request: SaveTemplateRequest) => Promise<boolean>;
 
   savingFields: boolean;
   saveFieldsError: string | null;
@@ -51,14 +53,11 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
   // Upload state
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const lastUploadErrorRef = useRef<string | null>(null);
 
   // Send state
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-
-  // Template state
-  const [savingTemplate, setSavingTemplate] = useState(false);
-  const [templateError, setTemplateError] = useState<string | null>(null);
 
   // Delete state
   const [deleting, setDeleting] = useState(false);
@@ -74,6 +73,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
   // ==================== UPLOAD DOCUMENT ====================
 
   const uploadDocument = async (request: UploadDocumentRequest): Promise<EsignEnvelope | null> => {
+    lastUploadErrorRef.current = null;
     setUploading(true);
     setUploadError(null);
 
@@ -84,7 +84,8 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
         });
       } else {
         logger.error('📤 Upload aborted: No files provided in request');
-        setUploadError('No files provided. Please select at least one document.');
+        lastUploadErrorRef.current = 'No files provided. Please select at least one document.';
+        setUploadError(lastUploadErrorRef.current);
         return null;
       }
       const response = await esignApi.uploadDocument(request);
@@ -99,6 +100,7 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Upload failed';
       logger.error('❌ Upload error:', errorMessage);
+      lastUploadErrorRef.current = errorMessage;
       setUploadError(errorMessage);
       return null;
     } finally {
@@ -124,30 +126,6 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
       return false;
     } finally {
       setSending(false);
-    }
-  };
-
-  // ==================== SAVE AS TEMPLATE ====================
-
-  const saveAsTemplate = async (
-    envelopeId: string,
-    request: SaveTemplateRequest,
-  ): Promise<boolean> => {
-    setSavingTemplate(true);
-    setTemplateError(null);
-
-    try {
-      logger.debug('💾 Saving envelope as template:', { envelopeId });
-      await esignApi.saveAsTemplate(envelopeId, request);
-      logger.debug('✅ Template saved successfully');
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save template';
-      logger.error('❌ Template error:', errorMessage);
-      setTemplateError(errorMessage);
-      return false;
-    } finally {
-      setSavingTemplate(false);
     }
   };
 
@@ -225,6 +203,9 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
       await esignApi.downloadDocument(envelopeId, filename);
     } catch (err) {
       logger.error('❌ Download error:', err);
+      // Every caller awaited this and showed nothing, so a failed download
+      // looked like a click that did nothing.
+      toast.error('The document could not be downloaded. Please try again.');
     } finally {
       setDownloading(false);
     }
@@ -234,14 +215,11 @@ export function useEnvelopeActions(): UseEnvelopeActionsReturn {
     uploading,
     uploadError,
     uploadDocument,
+    getLastUploadError: () => lastUploadErrorRef.current,
 
     sending,
     sendError,
     sendInvites,
-
-    savingTemplate,
-    templateError,
-    saveAsTemplate,
 
     savingFields,
     saveFieldsError,

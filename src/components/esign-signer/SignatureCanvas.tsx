@@ -281,8 +281,22 @@ export function SignatureCanvas({
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      setUploadedImage(event.target?.result as string);
-      setHasContent(true);
+      const dataUrl = event.target?.result as string;
+      // The signed PDF can only embed PNG and JPEG; anything else (WebP,
+      // GIF…) printed as a grey "[Signature]". Convert it to PNG here.
+      if (/^data:image\/(png|jpe?g)/i.test(dataUrl)) {
+        setUploadedImage(dataUrl);
+        setHasContent(true);
+        return;
+      }
+      void toPngDataUrl(dataUrl).then((png) => {
+        if (!png) {
+          alert('That image could not be read. Please upload a PNG or JPG.');
+          return;
+        }
+        setUploadedImage(png);
+        setHasContent(true);
+      });
     };
     reader.readAsDataURL(file);
   };
@@ -315,13 +329,13 @@ export function SignatureCanvas({
     if (signatureMode === 'draw') {
       const canvas = drawCanvasRef.current;
       if (!canvas || isCanvasEmpty(canvas)) return;
-      onSave(canvas.toDataURL('image/png'));
+      onSave(trimmedPng(canvas));
       return;
     }
     if (signatureMode === 'type') {
       const canvas = typeCanvasRef.current;
       if (!canvas || !typedText.trim()) return;
-      onSave(canvas.toDataURL('image/png'));
+      onSave(trimmedPng(canvas));
       return;
     }
     if (signatureMode === 'upload') {
@@ -622,4 +636,67 @@ export function SignatureCanvas({
       </div>
     </div>
   );
+}
+
+/**
+ * The canvas as a PNG cropped to the ink, with a small margin. The whole pad
+ * used to be exported, empty margins included, so once the signature was
+ * fitted into a field box the actual strokes came out small.
+ */
+function trimmedPng(canvas: HTMLCanvasElement): string {
+  try {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas.toDataURL('image/png');
+    const { width, height } = canvas;
+    const data = ctx.getImageData(0, 0, width, height).data;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (data[(y * width + x) * 4 + 3] > 8) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) return canvas.toDataURL('image/png');
+    const pad = Math.round(Math.max(width, height) * 0.02);
+    const sx = Math.max(0, minX - pad);
+    const sy = Math.max(0, minY - pad);
+    const sw = Math.min(width, maxX + pad + 1) - sx;
+    const sh = Math.min(height, maxY + pad + 1) - sy;
+    const out = document.createElement('canvas');
+    out.width = sw;
+    out.height = sh;
+    out.getContext('2d')?.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    return out.toDataURL('image/png');
+  } catch {
+    return canvas.toDataURL('image/png');
+  }
+}
+
+/** Re-encode any browser-readable image as PNG; null if it cannot be read. */
+function toPngDataUrl(dataUrl: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth || img.width;
+        c.height = img.naturalHeight || img.height;
+        const ctx = c.getContext('2d');
+        if (!ctx || !c.width || !c.height) return resolve(null);
+        ctx.drawImage(img, 0, 0);
+        resolve(c.toDataURL('image/png'));
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
 }

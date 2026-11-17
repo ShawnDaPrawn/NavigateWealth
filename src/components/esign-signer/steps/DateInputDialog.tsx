@@ -10,6 +10,7 @@ import {
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
+import { sastIsoDate } from '../../../shared/esign/fieldText';
 
 interface DateInputDialogProps {
   open: boolean;
@@ -54,7 +55,8 @@ export function DateInputDialog({
               variant="link"
               size="sm"
               className="text-indigo-600 p-0 h-auto"
-              onClick={() => onDateInputChange(new Date().toISOString().split('T')[0])}
+              // South African date: the UTC one is yesterday before 02:00 SAST.
+              onClick={() => onDateInputChange(sastIsoDate())}
             >
               Use today's date
             </Button>

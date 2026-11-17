@@ -29,6 +29,8 @@ import {
   Edit2,
   X,
   GripVertical,
+  ChevronUp,
+  ChevronDown,
   UserCheck,
   Info,
   ExternalLink,
@@ -58,6 +60,12 @@ interface RecipientsManagerProps {
   disabled?: boolean;
   /** When set, the client is auto-added as first signer on mount (removable). */
   clientContext?: ClientContext;
+  /**
+   * How the envelope routes. The help text below always described sequential
+   * signing ("notified once the previous signer completes"), even for
+   * envelopes sent to everyone at once.
+   */
+  signingMode?: 'sequential' | 'parallel';
 }
 
 import { RecipientAddForm, type AddMode, type SystemClient } from './RecipientAddForm';
@@ -81,6 +89,7 @@ export function RecipientsManager({
   onChange,
   disabled = false,
   clientContext,
+  signingMode = 'sequential',
 }: RecipientsManagerProps) {
   // UI state
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -362,6 +371,18 @@ export function RecipientsManager({
     setDraggedIndex(index);
   };
 
+  /**
+   * Move a recipient one place up or down. Reordering was drag-only, which
+   * cannot be done with a keyboard and rarely works on a touch screen.
+   */
+  const moveSigner = (index: number, delta: -1 | 1) => {
+    const target = index + delta;
+    if (target < 0 || target >= signers.length) return;
+    const items = [...signers];
+    [items[index], items[target]] = [items[target], items[index]];
+    onChange(items.map((s, i) => ({ ...s, order: i + 1 })));
+  };
+
   // ==================== RENDER ====================
 
   const canAddMore = signers.length < CURRENT_MAX_SIGNERS;
@@ -564,11 +585,43 @@ export function RecipientsManager({
 
               {/* Actions */}
               {!disabled && (
-                <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity flex-wrap">
-                  <Button variant="ghost" size="sm" onClick={() => setEditingIndex(index)}>
+                <div className="flex items-center gap-1 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex-wrap">
+                  {signers.length > 1 && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveSigner(index, -1)}
+                        disabled={index === 0}
+                        aria-label={`Move ${signer.name || 'recipient'} up`}
+                      >
+                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => moveSigner(index, 1)}
+                        disabled={index === signers.length - 1}
+                        aria-label={`Move ${signer.name || 'recipient'} down`}
+                      >
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingIndex(index)}
+                    aria-label={`Edit ${signer.name || 'recipient'}`}
+                  >
                     <Edit2 className="h-4 w-4 text-gray-500" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(index)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(index)}
+                    aria-label={`Remove ${signer.name || 'recipient'}`}
+                  >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
                 </div>
@@ -642,8 +695,11 @@ export function RecipientsManager({
             <div className="text-sm text-gray-600">
               <p className="font-medium text-gray-700">Signing Order</p>
               <p className="mt-1">
-                Recipients will receive the document in the numbered order shown above.
-                {signers.length > 1 &&
+                {signingMode === 'parallel'
+                  ? 'Everyone is sent the document at the same time and can sign in any order.'
+                  : 'Recipients will receive the document in the numbered order shown above.'}
+                {signingMode !== 'parallel' &&
+                  signers.length > 1 &&
                   ' Each signer will be notified once the previous signer completes.'}
               </p>
             </div>

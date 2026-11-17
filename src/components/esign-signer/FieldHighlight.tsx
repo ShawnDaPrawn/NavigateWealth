@@ -13,7 +13,7 @@
  * the page, then the next brightest", which the styling above enforces.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { motion } from 'motion/react';
 import {
   Pen,
@@ -26,6 +26,7 @@ import {
   ChevronDown as ChevronDownIcon,
   CircleDot,
 } from 'lucide-react';
+import { fitFieldText, formatFieldDate } from '../../shared/esign/fieldText';
 
 interface FieldHighlightProps {
   field: {
@@ -103,16 +104,21 @@ export function FieldHighlight({
     format?: string;
     placeholder?: string;
     maxLength?: number;
+    minLength?: number;
     pattern?: string;
   };
+  // Inline editing skips the modal's validation, so it is only offered for
+  // free text with no rule to check. The studio writes 'free_text' (this
+  // used to test for 'plain' only), and a minimum length or pattern needs
+  // the modal's feedback.
+  const isFreeText = !meta.format || meta.format === 'plain' || meta.format === 'free_text';
   const inlineEligible =
     !inactive &&
     !locked &&
     !!onInlineCommit &&
     // Date always uses native picker — no validation friction
     (field.type === 'date' ||
-      // Text only when no format-driven masking is configured
-      (field.type === 'text' && (!meta.format || meta.format === 'plain')));
+      (field.type === 'text' && isFreeText && !meta.minLength && !meta.pattern));
 
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<string>(filledValue ?? '');
@@ -223,6 +229,25 @@ export function FieldHighlight({
   const widthPercent = (field.width / pageWidthPts) * 100;
   const heightPercent = (field.height / pageHeightPts) * 100;
 
+  // Text is sized by the SAME rule as the signed PDF (shared/esign/fieldText):
+  // one line, as large as fits the box, clipped at its edge. The size is in
+  // points; `cqh` (a percent of the field's own height — the field is a size
+  // container) turns it into pixels at whatever zoom the page is shown.
+  // It used to be a fixed 12px with an ellipsis, unrelated to what printed.
+  const textStyle = (text: string): CSSProperties => {
+    const fit = fitFieldText(text, field.width, field.height);
+    return {
+      fontSize: `${(fit.size / field.height) * 100}cqh`,
+      lineHeight: 1,
+      paddingLeft: `${(fit.offsetX / field.width) * 100}cqw`,
+      fontFamily: 'Helvetica, Arial, sans-serif',
+    };
+  };
+  const displayValue =
+    filledValue && (field.type === 'date' || field.type === 'auto_date')
+      ? formatFieldDate(filledValue)
+      : filledValue;
+
   // Determine what kind of preview to render in the filled state.
   const isImagePreview =
     isFilled &&
@@ -252,13 +277,12 @@ export function FieldHighlight({
   if (field.type === 'note') {
     return (
       <div
-        className="absolute rounded-md border border-amber-300/70 bg-amber-50/80 px-2 py-1 overflow-hidden pointer-events-none z-10"
+        className="absolute border border-amber-300/70 bg-amber-50/80 px-1 overflow-hidden pointer-events-none z-10"
         style={{
           left: `${leftPercent}%`,
           top: `${topPercent}%`,
           width: `${widthPercent}%`,
           height: `${heightPercent}%`,
-          minHeight: '24px',
         }}
         role="note"
         aria-label="Note from the sender"
@@ -276,13 +300,14 @@ export function FieldHighlight({
   if (inlineEligible && (isEditing || (!isFilled && isNextRequired))) {
     return (
       <div
-        className={`absolute rounded-md border-2 ${field.required ? 'border-amber-500 bg-amber-50' : 'border-gray-400 bg-white'} shadow-sm pointer-events-auto z-20 flex items-center px-1`}
+        className={`absolute border-2 ${field.required ? 'border-amber-500 bg-amber-50' : 'border-gray-400 bg-white'} shadow-sm pointer-events-auto z-20 flex items-center`}
         style={{
           left: `${field.x}%`,
           top: `${field.y}%`,
           width: `${widthPercent}%`,
-          height: `${heightPercent}%`,
-          minHeight: '32px',
+          // At least a usable typing height while editing; the field itself
+          // is drawn at its true size the rest of the time.
+          height: `max(${heightPercent}%, 28px)`,
         }}
       >
         <input
@@ -351,7 +376,7 @@ export function FieldHighlight({
           : {}
       }
       transition={shouldPulse ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : {}}
-      className={`absolute rounded-md transition-colors pointer-events-auto z-10 ${
+      className={`absolute transition-colors pointer-events-auto z-10 ${
         locked || inactive ? 'opacity-80' : 'cursor-pointer'
       } ${getFieldClasses()}`}
       style={{
@@ -359,36 +384,43 @@ export function FieldHighlight({
         top: `${topPercent}%`,
         width: `${widthPercent}%`,
         height: `${heightPercent}%`,
-        // Make every field at least a comfortable touch target visually,
-        // without changing its document-space position.
-        minHeight: '24px',
+        // Drawn at its TRUE size and with square corners, so it lines up with
+        // the printed box (a 24px minimum and rounded corners made small boxes
+        // look twice their size). The touch target is enlarged invisibly below.
+        containerType: 'size',
       }}
     >
+      {/* Invisible larger hit area for fingers; does not change the drawing. */}
+      <span aria-hidden className="absolute -inset-1.5 md:inset-0" />
       {/* Filled State: Signature/Initials Image Preview */}
       {isImagePreview && (
         <div className="absolute inset-0.5 flex items-center justify-center overflow-hidden">
           <img src={filledValue} alt="" className="max-h-full max-w-full object-contain" />
-          <div className="absolute top-0 right-0 bg-green-500 text-white rounded-bl-md p-0.5">
-            <Check className="h-2.5 w-2.5" />
+          <div className="absolute top-0 right-0 bg-green-500 text-white p-px">
+            <Check className="h-2 w-2" />
           </div>
         </div>
       )}
 
       {/* Filled State: Text/Date Preview */}
       {isTextPreview && (
-        <div className="absolute inset-0 flex items-center px-2 overflow-hidden">
-          <span className="text-xs text-gray-800 truncate font-medium">{filledValue}</span>
-          <div className="absolute top-0 right-0 bg-green-500 text-white rounded-bl-md p-0.5">
-            <Check className="h-2.5 w-2.5" />
-          </div>
+        <div className="absolute inset-0 flex items-center overflow-hidden whitespace-nowrap">
+          <span className="text-gray-900" style={textStyle(displayValue ?? '')}>
+            {displayValue}
+          </span>
+          {!locked && (
+            <div className="absolute top-0 right-0 bg-green-500 text-white p-px">
+              <Check className="h-2 w-2" />
+            </div>
+          )}
         </div>
       )}
 
       {/* Filled State: Checkbox */}
       {isCheckboxFilled && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-5 w-5 bg-green-500 rounded flex items-center justify-center">
-            <Check className="h-3.5 w-3.5 text-white" />
+          <div className="h-[85%] aspect-square bg-green-500 flex items-center justify-center">
+            <Check className="h-[80%] w-[80%] text-white" />
           </div>
         </div>
       )}
@@ -407,8 +439,15 @@ export function FieldHighlight({
         </div>
       )}
 
-      {/* Locked State */}
-      {locked && (
+      {/* Locked State — the label only when there is no value to show. A
+          locked prefill or calculated value used to have "Locked" printed
+          over it; now the value shows with a small lock in the corner. */}
+      {locked && isFilled && (
+        <div className="absolute top-0 right-0 bg-gray-400 text-white p-px" aria-hidden>
+          <Lock className="h-2 w-2" />
+        </div>
+      )}
+      {locked && !isFilled && (
         <div className="absolute inset-0 flex items-center justify-center p-1 overflow-hidden">
           <div className="flex items-center gap-1 text-[11px] font-medium text-gray-400">
             <Lock className="h-3 w-3" />

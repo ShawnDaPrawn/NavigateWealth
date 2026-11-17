@@ -42,11 +42,13 @@ export type { EsignWizardStepId } from './components/wizard';
 export { documentStepBlocker } from './components/documentStepModel';
 export {
   attachSignerIndexes,
+  deriveExpiryDays,
   signersFromResumedEnvelope,
   toDraftSignerPayload,
   toInviteSignerPayload,
 } from './wizardDerivations';
 export { withRecipientKeys } from './recipientIdentity';
+export { describeDraftDocumentSync, syncDraftDocuments } from './draftDocuments';
 export type { DocumentUploadValue } from './components/documentStepModel';
 
 // Presentational pieces reused by the client portal and the client e-sign tab

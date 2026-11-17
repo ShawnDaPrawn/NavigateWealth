@@ -50,6 +50,10 @@ import {
 const RECIPIENTS = [
   { name: 'Thandi Nkosi', email: 'thandi@example.co.za', role: 'Client', order: 1 },
 ];
+/** What a template keeps of RECIPIENTS: the slot, not the person. */
+const RECIPIENT_SLOTS = [
+  { name: 'Thandi Nkosi', email: '', role: 'Client', order: 1, otpRequired: false },
+];
 const FIELDS = [{ type: 'signature', page: 1, x: 100, y: 200, recipientIndex: 0 }];
 
 const newTemplate = (overrides: Record<string, unknown> = {}) =>
@@ -277,7 +281,38 @@ describe('updateTemplate — the version rule', () => {
 
     const updated = await updateTemplate(template.id, { name: 'Same shape, new name' });
 
-    expect(updated).toMatchObject({ version: 1, recipients: RECIPIENTS, fields: FIELDS });
+    expect(updated).toMatchObject({ version: 1, recipients: RECIPIENT_SLOTS, fields: FIELDS });
+  });
+
+  it('never stores a recipient email or access code on a template', async () => {
+    // Templates kept the source envelope's emails and access codes, and every
+    // envelope made from one started pre-filled with that client. The name is
+    // kept: on a template it is the slot's label.
+    const template = await newTemplate({
+      recipients: [
+        {
+          name: 'Client',
+          email: 'x@x.co',
+          role: 'Client',
+          order: 1,
+          accessCode: '1234',
+          otpRequired: true,
+          kind: 'signer',
+        },
+      ],
+    });
+    expect(template.recipients).toEqual([
+      { name: 'Client', email: '', role: 'Client', order: 1, otpRequired: true, kind: 'signer' },
+    ]);
+
+    const updated = await updateTemplate(template.id, {
+      recipients: [
+        { name: 'Spouse', email: 'y@x.co', role: 'Spouse', order: 1, otpRequired: false },
+      ],
+    } as Partial<EsignTemplateRecord>);
+    expect(updated?.recipients).toEqual([
+      { name: 'Spouse', email: '', role: 'Spouse', order: 1, otpRequired: false },
+    ]);
   });
 
   it('keeps bumping across successive changes and records each snapshot', async () => {

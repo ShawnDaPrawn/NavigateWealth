@@ -485,7 +485,10 @@ describe('templates on the v1 surface', () => {
     const t = await makeTemplate();
     const { templates } = await json(await call('GET', '/v1/templates', { token: tokenB }));
     expect(templates.map((x: any) => x.id)).toEqual([t.id]);
-    expect(templates[0].recipients[0].email).toBe('client@example.com');
+    // Templates no longer store recipient emails (toRecipientSlots), so the
+    // cross-firm listing still leaks the template, but no longer a client's
+    // email address with it.
+    expect(templates[0].recipients[0].email).toBe('');
   });
 
   it('ASSERTED NOT ENDORSED: serves another firm’s template detail to any API key', async () => {

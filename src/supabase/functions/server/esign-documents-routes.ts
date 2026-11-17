@@ -35,6 +35,7 @@ import {
   getEnvelopeSigners,
   logAuditEvent,
   addSignersToEnvelope,
+  clearDraftSigners,
   addFieldsToEnvelope,
 } from './esign-services.ts';
 import {
@@ -509,36 +510,6 @@ documentsRoutes.post(
       // Determine signing mode: sequential (default) or parallel
       const effectiveMode = signingMode || envelope.signing_mode || 'sequential';
 
-      // Add signers
-      const { signerIds, error: signerError } = await addSignersToEnvelope(
-        envelopeId,
-        signers.map((s: SignerRecord, _index: number) => ({
-          name: s.name,
-          email: s.email,
-          phone: s.phone,
-          role: s.role || 'Signer',
-          // P2.5 2.8 — pass through kind ('signer' | 'witness' | 'cc') so the
-          // audit trail tags witness attestations distinctly. Defaults to
-          // 'signer' inside addSignersToEnvelope when undefined.
-          kind: (s as { kind?: 'signer' | 'witness' | 'cc' }).kind,
-          // The wizard sends `otpRequired`; `requiresOtp` is the older name.
-          // Reading only `requiresOtp` meant unticking "Require OTP" did
-          // nothing — every recipient was asked for a code.
-          requiresOtp:
-            ((s as { requiresOtp?: boolean; otpRequired?: boolean }).requiresOtp ??
-              (s as { otpRequired?: boolean }).otpRequired) !== false,
-          accessCode: s.accessCode,
-          clientId: s.clientId,
-          // P5.1 — propagate SMS opt-in; only honoured on the server when a
-          // phone number is also present (see addSignersToEnvelope).
-          smsOptIn: (s as { smsOptIn?: boolean }).smsOptIn === true,
-        })),
-      );
-
-      if (signerError) {
-        return c.json({ error: signerError }, 500);
-      }
-
       // ── P3.3 + P3.4 — Materialise envelope at send-time ──
       // Two paths converge here:
       //   • Multi-document envelopes (P3.4): concatenate every document
@@ -576,13 +547,30 @@ documentsRoutes.post(
             },
           });
         } catch (matErr) {
-          log.warn(`Multi-doc materialisation failed (sending primary only): ${getErrMsg(matErr)}`);
+          // This used to send the PRIMARY document alone, with fields still
+          // numbered for the combined one, and report success. Nothing has
+          // been created or sent yet (signers are added after this), so fail
+          // the send cleanly instead.
+          log.error(`Multi-doc materialisation failed for ${envelopeId}: ${getErrMsg(matErr)}`);
+          return c.json(
+            {
+              error:
+                'The documents could not be combined for sending. Nothing was sent; please try again, or remove and re-add the document that fails.',
+            },
+            500,
+          );
         }
       } else {
         try {
           const manifest = await kv.get(EsignKeys.envelopeManifest(envelopeId));
           if (manifest && envelope?.document?.storage_path) {
-            const sourceBuffer = await downloadDocument(envelope.document.storage_path);
+            // Always from the ORIGINAL file: a send that failed after this
+            // step left storage_path on the already-edited copy, and a retry
+            // re-applied the page edits to it (pages reordered twice).
+            const sourcePath =
+              (envelope.document as { original_storage_path?: string }).original_storage_path ??
+              envelope.document.storage_path;
+            const sourceBuffer = await downloadDocument(sourcePath);
             if (sourceBuffer) {
               const result = await applyManifest(sourceBuffer, manifest);
               // Upload the materialised PDF under a deterministic path so we
@@ -641,6 +629,45 @@ documentsRoutes.post(
           // is lost but the envelope is still sendable.
           log.warn(`Manifest materialisation failed (sending original): ${getErrMsg(matErr)}`);
         }
+      }
+
+      // A send that failed after creating its signers left the envelope a
+      // draft; the retry appended the same recipients again. Start clean.
+      const clearedSigners = await clearDraftSigners(envelopeId);
+      if (clearedSigners > 0) {
+        log.warn(
+          `Cleared ${clearedSigners} signer(s) left by an earlier, failed send of ${envelopeId}`,
+        );
+      }
+
+      // Add signers
+      const { signerIds, error: signerError } = await addSignersToEnvelope(
+        envelopeId,
+        signers.map((s: SignerRecord, _index: number) => ({
+          name: s.name,
+          email: s.email,
+          phone: s.phone,
+          role: s.role || 'Signer',
+          // P2.5 2.8 — pass through kind ('signer' | 'witness' | 'cc') so the
+          // audit trail tags witness attestations distinctly. Defaults to
+          // 'signer' inside addSignersToEnvelope when undefined.
+          kind: (s as { kind?: 'signer' | 'witness' | 'cc' }).kind,
+          // The wizard sends `otpRequired`; `requiresOtp` is the older name.
+          // Reading only `requiresOtp` meant unticking "Require OTP" did
+          // nothing — every recipient was asked for a code.
+          requiresOtp:
+            ((s as { requiresOtp?: boolean; otpRequired?: boolean }).requiresOtp ??
+              (s as { otpRequired?: boolean }).otpRequired) !== false,
+          accessCode: s.accessCode,
+          clientId: s.clientId,
+          // P5.1 — propagate SMS opt-in; only honoured on the server when a
+          // phone number is also present (see addSignersToEnvelope).
+          smsOptIn: (s as { smsOptIn?: boolean }).smsOptIn === true,
+        })),
+      );
+
+      if (signerError) {
+        return c.json({ error: signerError }, 500);
       }
 
       // Add fields if provided

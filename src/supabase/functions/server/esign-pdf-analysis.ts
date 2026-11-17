@@ -39,6 +39,7 @@
 import { PDFArray, PDFDict, PDFDocument, PDFPage, PDFRef } from 'npm:pdf-lib@1.17.1';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { pageFrame } from './esign-page-frame.ts';
 
 const log = createModuleLogger('esign-pdf-analysis');
 
@@ -346,8 +347,17 @@ export async function detectAcroformFields(buffer: Uint8Array): Promise<Analysis
     const widgets = await extractAcroformWidgets(buffer);
     const candidates: FieldCandidate[] = widgets.map((w, i) => {
       const page = pages[w.pageIndex] ?? pages[0];
-      const { width, height } = page.getSize();
-      return widgetToCandidate(w, width, height, i);
+      // Positions are stored against the page AS VIEWED (CropBox, turned by
+      // /Rotate). Widget rects are raw user space, so a rotated or cropped
+      // page used to put every suggestion in the wrong place.
+      const frame = pageFrame(page.getCropBox(), page.getRotation().angle);
+      const a = frame.toDisplay(w.rect[0], w.rect[1]);
+      const b = frame.toDisplay(w.rect[2], w.rect[3]);
+      const viewed: AcroformWidget = {
+        ...w,
+        rect: [Math.min(a.u, b.u), Math.min(a.v, b.v), Math.max(a.u, b.u), Math.max(a.v, b.v)],
+      };
+      return widgetToCandidate(viewed, frame.width, frame.height, i);
     });
     log.info(
       `AcroForm autodetect: ${candidates.length} candidate(s) from ${pages.length}-page PDF`,

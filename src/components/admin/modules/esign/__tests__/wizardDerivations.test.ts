@@ -139,6 +139,35 @@ describe('mapTemplateRecipientsToWizard', () => {
     });
     expect(out[1]).toMatchObject({ role: 'Adviser', order: 9, otpRequired: true });
   });
+
+  it("never copies a template's stored person into a new envelope", () => {
+    // Older templates were saved with the source envelope's recipients;
+    // copying them pre-filled every new envelope with the previous client.
+    const out = mapTemplateRecipientsToWizard(
+      template({
+        recipients: [
+          {
+            name: 'Previous Client',
+            email: 'previous@client.co',
+            role: 'Client',
+            order: 1,
+            otpRequired: true,
+            accessCode: '9999',
+            kind: 'signer',
+          },
+        ],
+      }),
+    );
+    expect(out[0]).toMatchObject({
+      name: '',
+      email: '',
+      accessCode: undefined,
+      role: 'Client',
+      order: 1,
+      otpRequired: true,
+      kind: 'signer',
+    });
+  });
 });
 
 describe('toDraftSignerPayload', () => {

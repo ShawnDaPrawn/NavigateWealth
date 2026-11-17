@@ -663,6 +663,7 @@ export function PrepareFormStudio({
           signers={signers}
           onSave={handleRecipientsSave}
           onClose={() => setShowRecipients(false)}
+          signingMode={settingsDraft.signingMode}
         />
       )}
       <div className={cn('flex flex-col h-full bg-gray-50', showRecipients && 'hidden')}>

@@ -206,8 +206,32 @@ vi.mock('../components/DocumentUploadStep', () => ({
 }));
 
 vi.mock('../components/RecipientsManager', () => {
-  const RecipientsManager = ({ signers }: { signers: unknown[] }) => (
-    <div data-testid="recipients-manager">{JSON.stringify(signers)}</div>
+  // "fill-recipients" stands in for the sender typing in each slot's person.
+  const RecipientsManager = ({
+    signers,
+    onChange,
+  }: {
+    signers: Array<Record<string, unknown>>;
+    onChange?: (next: Array<Record<string, unknown>>) => void;
+  }) => (
+    <div>
+      <div data-testid="recipients-manager">{JSON.stringify(signers)}</div>
+      <button
+        type="button"
+        data-testid="fill-recipients"
+        onClick={() =>
+          onChange?.(
+            signers.map((s, i) => ({
+              ...s,
+              name: ['Client', 'Adviser'][i] ?? 'Person',
+              email: ['client@x.co', 'adviser@x.co'][i] ?? 'p@x.co',
+            })),
+          )
+        }
+      >
+        fill
+      </button>
+    </div>
   );
   return { RecipientsManager, default: RecipientsManager };
 });
@@ -333,25 +357,23 @@ beforeEach(() => {
 // ── tests ────────────────────────────────────────────────────────────────────
 
 describe('EsignModule wizard flow', () => {
-  it('template with saved documents jumps straight to recipients, signers hydrated from the template', async () => {
+  it('template with saved documents jumps straight to recipients, as empty slots', async () => {
     await openTemplate('use-tpl-ready');
 
+    // The template still carries the source envelope's people (older
+    // templates were saved that way). They must NOT be copied into a new
+    // envelope: an express send went to the previous client.
     const signers = JSON.parse(screen.getByTestId('recipients-manager').textContent || '[]');
     expect(signers).toHaveLength(2);
     expect(signers[0]).toMatchObject({
-      name: 'Client',
-      email: 'client@x.co',
+      name: '',
+      email: '',
       role: 'Signer',
       order: 1,
       otpRequired: false,
       isSystemClient: false,
     });
-    expect(signers[1]).toMatchObject({
-      name: 'Adviser',
-      email: 'adviser@x.co',
-      order: 2,
-      otpRequired: true,
-    });
+    expect(signers[1]).toMatchObject({ name: '', email: '', order: 2, otpRequired: true });
   });
 
   it('template without saved documents goes to the upload step instead', async () => {
@@ -389,7 +411,7 @@ describe('EsignModule wizard flow', () => {
     fireEvent.click(screen.getByRole('button', { name: /send now \(express\)/i }));
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        'Each recipient needs an email before express send.',
+        'Add the name and email for "Signer" before sending.',
       );
     });
     expect(spies.materialiseTemplateDraft).not.toHaveBeenCalled();
@@ -397,6 +419,7 @@ describe('EsignModule wizard flow', () => {
 
   it('express send materialises the template draft, persists draft signers, and hydrates the field layout', async () => {
     await openTemplate('use-tpl-ready');
+    fireEvent.click(screen.getByTestId('fill-recipients'));
     fireEvent.click(screen.getByRole('button', { name: /send now \(express\)/i }));
 
     await waitFor(() => {

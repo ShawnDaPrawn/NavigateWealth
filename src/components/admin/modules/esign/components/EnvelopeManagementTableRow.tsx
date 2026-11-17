@@ -29,8 +29,7 @@ import { toast } from 'sonner';
 import { esignApi } from '../api';
 import {
   formatEnvelopeDate,
-  getDaysUntilExpiry,
-  isExpiringSoon,
+  expiryCell,
   getEnvelopeStatusColor,
   getEnvelopeStatusLabel,
 } from '../types';
@@ -66,8 +65,7 @@ export function EnvelopeManagementTableRow({
   actionsLayout = 'icons',
 }: EnvelopeManagementTableRowProps) {
   const progress = calculateSigningProgress(envelope);
-  const daysUntilExpiry = getDaysUntilExpiry(envelope.expires_at ?? null);
-  const expiringSoon = isExpiringSoon(envelope.expires_at ?? null);
+  const expiry = expiryCell(envelope.status, envelope.expires_at);
   const isDraft = envelope.status === 'draft';
   const isPending = ['sent', 'viewed', 'partially_signed'].includes(envelope.status);
   const isCompleted = envelope.status === 'completed';
@@ -174,21 +172,17 @@ export function EnvelopeManagementTableRow({
       </TableCell>
 
       <TableCell>
-        {envelope.expires_at ? (
-          <span
-            className={`text-xs ${
-              expiringSoon
-                ? 'text-amber-600 font-medium'
-                : daysUntilExpiry !== null && daysUntilExpiry <= 0
-                  ? 'text-red-600 font-medium'
-                  : 'text-muted-foreground'
-            }`}
-          >
-            {daysUntilExpiry !== null && daysUntilExpiry > 0 ? `${daysUntilExpiry}d` : 'Expired'}
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground">--</span>
-        )}
+        <span
+          className={`text-xs ${
+            expiry.tone === 'warning'
+              ? 'text-amber-600 font-medium'
+              : expiry.tone === 'danger'
+                ? 'text-red-600 font-medium'
+                : 'text-muted-foreground'
+          }`}
+        >
+          {expiry.label}
+        </span>
       </TableCell>
 
       <TableCell className="text-right pr-4">

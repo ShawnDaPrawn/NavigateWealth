@@ -76,6 +76,7 @@ type WorkflowPhase = 'reading' | 'signing';
 
 import { isValidSaId, maskSaId, inProgressKey } from './signingIdentity';
 import { useInProgressSignatures } from './useInProgressSignatures';
+import { sastIsoDate } from '../../shared/esign/fieldText';
 
 export function SigningWorkflow({
   token,
@@ -140,14 +141,10 @@ export function SigningWorkflow({
     );
     if (autoDateFields.length === 0) return;
 
-    const now = new Date().toLocaleDateString('en-ZA', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
+    // Today in South Africa, as the server will stamp it on submit (the
+    // server's date wins; this is the preview). It used the device's own
+    // clock and time zone, with the time appended.
+    const now = sastIsoDate();
 
     setSignatures((prev) => {
       const newEntries = autoDateFields
@@ -507,8 +504,10 @@ export function SigningWorkflow({
     (field: SignerField) => {
       const sig = signatures.find((s) => s.field_id === field.id);
       if (sig && (sig.value ?? '').trim() !== '') return true;
-      const meta = (field.metadata ?? {}) as { prefill?: { token?: string } };
-      if (meta.prefill?.token && (field.value ?? '').trim() !== '') return true;
+      // Any value the field arrived with counts: a prefill, or a default the
+      // sender typed. Only prefills counted, so a field showing the sender's
+      // default still blocked "Finish". (Sending now keeps those values.)
+      if ((field.value ?? '').trim() !== '') return true;
       return false;
     },
     [signatures],
@@ -582,14 +581,7 @@ export function SigningWorkflow({
           handleCheckboxToggle(field);
           break;
         case 'auto_date': {
-          const now = new Date().toLocaleDateString('en-ZA', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          });
+          const now = sastIsoDate();
           setSignatures((prev) => {
             const existing = prev.find((s) => s.field_id === field.id);
             if (existing)

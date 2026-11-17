@@ -676,18 +676,6 @@ describe('esignApi uploadDocument and saveAsTemplate', () => {
     expect(formData.getAll('files').length).toBe(2);
     expect(formData.get('context')).toContain('Multi-doc');
   });
-
-  it('saveAsTemplate posts to envelope templates endpoint', async () => {
-    const mockTemplate = { id: 'tmpl-001', name: 'My Template', envelopeId: 'env-001' };
-    mockApiPost.mockResolvedValue({ template: mockTemplate, templateId: 'tmpl-001' });
-    const result = await esignApi.saveAsTemplate('env-001', {
-      name: 'My Template',
-    } as never);
-    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/templates', {
-      name: 'My Template',
-    });
-    expect((result as unknown as { templateId: string }).templateId).toBe('tmpl-001');
-  });
 });
 
 describe('esignApi syncTemplateFromEnvelope', () => {

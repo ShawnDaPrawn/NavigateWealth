@@ -20,6 +20,5 @@ export { SigningProgressTimeline } from './SigningProgressTimeline';
 export { ReminderConfigPanel, SigningModeSelector } from './ReminderSettingsPanel';
 export { TemplateLibrary } from './TemplateLibrary';
 export { EditTemplateDialog } from './EditTemplateDialog';
-export { SaveAsTemplateDialog } from './SaveAsTemplateDialog';
 export { TemplatePickerDialog } from './TemplatePickerDialog';
 export { BulkRemindDialog, BulkVoidDialog } from './BulkActionDialogs';

@@ -628,6 +628,32 @@ export async function addSignersToEnvelope(
 }
 
 /**
+ * Remove every signer record from a DRAFT envelope, with their token index
+ * entries, so a send can start from a clean list.
+ *
+ * Sending appends signers. When a send failed after its signers were created
+ * (an email or storage error), the envelope stayed a draft and the retry
+ * appended the same people again: every recipient twice, two signing links
+ * each, and a completion that waited for the duplicates. Draft signers are
+ * never visible to anyone, so clearing them before a send is safe. The
+ * per-email and per-client envelope indexes are left alone: they list this
+ * envelope id, which the re-added signers point at again.
+ *
+ * Returns how many signer records were removed.
+ */
+export async function clearDraftSigners(envelopeId: string): Promise<number> {
+  const existing = await getEnvelopeSigners(envelopeId);
+  if (existing.length === 0) return 0;
+  const keys: string[] = [EsignKeys.envelopeSigners(envelopeId)];
+  for (const s of existing) {
+    keys.push(EsignKeys.PREFIX_SIGNER + s.id);
+    if (s.access_token) keys.push(EsignKeys.signerToken(s.access_token));
+  }
+  await kv.mdel(keys);
+  return existing.length;
+}
+
+/**
  * Get envelope signers
  */
 export async function getEnvelopeSigners(envelopeId: string): Promise<EsignSigner[]> {

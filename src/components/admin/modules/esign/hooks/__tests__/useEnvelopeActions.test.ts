@@ -19,7 +19,6 @@ import { useEnvelopeActions } from '../useEnvelopeActions';
 
 const mockUploadDocument = vi.fn();
 const mockSendInvites = vi.fn();
-const mockSaveAsTemplate = vi.fn();
 const mockSaveFields = vi.fn();
 const mockDeleteEnvelope = vi.fn();
 const mockVoidEnvelope = vi.fn();
@@ -29,7 +28,6 @@ vi.mock('../../api', () => ({
   esignApi: {
     uploadDocument: (...args: unknown[]) => mockUploadDocument(...args),
     sendInvites: (...args: unknown[]) => mockSendInvites(...args),
-    saveAsTemplate: (...args: unknown[]) => mockSaveAsTemplate(...args),
     saveFields: (...args: unknown[]) => mockSaveFields(...args),
     deleteEnvelope: (...args: unknown[]) => mockDeleteEnvelope(...args),
     voidEnvelope: (...args: unknown[]) => mockVoidEnvelope(...args),
@@ -92,7 +90,6 @@ describe('useEnvelopeActions – initial state', () => {
     const { result } = renderHook(() => useEnvelopeActions());
     expect(result.current.uploading).toBe(false);
     expect(result.current.sending).toBe(false);
-    expect(result.current.savingTemplate).toBe(false);
     expect(result.current.savingFields).toBe(false);
     expect(result.current.deleting).toBe(false);
     expect(result.current.voiding).toBe(false);
@@ -103,7 +100,6 @@ describe('useEnvelopeActions – initial state', () => {
     const { result } = renderHook(() => useEnvelopeActions());
     expect(result.current.uploadError).toBeNull();
     expect(result.current.sendError).toBeNull();
-    expect(result.current.templateError).toBeNull();
     expect(result.current.saveFieldsError).toBeNull();
     expect(result.current.deleteError).toBeNull();
     expect(result.current.voidError).toBeNull();
@@ -113,7 +109,6 @@ describe('useEnvelopeActions – initial state', () => {
     const { result } = renderHook(() => useEnvelopeActions());
     expect(typeof result.current.uploadDocument).toBe('function');
     expect(typeof result.current.sendInvites).toBe('function');
-    expect(typeof result.current.saveAsTemplate).toBe('function');
     expect(typeof result.current.saveFields).toBe('function');
     expect(typeof result.current.deleteEnvelope).toBe('function');
     expect(typeof result.current.voidEnvelope).toBe('function');
@@ -262,51 +257,6 @@ describe('sendInvites', () => {
     expect(returned).toBe(false);
     expect(result.current.sendError).toBe('Send failed');
     expect(result.current.sending).toBe(false);
-  });
-});
-
-// ============================================================================
-// saveAsTemplate
-// ============================================================================
-
-describe('saveAsTemplate', () => {
-  const req = { name: 'My Template', description: 'Desc' };
-
-  it('returns true on success', async () => {
-    mockSaveAsTemplate.mockResolvedValue({ id: 'tpl-1' });
-    const { result } = renderHook(() => useEnvelopeActions());
-
-    let returned: unknown;
-    await act(async () => {
-      returned = await result.current.saveAsTemplate('env-1', req);
-    });
-
-    expect(returned).toBe(true);
-  });
-
-  it('clears loading state after success', async () => {
-    mockSaveAsTemplate.mockResolvedValue({ id: 'tpl-1' });
-    const { result } = renderHook(() => useEnvelopeActions());
-
-    await act(async () => {
-      await result.current.saveAsTemplate('env-1', req);
-    });
-
-    expect(result.current.savingTemplate).toBe(false);
-  });
-
-  it('returns false and sets templateError on failure', async () => {
-    mockSaveAsTemplate.mockRejectedValue(new Error('Template error'));
-    const { result } = renderHook(() => useEnvelopeActions());
-
-    let returned: unknown;
-    await act(async () => {
-      returned = await result.current.saveAsTemplate('env-1', req);
-    });
-
-    expect(returned).toBe(false);
-    expect(result.current.templateError).toBe('Template error');
-    expect(result.current.savingTemplate).toBe(false);
   });
 });
 

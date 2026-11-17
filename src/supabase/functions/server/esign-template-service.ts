@@ -42,6 +42,27 @@ export interface TemplateRecipient {
   kind?: 'signer' | 'witness' | 'cc';
 }
 
+/**
+ * A template describes recipient SLOTS ("Client", "Spouse", "Witness"), not
+ * people. Recipients were saved with the email and access code of whoever
+ * the source envelope went to, and every envelope made from the template
+ * started pre-filled with them, so an express send (or a v1 API call that
+ * omitted an email) could go to the previous client. The email and access
+ * code are never stored. `name` stays: on a template it is the slot's label
+ * ("Client"); the path that snapshots a real envelope replaces it with the
+ * recipient's role before it gets here (normaliseTemplateRecipients).
+ */
+export function toRecipientSlots(recipients: TemplateRecipient[] | undefined): TemplateRecipient[] {
+  return (recipients ?? []).map((r, index) => ({
+    name: r.name?.trim() || '',
+    email: '',
+    role: r.role?.trim() || '',
+    order: r.order ?? index + 1,
+    otpRequired: r.otpRequired ?? false,
+    ...(r.kind ? { kind: r.kind } : {}),
+  }));
+}
+
 export interface TemplateDocument {
   documentId: string;
   order: number;
@@ -118,7 +139,7 @@ export async function createTemplate(params: {
     signingMode: params.signingMode || 'sequential',
     defaultMessage: params.defaultMessage?.trim(),
     defaultExpiryDays: params.defaultExpiryDays || 30,
-    recipients: params.recipients || [],
+    recipients: toRecipientSlots(params.recipients),
     documents: params.documents || [],
     fields: params.fields || [],
     usageCount: 0,
@@ -208,6 +229,9 @@ export async function updateTemplate(
     return null;
   }
 
+  if (updates.recipients !== undefined) {
+    updates = { ...updates, recipients: toRecipientSlots(updates.recipients) };
+  }
   const bump = shouldBumpVersion(existing, updates as Partial<EsignTemplateRecord>);
   if (bump) {
     try {
@@ -359,13 +383,14 @@ function normaliseTemplateRecipients(
     const recipients = ordered.map((signer, index) => {
       recipientKeyToIndex.set(signer.id, index);
       recipientKeyToIndex.set(signer.email, index);
+      // A real envelope's recipients are people: the template keeps the
+      // slot (labelled by role), never the person (see toRecipientSlots).
       return {
-        name: signer.name || '',
-        email: signer.email || '',
+        name: signer.role || '',
+        email: '',
         role: signer.role || '',
         order: signer.order ?? index + 1,
         otpRequired: signer.requires_otp ?? false,
-        accessCode: signer.access_code,
         kind: signer.kind,
       };
     });
@@ -381,12 +406,11 @@ function normaliseTemplateRecipients(
     if (email && !recipientKeyToIndex.has(email)) recipientKeyToIndex.set(email, index);
     if (signer.recipientKey) recipientKeyToIndex.set(signer.recipientKey, index);
     return {
-      name: signer.name?.trim() || '',
-      email,
+      name: signer.role?.trim() || '',
+      email: '',
       role: signer.role?.trim() || '',
       order: signer.order ?? index + 1,
       otpRequired: signer.otpRequired ?? false,
-      accessCode: signer.accessCode,
       kind: signer.kind,
     };
   });

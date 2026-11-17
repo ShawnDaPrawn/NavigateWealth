@@ -239,6 +239,31 @@ describe('useEnvelopes — refetch', () => {
       queryKey: ['esign', 'envelopes'],
     });
   });
+
+  it("also refreshes a client's own list, which lives outside the envelopes key", async () => {
+    // The client drawer's list is ['esign', 'client', id]; invalidating only
+    // ['esign', 'envelopes'] left it stale after every send, void or delete.
+    mockUseQuery.mockReturnValue({ data: [], isLoading: false, error: null });
+    const { result } = renderHook(() => useEnvelopes({ clientId: 'c-1' }));
+    await act(async () => {
+      await result.current.refetch();
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['esign', 'client', 'c-1'] });
+  });
+
+  it('refetches when refreshTrigger changes, not on first render', async () => {
+    // refreshTrigger was accepted and ignored: lists kept the old status for
+    // up to the 2-minute stale time after an action.
+    mockUseQuery.mockReturnValue({ data: [], isLoading: false, error: null });
+    const { rerender } = renderHook(({ t }) => useEnvelopes({ refreshTrigger: t }), {
+      initialProps: { t: 0 },
+    });
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+    await act(async () => {
+      rerender({ t: 1 });
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['esign', 'envelopes'] });
+  });
 });
 
 // ============================================================================

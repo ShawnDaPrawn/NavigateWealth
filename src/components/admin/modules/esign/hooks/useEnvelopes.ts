@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { esignApi } from '../api';
 import type { EsignEnvelope } from '../types';
 import { esignKeys } from './useEnvelopesQuery';
@@ -27,15 +27,19 @@ interface UseEnvelopesReturn {
 }
 
 export function useEnvelopes(options: UseEnvelopesOptions = {}): UseEnvelopesReturn {
-  const { clientId, clientEmail, autoLoad = true } = options;
+  const { clientId, clientEmail, autoLoad = true, refreshTrigger } = options;
   const queryClient = useQueryClient();
 
+  const listKey = useMemo(
+    () => (clientId ? esignKeys.clientEnvelopes(clientId) : esignKeys.allEnvelopes()),
+    [clientId],
+  );
   const {
     data: envelopes = [],
     isLoading: loading,
     error: queryError,
   } = useQuery({
-    queryKey: clientId ? esignKeys.clientEnvelopes(clientId) : esignKeys.allEnvelopes(),
+    queryKey: listKey,
     queryFn: async () => {
       if (clientId) {
         const response = await esignApi.getClientEnvelopes(clientId, clientEmail);
@@ -48,9 +52,25 @@ export function useEnvelopes(options: UseEnvelopesOptions = {}): UseEnvelopesRet
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
+  // Invalidate THIS list's key too: a client's list lives under
+  // ['esign', 'client', id], outside esignKeys.envelopes(), so the client
+  // drawer's refetch() after a send/void/delete never refreshed its own list.
   const refetch = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() });
-  }, [queryClient]);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: esignKeys.envelopes() }),
+      queryClient.invalidateQueries({ queryKey: listKey }),
+    ]);
+  }, [queryClient, listKey]);
+
+  // `refreshTrigger` was accepted and ignored, so after a send, void or
+  // delete the list kept showing the old status until the 2-minute stale
+  // time ran out. A change of trigger now refetches.
+  const lastTrigger = useRef(refreshTrigger);
+  useEffect(() => {
+    if (refreshTrigger === undefined || refreshTrigger === lastTrigger.current) return;
+    lastTrigger.current = refreshTrigger;
+    void refetch();
+  }, [refreshTrigger, refetch]);
 
   const getEnvelope = useCallback(async (id: string): Promise<EsignEnvelope | null> => {
     try {

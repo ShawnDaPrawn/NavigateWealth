@@ -19,7 +19,7 @@
  *   SS19.1 -- Query keys via centralised registry
  */
 
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, useRef, Suspense } from 'react';
 import { Card, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { Input } from '../../../../ui/input';
@@ -56,6 +56,9 @@ import {
   toDraftSignerPayload,
   toInviteSignerPayload,
   withRecipientKeys,
+  deriveExpiryDays,
+  describeDraftDocumentSync,
+  syncDraftDocuments,
 } from '../../esign';
 
 import type { EsignEnvelope, EsignField, SignerFormData } from './esignTabModel';
@@ -82,6 +85,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
 
   const {
     uploadDocument,
+    getLastUploadError,
     sendInvites,
     deleteEnvelope,
     voidEnvelope,
@@ -114,6 +118,8 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
 
   // Prepare state
   const [activeEnvelope, setActiveEnvelope] = useState<EsignEnvelope | null>(null);
+  /** Wizard files already uploaded into the active draft (see draftDocuments.ts). */
+  const uploadedFilesRef = useRef<File[]>([]);
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
 
   // List view state
@@ -168,6 +174,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     // recipients onto that old envelope instead of uploading these files.
     setActiveEnvelope(null);
     setDocumentUrl(null);
+    uploadedFilesRef.current = [];
     setView('wizard-upload');
   };
 
@@ -228,10 +235,12 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       });
 
       if (!result || !result.id) {
-        throw new Error('Failed to create envelope');
+        // Show the server's reason, not a generic line.
+        throw new Error(getLastUploadError() || 'Failed to create envelope');
       }
 
       setActiveEnvelope(result);
+      uploadedFilesRef.current = [...wizardData.files];
 
       const url = result.document?.url || result.documentUrl;
       if (url) setDocumentUrl(url);
@@ -242,9 +251,45 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     }
   };
 
+  /**
+   * Write the wizard's current settings, recipients and any newly added
+   * documents onto the draft this session already created.
+   */
+  const updateExistingDraft = async (envelope: EsignEnvelope) => {
+    await esignApi.updateDraftSettings(envelope.id, {
+      title: wizardData.title,
+      message: wizardData.message,
+      expiryDays: wizardData.expiryDays,
+    });
+    await persistDraftSigners(envelope.id, { strict: true });
+    const sync = await syncDraftDocuments(envelope.id, wizardData.files, uploadedFilesRef.current);
+    uploadedFilesRef.current = [...uploadedFilesRef.current, ...sync.added];
+    const note = describeDraftDocumentSync(sync);
+    if (note) {
+      if (sync.failed.length > 0 || sync.removed.length > 0) toast.warning(note);
+      else toast.success(note);
+    }
+    setActiveEnvelope({ ...envelope, title: wizardData.title, message: wizardData.message });
+  };
+
   const handleRecipientsNext = async () => {
     if (wizardData.signers.length === 0) {
       toast.error('Please add at least one recipient.');
+      return;
+    }
+
+    // Back from the studio, then Next, used to upload the documents again and
+    // open a SECOND draft — the fields already placed stayed on the first.
+    // Reuse the draft this session created (as the module's wizard does).
+    if (activeEnvelope?.id && activeEnvelope.status === 'draft') {
+      try {
+        await updateExistingDraft(activeEnvelope);
+      } catch (err: unknown) {
+        logger.error('Failed to update the existing draft:', err);
+        toast.error(err instanceof Error ? err.message : 'Failed to update the draft');
+        return;
+      }
+      setView('prepare');
       return;
     }
 
@@ -290,14 +335,9 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       // An envelope already created for this session is a draft already; the
       // recipients edited since are what still needs writing back.
       if (activeEnvelope?.id) {
-        // Step 1 is one Back away from the studio, so the title, message and
-        // expiry may have changed since this draft was created.
-        await esignApi.updateDraftSettings(activeEnvelope.id, {
-          title: wizardData.title,
-          message: wizardData.message,
-          expiryDays: wizardData.expiryDays,
-        });
-        await persistDraftSigners(activeEnvelope.id, { strict: true });
+        // Step 1 is one Back away from the studio, so the title, message,
+        // expiry and documents may have changed since this draft was created.
+        await updateExistingDraft(activeEnvelope);
       } else if (!(await createDraftEnvelopeFromWizard({ strict: true }))) {
         return;
       }
@@ -382,10 +422,16 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
 
       setWizardData((prev) => ({
         ...prev,
+        // A resumed draft has no local files: nothing to re-upload.
+        files: [],
         title: fullEnvelope.title,
         message: fullEnvelope.message || '',
+        // The drawer did not restore the expiry, so a resumed draft reset to
+        // the 30-day default; the module derives it from the envelope.
+        expiryDays: deriveExpiryDays(fullEnvelope.expires_at ?? undefined, Date.now(), 30),
         signers,
       }));
+      uploadedFilesRef.current = [];
       setActiveEnvelope(fullEnvelope);
       setDocumentUrl(docUrl);
       setDetailsDialogOpen(false);
@@ -512,6 +558,22 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
             onSignersChange={(signers) =>
               setWizardData((prev) => ({ ...prev, signers: withRecipientKeys(signers) }))
             }
+            // Settings edited in the studio (title, message, expiry, signing
+            // mode) were saved to the draft but the drawer kept its own copy,
+            // so the send went out with the old message and expiry.
+            onEnvelopeUpdated={(updated) => {
+              setActiveEnvelope((prev) => (prev ? { ...prev, ...updated } : updated));
+              setWizardData((prev) => ({
+                ...prev,
+                title: updated.title,
+                message: updated.message ?? '',
+                expiryDays: deriveExpiryDays(
+                  updated.expires_at ?? undefined,
+                  Date.now(),
+                  prev.expiryDays,
+                ),
+              }));
+            }}
             saving={savingFields}
             sending={sending}
             documentUrl={documentUrl || undefined}
@@ -604,6 +666,7 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
             autoPopulateSuggestedFields={autoPopulateSuggestedFields}
             onAutoPopulateChange={setAutoPopulateSuggestedFields}
             clientContext={clientContext}
+            signingMode={activeEnvelope?.signing_mode}
           />
         </Suspense>
       </EsignWizardShell>

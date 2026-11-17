@@ -15,12 +15,7 @@ import { SUCCESS_MESSAGES, ERROR_MESSAGES } from '../constants';
 // so the user gets a "Retry" affordance for transient network blips
 // without having to reopen the dialog.
 import { toastError } from '../utils/toastWithRetry';
-import type {
-  UploadDocumentRequest,
-  SendInvitesRequest,
-  SaveTemplateRequest,
-  EsignField,
-} from '../types';
+import type { UploadDocumentRequest, SendInvitesRequest, EsignField } from '../types';
 
 // ============================================================================
 // ENVELOPE MUTATIONS
@@ -204,45 +199,4 @@ export function useVoidEnvelope() {
     },
   });
   return mutation;
-}
-
-/**
- * Hook to save envelope as template
- *
- * @returns React Query mutation result
- *
- * @example
- * ```tsx
- * const { mutate: saveAsTemplate, isPending } = useSaveAsTemplate();
- *
- * saveAsTemplate({
- *   envelopeId: 'envelope-123',
- *   request: {
- *     name: 'Service Agreement Template',
- *     description: 'Standard service agreement for new clients',
- *   }
- * });
- * ```
- */
-export function useSaveAsTemplate() {
-  return useMutation({
-    mutationFn: async ({
-      envelopeId,
-      request,
-    }: {
-      envelopeId: string;
-      request: SaveTemplateRequest;
-    }) => {
-      logger.debug('[E-Sign Mutation] Saving envelope as template', { envelopeId });
-      return esignApi.saveAsTemplate(envelopeId, request);
-    },
-    onSuccess: () => {
-      logger.info('[E-Sign Mutation] Template saved successfully');
-      toast.success(SUCCESS_MESSAGES.TEMPLATE_SAVED);
-    },
-    onError: (error: Error) => {
-      console.error('❌ [E-Sign Mutation] Failed to save template:', error);
-      toast.error(`${ERROR_MESSAGES.TEMPLATE_FAILED}: ${error.message}`);
-    },
-  });
 }

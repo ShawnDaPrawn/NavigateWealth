@@ -572,6 +572,23 @@ is work not yet done, not budget.
   per PR, lowest fan-in first; `esign-*`, `integrations-*` and `client-*` have
   the most inbound imports and test paths and are the expensive ones. See
   [`ROADMAP.md`](ROADMAP.md).
+- **E-sign: what the November 2026 refinement left open.** Sending, signing
+  and the signed PDF now work end to end and are pinned by
+  `esign-round-trip.e2e.test.ts`, which drives the wizard's and the signer
+  client's real request bodies through the real routes and reads the burned
+  PDF back (see `INCIDENTS.md`, 2026-11-17). Field text, on the signing screen
+  and in the PDF, follows one rule in `shared/esign/fieldText.ts`; change it
+  there, not in either renderer. Still open:
+  - A later signer sees the original PDF, not earlier signers' entries
+    (`esign-signer-access-routes.ts` returns the signer's own fields only).
+  - Burn-in draws on the page's existing content stream. A source PDF that
+    leaves its graphics state unbalanced (an unmatched `q`) would offset what
+    is drawn; pdf-lib does not wrap existing content.
+  - "Require OTP" is now honoured when a sender unticks it — before, every
+    recipient was asked for a code regardless. Whether the box should be
+    offered at all is a product decision, not a bug.
+  - The page manager edits single-document envelopes only; on a
+    multi-document envelope it is disabled.
 - **KV-first data access.** Large parts of the domain still read and write the
   KV table with the service-role key, bypassing row-level security. The
   `kv-direct-access` ratchet holds the line while it is migrated.

@@ -22,7 +22,6 @@ export {
   useSaveFields,
   useSendInvites,
   useVoidEnvelope,
-  useSaveAsTemplate,
 } from './useEnvelopeMutations';
 
 // Legacy hooks (kept for backward compatibility)

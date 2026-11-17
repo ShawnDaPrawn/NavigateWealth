@@ -14,8 +14,6 @@ import {
   UploadDocumentResponse,
   SendInvitesRequest,
   SendInvitesResponse,
-  SaveTemplateRequest,
-  SaveTemplateResponse,
   GetAuditTrailResponse,
   GetDocumentUrlResponse,
   GetCertificateUrlResponse,
@@ -153,16 +151,6 @@ export const envelopeApi = {
   },
 
   /**
-   * Save envelope as template
-   */
-  async saveAsTemplate(
-    envelopeId: string,
-    request: SaveTemplateRequest,
-  ): Promise<SaveTemplateResponse> {
-    return api.post<SaveTemplateResponse>(`/esign/envelopes/${envelopeId}/templates`, request);
-  },
-
-  /**
    * Download signed document
    */
   async downloadDocument(envelopeId: string, filename: string = 'document.pdf'): Promise<void> {
@@ -171,7 +159,8 @@ export const envelopeApi = {
 
     if (!(response instanceof Response)) {
       logger.error('Expected Response object for download');
-      return;
+      // Returning quietly here meant no file and no error.
+      throw new Error('Download failed: the server did not return a file');
     }
 
     const blob = await response.blob();

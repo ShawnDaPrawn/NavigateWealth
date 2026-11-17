@@ -51,15 +51,22 @@ export const templateHasSavedDocuments = (
   template: EsignTemplateRecord | null | undefined,
 ): boolean => Array.isArray(template?.documents) && template.documents.length > 0;
 
+/**
+ * A template's recipients are SLOTS to fill for this envelope. Older
+ * templates stored the name, email and access code of whoever the source
+ * envelope went to; copying them in pre-filled every new envelope with the
+ * previous client, so an express send could go to the wrong person. Only the
+ * slot (role, order, kind, OTP) is carried; the sender fills in the person.
+ */
 export const mapTemplateRecipientsToWizard = (template: EsignTemplateRecord): SignerFormData[] =>
   template.recipients.map((recipient, index) => ({
     recipientKey: newRecipientKey(),
-    name: recipient.name || '',
-    email: recipient.email || '',
+    name: '',
+    email: '',
     role: recipient.role || 'Signer',
     order: recipient.order ?? index + 1,
     otpRequired: recipient.otpRequired ?? false,
-    accessCode: recipient.accessCode,
+    accessCode: undefined,
     kind: recipient.kind,
     clientId: undefined,
     isSystemClient: false,

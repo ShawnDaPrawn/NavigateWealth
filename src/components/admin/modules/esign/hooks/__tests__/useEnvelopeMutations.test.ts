@@ -5,7 +5,6 @@ import {
   useSaveFields,
   useSendInvites,
   useVoidEnvelope,
-  useSaveAsTemplate,
 } from '../useEnvelopeMutations';
 
 // ============================================================================
@@ -47,7 +46,6 @@ const mockEsignApi = {
   saveFields: vi.fn(),
   sendInvites: vi.fn(),
   voidEnvelope: vi.fn(),
-  saveAsTemplate: vi.fn(),
 };
 
 vi.mock('../../api', () => ({
@@ -56,7 +54,6 @@ vi.mock('../../api', () => ({
     saveFields: (...args: unknown[]) => mockEsignApi.saveFields(...args),
     sendInvites: (...args: unknown[]) => mockEsignApi.sendInvites(...args),
     voidEnvelope: (...args: unknown[]) => mockEsignApi.voidEnvelope(...args),
-    saveAsTemplate: (...args: unknown[]) => mockEsignApi.saveAsTemplate(...args),
   },
 }));
 
@@ -319,36 +316,5 @@ describe('useVoidEnvelope', () => {
       error,
       expect.objectContaining({ id: 'esign-void-env-4' }),
     );
-  });
-});
-
-describe('useSaveAsTemplate', () => {
-  it('returns a mutation object with mutate and isPending', () => {
-    const { result } = renderHook(() => useSaveAsTemplate());
-    expect(typeof result.current.mutate).toBe('function');
-    expect(result.current.isPending).toBe(false);
-  });
-
-  it('mutationFn calls esignApi.saveAsTemplate with envelopeId and request', async () => {
-    mockEsignApi.saveAsTemplate.mockResolvedValue({ id: 'tpl-1' });
-    const { mutationFn } = getOptions(() => useSaveAsTemplate());
-    const req = { name: 'Agreement Template', description: 'Standard agreement' };
-    await mutationFn({ envelopeId: 'env-5', request: req });
-    expect(mockEsignApi.saveAsTemplate).toHaveBeenCalledWith('env-5', req);
-  });
-
-  it('onSuccess shows template-saved toast', async () => {
-    const { toast } = await import('sonner');
-    const { onSuccess } = getOptions(() => useSaveAsTemplate());
-    await onSuccess(undefined, undefined, undefined);
-    expect(toast.success).toHaveBeenCalledWith('Template saved successfully');
-  });
-
-  it('onError shows error toast with message', async () => {
-    const { toast } = await import('sonner');
-    const { onError } = getOptions(() => useSaveAsTemplate());
-    const error = new Error('Template save failed');
-    await onError(error, undefined, undefined);
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Template save failed'));
   });
 });

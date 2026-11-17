@@ -3,8 +3,21 @@
  * Handles PDF manipulation, field flattening ("burn-in"), and certificate generation.
  */
 
-import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
-import type { PDFFont, PDFPage, RGB } from 'npm:pdf-lib@1.17.1';
+import {
+  PDFDocument,
+  rgb,
+  StandardFonts,
+  clip,
+  concatTransformationMatrix,
+  endPath,
+  popGraphicsState,
+  pushGraphicsState,
+  rectangle,
+} from 'npm:pdf-lib@1.17.1';
+import type { PDFFont, PDFImage, PDFPage, RGB } from 'npm:pdf-lib@1.17.1';
+import { fitFieldText, formatFieldDate, helveticaWidth } from '../../../shared/esign/fieldText.ts';
+import { makeSanitiser } from './esign-certificate-format.ts';
+import { fieldRectInDisplay, pageFrame } from './esign-page-frame.ts';
 import type { EsignField, EsignSigner } from './esign-types.ts';
 import { calculateHash } from './esign-storage.ts';
 import { createModuleLogger } from './stderr-logger.ts';
@@ -20,24 +33,16 @@ export interface PDFBurnInResult {
 
 export class PDFService {
   // ==========================================================================
-  // Signature Metadata Helpers (rendered below signature/initials on burn-in)
+  // Signature metadata (signer name, time, masked IP)
   // ==========================================================================
 
-  /** Metadata font size in PDF points */
-  private static readonly META_FONT_SIZE = 5.5;
-  /** Vertical gap between signature bottom edge and metadata block */
-  private static readonly META_GAP = 1.5;
-  /** Line height for metadata text lines */
-  private static readonly META_LINE_HEIGHT = 7;
-  /** Minimum space from page bottom before we skip metadata (points) */
-  private static readonly META_MARGIN_BOTTOM = 12;
-  /** Dark grey for bold signer name */
-  private static readonly META_COLOR_BOLD: RGB = rgb(0.25, 0.25, 0.25);
-  /** Medium grey for regular metadata text */
-  private static readonly META_COLOR: RGB = rgb(0.5, 0.5, 0.5);
-  /** Lighter grey for separator line */
-  private static readonly META_LINE_COLOR: RGB = rgb(0.78, 0.78, 0.78);
-  /** Dot separator between metadata segments */
+  /** Signature boxes shorter than this get no stamp — the certificate has it. */
+  private static readonly STAMP_MIN_BOX_H = 28;
+  /** Largest stamp font size, in points. */
+  private static readonly STAMP_MAX_SIZE = 5.5;
+  /** Medium grey for the stamp. */
+  private static readonly META_COLOR: RGB = rgb(0.45, 0.45, 0.45);
+  /** Dot separator between stamp segments. */
   private static readonly META_SEP = '  ·  ';
 
   /**
@@ -69,20 +74,25 @@ export class PDFService {
   }
 
   /**
-   * Format an ISO date string for metadata display.
-   * Output: "25 Feb 2026, 14:32" (en-ZA locale)
+   * Format an ISO timestamp for the signature stamp, in South African time:
+   * "25 Feb 2026, 14:32". The Edge runtime's clock is UTC, so without the
+   * time zone the stamp read two hours early.
    */
   private static formatMetaDate(iso: string): string {
     try {
       const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      const opts = { timeZone: 'Africa/Johannesburg' } as const;
       return (
         d.toLocaleDateString('en-ZA', {
+          ...opts,
           day: '2-digit',
           month: 'short',
           year: 'numeric',
         }) +
         ', ' +
         d.toLocaleTimeString('en-ZA', {
+          ...opts,
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
@@ -93,188 +103,82 @@ export class PDFService {
     }
   }
 
-  /**
-   * Draw provenance metadata below a signature or initials field.
-   *
-   * Compact single-line layout (space permitting):
-   *   ─────────────────────────── (thin separator)
-   *   **Name**  ·  25 Feb 2026, 14:32  ·  IP: 102.134.x.x
-   *
-   * Falls back to two tight lines if the field is too narrow.
-   * Skips rendering if there isn't enough space before the page bottom.
-   */
-  private static drawSignatureMetadata(
-    page: PDFPage,
-    field: EsignField,
-    signer: EsignSigner,
-    regularFont: PDFFont,
-    boldFont: PDFFont,
-    fieldX: number,
-    fieldY: number,
-    fieldW: number,
-  ): void {
-    const {
-      META_FONT_SIZE,
-      META_GAP,
-      META_LINE_HEIGHT,
-      META_MARGIN_BOTTOM,
-      META_COLOR,
-      META_COLOR_BOLD,
-      META_LINE_COLOR,
-      META_SEP,
-    } = PDFService;
-
-    const metaTopY = fieldY - META_GAP;
-
-    // Prepare text segments
-    const nameText = signer.name;
-    const datePart = signer.signed_at ? PDFService.formatMetaDate(signer.signed_at) : 'Pending';
-    const ipPart = signer.ip_address ? `IP: ${PDFService.maskIp(signer.ip_address)}` : '';
-
-    // Measure widths to decide single-line vs two-line
-    const nameW = boldFont.widthOfTextAtSize(nameText, META_FONT_SIZE);
-    const sepW = regularFont.widthOfTextAtSize(META_SEP, META_FONT_SIZE);
-    const dateW = regularFont.widthOfTextAtSize(datePart, META_FONT_SIZE);
-    const ipW = ipPart ? regularFont.widthOfTextAtSize(ipPart, META_FONT_SIZE) : 0;
-
-    const singleLineW = nameW + sepW + dateW + (ipPart ? sepW + ipW : 0);
-    const useSingleLine = singleLineW <= fieldW;
-
-    // Total height needed
-    const lineCount = useSingleLine ? 1 : 2;
-    const totalMetaHeight = META_GAP + 1 + META_LINE_HEIGHT * lineCount;
-
-    // Bounds check: don't render if it would go below the page margin
-    if (metaTopY - totalMetaHeight < META_MARGIN_BOTTOM) {
-      return;
-    }
-
-    // 1. Thin separator line
-    const lineY = metaTopY;
-    page.drawLine({
-      start: { x: fieldX, y: lineY },
-      end: { x: fieldX + fieldW, y: lineY },
-      thickness: 0.4,
-      color: META_LINE_COLOR,
-    });
-
-    if (useSingleLine) {
-      // ── Single compact line: **Name**  ·  date  ·  IP: x.x.x.x
-      const textY = lineY - META_LINE_HEIGHT;
-      let cursorX = fieldX;
-
-      // Bold name
-      page.drawText(nameText, {
-        x: cursorX,
-        y: textY,
-        size: META_FONT_SIZE,
-        font: boldFont,
-        color: META_COLOR_BOLD,
-      });
-      cursorX += nameW;
-
-      // Separator + date
-      page.drawText(META_SEP, {
-        x: cursorX,
-        y: textY,
-        size: META_FONT_SIZE,
-        font: regularFont,
-        color: META_COLOR,
-      });
-      cursorX += sepW;
-      page.drawText(datePart, {
-        x: cursorX,
-        y: textY,
-        size: META_FONT_SIZE,
-        font: regularFont,
-        color: META_COLOR,
-      });
-      cursorX += dateW;
-
-      // Separator + IP (if available)
-      if (ipPart) {
-        page.drawText(META_SEP, {
-          x: cursorX,
-          y: textY,
-          size: META_FONT_SIZE,
-          font: regularFont,
-          color: META_COLOR,
-        });
-        cursorX += sepW;
-        page.drawText(ipPart, {
-          x: cursorX,
-          y: textY,
-          size: META_FONT_SIZE,
-          font: regularFont,
-          color: META_COLOR,
-        });
-      }
-    } else {
-      // ── Two-line compact layout:
-      //   Line 1: **Name**  ·  date
-      //   Line 2: IP: x.x.x.x  (only if present)
-      const line1Y = lineY - META_LINE_HEIGHT;
-      let cursorX = fieldX;
-
-      // Bold name
-      page.drawText(nameText, {
-        x: cursorX,
-        y: line1Y,
-        size: META_FONT_SIZE,
-        font: boldFont,
-        color: META_COLOR_BOLD,
-      });
-      cursorX += nameW;
-
-      // If date fits on line 1 after name, append it
-      const dateWithSepW = sepW + dateW;
-      if (cursorX + dateWithSepW <= fieldX + fieldW) {
-        page.drawText(META_SEP, {
-          x: cursorX,
-          y: line1Y,
-          size: META_FONT_SIZE,
-          font: regularFont,
-          color: META_COLOR,
-        });
-        cursorX += sepW;
-        page.drawText(datePart, {
-          x: cursorX,
-          y: line1Y,
-          size: META_FONT_SIZE,
-          font: regularFont,
-          color: META_COLOR,
-        });
-      } else {
-        // Date on line 2 instead
-        const line2Y = line1Y - META_LINE_HEIGHT;
-        const dateIpText = ipPart ? `${datePart}${META_SEP}${ipPart}` : datePart;
-        page.drawText(dateIpText, {
-          x: fieldX,
-          y: line2Y,
-          size: META_FONT_SIZE,
-          font: regularFont,
-          color: META_COLOR,
-          maxWidth: fieldW,
-        });
-        return; // Already drew line 2, done
-      }
-
-      // Line 2: IP only
-      if (ipPart) {
-        const line2Y = line1Y - META_LINE_HEIGHT;
-        page.drawText(ipPart, {
-          x: fieldX,
-          y: line2Y,
-          size: META_FONT_SIZE,
-          font: regularFont,
-          color: META_COLOR,
-        });
-      }
+  /** Embed a data-URL image, or null if it is not a PNG/JPEG pdf-lib can read. */
+  private static async embedDataUrlImage(
+    pdfDoc: PDFDocument,
+    dataUrl: string,
+  ): Promise<PDFImage | null> {
+    const base64 = dataUrl.split(',')[1];
+    if (!base64) return null;
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    if (/^data:image\/jpe?g/i.test(dataUrl)) return await pdfDoc.embedJpg(bytes);
+    try {
+      return await pdfDoc.embedPng(bytes);
+    } catch {
+      return await pdfDoc.embedJpg(bytes);
     }
   }
 
+  /** Clip everything drawn by `draw` to the rectangle, so nothing can leave the box. */
+  private static clipped(
+    page: PDFPage,
+    box: { x: number; y: number; w: number; h: number },
+    draw: () => void,
+  ): void {
+    page.pushOperators(
+      pushGraphicsState(),
+      rectangle(box.x, box.y, box.w, box.h),
+      clip(),
+      endPath(),
+    );
+    try {
+      draw();
+    } finally {
+      page.pushOperators(popGraphicsState());
+    }
+  }
+
+  /** Draw a one-line value fitted to (and clipped by) the box. */
+  private static drawFittedText(
+    page: PDFPage,
+    font: PDFFont,
+    text: string,
+    box: { x: number; y: number; w: number; h: number },
+    opts: { maxSize?: number; color?: RGB } = {},
+  ): void {
+    if (!text) return;
+    const fit = fitFieldText(text, box.w, box.h, {
+      maxSize: opts.maxSize,
+      // Real font metrics for the drawn font; the shared table matches them
+      // for ASCII and is what the signing screen uses.
+      measure: (t, size) => {
+        try {
+          return font.widthOfTextAtSize(t, size);
+        } catch {
+          return helveticaWidth(t, size);
+        }
+      },
+    });
+    PDFService.clipped(page, box, () => {
+      page.drawText(text, {
+        x: box.x + fit.offsetX,
+        y: box.y + fit.baselineFromBottom,
+        size: fit.size,
+        font,
+        color: opts.color ?? rgb(0, 0, 0),
+      });
+    });
+  }
+
   /**
-   * Burn-in signatures and fields into the PDF
+   * Burn field values into the PDF.
+   *
+   * Every value is drawn INSIDE its field box and clipped to it — the same
+   * one-line fit rule the signing screen uses (shared/esign/fieldText.ts).
+   * This used to print 14pt text wrapped onto lines below the box, stretch
+   * signatures to the box's shape, print the signer stamp under the box over
+   * whatever was there, ignore page rotation and crop, and abort the whole
+   * completion on a name the standard font could not encode.
    */
   static async burnIn(
     originalPdfBuffer: Uint8Array,
@@ -302,7 +206,7 @@ export class PDFService {
 
       const pages = pdfDoc.getPages();
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      const sanitise = makeSanitiser(helveticaFont);
 
       // Group fields by page for efficiency
       const fieldsByPage: Record<number, EsignField[]> = {};
@@ -316,127 +220,22 @@ export class PDFService {
       // Process each page
       for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
         const page = pages[pageIndex];
-        const pageFields = fieldsByPage[pageIndex + 1] || []; // Pages are 1-based in our data model
+        const pageFields = (fieldsByPage[pageIndex + 1] || []).filter((f) => !!f.value);
+        if (pageFields.length === 0) continue;
 
-        const { height } = page.getSize();
-
-        for (const field of pageFields) {
-          if (!field.value) continue; // Skip empty fields
-
-          // Calculate position — x,y are stored as percentages (0–100).
-          // width,height are stored in PDF points (absolute pixel values).
-          // PDF origin is bottom-left; stored y is top-down.
-          const x = (field.x / 100) * page.getWidth();
-          const w = field.width; // already in PDF points
-          const h = field.height; // already in PDF points
-          const y = height - (field.y / 100) * height - h;
-
-          // Every type whose value is a plain string burns in as text.
-          // auto_date/dropdown values used to be silently skipped here, so
-          // they showed in the app but never reached the sealed PDF.
-          const textLike =
-            field.type === 'text' ||
-            field.type === 'date' ||
-            field.type === 'auto_date' ||
-            field.type === 'dropdown' ||
-            field.type === 'radio' ||
-            field.type === 'note';
-          if (textLike) {
-            // Clamp font size to fit the field height, min 8, max 14
-            const fontSize = Math.max(8, Math.min(14, h * 0.6));
-            page.drawText(field.value, {
-              x: x + 2,
-              y: y + h / 2 - fontSize * 0.35,
-              size: fontSize,
+        // Draw in the page's DISPLAY space — the CropBox, turned by /Rotate —
+        // which is what the studio and the signing screen positioned against.
+        const frame = pageFrame(page.getCropBox(), page.getRotation().angle);
+        page.pushOperators(pushGraphicsState(), concatTransformationMatrix(...frame.matrix));
+        try {
+          for (const field of pageFields) {
+            await PDFService.burnField(pdfDoc, page, field, signers, frame, {
               font: helveticaFont,
-              color: rgb(0, 0, 0),
-              maxWidth: w - 4,
+              sanitise,
             });
-          } else if (field.type === 'checkbox') {
-            if (field.value === 'true' || field.value === 'checked') {
-              page.drawText('X', {
-                x: x + w / 2 - 4,
-                y: y + h / 2 - 4,
-                size: Math.min(14, h * 0.7),
-                font: helveticaFont,
-                color: rgb(0, 0, 0),
-              });
-            }
-          } else if (field.type === 'signature' || field.type === 'initials') {
-            // Handle both PNG and JPEG data URLs
-            try {
-              if (field.value.startsWith('data:image/png')) {
-                const base64Data = field.value.split(',')[1];
-                if (base64Data) {
-                  const pngImageBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
-                  const pngImage = await pdfDoc.embedPng(pngImageBytes);
-                  page.drawImage(pngImage, { x, y, width: w, height: h });
-                }
-              } else if (
-                field.value.startsWith('data:image/jpeg') ||
-                field.value.startsWith('data:image/jpg')
-              ) {
-                const base64Data = field.value.split(',')[1];
-                if (base64Data) {
-                  const jpgImageBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
-                  const jpgImage = await pdfDoc.embedJpg(jpgImageBytes);
-                  page.drawImage(jpgImage, { x, y, width: w, height: h });
-                }
-              } else if (field.value.startsWith('data:image/')) {
-                // Fallback: try PNG for any other image data URL
-                const base64Data = field.value.split(',')[1];
-                if (base64Data) {
-                  const imgBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
-                  try {
-                    const img = await pdfDoc.embedPng(imgBytes);
-                    page.drawImage(img, { x, y, width: w, height: h });
-                  } catch {
-                    // If PNG fails, try JPG
-                    const img = await pdfDoc.embedJpg(imgBytes);
-                    page.drawImage(img, { x, y, width: w, height: h });
-                  }
-                }
-              } else {
-                // Value is plain text (e.g. typed signature/initials) — render as text
-                const fontSize = Math.max(10, Math.min(18, h * 0.5));
-                page.drawText(field.value, {
-                  x: x + 2,
-                  y: y + h / 2 - fontSize * 0.35,
-                  size: fontSize,
-                  font: helveticaFont,
-                  color: rgb(0, 0, 0),
-                  maxWidth: w - 4,
-                });
-              }
-
-              // ── Signature metadata block ─────────────────────────────
-              // Render provenance info (signer name, timestamp, IP) below
-              // the signature/initials field for audit traceability.
-              const signer = PDFService.findSignerForField(field, signers);
-              if (signer) {
-                PDFService.drawSignatureMetadata(
-                  page,
-                  field,
-                  signer,
-                  helveticaFont,
-                  helveticaBoldFont,
-                  x,
-                  y,
-                  w,
-                );
-              }
-            } catch (imgError: unknown) {
-              log.error(`Failed to embed image for field ${field.id}:`, imgError);
-              // Fallback: render value as text so we don't lose data
-              page.drawText('[Signature]', {
-                x: x + 2,
-                y: y + h / 2 - 5,
-                size: 10,
-                font: helveticaFont,
-                color: rgb(0.5, 0.5, 0.5),
-              });
-            }
           }
+        } finally {
+          page.pushOperators(popGraphicsState());
         }
       }
 
@@ -453,6 +252,96 @@ export class PDFService {
     } catch (error: unknown) {
       log.error('PDF Burn-in failed:', error);
       throw new Error(`PDF Burn-in failed: ${getErrMsg(error)}`, { cause: error });
+    }
+  }
+
+  /** Draw one field's value. Coordinates are display space (see pageFrame). */
+  private static async burnField(
+    pdfDoc: PDFDocument,
+    page: PDFPage,
+    field: EsignField,
+    signers: EsignSigner[],
+    frame: { width: number; height: number },
+    ctx: { font: PDFFont; sanitise: (s: string) => string },
+  ): Promise<void> {
+    const value = field.value ?? '';
+    const box = fieldRectInDisplay(frame, field);
+
+    // Every type whose value is a plain string burns in as text.
+    const textLike =
+      field.type === 'text' ||
+      field.type === 'date' ||
+      field.type === 'auto_date' ||
+      field.type === 'dropdown' ||
+      field.type === 'radio' ||
+      field.type === 'note';
+
+    if (textLike) {
+      const shown =
+        field.type === 'date' || field.type === 'auto_date' ? formatFieldDate(value) : value;
+      PDFService.drawFittedText(page, ctx.font, ctx.sanitise(shown), box);
+      return;
+    }
+
+    if (field.type === 'checkbox') {
+      if (value === 'true' || value === 'checked') {
+        PDFService.drawFittedText(page, ctx.font, 'X', box, { maxSize: Math.min(box.w, box.h) });
+      }
+      return;
+    }
+
+    if (field.type !== 'signature' && field.type !== 'initials') return;
+
+    // A stamp line inside the bottom of the box when there is room for one;
+    // the image takes the rest. Small boxes carry the image alone — the
+    // completion certificate records who signed, when and from where.
+    const signer = PDFService.findSignerForField(field, signers);
+    const stampH =
+      signer && box.h >= PDFService.STAMP_MIN_BOX_H
+        ? Math.min(PDFService.STAMP_MAX_SIZE * 1.6, box.h * 0.22)
+        : 0;
+    const imageBox = { x: box.x, y: box.y + stampH, w: box.w, h: box.h - stampH };
+
+    try {
+      if (value.startsWith('data:image/')) {
+        const img = await PDFService.embedDataUrlImage(pdfDoc, value);
+        if (img) {
+          // Keep the signature's shape: fit inside the box and centre it.
+          // Drawing it at the box's width AND height stretched it.
+          const scale = Math.min(imageBox.w / img.width, imageBox.h / img.height);
+          const iw = img.width * scale;
+          const ih = img.height * scale;
+          page.drawImage(img, {
+            x: imageBox.x + (imageBox.w - iw) / 2,
+            y: imageBox.y + (imageBox.h - ih) / 2,
+            width: iw,
+            height: ih,
+          });
+        }
+      } else {
+        // Typed signature/initials — drawn as text, a little larger.
+        PDFService.drawFittedText(page, ctx.font, ctx.sanitise(value), imageBox, { maxSize: 18 });
+      }
+    } catch (imgError: unknown) {
+      log.error(`Failed to embed image for field ${field.id}:`, imgError);
+      PDFService.drawFittedText(page, ctx.font, '[Signature]', imageBox, {
+        color: rgb(0.5, 0.5, 0.5),
+      });
+    }
+
+    if (signer && stampH > 0) {
+      const parts = [
+        signer.name,
+        signer.signed_at ? PDFService.formatMetaDate(signer.signed_at) : '',
+        signer.ip_address ? `IP ${PDFService.maskIp(signer.ip_address)}` : '',
+      ].filter(Boolean);
+      PDFService.drawFittedText(
+        page,
+        ctx.font,
+        ctx.sanitise(parts.join(PDFService.META_SEP)),
+        { x: box.x, y: box.y, w: box.w, h: stampH },
+        { maxSize: PDFService.STAMP_MAX_SIZE, color: PDFService.META_COLOR },
+      );
     }
   }
 
