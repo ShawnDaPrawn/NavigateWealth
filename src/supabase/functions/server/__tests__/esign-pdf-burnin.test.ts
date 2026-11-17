@@ -6,7 +6,7 @@
  * actually landed, in the page's viewed coordinates (CropBox + rotation).
  */
 import { describe, expect, it, vi } from 'vitest';
-import { PDFDocument, degrees } from 'pdf-lib';
+import { PDFDocument, concatTransformationMatrix, degrees, pushGraphicsState } from 'pdf-lib';
 
 vi.mock('../stderr-logger.ts', () => ({
   createModuleLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
@@ -97,6 +97,23 @@ describe('burn-in keeps values inside their box', () => {
     const out = await PDFService.burnIn(await pdf.save(), [field({ value: 'Zoë Nkosi 李' })], []);
     const { items } = await textBoxes(out.pdfBuffer);
     expect(items.map((i) => i.str).join('')).toContain('Zoë Nkosi');
+  });
+
+  it('is not thrown off by source content that leaves its graphics state changed', async () => {
+    // A source page that scales by half and never restores (q without Q).
+    // pdf-lib wraps existing content in q/Q before anything is drawn, so the
+    // value must still land in its box, not at half its position.
+    const pdf = await PDFDocument.create();
+    const page = pdf.addPage([595, 842]);
+    page.pushOperators(pushGraphicsState(), concatTransformationMatrix(0.5, 0, 0, 0.5, 0, 0));
+    const f = field({ x: 50, y: 50, value: 'MARK' });
+    const out = await PDFService.burnIn(await pdf.save(), [f], []);
+    const { items, viewport } = await textBoxes(out.pdfBuffer);
+    const box = boxOf(f, viewport);
+    const t = items.find((i) => i.str === 'MARK')!;
+    expect(t.x).toBeGreaterThanOrEqual(box.left);
+    expect(t.y).toBeGreaterThan(box.top);
+    expect(t.y).toBeLessThanOrEqual(box.bottom);
   });
 
   it('places values by the page as viewed on a rotated page', async () => {

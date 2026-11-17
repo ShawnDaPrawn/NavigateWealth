@@ -45,6 +45,7 @@ import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
 import { FileText, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { FieldHighlight } from './FieldHighlight';
+import { PriorEntry } from './PriorEntry';
 import type { SignerSessionData, SignatureData, SignerField } from './types';
 import { SigningWorkflowDialogs } from './SigningWorkflowDialogs';
 import { SigningZoomControls } from './SigningZoomControls';
@@ -1025,6 +1026,9 @@ export function SigningWorkflow({
                 const pageFields = visibleSignerFields.filter((f) =>
                   usesZeroBasedIndexing ? f.page === pageNumber - 1 : f.page === pageNumber,
                 );
+                const priorEntries = (sessionData.completed_fields ?? []).filter((f) =>
+                  usesZeroBasedIndexing ? f.page === pageNumber - 1 : f.page === pageNumber,
+                );
 
                 const dim = pageDims.find((d) => d.pageNumber === pageNumber);
                 const scale = zoom / 100;
@@ -1083,6 +1087,15 @@ export function SigningWorkflow({
 
                     {/* Fields overlay */}
                     <div className="absolute inset-0 z-10 pointer-events-none">
+                      {/* What earlier signers completed — read-only. */}
+                      {priorEntries.map((entry) => (
+                        <PriorEntry
+                          key={`prior-${entry.id}`}
+                          field={entry}
+                          pageWidthPts={dim?.width}
+                          pageHeightPts={dim?.height}
+                        />
+                      ))}
                       {pageFields.map((field) => {
                         const signature = signatures.find((s) => s.field_id === field.id);
                         // P3.6 — When a field has a server-resolved prefill

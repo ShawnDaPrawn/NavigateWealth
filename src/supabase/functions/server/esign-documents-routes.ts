@@ -673,8 +673,16 @@ documentsRoutes.post(
       // Add fields if provided
       if (materialisedFields.length > 0) {
         // First, clear any existing fields (e.g. from draft saves) to avoid duplicates
-        // and ensure we have clean fields with correct signer IDs
-        await kv.del(EsignKeys.envelopeFields(envelopeId));
+        // and ensure we have clean fields with correct signer IDs. The draft's
+        // field RECORDS go too: only the list used to be removed, so every
+        // send left its draft field records behind, referenced by nothing.
+        const draftFieldIds = ((envelope.fields ?? []) as Array<{ id?: string }>)
+          .map((f) => f.id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0);
+        await kv.mdel([
+          EsignKeys.envelopeFields(envelopeId),
+          ...draftFieldIds.map((id) => EsignKeys.field(id)),
+        ]);
 
         // Map signer indices to actual signer IDs
         const fieldsWithSignerIds = materialisedFields.map((field: FieldRecord) => ({

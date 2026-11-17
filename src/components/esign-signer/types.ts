@@ -23,6 +23,11 @@ export interface SignerSessionData {
   document_filename?: string;
   page_count: number;
   fields: SignerField[];
+  /**
+   * Values earlier signers have already completed — shown read-only so a
+   * later signer sees the document as it stands (PriorEntry.tsx).
+   */
+  completed_fields?: CompletedField[];
   expires_at?: string;
   /** Whether it is currently this signer's turn in the sequential signing order */
   is_turn?: boolean;
@@ -45,6 +50,18 @@ export interface SignerSessionData {
     accent_hex: string | null;
     support_email: string | null;
   } | null;
+}
+
+/** A field an earlier signer completed: geometry and value only. */
+export interface CompletedField {
+  id: string;
+  type: SignerField['type'];
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  value?: string | null;
 }
 
 export interface SignerField {

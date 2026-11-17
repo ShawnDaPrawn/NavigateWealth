@@ -85,6 +85,12 @@ export interface TemplateField {
   /** Template-owned source document this field belongs to. */
   documentId?: string;
   metadata?: Record<string, unknown>;
+  /**
+   * The field's id in the envelope the template was saved from. Other
+   * fields' conditional rules and formulas refer to it; applying the
+   * template rewrites those references to the new fields' ids.
+   */
+  key?: string;
 }
 
 export interface EsignTemplateRecord {
@@ -547,6 +553,9 @@ async function buildTemplateSnapshotFromEnvelope(envelopeId: string): Promise<{
   const primaryTemplateDocumentId = documents[0]?.documentId;
 
   const fields = (await loadEnvelopeFields(envelopeId)).map((field) => ({
+    // Kept so conditional rules / formulas that name this field can be
+    // re-pointed when the template is applied (they were left dangling).
+    key: field.id,
     type: field.type,
     page: field.page,
     x: field.x,

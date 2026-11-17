@@ -106,12 +106,14 @@ import type { EsignField, EsignSigner } from '../esign-types.ts';
 
 const documentsRoutes = (await import('../esign-documents-routes.ts')).default;
 const signerSubmitRoutes = (await import('../esign-signer-submit-routes.ts')).default;
+const signerAccessRoutes = (await import('../esign-signer-access-routes.ts')).default;
 const { getEnvelopeDetails } = await import('../esign-services.ts');
 const { PDFService } = await import('../esign-pdf.service.ts');
 
 const app = new Hono();
 app.route('/', documentsRoutes);
 app.route('/', signerSubmitRoutes);
+app.route('/', signerAccessRoutes);
 
 const ENV_ID = 'env-rt';
 const DOC_ID = 'doc-rt';
@@ -262,6 +264,13 @@ const placed = (): ClientField[] => {
   ] as ClientField[];
 };
 
+/** What the studio's draft save leaves in KV before a send. */
+function seedDraftFieldRecords() {
+  const ids = placed().map((f) => f.id);
+  ids.forEach((id) => kvStore.set(`esign:field:${id}`, { id, envelope_id: ENV_ID }));
+  kvStore.set(EsignKeys.envelopeFields(ENV_ID), ids);
+}
+
 async function send() {
   return app.request(`/envelopes/${ENV_ID}/invites`, {
     method: 'POST',
@@ -299,6 +308,7 @@ async function submitAsSigner(
 describe('e-sign round trip', () => {
   it('sends, signs and burns in what the studio placed', async () => {
     // ── Send ────────────────────────────────────────────────────────────
+    seedDraftFieldRecords();
     const res = await send();
     expect(res.status, await res.clone().text()).toBe(200);
 
@@ -341,6 +351,11 @@ describe('e-sign round trip', () => {
     expect(nameField.signer_id).toBe(main.id);
     expect(byLabel((f) => f.type === 'signature' && f.signer_id === spouse.id)).toBeTruthy();
 
+    // Only the sent field records remain: the draft ones the studio saved
+    // used to be left behind with nothing pointing at them.
+    const fieldKeys = [...kvStore.keys()].filter((k) => k.startsWith('esign:field:'));
+    expect(fieldKeys.sort()).toEqual(fields.map((f) => `esign:field:${f.id}`).sort());
+
     // ── Sign ────────────────────────────────────────────────────────────
     const own = (signerId: string) => fields.filter((f) => f.signer_id === signerId);
     const mainFields = own(main.id);
@@ -356,6 +371,27 @@ describe('e-sign round trip', () => {
     ]);
     expect(r1).toEqual({ success: true }); // was a 400 for every signer
     expect(io.completions).toEqual([]); // spouse still to sign; CC never blocks
+
+    // The next signer sees what the first one completed (read-only). Their
+    // session used to carry only their own fields over the original PDF.
+    const session = await app.request('/signer/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: spouse.access_token }),
+    });
+    expect(session.status, await session.clone().text()).toBe(200);
+    const sessionBody = (await session.json()) as {
+      fields: Array<{ id: string }>;
+      completed_fields: Array<{ id: string; value: string }>;
+    };
+    expect(sessionBody.fields.every((f) => own(spouse.id).some((o) => o.id === f.id))).toBe(true);
+    const prior = new Map(sessionBody.completed_fields.map((f) => [f.id, f.value]));
+    expect(prior.get(sigMain.id)).toBe(SIGNATURE_PNG);
+    expect(prior.get(fund.id)).toBe('Growth');
+    // Nothing of the spouse's own, and nothing unfilled.
+    expect(
+      sessionBody.completed_fields.some((f) => own(spouse.id).some((o) => o.id === f.id)),
+    ).toBe(false);
 
     const sigSpouse = own(spouse.id).find((f) => f.type === 'signature')!;
     const r2 = await submitAsSigner(spouse.access_token, [
