@@ -868,10 +868,6 @@ export async function addFieldsToEnvelope(
   }
 }
 
-// Rewriting conditional/formula references lives in shared code: the SPA
-// needs the same rule when it applies a saved template.
-export { remapFieldReferences } from '../../../shared/esign/fieldReferences.ts';
-
 /**
  * Update field value
  */
