@@ -9,6 +9,7 @@ import {
   SignerRejectBodySchema,
   primarySignatureImage,
 } from './esign-validation.ts';
+import { sastIsoDate } from '../../../shared/esign/fieldText.ts';
 import { getRequestMetadata, audActor } from './esign-route-helpers.ts';
 import {
   getEnvelopeDetails,
@@ -98,14 +99,26 @@ app.post(
         );
       }
 
+      // "Date signed" fields take the SERVER's date, in South African time.
+      // The signer's device used to supply it — its own clock and time zone,
+      // with the time of day appended.
+      const signedOn = sastIsoDate();
+      const autoDateIds = new Set(
+        ((signingEnvelope.fields ?? []) as Array<{ id: string; type: string; signer_id?: string }>)
+          .filter((f) => f.type === 'auto_date' && f.signer_id === signer.id)
+          .map((f) => f.id),
+      );
+
       // Update field values
       if (field_values && Array.isArray(field_values)) {
         for (const fv of field_values) {
           if (fv.field_id && fv.value !== undefined) {
+            if (autoDateIds.has(fv.field_id)) continue;
             await updateFieldValue(fv.field_id, fv.value);
           }
         }
       }
+      for (const id of autoDateIds) await updateFieldValue(id, signedOn);
 
       // Update signer status + P6 evidence stamps
       const { ip, userAgent } = getRequestMetadata(c);
