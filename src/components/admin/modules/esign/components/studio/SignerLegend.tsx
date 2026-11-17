@@ -10,6 +10,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { Filter } from 'lucide-react';
 import type { SignerFormData } from '../../types';
 import { SIGNER_COLORS } from '../../constants';
+import { recipientIdOf } from '../../recipientIdentity';
 
 interface SignerLegendProps {
   clearSignerFilter: () => void;
@@ -17,7 +18,7 @@ interface SignerLegendProps {
   selectedSignerId: string | undefined;
   setSelectedSignerId: Dispatch<SetStateAction<string | undefined>>;
   signers: SignerFormData[];
-  toggleSignerFilter: (email: string) => void;
+  toggleSignerFilter: (recipientId: string) => void;
   visibleSignerIds: Set<string> | null;
 }
 
@@ -35,15 +36,16 @@ export function SignerLegend({
       <span className="text-xs uppercase tracking-wider text-gray-400 mr-1 shrink-0">Signers</span>
       {signers.map((signer, idx) => {
         const color = SIGNER_COLORS[idx % SIGNER_COLORS.length].hex;
+        const id = recipientIdOf(signer);
         const isCC = signer.kind === 'cc';
         const isWitness = signer.kind === 'witness';
-        const isVisible = !visibleSignerIds || visibleSignerIds.has(signer.email);
+        const isVisible = !visibleSignerIds || visibleSignerIds.has(id);
         const isFiltering = !!visibleSignerIds && visibleSignerIds.size > 0;
-        const count = fieldCountsBySigner[signer.email] ?? 0;
-        const isActive = selectedSignerId === signer.email;
+        const count = fieldCountsBySigner[id] ?? 0;
+        const isActive = selectedSignerId === id;
         return (
           <div
-            key={signer.email}
+            key={id}
             className={[
               'inline-flex items-center gap-1 rounded-full border text-xs transition shrink-0 overflow-hidden',
               isCC ? 'opacity-60 border-gray-200' : 'border-gray-200',
@@ -57,7 +59,7 @@ export function SignerLegend({
               disabled={isCC}
               onClick={() => {
                 if (isCC) return;
-                toggleSignerFilter(signer.email);
+                toggleSignerFilter(id);
               }}
               className={[
                 'inline-flex items-center gap-2 px-2.5 py-1',
@@ -87,7 +89,7 @@ export function SignerLegend({
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedSignerId(signer.email);
+                  setSelectedSignerId(id);
                 }}
                 className={[
                   'text-[10px] tabular-nums px-1.5 py-1 rounded-r-full',
@@ -104,7 +106,7 @@ export function SignerLegend({
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedSignerId(signer.email);
+                  setSelectedSignerId(id);
                   const canvas = document.querySelector('[data-esign-canvas]');
                   canvas?.scrollTo({ top: 0, behavior: 'smooth' });
                 }}

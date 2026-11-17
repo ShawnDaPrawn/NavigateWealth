@@ -767,6 +767,7 @@ export function EnvelopeInspector({
         onOpenChange={setVoidDialogOpen}
         onConfirm={async (reason) => {
           if (onVoidEnvelope) {
+            // Throws when the void failed; the dialog then stays open.
             await onVoidEnvelope(envelope.id, reason);
             setVoidDialogOpen(false);
             onOpenChange(false);

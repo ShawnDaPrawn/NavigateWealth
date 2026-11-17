@@ -91,7 +91,9 @@ export interface EsignSigner {
   client_id?: string | null;
   name: string;
   email: string;
+  phone?: string | null;
   role?: string;
+  kind?: SignerKind;
   order: number;
   otp_required: boolean;
   otp_hash?: string | null;
@@ -192,6 +194,8 @@ export interface EsignEnvelope {
   // recipients → prepare transition so "Continue Editing" can restore them).
   // NOT the same as the real EsignSigner records created at invite-send time.
   draft_signers?: Array<{
+    recipientKey?: string;
+    kind?: SignerKind;
     name: string;
     email: string;
     phone?: string;
@@ -339,11 +343,13 @@ export interface SendInvitesRequest {
     order?: number;
     /** P4.7 — bulk send and packets short-circuit OTP. The server side
      *  uses the camelCase `requiresOtp` flag (see addSignersToEnvelope),
-     *  while the legacy wizard sends `otpRequired`; both are accepted. */
+     *  while the wizard sends `otpRequired`; the send route reads both. */
     requiresOtp?: boolean;
     otpRequired?: boolean;
     accessCode?: string;
     clientId?: string;
+    /** 'cc' recipients are notified only — never sent a signing link. */
+    kind?: SignerKind;
     /** P5.1 — per-signer opt-in for the SMS channel (OTP + invite +
      *  reminder). Requires `phone` to be set. Off by default; senders
      *  must tick explicitly to comply with POPIA s69. */
@@ -451,6 +457,12 @@ export interface GetClientEnvelopesResponse {
 export type SignerKind = 'signer' | 'witness' | 'cc';
 
 export interface SignerFormData {
+  /**
+   * Stable id for this recipient within the draft. Placed fields point at it
+   * (`EsignField.signer_id`), so editing the email or sharing an address with
+   * another recipient does not detach their fields. See `recipientIdentity.ts`.
+   */
+  recipientKey?: string;
   name: string;
   email: string;
   /** P5.1 — required when `smsOptIn` is true. Stored E.164 or
@@ -547,6 +559,14 @@ export interface PrefillMetadata {
   token: PrefillToken;
   /** When true the signer cannot edit the resolved value. */
   locked: boolean;
+  /**
+   * Whose client record the value comes from, as a recipient id (see
+   * `recipientIdentity.ts`). Absent means the field's own assignee. Lets a
+   * form the main client completes carry, say, the spouse's ID number.
+   */
+  source?: string;
+  /** Wire form of `source` at send time: index into the recipient list. */
+  source_index?: number;
 }
 
 // ---------------------------------------------------------------------------

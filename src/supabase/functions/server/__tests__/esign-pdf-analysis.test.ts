@@ -362,3 +362,35 @@ describe('detectSmartAnchors — a realistic form', () => {
     expect(sigRightPct).toBeLessThanOrEqual(date.x);
   });
 });
+
+describe('detectAcroformFields — a widget keeps its exact size', () => {
+  it('does not grow a small but real form box to a minimum', async () => {
+    // A 14pt-tall name box was suggested as a 24pt (140pt-wide minimum)
+    // field, so every auto-mapped field overflowed the box it was for.
+    const pdf = await PDFDocument.create();
+    const form = pdf.getForm();
+    const page = pdf.addPage([595, 842]);
+    form.createTextField('surname').addToPage(page, { x: 72, y: 600, width: 96, height: 14 });
+    form.createCheckBox('tick').addToPage(page, { x: 72, y: 560, width: 9, height: 9 });
+    const res = await detectAcroformFields(await pdf.save());
+    expect(res.ok).toBe(true);
+    const byName = Object.fromEntries(res.candidates.map((c) => [c.label, c]));
+    // Within a point of the drawn box (pdf-lib pads the widget rect for its
+    // border) — and nowhere near the old 140x24 / 18x18 minimums.
+    expect(Math.abs(byName.surname.width - 96)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(byName.surname.height - 14)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(byName.tick.width - 9)).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(byName.tick.height - 9)).toBeLessThanOrEqual(1.5);
+  });
+
+  it('still gives a degenerate widget a grabbable size', async () => {
+    const pdf = await PDFDocument.create();
+    const form = pdf.getForm();
+    const page = pdf.addPage([595, 842]);
+    form.createTextField('broken').addToPage(page, { x: 72, y: 600, width: 1, height: 1 });
+    const res = await detectAcroformFields(await pdf.save());
+    const c = res.candidates.find((x) => x.label === 'broken')!;
+    expect(c.width).toBeGreaterThan(4);
+    expect(c.height).toBeGreaterThan(4);
+  });
+});

@@ -31,7 +31,13 @@ export function VoidEnvelopeDialog({
 
   const handleConfirm = async () => {
     if (!reason.trim()) return;
-    await onConfirm(reason);
+    try {
+      await onConfirm(reason);
+    } catch {
+      // The caller has already said what went wrong. Stay open so the
+      // sender can retry or cancel — closing implied the void had worked.
+      return;
+    }
     setReason('');
     onOpenChange(false);
   };

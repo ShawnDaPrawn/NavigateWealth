@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import type { EsignField, FieldType, SignerFormData } from '../types';
 import { SIGNER_COLORS } from '../constants';
+import { findRecipient, findRecipientIndex, recipientIdOf } from '../recipientIdentity';
 
 interface FieldPaletteProps {
   signers: SignerFormData[];
@@ -308,16 +309,14 @@ export function FieldPalette({
 
   // Get signer color for field
   const getSignerColor = (signerId: string): string => {
-    const signerIndex = signers.findIndex((s) => s.email === signerId);
+    const signerIndex = findRecipientIndex(signers, signerId);
     if (signerIndex >= 0) return SIGNER_COLORS[signerIndex % SIGNER_COLORS.length].hex;
-    return '#6d28d9';
+    return '#6b7280';
   };
 
   // Get signer name
-  const getSignerName = (signerId: string): string => {
-    const signer = signers.find((s) => s.email === signerId);
-    return signer?.name || 'Unknown';
-  };
+  const getSignerName = (signerId: string): string =>
+    findRecipient(signers, signerId)?.name || 'No recipient';
 
   // Handle drag start
   const handleDragStart = (e: React.DragEvent, template: FieldTemplate) => {
@@ -346,7 +345,8 @@ export function FieldPalette({
   // Group fields by signer
   const fieldsBySigner = fields.reduce(
     (acc, field) => {
-      const signerId = field.signer_id || 'unassigned';
+      const r = findRecipient(signers, field.signer_id);
+      const signerId = r ? recipientIdOf(r) : 'unassigned';
       if (!acc[signerId]) acc[signerId] = [];
       acc[signerId].push(field);
       return acc;

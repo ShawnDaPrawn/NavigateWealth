@@ -24,6 +24,7 @@ import { sendSigningReminder } from './email-service.ts';
 import { runExpirySweep } from './esign-expiry-service.ts';
 import { requireCronAuth } from './cron-auth.ts';
 import { runReminderSweep } from './esign-reminder-service.ts';
+import { isCarbonCopy, isSignerTurn } from './esign-signer-guards.ts';
 import {
   getEnvelopeDetails,
   getEnvelopeSigners,
@@ -257,9 +258,15 @@ opsRoutes.post('/maintenance/bulk-remind', requireAdmin, rateLimit('SENDER_BULK'
           continue;
         }
 
+        // Same rule as the single-envelope remind route: whoever can act now,
+        // never a copy-only recipient or a signer whose turn has not come.
         const signers = await getEnvelopeSigners(envelopeId);
-        const pendingSigners = signers.filter((s: { status: string }) =>
-          ['pending', 'sent', 'viewed', 'otp_verified'].includes(s.status),
+        const envelopeForTurn = { ...envelope, signers };
+        const pendingSigners = signers.filter(
+          (s) =>
+            ['pending', 'sent', 'viewed', 'otp_verified'].includes(s.status) &&
+            !isCarbonCopy(s) &&
+            isSignerTurn(envelopeForTurn, s),
         );
 
         if (pendingSigners.length === 0) {
@@ -278,15 +285,20 @@ opsRoutes.post('/maintenance/bulk-remind', requireAdmin, rateLimit('SENDER_BULK'
           email: s.email,
         }));
 
+        let delivered = 0;
         if (!dryRun) {
           for (const signer of pendingSigners) {
             try {
-              await sendSigningReminder({
+              // The link was built by stripping ".supabase.co" off the
+              // project URL — https://<project-ref>/sign — which goes nowhere.
+              // Every other signing email links to the app.
+              const ok = await sendSigningReminder({
                 signerEmail: signer.email,
                 signerName: signer.name,
                 envelopeTitle: envelope.title,
-                signingUrl: `${Deno.env.get('SUPABASE_URL')?.replace('.supabase.co', '')}/sign?token=${signer.access_token}`,
+                signingUrl: `https://www.navigatewealth.co/sign?token=${signer.access_token}`,
               });
+              if (ok) delivered += 1;
             } catch (err) {
               log.error(`Failed to send reminder to ${signer.email}:`, err);
             }
@@ -297,7 +309,7 @@ opsRoutes.post('/maintenance/bulk-remind', requireAdmin, rateLimit('SENDER_BULK'
           envelopeId,
           title: envelope.title,
           pendingSigners: pending,
-          remindersSent: dryRun ? 0 : pendingSigners.length,
+          remindersSent: dryRun ? 0 : delivered,
         });
       } catch (err) {
         results.push({

@@ -132,11 +132,11 @@ describe('esignApi envelope operations', () => {
     expect(mockApiDelete).toHaveBeenCalledWith('/esign/envelopes/env-001');
   });
 
-  it('voidEnvelope posts to void endpoint with reason', async () => {
+  it('voidEnvelope posts to the recall endpoint with reason', async () => {
     mockApiPost.mockResolvedValue({ success: true });
     const result = await esignApi.voidEnvelope('env-001', 'Client request');
     expect(result.success).toBe(true);
-    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/void', {
+    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/recall', {
       reason: 'Client request',
     });
   });
@@ -144,7 +144,7 @@ describe('esignApi envelope operations', () => {
   it('voidEnvelope uses default reason when none provided', async () => {
     mockApiPost.mockResolvedValue({ success: true });
     await esignApi.voidEnvelope('env-001');
-    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/void', {
+    expect(mockApiPost).toHaveBeenCalledWith('/esign/envelopes/env-001/recall', {
       reason: 'Voided by admin',
     });
   });

@@ -82,6 +82,12 @@ fieldsRoutes.put('/envelopes/:envelopeId/fields', requireAdmin, async (c) => {
         signer_id: field.signer_id as string | undefined,
         value: field.value || null,
         metadata: field.metadata || {},
+        // Which PDF of a multi-document envelope the field sits on. Dropped
+        // here before, so on reload every field fell onto the first document
+        // and was sent there too.
+        ...(typeof field.document_id === 'string' && field.document_id
+          ? { document_id: field.document_id }
+          : {}),
         created_at: field.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

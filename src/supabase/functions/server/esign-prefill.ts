@@ -34,7 +34,15 @@ export type PrefillToken =
   | 'envelope.request_id';
 
 interface PrefillContext {
+  /** The signer the fields are assigned to (who completes them). */
   signer: EsignSigner;
+  /**
+   * Every signer on the envelope. A binding may name a DIFFERENT signer as
+   * its data source (`prefill.source_signer_id`) — e.g. the spouse's ID
+   * number on a form the main client completes. Without this the source is
+   * always the assignee.
+   */
+  signers?: EsignSigner[];
   envelope: {
     advice_case_id?: string;
     product_id?: string;
@@ -101,21 +109,22 @@ async function loadClientFields(clientId: string | undefined): Promise<Record<st
 async function resolveToken(
   token: PrefillToken,
   ctx: PrefillContext,
+  source: EsignSigner,
   client: Record<string, unknown>,
 ): Promise<string> {
   if (token.startsWith('key:')) {
     const canonicalKey = token.replace('key:', '');
-    const resolved = await resolveCanonicalValueForClient(ctx.signer.client_id ?? '', canonicalKey);
+    const resolved = await resolveCanonicalValueForClient(source.client_id ?? '', canonicalKey);
     return resolved?.value !== undefined && resolved?.value !== null ? String(resolved.value) : '';
   }
 
   switch (token) {
     case 'client.name':
-      return String(client.name ?? ctx.signer.name ?? '');
+      return String(client.name ?? source.name ?? '');
     case 'client.email':
-      return String(client.email ?? ctx.signer.email ?? '');
+      return String(client.email ?? source.email ?? '');
     case 'client.phone':
-      return String(client.phone ?? ctx.signer.phone ?? '');
+      return String(client.phone ?? source.phone ?? '');
     case 'client.id_number':
       return String(client.id_number ?? '');
     case 'client.address':
@@ -147,15 +156,28 @@ export async function resolvePrefilledFields(
   });
   if (bound.length === 0) return 0;
 
-  const client = await loadClientFields(ctx.signer.client_id);
+  // Client records are loaded once per source signer.
+  const clientCache = new Map<string, Record<string, unknown>>();
+  const clientFor = async (source: EsignSigner) => {
+    const key = source.client_id ?? '';
+    if (!clientCache.has(key)) clientCache.set(key, await loadClientFields(source.client_id));
+    return clientCache.get(key)!;
+  };
   let resolved = 0;
 
   for (const field of bound) {
     const meta = field.metadata as {
-      prefill?: { token: PrefillToken; locked?: boolean; resolvedAt?: string };
+      prefill?: {
+        token: PrefillToken;
+        locked?: boolean;
+        resolvedAt?: string;
+        source_signer_id?: string;
+      };
     };
     if (!meta.prefill) continue;
-    const value = await resolveToken(meta.prefill.token, ctx, client);
+    const sourceId = meta.prefill.source_signer_id;
+    const source = (sourceId && ctx.signers?.find((s) => s.id === sourceId)) || ctx.signer;
+    const value = await resolveToken(meta.prefill.token, ctx, source, await clientFor(source));
     field.value = value;
     meta.prefill.resolvedAt = new Date().toISOString();
     if (value) resolved += 1;
@@ -165,4 +187,22 @@ export async function resolvePrefilledFields(
     `Prefill resolved ${resolved}/${bound.length} bound field(s) for signer ${ctx.signer.email}`,
   );
   return resolved;
+}
+
+/**
+ * Translate a binding's data source from the sender's wire form to a signer
+ * id. The studio names the source by position in the recipient list
+ * (`prefill.source_index`), because the real signer ids only exist once the
+ * send route has created them. Unknown or absent indexes leave the binding
+ * untouched, so the source falls back to the field's assignee.
+ */
+export function withPrefillSourceSigner(
+  metadata: Record<string, unknown> | undefined,
+  signerIds: string[],
+): Record<string, unknown> | undefined {
+  const prefill = metadata?.prefill as Record<string, unknown> | undefined;
+  if (!metadata || !prefill || typeof prefill !== 'object') return metadata;
+  const idx = prefill.source_index;
+  if (typeof idx !== 'number' || !Number.isInteger(idx) || !signerIds[idx]) return metadata;
+  return { ...metadata, prefill: { ...prefill, source_signer_id: signerIds[idx] } };
 }

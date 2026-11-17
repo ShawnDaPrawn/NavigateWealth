@@ -19,6 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../../ui/dropdown-menu';
+import { recipientIdOf } from '../../recipientIdentity';
 
 interface BulkActionBarProps {
   eligibleSigners: SignerFormData[];
@@ -87,8 +88,8 @@ export function BulkActionBar({
               const color = SIGNER_COLORS[idx % SIGNER_COLORS.length].hex;
               return (
                 <DropdownMenuItem
-                  key={s.email}
-                  onSelect={() => handleBulkReassign(s.email)}
+                  key={recipientIdOf(s)}
+                  onSelect={() => handleBulkReassign(recipientIdOf(s))}
                   className="flex items-center gap-2"
                 >
                   <span

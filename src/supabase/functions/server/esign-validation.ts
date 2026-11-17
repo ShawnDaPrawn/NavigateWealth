@@ -15,7 +15,12 @@ export const SignerSchema = z
     email: z.string().email('Valid signer email is required'),
     // P5.1 — phone is optional; server normalises to E.164 at send-time.
     phone: z.string().max(32).optional(),
-    role: z.enum(['signer', 'witness', 'approver', 'cc']).optional().default('signer'),
+    // A free-text DISPLAY label ("Client", "First Life Assured", "Signer") —
+    // printed on the certificate as-is. It was an enum of lowercase kinds,
+    // which rejected every save the wizard made (it sends display labels), so
+    // draft recipients were never stored. What a recipient DOES is `kind`.
+    role: z.string().trim().max(100).optional().default('Signer'),
+    kind: z.enum(['signer', 'witness', 'cc']).optional(),
     order: z.number().int().nonnegative().optional(),
     signerType: z.enum(['client', 'adviser', 'witness', 'external']).optional(),
     // P5.1 — per-signer SMS channel opt-in. Never inferred; always
@@ -115,11 +120,32 @@ export const SignerValidateSchema = z.object({
 // are a GATE against missing/malformed required input, not a closed contract,
 // and an unknown extra field must never be the reason a signature fails.
 
+/**
+ * One entry of the signer client's `signature_data` array — see
+ * `esignSignerService.submitSignature`, which sends one entry per filled field.
+ */
+const SignatureDataEntrySchema = z
+  .object({
+    field_id: z.string().optional(),
+    type: z.string().optional(),
+    value: z.unknown().optional(),
+  })
+  .passthrough();
+
 /** POST /signer/submit — handler requires access_token AND signature_data. */
 export const SignerSubmitBodySchema = z
   .object({
     access_token: z.string().min(1, 'access_token required'),
-    signature_data: z.string().min(1, 'signature_data required'),
+    // The signer client sends an ARRAY of `{ field_id, type, value }` — one per
+    // filled field. This was briefly `z.string()` (#421), which rejected every
+    // real submission with a 400: exactly the failure the A19 note above warns
+    // about. A bare string (a signature image data URL) is still accepted for
+    // older callers. `primarySignatureImage` turns either shape into the one
+    // image the certificate needs.
+    signature_data: z.union([
+      z.string().min(1, 'signature_data required'),
+      z.array(SignatureDataEntrySchema),
+    ]),
     // Iterated as an array of { field_id, value }; entries missing either are
     // skipped by the handler, so they are tolerated rather than rejected here.
     field_values: z
@@ -213,3 +239,26 @@ export const UpdateWebhookSchema = z
     description: z.string().optional(),
   })
   .passthrough();
+
+/**
+ * The signer's adopted signature image, from either `signature_data` shape the
+ * submit route accepts. Prefers a `signature` entry, then `initials`, and only
+ * returns an image data URL — the certificate embeds it as a picture, so a
+ * typed value or an array would break that render (`esign-certificate-pdf.ts`).
+ */
+export function primarySignatureImage(signatureData: unknown): string | undefined {
+  const isImage = (v: unknown): v is string => typeof v === 'string' && v.startsWith('data:image/');
+  if (isImage(signatureData)) return signatureData;
+  if (!Array.isArray(signatureData)) return undefined;
+  for (const kind of ['signature', 'initials']) {
+    const hit = signatureData.find(
+      (e) =>
+        e &&
+        typeof e === 'object' &&
+        (e as { type?: unknown }).type === kind &&
+        isImage((e as { value?: unknown }).value),
+    ) as { value: string } | undefined;
+    if (hit) return hit.value;
+  }
+  return undefined;
+}

@@ -125,6 +125,8 @@ describe('mapTemplateRecipientsToWizard', () => {
       }),
     );
     expect(out[0]).toEqual({
+      // Every wizard recipient gets a stable key the fields point at.
+      recipientKey: expect.stringMatching(/^r_/),
       name: '',
       email: '',
       role: 'Signer',
@@ -262,6 +264,8 @@ describe('signersFromResumedEnvelope', () => {
       {
         name: 'Dana',
         email: 'dana@x.co',
+        phone: undefined,
+        kind: undefined,
         role: 'Witness',
         order: 2,
         otpRequired: true,
@@ -270,6 +274,26 @@ describe('signersFromResumedEnvelope', () => {
         isSystemClient: true,
       },
     ]);
+  });
+
+  it('restores a saved recipient key and never invents one', () => {
+    const out = signersFromResumedEnvelope(
+      envelope({
+        draft_signers: [
+          {
+            recipientKey: 'r_saved',
+            name: 'A',
+            email: 'a@x.co',
+            role: 'Client',
+            order: 1,
+            kind: 'witness',
+          },
+          { name: 'Legacy', email: 'l@x.co', role: 'Signer', order: 2 },
+        ],
+      } as Partial<EsignEnvelope>),
+    );
+    expect(out[0]).toMatchObject({ recipientKey: 'r_saved', role: 'Client', kind: 'witness' });
+    expect(out[1].recipientKey).toBeUndefined();
   });
 
   it('falls back to the legacy requires_otp flag when otp_required is absent', () => {

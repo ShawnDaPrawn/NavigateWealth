@@ -236,6 +236,7 @@ export async function runReminderSweep(dryRun = false): Promise<ReminderSweepRes
       let firedForEnvelope = 0;
 
       for (const signer of signers) {
+        if (signer.kind === 'cc') continue; // copy-only recipients never sign
         const tier = computeReminderTier({ now, config, signer, envelope, auditEvents });
         if (!tier) continue;
 
@@ -244,13 +245,16 @@ export async function runReminderSweep(dryRun = false): Promise<ReminderSweepRes
         if (!dryRun) {
           // Best-effort email first.
           try {
-            await sendSigningReminder({
+            const delivered = await sendSigningReminder({
               signerEmail: signer.email,
               signerName: signer.name,
               envelopeTitle: envelope.title,
               signingUrl,
               expiresAt: envelope.expires_at,
             });
+            // A false return is a failed send. It used to be counted and
+            // audited as sent, so the tier was spent and never retried.
+            if (!delivered) throw new Error('not accepted for delivery');
             firedForEnvelope += 1;
           } catch (err) {
             log.error(`Reminder email failed for ${signer.email}:`, err);
@@ -258,6 +262,7 @@ export async function runReminderSweep(dryRun = false): Promise<ReminderSweepRes
               envelopeId: envelope.id,
               error: `email:${signer.email}:${getErrMsg(err)}`,
             });
+            continue; // no audit entry, so the next sweep tries this tier again
           }
 
           // Parallel SMS channel when opted in.

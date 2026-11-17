@@ -51,6 +51,11 @@ import {
   DocumentUploadStep,
   RecipientsStepView,
   PrepareFormStudio,
+  attachSignerIndexes,
+  signersFromResumedEnvelope,
+  toDraftSignerPayload,
+  toInviteSignerPayload,
+  withRecipientKeys,
 } from '../../esign';
 
 import type { EsignEnvelope, EsignField, SignerFormData } from './esignTabModel';
@@ -181,19 +186,9 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
 
   const persistDraftSigners = async (envelopeId: string, options?: { strict?: boolean }) => {
     try {
-      await esignApi.saveDraftSigners(
-        envelopeId,
-        wizardData.signers.map((s, idx) => ({
-          name: s.name,
-          email: s.email,
-          role: s.role || 'Signer',
-          order: s.order ?? idx + 1,
-          otpRequired: s.otpRequired,
-          accessCode: s.accessCode,
-          clientId: s.clientId,
-          isSystemClient: s.isSystemClient,
-        })),
-      );
+      // Same payload as the module's wizard (wizardDerivations), so both
+      // entry points save kind, phone, SMS opt-in and the recipient key.
+      await esignApi.saveDraftSigners(envelopeId, toDraftSignerPayload(wizardData.signers));
     } catch (draftErr) {
       // The exit path drops the local wizard once this resolves, so there a
       // failure has to surface rather than quietly lose the recipients.
@@ -339,25 +334,17 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
     if (!activeEnvelope) return;
     const fieldsToUse = currentFields || activeEnvelope.fields || [];
     try {
-      const fieldsForInvite = fieldsToUse.map((f) => {
-        const signerIndex = wizardData.signers.findIndex((s) => s.email === f.signer_id);
-        return { ...f, signerIndex: signerIndex >= 0 ? signerIndex : 0 };
-      });
-
-      await sendInvites(activeEnvelope.id, {
-        signers: wizardData.signers.map((s) => ({
-          name: s.name,
-          email: s.email,
-          role: s.role,
-          order: s.order,
-          otpRequired: s.otpRequired,
-          accessCode: s.accessCode,
-          clientId: s.clientId,
-        })),
-        fields: fieldsForInvite,
+      const sent = await sendInvites(activeEnvelope.id, {
+        signers: toInviteSignerPayload(wizardData.signers),
+        fields: attachSignerIndexes(fieldsToUse, wizardData.signers),
         message: wizardData.message,
         expiryDays: wizardData.expiryDays,
       });
+      // sendInvites returns false on failure; ignoring it announced "sent".
+      if (!sent) {
+        toast.error('The envelope was not sent. Check the recipients and try again.');
+        return;
+      }
 
       toast.success('Document sent for signature!');
       setView('list');
@@ -389,34 +376,9 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
         return;
       }
 
-      // Reconstruct signers from draft_signers or real signers
-      let signers: SignerFormData[] = [];
-      const realSigners = fullEnvelope.signers || [];
-      const draftSigners = fullEnvelope.draft_signers || [];
-
-      if (realSigners.length > 0) {
-        signers = (realSigners as unknown as Record<string, unknown>[]).map((s) => ({
-          name: s.name as string,
-          email: s.email as string,
-          role: (s.role as string) || 'Signer',
-          order: s.order as number | undefined,
-          otpRequired: (s.otp_required ?? s.requires_otp ?? false) as boolean,
-          accessCode: (s.access_code as string) || undefined,
-          clientId: (s.client_id as string) || undefined,
-          isSystemClient: !!s.client_id,
-        }));
-      } else if (draftSigners.length > 0) {
-        signers = draftSigners.map((s: Record<string, unknown>) => ({
-          name: s.name as string,
-          email: s.email as string,
-          role: (s.role as string) || 'Signer',
-          order: s.order as number | undefined,
-          otpRequired: (s.otpRequired ?? false) as boolean,
-          accessCode: (s.accessCode as string) || undefined,
-          clientId: (s.clientId as string) || undefined,
-          isSystemClient: (s.isSystemClient ?? !!s.clientId) as boolean,
-        }));
-      }
+      // Reconstruct signers (real records first, then draft_signers) with the
+      // same rules as the module, keys and kinds included.
+      const signers: SignerFormData[] = signersFromResumedEnvelope(fullEnvelope);
 
       setWizardData((prev) => ({
         ...prev,
@@ -459,6 +421,8 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       if (success) {
         toast.success('Envelope deleted successfully');
         refetch();
+      } else {
+        toast.error('The envelope was not deleted. Please try again.');
       }
     }
     setDeleteDialogOpen(false);
@@ -471,6 +435,8 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       if (success) {
         toast.success('Envelope recalled successfully');
         refetch();
+      } else {
+        toast.error('The envelope was not recalled. It may already be completed or voided.');
       }
     }
     setRecallDialogOpen(false);
@@ -493,6 +459,8 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
       toast.success('Envelope voided successfully');
       setDetailsDialogOpen(false);
       refetch();
+    } else {
+      toast.error('The envelope was not voided. It may already be completed or voided.');
     }
   };
 
@@ -539,6 +507,11 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
             }}
             onSaveFields={handleSaveFields}
             onSendForSignature={handleSend}
+            // Recipient edits made inside the studio used to stay there: the
+            // drawer kept sending the list from before the edit.
+            onSignersChange={(signers) =>
+              setWizardData((prev) => ({ ...prev, signers: withRecipientKeys(signers) }))
+            }
             saving={savingFields}
             sending={sending}
             documentUrl={documentUrl || undefined}
@@ -625,7 +598,9 @@ export function EsignTab({ selectedClient }: EsignTabProps) {
         <Suspense fallback={<StepFallback />}>
           <RecipientsStepView
             signers={wizardData.signers}
-            onSignersChange={(signers) => setWizardData((prev) => ({ ...prev, signers }))}
+            onSignersChange={(signers) =>
+              setWizardData((prev) => ({ ...prev, signers: withRecipientKeys(signers) }))
+            }
             autoPopulateSuggestedFields={autoPopulateSuggestedFields}
             onAutoPopulateChange={setAutoPopulateSuggestedFields}
             clientContext={clientContext}

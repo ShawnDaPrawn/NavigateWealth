@@ -108,3 +108,88 @@ export function computeDropPosition(input: DropPlacementInput): { x: number; y: 
 
   return { x, y };
 }
+
+/**
+ * Smallest width or height a field may have, in PDF points (~2mm). Small
+ * enough for a tick box or a single line of a dense form. Was 20pt, and with
+ * the 8pt grid snapping on by default no field could be under 24pt (8.5mm),
+ * so a name field could not fit a typical form box.
+ */
+export const MIN_FIELD_PT = 6;
+
+const PT_PER_MM = 72 / 25.4;
+
+/** PDF points to millimetres. */
+export const ptToMm = (pt: number): number => pt / PT_PER_MM;
+/** Millimetres to PDF points. */
+export const mmToPt = (mm: number): number => mm * PT_PER_MM;
+/** A percent-of-page position to millimetres from that page edge. */
+export const pctToMm = (pct: number, pageSizePt: number): number =>
+  ptToMm((pct / 100) * pageSizePt);
+/** Millimetres from a page edge to a percent-of-page position. */
+export const mmToPct = (mm: number, pageSizePt: number): number =>
+  pageSizePt > 0 ? (mmToPt(mm) / pageSizePt) * 100 : 0;
+
+export type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+export interface FieldRectPts {
+  /** Left and top edges, in points from the page's top-left corner. */
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Resize a field rectangle by dragging one of its eight handles. All values
+ * are PDF points. The opposite edge stays put; the result never shrinks
+ * below MIN_FIELD_PT and never leaves the page.
+ *
+ * `snap` (grid step in points, or 0) quantises the MOVING edge only, so the
+ * fixed edge is never pulled off the box the sender lined it up with.
+ */
+export function resizeRect(
+  start: FieldRectPts,
+  handle: ResizeHandle,
+  dxPts: number,
+  dyPts: number,
+  page: { width: number; height: number },
+  snap = 0,
+): FieldRectPts {
+  const q = (v: number) => (snap > 0 ? Math.round(v / snap) * snap : v);
+  let left = start.left;
+  let top = start.top;
+  let right = start.left + start.width;
+  let bottom = start.top + start.height;
+
+  if (handle.includes('w')) left = Math.min(q(left + dxPts), right - MIN_FIELD_PT);
+  if (handle.includes('e')) right = Math.max(q(right + dxPts), left + MIN_FIELD_PT);
+  if (handle.includes('n')) top = Math.min(q(top + dyPts), bottom - MIN_FIELD_PT);
+  if (handle.includes('s')) bottom = Math.max(q(bottom + dyPts), top + MIN_FIELD_PT);
+
+  left = Math.max(0, left);
+  top = Math.max(0, top);
+  right = Math.min(page.width, right);
+  bottom = Math.min(page.height, bottom);
+
+  return {
+    left,
+    top,
+    width: Math.max(MIN_FIELD_PT, right - left),
+    height: Math.max(MIN_FIELD_PT, bottom - top),
+  };
+}
+
+/**
+ * The zoom (percent) at which the widest page fills `availablePx`, clamped
+ * to the viewer's zoom range.
+ */
+export function fitWidthZoom(
+  availablePx: number,
+  widestPagePts: number,
+  range: { min: number; max: number } = { min: 25, max: 300 },
+): number {
+  if (!(availablePx > 0) || !(widestPagePts > 0)) return 100;
+  const z = Math.floor((availablePx / widestPagePts) * 100);
+  return Math.min(range.max, Math.max(range.min, z));
+}

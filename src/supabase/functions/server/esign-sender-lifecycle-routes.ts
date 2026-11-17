@@ -19,6 +19,7 @@ import {
   logAuditEvent,
 } from './esign-services.ts';
 import { rateLimit } from './esign-rate-limit.ts';
+import { isCarbonCopy, isSignerTurn } from './esign-signer-guards.ts';
 import { sendSigningReminder, sendRecallNotification } from './email-service.ts';
 import { emitWebhookEvent } from './webhook-service.ts';
 import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
@@ -242,7 +243,9 @@ app.post(
       // access tokens so stale signing URLs become inert. (P5.6)
       const signers = await getEnvelopeSigners(envelopeId);
       for (const signer of signers) {
-        if (signer.status === 'pending' || signer.status === 'viewed') {
+        // 'sent' is the status an invited signer actually has — it was missing,
+        // so the people most likely to be mid-signing were never closed off.
+        if (signer.status === 'pending' || signer.status === 'sent' || signer.status === 'viewed') {
           await updateSignerStatus(signer.id, 'declined', {
             declined_at: new Date().toISOString(),
             decline_reason: 'Envelope recalled by admin',
@@ -374,8 +377,20 @@ app.post(
       }
 
       // Get all signers who haven't signed yet
+      // Remind whoever can act NOW: invited ('sent'/'viewed') or, if their
+      // invite failed, still 'pending' — but only when it is their turn
+      // (sequential mode) and never a copy-only recipient. This used to pick
+      // 'pending'/'viewed' only, while sending marks invitees 'sent': parallel
+      // envelopes answered "no pending signers" and sequential ones emailed
+      // the people whose turn had not come.
       const signers = await getEnvelopeSigners(envelopeId);
-      const pendingSigners = signers.filter((s) => s.status === 'pending' || s.status === 'viewed');
+      const envelopeForTurn = { ...envelope, signers };
+      const pendingSigners = signers.filter(
+        (s) =>
+          (s.status === 'pending' || s.status === 'sent' || s.status === 'viewed') &&
+          !isCarbonCopy(s) &&
+          isSignerTurn(envelopeForTurn, s),
+      );
 
       if (pendingSigners.length === 0) {
         return c.json({ error: 'No pending signers to remind' }, 400);
@@ -398,13 +413,16 @@ app.post(
           const tokenForLink = rotated?.access_token ?? signer.access_token;
           const signingUrl = `https://www.navigatewealth.co/sign?token=${tokenForLink}`;
 
-          await sendSigningReminder({
+          const delivered = await sendSigningReminder({
             signerEmail: signer.email,
             signerName: signer.name,
             envelopeTitle: envelope.title,
             signingUrl,
             expiresAt: envelope.expires_at,
           });
+          // sendSigningReminder reports failure by returning false, not by
+          // throwing; a failed send was counted and audited as sent.
+          if (!delivered) throw new Error('Reminder email was not accepted for delivery');
 
           remindersSent.push({
             signerId: signer.id,

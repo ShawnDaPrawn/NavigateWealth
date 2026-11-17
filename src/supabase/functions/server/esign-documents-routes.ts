@@ -25,6 +25,7 @@ import {
   firmScopeResponse,
   SignerRecord,
   FieldRecord,
+  expiryAtSend,
 } from './esign-route-helpers.ts';
 import {
   createDocument,
@@ -53,7 +54,8 @@ import {
   removeEnvelopeDocument,
   reorderEnvelopeDocuments,
 } from './esign-documents.ts';
-import { resolvePrefilledFields } from './esign-prefill.ts';
+import { resolvePrefilledFields, withPrefillSourceSigner } from './esign-prefill.ts';
+import { isCarbonCopy } from './esign-signer-guards.ts';
 import { createSigningInviteEmail } from './esign-email-templates.ts';
 import { getActiveConsent } from './esign-consent-registry.ts';
 import { sendEmail } from './email-service.ts';
@@ -483,7 +485,7 @@ documentsRoutes.post(
       const envelopeId = c.req.param('envelopeId')!;
 
       const body = await c.req.json();
-      const { signers, fields, expiryDays: _expiryDays, message, signingMode } = body;
+      const { signers, fields, expiryDays, message, signingMode } = body;
 
       if (!signers || signers.length === 0) {
         return c.json({ error: 'At least one signer required' }, 400);
@@ -519,7 +521,12 @@ documentsRoutes.post(
           // audit trail tags witness attestations distinctly. Defaults to
           // 'signer' inside addSignersToEnvelope when undefined.
           kind: (s as { kind?: 'signer' | 'witness' | 'cc' }).kind,
-          requiresOtp: s.requiresOtp !== false,
+          // The wizard sends `otpRequired`; `requiresOtp` is the older name.
+          // Reading only `requiresOtp` meant unticking "Require OTP" did
+          // nothing — every recipient was asked for a code.
+          requiresOtp:
+            ((s as { requiresOtp?: boolean; otpRequired?: boolean }).requiresOtp ??
+              (s as { otpRequired?: boolean }).otpRequired) !== false,
           accessCode: s.accessCode,
           clientId: s.clientId,
           // P5.1 — propagate SMS opt-in; only honoured on the server when a
@@ -646,6 +653,10 @@ documentsRoutes.post(
         const fieldsWithSignerIds = materialisedFields.map((field: FieldRecord) => ({
           ...field,
           signerId: signerIds[field.signerIndex as number] || signerIds[0],
+          metadata: withPrefillSourceSigner(
+            (field as { metadata?: Record<string, unknown> }).metadata,
+            signerIds,
+          ),
         }));
 
         await addFieldsToEnvelope(
@@ -661,14 +672,17 @@ documentsRoutes.post(
         // the resolved values are visible on the existing reads path.
         try {
           const allSigners = await getEnvelopeSigners(envelopeId);
-          const allFields: EsignField[] =
-            (await kv.get(EsignKeys.envelopeFields(envelopeId))) ?? [];
+          // The field list stores IDs; getEnvelopeDetails resolves them.
+          // Reading the list as objects meant no field ever matched a signer,
+          // so bound fields were never filled.
+          const allFields: EsignField[] = (await getEnvelopeDetails(envelopeId))?.fields ?? [];
           let totalResolved = 0;
           for (const s of allSigners) {
             const ownFields = allFields.filter((f) => f.signer_id === s.id);
             if (ownFields.length === 0) continue;
             const resolved = await resolvePrefilledFields(ownFields, {
               signer: s as unknown as EsignSigner,
+              signers: allSigners as unknown as EsignSigner[],
               envelope: {
                 advice_case_id: envelope.advice_case_id,
                 product_id: envelope.product_id,
@@ -678,10 +692,16 @@ documentsRoutes.post(
             totalResolved += resolved;
           }
           if (totalResolved > 0) {
-            // Persist back the mutated fields list (resolvePrefilledFields
-            // mutates in place, but we need the storage to reflect the new
-            // values).
-            await kv.set(EsignKeys.envelopeFields(envelopeId), allFields);
+            // Persist each resolved field record (resolvePrefilledFields
+            // mutates in place). The list itself is unchanged — it holds IDs.
+            for (const f of allFields) {
+              if (
+                (f.metadata as { prefill?: { resolvedAt?: string } } | undefined)?.prefill
+                  ?.resolvedAt
+              ) {
+                await kv.set(EsignKeys.field(f.id), f);
+              }
+            }
             await logAuditEvent({
               envelopeId,
               actorType: 'system',
@@ -707,6 +727,10 @@ documentsRoutes.post(
         sent_at: new Date().toISOString(),
         signing_mode: effectiveMode,
         consent_version: pinnedConsent,
+        // The signing window starts when the envelope is SENT. It used to be
+        // fixed at upload time and the sender's choice ignored, so a draft
+        // older than its window went out already expired.
+        expires_at: expiryAtSend(expiryDays, envelope as EsignEnvelope).toISOString(),
       });
 
       // Determine which signers to invite based on signing mode:
@@ -719,8 +743,10 @@ documentsRoutes.post(
       const invitesSent: Array<{ signerId: string; email: string; success: boolean }> = [];
       const { ip, userAgent } = getRequestMetadata(c);
 
+      // Copy-only recipients are never sent a signing link.
+      const signingRecipients = sortedSigners.filter((s) => !isCarbonCopy(s));
       const signersToInvite =
-        effectiveMode === 'parallel' ? sortedSigners : sortedSigners.slice(0, 1); // Sequential: first signer only
+        effectiveMode === 'parallel' ? signingRecipients : signingRecipients.slice(0, 1); // Sequential: first signer only
 
       for (const targetSigner of signersToInvite) {
         const signingUrl = `https://www.navigatewealth.co/sign?token=${targetSigner.access_token}`;

@@ -339,6 +339,7 @@ function deriveTemplateExpiryDays(envelope: EsignEnvelope): number {
 function normaliseTemplateRecipients(
   signers: EsignSigner[],
   draftSigners: Array<{
+    recipientKey?: string;
     name?: string;
     email?: string;
     role?: string;
@@ -374,7 +375,11 @@ function normaliseTemplateRecipients(
   const orderedDrafts = [...draftSigners].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const recipients = orderedDrafts.map((signer, index) => {
     const email = signer.email?.trim() || '';
-    if (email) recipientKeyToIndex.set(email, index);
+    // Fields point at a recipient KEY now (recipientIdentity.ts); older ones
+    // at an email. Index both, key first, or every keyed field would fall to
+    // recipient 1 when the draft is saved as a template.
+    if (email && !recipientKeyToIndex.has(email)) recipientKeyToIndex.set(email, index);
+    if (signer.recipientKey) recipientKeyToIndex.set(signer.recipientKey, index);
     return {
       name: signer.name?.trim() || '',
       email,
@@ -497,6 +502,7 @@ async function buildTemplateSnapshotFromEnvelope(envelopeId: string): Promise<{
     (
       envelope as EsignEnvelope & {
         draft_signers?: Array<{
+          recipientKey?: string;
           name?: string;
           email?: string;
           role?: string;
