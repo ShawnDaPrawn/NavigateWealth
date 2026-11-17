@@ -949,6 +949,8 @@ export interface TemplateField {
   /** Template-owned source document this field belongs to. */
   documentId?: string;
   metadata?: Record<string, unknown>;
+  /** The field's id where the template was saved; other fields' rules name it. */
+  key?: string;
 }
 
 export interface EsignTemplateRecord {

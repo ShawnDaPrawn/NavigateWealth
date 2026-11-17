@@ -296,6 +296,14 @@ jobs:
         # quality/accepted-advisories.json still lists the old acceptance; it
         # lapses by itself because the package now has a fix.
         #
+        # Floor is 13 from 2026-11-17: GHSA-fc5q-39xc-vjpf, high, a ReDoS in
+        # `picomatch` <=4.0.7 — every published version, no fix yet. It is
+        # counted 13 times through the dev/build tooling that depends on it
+        # (vite, vitest, @vitest/coverage-v8, typescript-eslint, lint-staged,
+        # tinyglobby, fdir). None of it ships: picomatch is not in the SPA
+        # bundle or the Edge Function. Put the floor back to 0 once a fixed
+        # picomatch is released and the lockfile resolves to it.
+        #
         # `|| true` is retained on the audit command itself because npm audit
         # exits non-zero whenever ANY vulnerability exists (including moderate/low,
         # which are not gated) — the count, not the exit code, is authoritative.

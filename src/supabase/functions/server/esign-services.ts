@@ -17,6 +17,7 @@ import type {
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import { esignPgRepo } from './esign-postgres-repo.ts';
+import { remapFieldReferences } from '../../../shared/esign/fieldReferences.ts';
 
 const log = createModuleLogger('esign-services');
 
@@ -867,46 +868,9 @@ export async function addFieldsToEnvelope(
   }
 }
 
-/**
- * Rewrite the field ids a field's rules refer to: `conditional.rules[].
- * sourceFieldId` and `{field:<id>}` tokens in `calculated.formula` (the
- * shapes `ruleEngine.ts` reads). Ids not in the map are left as they are.
- */
-export function remapFieldReferences(
-  metadata: Record<string, unknown>,
-  idMap: Map<string, string>,
-): Record<string, unknown> {
-  if (idMap.size === 0) return metadata;
-  let next = metadata;
-  const conditional = metadata.conditional as { rules?: unknown } | undefined;
-  if (conditional && Array.isArray(conditional.rules)) {
-    next = {
-      ...next,
-      conditional: {
-        ...conditional,
-        rules: conditional.rules.map((r) => {
-          const rule = r as { sourceFieldId?: unknown };
-          return typeof rule?.sourceFieldId === 'string' && idMap.has(rule.sourceFieldId)
-            ? { ...rule, sourceFieldId: idMap.get(rule.sourceFieldId) }
-            : r;
-        }),
-      },
-    };
-  }
-  const calculated = metadata.calculated as { formula?: unknown } | undefined;
-  if (calculated && typeof calculated.formula === 'string') {
-    next = {
-      ...next,
-      calculated: {
-        ...calculated,
-        formula: calculated.formula.replace(/\{field:([^}]+)\}/g, (whole, id: string) =>
-          idMap.has(id) ? `{field:${idMap.get(id)}}` : whole,
-        ),
-      },
-    };
-  }
-  return next;
-}
+// Rewriting conditional/formula references lives in shared code: the SPA
+// needs the same rule when it applies a saved template.
+export { remapFieldReferences } from '../../../shared/esign/fieldReferences.ts';
 
 /**
  * Update field value

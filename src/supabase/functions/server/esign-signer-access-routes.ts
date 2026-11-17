@@ -209,6 +209,39 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       : [];
     const signerFields = allFields2.filter((f: FieldRecord) => f.signer_id === signer.id);
 
+    // What signers BEFORE this one have already completed, so a later signer
+    // sees the document as it stands — the original PDF alone hid the
+    // earlier entries until the final copy. Read-only and only from signers
+    // who have finished; geometry and the value, nothing else.
+    const finishedSignerIds = new Set(
+      (Array.isArray(envelope.signers)
+        ? (envelope.signers as unknown as Array<Record<string, unknown>>)
+        : []
+      )
+        .filter((s) => s.status === 'signed' && s.id !== signer.id)
+        .map((s) => s.id as string),
+    );
+    const completedFields = allFields2
+      .filter(
+        (f: FieldRecord) =>
+          finishedSignerIds.has(f.signer_id as string) &&
+          // An attachment's value is a storage marker (`attachment:<id>`), not
+          // document content; the signed PDF skips it, so the screen does too.
+          f.type !== 'attachment' &&
+          typeof f.value === 'string' &&
+          (f.value as string).trim() !== '',
+      )
+      .map((f: FieldRecord) => ({
+        id: f.id,
+        type: f.type,
+        page: f.page,
+        x: f.x,
+        y: f.y,
+        width: f.width,
+        height: f.height,
+        value: f.value,
+      }));
+
     // Determine if it's this signer's turn based on signing mode
     // ── Look up the signer's saved signature profile (Phase 1 — signature reuse).
     // Keyed by lowercased email so a returning signer sees their adopted
@@ -317,6 +350,7 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       is_turn: isTurn,
       all_signers: signersSummary,
       fields: signerFields,
+      completed_fields: completedFields,
       saved_signature: savedSignature,
       saved_initials: savedInitials,
       branding,

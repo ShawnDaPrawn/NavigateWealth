@@ -15,6 +15,7 @@ import type {
   EsignSigner,
 } from './types';
 import { findRecipientIndex, newRecipientKey, recipientIdOf } from './recipientIdentity';
+import { remapFieldReferences } from '../../../../shared/esign/fieldReferences';
 
 /**
  * P4.1 / P4.3 — Template provenance carried through the wizard.
@@ -113,13 +114,22 @@ export const buildTemplateFieldsForEnvelope = (params: {
     params.envelope.document_id ??
     Object.values(params.documentMap || {})[0];
 
+  // New ids for every template field, by its saved key, so conditional rules
+  // and formulas that name another field can be re-pointed (they kept the
+  // saved envelope's ids and never matched).
+  const idOf = (index: number) => `tpl-${params.envelope.id}-${index}`;
+  const keyToId = new Map<string, string>();
+  params.template.fields.forEach((f, index) => {
+    if (f.key) keyToId.set(f.key, idOf(index));
+  });
+
   return params.template.fields
     .map((templateField, index): EsignField | null => {
       const recipient = params.signers[templateField.recipientIndex];
       if (!recipient) return null;
 
       return {
-        id: `tpl-${params.envelope.id}-${index}`,
+        id: idOf(index),
         envelope_id: params.envelope.id,
         document_id:
           (templateField.documentId && params.documentMap?.[templateField.documentId]) ||
@@ -132,7 +142,7 @@ export const buildTemplateFieldsForEnvelope = (params: {
         width: templateField.width,
         height: templateField.height,
         required: templateField.required,
-        metadata: templateField.metadata ?? {},
+        metadata: remapFieldReferences(templateField.metadata ?? {}, keyToId),
         created_at: nowIso,
         updated_at: nowIso,
       } satisfies EsignField;

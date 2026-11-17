@@ -10,10 +10,11 @@ import {
 } from '../recipientIdentity';
 import {
   attachSignerIndexes,
+  buildTemplateFieldsForEnvelope,
   toInviteSignerPayload,
   toDraftSignerPayload,
 } from '../wizardDerivations';
-import type { EsignField, SignerFormData } from '../types';
+import type { EsignEnvelope, EsignField, EsignTemplateRecord, SignerFormData } from '../types';
 
 const signer = (over: Partial<SignerFormData>): SignerFormData => ({
   name: 'X',
@@ -111,5 +112,52 @@ describe('send payload', () => {
 
   it('saves the recipient key and kind with the draft', () => {
     expect(toDraftSignerPayload([b])[0]).toMatchObject({ recipientKey: 'r_b', kind: 'cc' });
+  });
+});
+
+describe('applying a template', () => {
+  it('re-points conditional rules and formulas at the new fields', () => {
+    const template = {
+      fields: [
+        {
+          key: 'k-box',
+          type: 'checkbox',
+          page: 1,
+          x: 1,
+          y: 1,
+          width: 9,
+          height: 9,
+          required: false,
+          recipientIndex: 0,
+        },
+        {
+          key: 'k-detail',
+          type: 'text',
+          page: 1,
+          x: 1,
+          y: 5,
+          width: 100,
+          height: 14,
+          required: true,
+          recipientIndex: 0,
+          metadata: {
+            conditional: { rules: [{ sourceFieldId: 'k-box', operator: 'is_checked' }] },
+            calculated: { formula: '{field:k-box} + 1' },
+          },
+        },
+      ],
+    } as unknown as EsignTemplateRecord;
+    const out = buildTemplateFieldsForEnvelope({
+      envelope: { id: 'env-9', document_id: 'doc-9' } as EsignEnvelope,
+      template,
+      signers: [signer({ recipientKey: 'r_a' })],
+    });
+    const box = out[0];
+    const meta = out[1].metadata as {
+      conditional: { rules: Array<{ sourceFieldId: string }> };
+      calculated: { formula: string };
+    };
+    expect(meta.conditional.rules[0].sourceFieldId).toBe(box.id);
+    expect(meta.calculated.formula).toBe(`{field:${box.id}} + 1`);
   });
 });

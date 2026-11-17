@@ -264,6 +264,7 @@ IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
 | —              | `POST /requests/:id/submit` has never existed server-side; the client-facing request completion flow 404s on submit. Needs a product decision, not just a fix.                                                                                                                                                                                                                                                                                                                                                                                      |
 | GHSA-86w9      | **Accepted by the owner, 2026-10-02.** `node-forge` (via `@signpdf/signer-p12`) has a high advisory in RSA signature _verification_, no fixed release; `esign-pdf-protect.ts` only signs, so it is unreachable. `npm-audit-baseline` was 0 → 2; **floor back to 0 on 2026-11-13** now that `node-forge` 1.4.3 is locked and `npm audit` reports no high/critical (#472, #411). Still open: the edge import `esign-pdf-protect.ts` pins `npm:node-forge@1.4.0`; move it to 1.4.3 only with a Deno signing check, since it runs the e-signature path. |
 | GHSA-hq66      | **Avoided, 2026-10-09.** `pdfjs-dist` from 5.6.83 up to 6.2.108 can run arbitrary JavaScript when a malicious PDF is opened; the admin e-sign viewer opens uploaded PDFs. The grouped Dependabot bump to 5.7.284 was declined: `package.json` holds `~5.5.207` (unaffected) and `.github/dependabot.yml` ignores the affected range. The way forward is the deliberate move to 6.2.108+, a major with its own API changes.                                                                                                                          |
+| GHSA-fc5q      | **Floor raised, 2026-11-17.** A ReDoS in `picomatch` <=4.0.7 (every release; no fix exists). It reaches the tree only through dev/build tooling — vite, vitest, typescript-eslint, lint-staged — so nothing shipped can hit it. `npm-audit-baseline` 0 → 13 (one advisory counted through 13 packages); back to 0 when a fixed picomatch lands and the lockfile resolves to it.                                                                                                                                                                     |
 
 ### Closed by the September 2026 auth review
 
@@ -572,23 +573,25 @@ is work not yet done, not budget.
   per PR, lowest fan-in first; `esign-*`, `integrations-*` and `client-*` have
   the most inbound imports and test paths and are the expensive ones. See
   [`ROADMAP.md`](ROADMAP.md).
-- **E-sign: what the November 2026 refinement left open.** Sending, signing
-  and the signed PDF now work end to end and are pinned by
+- **E-sign: how it is held together (November 2026 refinement).** Sending,
+  signing and the signed PDF work end to end and are pinned by
   `esign-round-trip.e2e.test.ts`, which drives the wizard's and the signer
-  client's real request bodies through the real routes and reads the burned
-  PDF back (see `INCIDENTS.md`, 2026-11-17). Field text, on the signing screen
-  and in the PDF, follows one rule in `shared/esign/fieldText.ts`; change it
-  there, not in either renderer. Still open:
-  - A later signer sees the original PDF, not earlier signers' entries
-    (`esign-signer-access-routes.ts` returns the signer's own fields only).
-  - Burn-in draws on the page's existing content stream. A source PDF that
-    leaves its graphics state unbalanced (an unmatched `q`) would offset what
-    is drawn; pdf-lib does not wrap existing content.
-  - "Require OTP" is now honoured when a sender unticks it — before, every
-    recipient was asked for a code regardless. Whether the box should be
-    offered at all is a product decision, not a bug.
-  - The page manager edits single-document envelopes only; on a
-    multi-document envelope it is disabled.
+  client's real request bodies through the real routes, checks what the next
+  signer is shown, and reads the burned PDF back (see `INCIDENTS.md`,
+  2026-11-17). Two rules live in shared code; change them there, not in a
+  renderer or route:
+  - `shared/esign/fieldText.ts` — how a value sits in its box, on the signing
+    screen and in the PDF.
+  - `shared/esign/fieldReferences.ts` — re-pointing conditional rules and
+    formulas when fields get new ids (at send, and when a template is
+    applied; templates keep each field's saved id as `key` for this).
+
+  Decided, not open: **"Require OTP" is the sender's choice per recipient**
+  (owner, 2026-11-17). Until October every recipient was asked for a code
+  whatever the box said; the box is now honoured. Later signers see earlier
+  signers' completed entries (read-only). The page manager edits
+  single-document envelopes only and is disabled on multi-document ones.
+
 - **KV-first data access.** Large parts of the domain still read and write the
   KV table with the service-role key, bypassing row-level security. The
   `kv-direct-access` ratchet holds the line while it is migrated.

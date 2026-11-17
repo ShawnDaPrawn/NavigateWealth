@@ -87,6 +87,9 @@ describe('saving a draft as a template', () => {
     });
     expect(tpl).toBeTruthy();
     expect(tpl!.fields.map((f) => f.recipientIndex)).toEqual([0, 1]);
+    // Each field keeps its saved id as a key, so references can be re-pointed
+    // when the template is applied.
+    expect(tpl!.fields.map((f) => (f as { key?: string }).key)).toEqual(['fa', 'fb']);
   });
 });
 
