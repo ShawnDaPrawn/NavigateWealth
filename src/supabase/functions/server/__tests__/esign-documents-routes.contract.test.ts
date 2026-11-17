@@ -69,7 +69,12 @@ vi.mock('../esign-pdf-transform.ts', async () => {
   return { ...real, applyManifest: vi.fn(async () => new Uint8Array([9, 9, 9])) };
 });
 
-vi.mock('../email-service.ts', () => ({ sendEmail: vi.fn(async () => true) }));
+vi.mock('../email-service.ts', () => ({
+  sendEmail: vi.fn(async () => true),
+  // The invite route renders its email through these.
+  createEmailTemplate: vi.fn(() => '<p>invite</p>'),
+  createPlainTextEmail: vi.fn(() => 'invite'),
+}));
 vi.mock('../sms-service.ts', () => ({ sendInviteSms: vi.fn(async () => true) }));
 
 const supa = vi.hoisted(() => ({
@@ -655,5 +660,62 @@ describe('firm scope', () => {
     // an owner, so a bad id is a 404 instead of `{ manifest: null }`.
     const res = await req('/envelopes/no-such-envelope/manifest', { as: 'owner' });
     expect(res.status).toBe(404);
+  });
+});
+
+// ============================================================================
+// POST /envelopes/:id/invites — retries and half-sent envelopes
+// ============================================================================
+
+describe('POST /envelopes/:id/invites', () => {
+  const invite = (signers: Array<{ name: string; email: string }>) =>
+    req(`/envelopes/${ENV_ID}/invites`, {
+      method: 'POST',
+      body: { signers, fields: [], message: 'Please sign' },
+    });
+
+  it('starts a retried send from a clean signer list', async () => {
+    // A send that failed after creating its signers left the envelope a
+    // draft; the retry appended the same people again, each with a second
+    // signing link.
+    seedEnvelope();
+    kvStore.set(EsignKeys.envelopeSigners(ENV_ID), ['stale-1']);
+    kvStore.set(EsignKeys.PREFIX_SIGNER + 'stale-1', {
+      id: 'stale-1',
+      envelope_id: ENV_ID,
+      email: 'jane@example.com',
+      name: 'Jane',
+      access_token: 'tok-stale',
+      status: 'pending',
+      order: 1,
+    });
+    kvStore.set(EsignKeys.signerToken('tok-stale'), 'stale-1');
+
+    const res = await invite([{ name: 'Jane', email: 'jane@example.com' }]);
+    expect(res.status).toBe(200);
+
+    const ids = kvStore.get(EsignKeys.envelopeSigners(ENV_ID)) as string[];
+    expect(ids).toHaveLength(1);
+    expect(ids[0]).not.toBe('stale-1');
+    expect(kvStore.has(EsignKeys.PREFIX_SIGNER + 'stale-1')).toBe(false);
+    expect(kvStore.has(EsignKeys.signerToken('tok-stale'))).toBe(false);
+  });
+
+  it('fails a multi-document send that cannot be combined, before inviting anyone', async () => {
+    // It used to send the first document alone, with fields numbered for
+    // the combined one, and report success. The stored bytes here are not a
+    // PDF, so combining fails.
+    seedEnvelope();
+    seedSecondDocument();
+
+    const res = await invite([{ name: 'Jane', email: 'jane@example.com' }]);
+    expect(res.status).toBe(500);
+    expect(((await json(res)) as unknown as { error: string }).error).toMatch(
+      /could not be combined/,
+    );
+
+    const stored = kvStore.get(EsignKeys.envelope(ENV_ID)) as { status: string };
+    expect(stored.status).toBe('draft');
+    expect(kvStore.get(EsignKeys.envelopeSigners(ENV_ID)) ?? []).toEqual([]);
   });
 });

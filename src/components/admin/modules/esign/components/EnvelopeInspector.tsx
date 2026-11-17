@@ -273,7 +273,11 @@ interface EnvelopeInspectorProps {
   envelope: EsignEnvelope | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSendReminder?: (envelopeId: string) => void;
+  /**
+   * Sends the reminder and reports the outcome itself (it knows whether the
+   * request worked; the inspector used to announce success before it ended).
+   */
+  onSendReminder?: (envelopeId: string) => Promise<unknown> | void;
   onVoidEnvelope?: (envelopeId: string, reason: string) => void;
   onDeleteEnvelope?: (envelopeId: string) => void;
   onDownloadDocument?: (envelopeId: string) => void;
@@ -298,6 +302,7 @@ export function EnvelopeInspector({
   const [auditEvents, setAuditEvents] = useState<EsignAuditEvent[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [fullEnvelope, setFullEnvelope] = useState<EsignEnvelope | null>(null);
+  const [reminding, setReminding] = useState(false);
 
   // Fetch full envelope details (with signers/fields) when inspector opens
   useEffect(() => {
@@ -340,11 +345,14 @@ export function EnvelopeInspector({
     toast.success('Envelope ID copied to clipboard');
   };
 
-  const handleResend = (e: React.MouseEvent) => {
+  const handleResend = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onSendReminder) {
-      onSendReminder(envelope.id);
-      toast.success('Reminder sent to current recipient');
+    if (!onSendReminder || reminding) return;
+    setReminding(true);
+    try {
+      await onSendReminder(envelope.id);
+    } finally {
+      setReminding(false);
     }
   };
 
@@ -353,9 +361,13 @@ export function EnvelopeInspector({
   const sortedSigners = [...(envelopeData.signers || [])].sort(
     (a, b) => (a.order || 0) - (b.order || 0),
   );
-  const isActive = ['sent', 'viewed', 'partially_signed'].includes(envelope.status);
-  const isCompleted = envelope.status === 'completed';
-  const isDraft = envelope.status === 'draft';
+  // Decide from the envelope as just fetched, not the list's copy: after a
+  // void or send the list is refreshed in the background, and acting on its
+  // stale status offered actions that then failed.
+  const status = envelopeData.status;
+  const isActive = ['sent', 'viewed', 'partially_signed'].includes(status);
+  const isCompleted = status === 'completed';
+  const isDraft = status === 'draft';
 
   // Sort audit events chronologically (newest first)
   const sortedAuditEvents = [...auditEvents].sort((a, b) => {
@@ -464,8 +476,8 @@ export function EnvelopeInspector({
                   </DropdownMenuContent>
                 </DropdownMenu>
                 {isActive && onSendReminder && (
-                  <DsButton variant="primary" onClick={handleResend}>
-                    Send reminder
+                  <DsButton variant="primary" onClick={handleResend} disabled={reminding}>
+                    {reminding ? 'Sending…' : 'Send reminder'}
                   </DsButton>
                 )}
                 {isDraft && onResumePrepare && (
@@ -556,7 +568,12 @@ export function EnvelopeInspector({
                                 </span>
                               </div>
                               {isCurrent && onSendReminder && (
-                                <DsButton size="sm" variant="ghost" onClick={handleResend}>
+                                <DsButton
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={handleResend}
+                                  disabled={reminding}
+                                >
                                   Remind
                                 </DsButton>
                               )}
@@ -576,7 +593,7 @@ export function EnvelopeInspector({
                     <div className="ds-dl">
                       <div>
                         <span>Status</span>
-                        <StatusBadge status={envelope.status} type="envelope" />
+                        <StatusBadge status={status} type="envelope" />
                       </div>
                       <div>
                         <span>Created</span>
@@ -629,11 +646,8 @@ export function EnvelopeInspector({
                     )}
 
                     {/* Per-Envelope Reminder Settings */}
-                    {!isCompleted && envelope.status !== 'voided' && (
-                      <ReminderConfigPanel
-                        envelopeId={envelope.id}
-                        envelopeStatus={envelope.status}
-                      />
+                    {!isCompleted && status !== 'voided' && (
+                      <ReminderConfigPanel envelopeId={envelope.id} envelopeStatus={status} />
                     )}
                   </div>
                 )}
@@ -779,7 +793,7 @@ export function EnvelopeInspector({
       <DiscardEnvelopeDialog
         open={discardDialogOpen}
         onOpenChange={setDiscardDialogOpen}
-        envelopeStatus={envelope.status}
+        envelopeStatus={status}
         onConfirm={async () => {
           if (onDeleteEnvelope) {
             onDeleteEnvelope(envelope.id);

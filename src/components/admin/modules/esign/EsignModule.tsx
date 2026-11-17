@@ -21,7 +21,7 @@
  * different on screen.
  */
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'react-router';
 import { useBreadcrumbTrail } from '../../layout/page';
 import { ArrowRight, Send } from 'lucide-react';
@@ -42,6 +42,7 @@ import {
 import { documentStepBlocker } from './components/documentStepModel';
 import { esignApi } from './api';
 import { withRecipientKeys } from './recipientIdentity';
+import { describeDraftDocumentSync, syncDraftDocuments } from './draftDocuments';
 import {
   canExpressSend,
   templateHasSavedDocuments,
@@ -123,6 +124,7 @@ export function EsignModule() {
     deleteEnvelope,
     saveFields,
     downloadDocument,
+    getLastUploadError,
     uploading,
     sending,
     savingFields,
@@ -130,7 +132,21 @@ export function EsignModule() {
 
   // ==================== NAVIGATION HANDLERS ====================
 
+  /**
+   * The wizard files already uploaded into the active draft. Lets a return
+   * trip through the Documents step add only what is new (draftDocuments.ts).
+   */
+  const uploadedFilesRef = useRef<File[]>([]);
+  /**
+   * The draft envelope THIS wizard session created, if any. Discarding the
+   * wizard deletes it (to the Recovery Bin); a draft the sender resumed from
+   * the dashboard is theirs and is left alone.
+   */
+  const sessionDraftIdRef = useRef<string | null>(null);
+
   const resetWizardState = () => {
+    uploadedFilesRef.current = [];
+    sessionDraftIdRef.current = null;
     setWizardData({
       files: [],
       title: '',
@@ -217,6 +233,8 @@ export function EsignModule() {
 
     setPendingEnvelopes([]);
     setActiveEnvelope(result.envelope);
+    uploadedFilesRef.current = [...wizardData.files];
+    sessionDraftIdRef.current = result.envelope.id;
     const url = result.envelope.document?.url || result.envelope.documentUrl;
     if (url) setDocumentUrl(url);
 
@@ -355,6 +373,19 @@ export function EsignModule() {
   };
 
   /**
+   * Add files the sender put on the Documents step after the draft was
+   * created, and say what happened to any they took away.
+   */
+  const syncWizardFilesIntoDraft = async (envelopeId: string) => {
+    const sync = await syncDraftDocuments(envelopeId, wizardData.files, uploadedFilesRef.current);
+    uploadedFilesRef.current = [...uploadedFilesRef.current, ...sync.added];
+    const note = describeDraftDocumentSync(sync);
+    if (!note) return;
+    if (sync.failed.length > 0 || sync.removed.length > 0) toast.warning(note);
+    else toast.success(note);
+  };
+
+  /**
    * P4.1 / P4.3 — Materialise an envelope from the wizard state.
    * Uploads the document(s), persists draft signers, and (when a
    * template was selected) hydrates the template's field layout onto
@@ -403,6 +434,7 @@ export function EsignModule() {
           error: draftErr,
         });
       }
+      await syncWizardFilesIntoDraft(activeEnvelope.id);
       return { envelope: activeEnvelope, fields: activeEnvelope.fields ?? [] };
     }
 
@@ -428,17 +460,26 @@ export function EsignModule() {
         title: wizardData.title,
         message: wizardData.message,
         expiresAt: new Date(Date.now() + wizardData.expiryDays * 24 * 60 * 60 * 1000).toISOString(),
+        expiryDays: wizardData.expiryDays,
+        // A template's signing order was dropped when its documents were
+        // uploaded fresh, so every such envelope fell back to sequential.
+        signingMode: templateContext?.template.signingMode,
         templateId: templateContext?.template.id,
         templateVersion: templateContext?.version,
       },
     });
 
     if (!result || !result.id) {
-      throw new Error('Failed to create envelope');
+      // uploadDocument reports failure as null and keeps the server's
+      // message in uploadError; this used to say only "Failed to create
+      // envelope", whatever the server had said.
+      throw new Error(getLastUploadError() || 'Failed to create envelope');
     }
 
     setPendingEnvelopes([]);
     setActiveEnvelope(result);
+    uploadedFilesRef.current = [...wizardData.files];
+    sessionDraftIdRef.current = result.id;
 
     const url = result.document?.url || result.documentUrl;
     if (url) setDocumentUrl(url);
@@ -484,12 +525,24 @@ export function EsignModule() {
     // also find them.
     if (activeEnvelope?.id && activeEnvelope.status === 'draft') {
       try {
+        // Title, message and expiry edited on the Documents step were
+        // silently dropped here: only the recipients were written back.
+        await esignApi.updateDraftSettings(activeEnvelope.id, {
+          title: wizardData.title,
+          message: wizardData.message,
+          expiryDays: wizardData.expiryDays,
+        });
         await syncDraftSigners(activeEnvelope.id, wizardData.signers);
       } catch (draftErr) {
-        logger.warn('Failed to update draft signers on existing envelope (non-critical):', {
+        logger.warn('Failed to update the existing draft (non-critical):', {
           error: draftErr,
         });
+        toast.error('Some changes could not be saved to the draft. Please try again.');
       }
+      await syncWizardFilesIntoDraft(activeEnvelope.id);
+      setActiveEnvelope((prev) =>
+        prev ? { ...prev, title: wizardData.title, message: wizardData.message } : prev,
+      );
       setView('prepare');
       return;
     }
@@ -661,9 +714,12 @@ export function EsignModule() {
       toast.error('You do not have permission to send envelopes.');
       return;
     }
+    // Template recipients arrive as empty slots (wizardDerivations), so this
+    // is what stops an express send to nobody — or, before slots, to the
+    // template's previous client.
     const missingEmail = wizardData.signers.find((s) => !s.email?.trim());
     if (missingEmail) {
-      toast.error('Each recipient needs an email before express send.');
+      toast.error(`Add the name and email for "${missingEmail.role || 'Signer'}" before sending.`);
       return;
     }
     if (templateContext.template.fields.length === 0) {
@@ -844,11 +900,41 @@ export function EsignModule() {
       setExitDialogOpen(true);
       return;
     }
-    discardWizard();
+    void discardWizard();
   };
 
-  const discardWizard = () => {
+  /** Manual reminder from the envelope page; reports what actually happened. */
+  const handleSendReminder = async (envelopeId: string) => {
+    try {
+      const result = await esignApi.sendReminder(envelopeId);
+      if (result.totalReminders > 0) {
+        toast.success(
+          `Reminder sent to ${result.totalReminders} signer${result.totalReminders > 1 ? 's' : ''}`,
+        );
+      } else {
+        toast.info('No signer is waiting to sign right now.');
+      }
+    } catch (err) {
+      logger.error('Failed to send reminder:', err);
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to send reminder. Please try again.',
+      );
+    }
+  };
+
+  const discardWizard = async () => {
     setExitDialogOpen(false);
+    // Once the wizard had created its draft (or a template opened for editing
+    // had), Discard used to leave that draft on the dashboard as if it had
+    // been saved. Delete it; it goes to the Recovery Bin, so it can be undone.
+    const draftId = sessionDraftIdRef.current;
+    if (draftId && activeEnvelope?.id === draftId && activeEnvelope.status === 'draft') {
+      const deleted = await deleteEnvelope(draftId);
+      if (!deleted) {
+        toast.error('The draft could not be discarded. It is still on your dashboard.');
+      }
+      setRefreshTrigger((prev) => prev + 1);
+    }
     resetWizardState();
     setView('dashboard');
   };
@@ -1093,6 +1179,7 @@ export function EsignModule() {
             isTemplateBuilder={!!templateBuilder}
             autoPopulateSuggestedFields={autoPopulateSuggestedFields}
             onAutoPopulateChange={setAutoPopulateSuggestedFields}
+            signingMode={activeEnvelope?.signing_mode}
           />
         </EsignWizardShell>
       ) : (
@@ -1108,6 +1195,9 @@ export function EsignModule() {
                       if (!open) closeEnvelope();
                     }}
                     onDownloadDocument={handleDownloadDocument}
+                    // The module never passed this, so the inspector's
+                    // "Send reminder" button never appeared here.
+                    onSendReminder={canSend ? handleSendReminder : undefined}
                     onResumePrepare={canCreate ? handleResumePrepare : undefined}
                     resumingEnvelopeId={resumingEnvelopeId}
                     onVoidEnvelope={
@@ -1186,7 +1276,7 @@ export function EsignModule() {
         open={exitDialogOpen}
         onOpenChange={setExitDialogOpen}
         onSaveDraft={handleSaveDraftAndExit}
-        onDiscard={discardWizard}
+        onDiscard={() => void discardWizard()}
         canSaveDraft={
           // A saved draft carries no template-builder context — resuming it
           // would offer Send, not Save Template, and lose the template's id,

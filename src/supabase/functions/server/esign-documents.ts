@@ -221,10 +221,12 @@ export async function concatenateEnvelopeDocuments(
   let combinedPageCursor = 0;
 
   for (const doc of documents) {
+    // A document that cannot be read used to be SKIPPED, so the envelope
+    // went out without it and with its fields dropped. The only caller is the
+    // send path, which turns this into a failed send with nothing sent.
     const sourceBuffer = await downloadDocument(doc.storage_path);
     if (!sourceBuffer) {
-      log.warn(`Skipping document ${doc.document_id}: download failed`);
-      continue;
+      throw new Error(`Document ${doc.display_name || doc.document_id} could not be downloaded`);
     }
     let bufferToUse = sourceBuffer;
     // Apply per-document manifest (rotate/reorder/delete) if present.
@@ -245,8 +247,10 @@ export async function concatenateEnvelopeDocuments(
     try {
       src = await PDFDocument.load(bufferToUse, { ignoreEncryption: true });
     } catch (err) {
-      log.warn(`pdf-lib failed to load doc ${doc.document_id}: ${getErrMsg(err)}`);
-      continue;
+      throw new Error(
+        `Document ${doc.display_name || doc.document_id} could not be read as a PDF: ${getErrMsg(err)}`,
+        { cause: err },
+      );
     }
     const pageIndices = src.getPageIndices();
     const copied = await merged.copyPages(src, pageIndices);

@@ -18,9 +18,11 @@ interface RecipientsPageProps {
   onSave: (next: SignerFormData[]) => Promise<boolean>;
   /** Returns to the fields. */
   onClose: () => void;
+  /** How the envelope routes; drives the signing-order help text. */
+  signingMode?: 'sequential' | 'parallel';
 }
 
-export function RecipientsPage({ signers, onSave, onClose }: RecipientsPageProps) {
+export function RecipientsPage({ signers, onSave, onClose, signingMode }: RecipientsPageProps) {
   const [draft, setDraft] = useState<SignerFormData[]>(signers);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,6 +73,7 @@ export function RecipientsPage({ signers, onSave, onClose }: RecipientsPageProps
             setDraft(next);
             setDirty(true);
           }}
+          signingMode={signingMode}
         />
       </div>
     </div>

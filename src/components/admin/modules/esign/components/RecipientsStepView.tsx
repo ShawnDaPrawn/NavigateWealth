@@ -28,6 +28,8 @@ interface RecipientsStepViewProps {
   /** When set, this client is pre-filled as the first recipient (removable). */
   clientContext?: ClientContext;
   disabled?: boolean;
+  /** How the envelope routes; drives the signing-order help text. */
+  signingMode?: 'sequential' | 'parallel';
 }
 
 export function RecipientsStepView({
@@ -39,6 +41,7 @@ export function RecipientsStepView({
   onAutoPopulateChange,
   clientContext,
   disabled = false,
+  signingMode,
 }: RecipientsStepViewProps) {
   const expressAvailable = canExpressSend(templateContext, isTemplateBuilder);
 
@@ -50,7 +53,7 @@ export function RecipientsStepView({
       <EsignWizardSection
         icon={Users}
         title="Recipients"
-        description="Everyone who has to sign, in signing order. Drag to reorder."
+        description="Everyone who has to sign, in signing order. Drag or use the arrows to reorder."
         action={
           signers.length > 0 ? (
             <span className="text-xs font-medium text-gray-500">
@@ -64,6 +67,7 @@ export function RecipientsStepView({
           onChange={onSignersChange}
           clientContext={clientContext}
           disabled={disabled}
+          signingMode={signingMode ?? templateContext?.template.signingMode}
         />
       </EsignWizardSection>
 

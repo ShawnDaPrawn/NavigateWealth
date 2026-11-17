@@ -410,18 +410,6 @@ export interface RejectSigningResponse {
   status: EnvelopeStatus;
 }
 
-export interface SaveTemplateRequest {
-  name: string;
-  description?: string;
-}
-
-export interface SaveTemplateResponse {
-  id: string;
-  name: string;
-  description?: string | null;
-  documentId: string;
-}
-
 export interface GetAuditTrailResponse {
   events: EsignAuditEvent[];
 }
@@ -885,6 +873,26 @@ export function getDaysUntilExpiry(expiresAt: string | null): number | null {
 export function isExpiringSoon(expiresAt: string | null, daysThreshold = 3): boolean {
   const daysUntilExpiry = getDaysUntilExpiry(expiresAt);
   return daysUntilExpiry !== null && daysUntilExpiry <= daysThreshold && daysUntilExpiry > 0;
+}
+
+/** Statuses for which an envelope's expiry date still means anything. */
+const IN_FLIGHT_STATUSES: ReadonlySet<string> = new Set(['sent', 'viewed', 'partially_signed']);
+
+/**
+ * What the envelope list shows in its Expires column. Only an envelope out
+ * for signature can expire: the column used to show a red "Expired" on
+ * completed envelopes and on drafts (whose upload-time expiry is replaced
+ * when they are sent).
+ */
+export function expiryCell(
+  status: string,
+  expiresAt: string | null | undefined,
+): { label: string; tone: 'muted' | 'warning' | 'danger' } {
+  if (!IN_FLIGHT_STATUSES.has(status) || !expiresAt) return { label: '--', tone: 'muted' };
+  const days = getDaysUntilExpiry(expiresAt);
+  if (days === null) return { label: '--', tone: 'muted' };
+  if (days <= 0) return { label: 'Expired', tone: 'danger' };
+  return { label: `${days}d`, tone: isExpiringSoon(expiresAt) ? 'warning' : 'muted' };
 }
 
 // ============================================================================
