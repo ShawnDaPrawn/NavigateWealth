@@ -520,7 +520,12 @@ export function EsignModule() {
     if (!activeEnvelope) return;
 
     try {
-      await saveFields(activeEnvelope.id, fields);
+      // `saveFields` reports failure by returning false (it does not throw),
+      // so check it — otherwise a rejected save was announced as a success.
+      if (!(await saveFields(activeEnvelope.id, fields))) {
+        toast.error('Failed to save fields — place at least one field and try again');
+        return;
+      }
       setActiveEnvelope({ ...activeEnvelope, fields });
       toast.success('Fields saved successfully');
     } catch (err) {
