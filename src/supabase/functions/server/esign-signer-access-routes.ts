@@ -225,6 +225,9 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       .filter(
         (f: FieldRecord) =>
           finishedSignerIds.has(f.signer_id as string) &&
+          // An attachment's value is a storage marker (`attachment:<id>`), not
+          // document content; the signed PDF skips it, so the screen does too.
+          f.type !== 'attachment' &&
           typeof f.value === 'string' &&
           (f.value as string).trim() !== '',
       )

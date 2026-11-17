@@ -15,7 +15,9 @@ interface PriorEntryProps {
 
 export function PriorEntry({ field, pageWidthPts = 595, pageHeightPts = 842 }: PriorEntryProps) {
   const value = field.value ?? '';
-  if (!value) return null;
+  // Attachments are not document content (their value is a storage marker);
+  // the signed PDF skips them, so they are not drawn here either.
+  if (!value || field.type === 'attachment' || value.startsWith('attachment:')) return null;
 
   const box = {
     left: `${field.x}%`,
