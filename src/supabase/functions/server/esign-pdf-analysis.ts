@@ -281,17 +281,30 @@ function widgetToCandidate(
     page: widget.pageIndex + 1,
     x: clampPct((x1 / pageWidthPt) * 100),
     y: clampPct((yTopPt / pageHeightPt) * 100),
-    // Minimum-size expansion must never push the field past the page: cap
-    // width at the space right of the widget, height at the space below
-    // its top edge (never shrinking a widget's real size).
-    width: roundPt(Math.min(Math.max(widthPt, min.width), Math.max(pageWidthPt - x1 - 2, widthPt))),
-    height: roundPt(Math.min(Math.max(heightPt, min.height), Math.max(y2, heightPt))),
+    // A form widget's rect IS the box the value belongs in, so it is used
+    // as-is. It used to be grown to a per-type minimum (text 140x24pt), so
+    // every auto-mapped field on a real form overflowed its box. The minimum
+    // now applies only to a degenerate widget (an edge under 4pt) that would
+    // otherwise be impossible to grab, and still never past the page.
+    width: roundPt(
+      widthPt >= DEGENERATE_PT
+        ? widthPt
+        : Math.min(Math.max(widthPt, min.width), Math.max(pageWidthPt - x1 - 2, widthPt)),
+    ),
+    height: roundPt(
+      heightPt >= DEGENERATE_PT
+        ? heightPt
+        : Math.min(Math.max(heightPt, min.height), Math.max(y2, heightPt)),
+    ),
     required: true,
     source: 'acroform',
     label: widget.name || undefined,
     metadata: { acroformName: widget.name },
   };
 }
+
+/** Below this many points a widget edge is treated as degenerate. */
+const DEGENERATE_PT = 4;
 
 /**
  * Smallest usable size per field type, in PDF points. Anchors matched on a

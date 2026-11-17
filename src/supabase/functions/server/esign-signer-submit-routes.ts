@@ -4,7 +4,11 @@ import { createModuleLogger } from './stderr-logger.ts';
 import { requireIdempotency } from './idempotency.ts';
 import { rateLimit } from './esign-rate-limit.ts';
 import { validateBody } from './validate.ts';
-import { SignerSubmitBodySchema, SignerRejectBodySchema } from './esign-validation.ts';
+import {
+  SignerSubmitBodySchema,
+  SignerRejectBodySchema,
+  primarySignatureImage,
+} from './esign-validation.ts';
 import { getRequestMetadata, audActor } from './esign-route-helpers.ts';
 import {
   getEnvelopeDetails,
@@ -107,7 +111,9 @@ app.post(
       const { ip, userAgent } = getRequestMetadata(c);
       await updateSignerStatus(signer.id, 'signed', {
         signed_at: new Date().toISOString(),
-        signature_data,
+        // Stored as the single adopted image; the client sends one entry per
+        // field, which the certificate cannot render.
+        signature_data: primarySignatureImage(signature_data),
         ip_address: ip,
         user_agent: userAgent,
         consent_version: typeof consent_version === 'string' ? consent_version : undefined,
@@ -175,7 +181,7 @@ app.post(
 
         // Sequential mode: notify next pending signer in order
         if (currentMode === 'sequential') {
-          const nextSigner = sorted.find((s) => s.status === 'pending');
+          const nextSigner = sorted.find((s) => s.status === 'pending' && s.kind !== 'cc');
 
           if (nextSigner) {
             try {

@@ -118,6 +118,9 @@ describe('PrepareFormStudio interactions', () => {
           id: 'field-1',
           envelope_id: 'env-1',
           type: 'signature',
+          // Placed before recipients had keys: pointed at by email. Still
+          // resolves to the recipient.
+          signer_id: 'signer@test.co',
           page: 1,
           x: 100,
           y: 200,
@@ -145,5 +148,43 @@ describe('PrepareFormStudio interactions', () => {
     await waitFor(() => {
       expect(onSendForSignature).toHaveBeenCalled();
     });
+  });
+
+  it('refuses to send a field that is assigned to nobody', async () => {
+    // The send path used to hand such a field to recipient 1 without a word.
+    const onSendForSignature = vi.fn(async () => {});
+    const envelopeWithOrphan = {
+      ...envelope,
+      fields: [
+        {
+          id: 'field-1',
+          envelope_id: 'env-1',
+          type: 'signature',
+          signer_id: 'removed@test.co',
+          page: 1,
+          x: 10,
+          y: 10,
+          width: 100,
+          height: 50,
+          required: true,
+          metadata: {},
+          created_at: '2026-01-01T00:00:00.000Z',
+          updated_at: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    } as unknown as EsignEnvelope;
+
+    render(
+      <PrepareFormStudio
+        envelope={envelopeWithOrphan}
+        signers={signers}
+        sendActionLabel="Send for Signature"
+        onSendForSignature={onSendForSignature}
+      />,
+    );
+
+    screen.getByRole('button', { name: /send for signature/i }).click();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(onSendForSignature).not.toHaveBeenCalled();
   });
 });

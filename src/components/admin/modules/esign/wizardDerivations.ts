@@ -14,6 +14,7 @@ import type {
   EsignTemplateRecord,
   EsignSigner,
 } from './types';
+import { findRecipientIndex, newRecipientKey, recipientIdOf } from './recipientIdentity';
 
 /**
  * P4.1 / P4.3 — Template provenance carried through the wizard.
@@ -52,6 +53,7 @@ export const templateHasSavedDocuments = (
 
 export const mapTemplateRecipientsToWizard = (template: EsignTemplateRecord): SignerFormData[] =>
   template.recipients.map((recipient, index) => ({
+    recipientKey: newRecipientKey(),
     name: recipient.name || '',
     email: recipient.email || '',
     role: recipient.role || 'Signer',
@@ -66,6 +68,9 @@ export const mapTemplateRecipientsToWizard = (template: EsignTemplateRecord): Si
 /** The wire shape `esignApi.saveDraftSigners` expects, built from wizard signers. */
 export const toDraftSignerPayload = (signers: SignerFormData[]) =>
   signers.map((signer, index) => ({
+    // Saved so a resumed draft's fields still point at the right person.
+    recipientKey: signer.recipientKey,
+    kind: signer.kind,
     name: signer.name,
     email: signer.email,
     phone: signer.phone,
@@ -112,7 +117,7 @@ export const buildTemplateFieldsForEnvelope = (params: {
         document_id:
           (templateField.documentId && params.documentMap?.[templateField.documentId]) ||
           primaryDocumentId,
-        signer_id: recipient.email,
+        signer_id: recipientIdOf(recipient),
         type: templateField.type,
         page: templateField.page,
         x: templateField.x,
@@ -129,16 +134,26 @@ export const buildTemplateFieldsForEnvelope = (params: {
 };
 
 /**
- * Map fields to include signerIndex for the backend. Fields carry the
- * signer's email in `signer_id`; the invite payload wants the signer's
- * index in the wizard's signer list (unknown emails fall back to 0).
+ * Map fields to include signerIndex for the backend. Fields carry a
+ * recipient id in `signer_id` (see recipientIdentity.ts); the invite payload
+ * wants the recipient's index in the wizard's list. A prefill binding's data
+ * source travels the same way, as `prefill.source_index`.
+ *
+ * Unknown recipients still fall back to 0 for older callers, but the studio's
+ * pre-send check refuses to send a field that matches no recipient.
  */
 export const attachSignerIndexes = (fields: EsignField[], signers: SignerFormData[]) =>
   fields.map((f) => {
-    const signerIndex = signers.findIndex((s) => s.email === f.signer_id);
+    const signerIndex = findRecipientIndex(signers, f.signer_id);
+    const meta = (f.metadata ?? {}) as Record<string, unknown>;
+    const prefill = meta.prefill as { source?: string } | undefined;
+    const sourceIndex = prefill?.source ? findRecipientIndex(signers, prefill.source) : -1;
     return {
       ...f,
       signerIndex: signerIndex >= 0 ? signerIndex : 0,
+      ...(sourceIndex >= 0
+        ? { metadata: { ...meta, prefill: { ...prefill, source_index: sourceIndex } } }
+        : {}),
     };
   });
 
@@ -149,6 +164,9 @@ export const toInviteSignerPayload = (signers: SignerFormData[]) =>
     email: s.email,
     phone: s.phone,
     role: s.role,
+    // Without `kind` a "receives a copy" recipient was sent a signing link
+    // and the envelope could not complete until they acted.
+    kind: s.kind,
     order: s.order,
     otpRequired: s.otpRequired,
     accessCode: s.accessCode,
@@ -172,7 +190,9 @@ export const signersFromResumedEnvelope = (fullEnvelope: EsignEnvelope): SignerF
     return realSigners.map((s: EsignSigner & { requires_otp?: boolean }) => ({
       name: s.name,
       email: s.email,
+      phone: s.phone || undefined,
       role: s.role || 'Signer',
+      kind: s.kind,
       order: s.order,
       otpRequired: s.otp_required ?? s.requires_otp ?? false,
       accessCode: s.access_code || undefined,
@@ -184,25 +204,38 @@ export const signersFromResumedEnvelope = (fullEnvelope: EsignEnvelope): SignerF
   if (draftSigners.length > 0) {
     // Draft envelope resumed via "Continue Editing" — signers not yet
     // created as real records, but persisted as lightweight form data
+    // Only a SAVED recipient key is restored. Inventing one here would not be
+    // saved back, so the next resume would invent another and every field
+    // placed in between would lose its recipient. A draft from before keys
+    // existed keeps resolving by email; its recipients get keys the next
+    // time the list is edited, and those are saved with the draft.
     const signers = draftSigners.map(
       (s: {
+        recipientKey?: string;
         name: string;
         email: string;
+        phone?: string;
         role?: string;
+        kind?: SignerFormData['kind'];
         order?: number;
         otpRequired?: boolean;
         accessCode?: string;
         clientId?: string;
         isSystemClient?: boolean;
+        smsOptIn?: boolean;
       }) => ({
+        recipientKey: s.recipientKey,
         name: s.name,
         email: s.email,
+        phone: s.phone || undefined,
         role: s.role || 'Signer',
+        kind: s.kind,
         order: s.order,
         otpRequired: s.otpRequired ?? false,
         accessCode: s.accessCode || undefined,
         clientId: s.clientId || undefined,
         isSystemClient: s.isSystemClient ?? !!s.clientId,
+        smsOptIn: s.smsOptIn,
       }),
     );
     logger.info(`Restored ${signers.length} draft signer(s) for envelope ${fullEnvelope.id}`);

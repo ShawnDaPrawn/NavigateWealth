@@ -21,7 +21,7 @@ import {
   FirmScopeError,
 } from './esign-firm-scope.ts';
 import { getEnvelopeDetails } from './esign-services.ts';
-import type { EsignEnvelopeDetails } from './esign-types.ts';
+import type { EsignEnvelope, EsignEnvelopeDetails } from './esign-types.ts';
 import { resolveApiKey } from './api-key-service.ts';
 import { extractClientIp } from '../../../shared/submissions/blockedIpAddresses.ts';
 
@@ -199,4 +199,27 @@ export function assertEnvelopeOwnership(
 /** Map a firm-scope denial to 403; returns null when the error is something else. */
 export function firmScopeResponse(c: Context, error: unknown) {
   return error instanceof FirmScopeError ? c.json({ error: 'Forbidden' }, 403) : null;
+}
+
+/**
+ * When a sent envelope expires: `expiryDays` from now when the sender gave a
+ * sane number, otherwise the window the draft was created with (its
+ * `expires_at` minus `created_at`), otherwise 30 days.
+ */
+export function expiryAtSend(
+  expiryDays: unknown,
+  envelope: Pick<EsignEnvelope, 'expires_at' | 'created_at'>,
+  now: number = Date.now(),
+): Date {
+  const DAY = 24 * 60 * 60 * 1000;
+  let days = 30;
+  if (typeof expiryDays === 'number' && Number.isFinite(expiryDays) && expiryDays >= 1) {
+    days = Math.min(Math.round(expiryDays), 365);
+  } else if (envelope.expires_at && envelope.created_at) {
+    const window = Math.round(
+      (new Date(envelope.expires_at).getTime() - new Date(envelope.created_at).getTime()) / DAY,
+    );
+    if (Number.isFinite(window) && window >= 1) days = Math.min(window, 365);
+  }
+  return new Date(now + days * DAY);
 }

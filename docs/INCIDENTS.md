@@ -14,6 +14,44 @@ that changes behaviour next time. An entry without a lesson is just a story.
 
 events that future agents could repeat.
 
+### 2026-11-17 - E-Sign Could Not Complete An Envelope End To End; Every Layer's Tests Passed
+
+- **Symptom:** The owner reported prepare-screen problems (fields that could
+  not be sized to a form's boxes, zoom shrinking the PDF into a corner, no way
+  to choose whose client details fill a field). An audit of the rest of the
+  path found that nothing sent since early October could have been completed.
+- **What was found.** Several independent breaks, each invisible to its own
+  layer's tests:
+  - `/signer/submit` validated `signature_data` as `z.string()` (#421) while
+    the signer client sends an array. Every "Finish" was a 400.
+  - `/invites` rebuilt each field from geometry alone, so sending dropped
+    every field's `metadata` and `value` (prefill bindings, dropdown options,
+    validation, labels). In production all 19 send-path fields had no
+    metadata; all 314 studio-saved fields had it.
+  - The prefill step and the attachment upload read the envelope's field
+    list as field objects; it stores field IDs. Prefill never filled anything.
+  - The draft-recipients schema took `role` as an enum of lowercase kinds;
+    the wizard sends display labels ("Client"). Draft recipients were never
+    saved — 1 of 11 envelopes ever had any.
+  - Void posted to a `/void` route that does not exist and still said
+    "Voided successfully"; send and void ignored their hooks' `false`.
+- **Why it hid:** Each side was tested against a stand-in for the other: the
+  signer service test mocks `fetch`, the server prefill test calls the
+  resolver directly, the draft-recipients test used lowercase `'signer'`, and
+  the PDF viewer is stubbed in every studio test. No envelope had been sent
+  since the regressions, so production never reported them either.
+- **Fix:** Phase 0 and Phase 1 of the e-sign refinement (this PR): the schema
+  accepts the client's shape, the send path keeps field data, readers resolve
+  IDs, recipients save with free-text roles and a stable `recipientKey`, void
+  goes to `/recall`, and failures are reported. Regression pins in
+  `esign-phase0-send-and-sign.test.ts`, `esign-happy-path.test.ts` and
+  `recipientIdentity.test.ts`.
+- **Lesson:** A contract between two of our own components needs one test
+  that runs both real halves together — at minimum, the client's real request
+  body through the server's real validator. A schema written "by reading the
+  handler" must also be read against the CALLER, and the comment above
+  `SignerSubmitBodySchema` now says so.
+
 ### 2026-10-01 - Bulk Delete Of 120 Draft Articles Took 7.5 Minutes With No Visible Progress
 
 - **Symptom:** The owner selected the unwanted drafts in Publications → Articles

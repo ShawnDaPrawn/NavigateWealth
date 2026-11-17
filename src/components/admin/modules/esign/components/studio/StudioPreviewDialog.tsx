@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '../../../../../ui/select';
 import { EmailPreview } from '../EmailPreview';
+import { findRecipient, recipientIdOf } from '../../recipientIdentity';
 
 interface StudioPreviewDialogProps {
   documentUrl: string | undefined;
@@ -81,7 +82,7 @@ export function StudioPreviewDialog({
               {eligibleSigners.map((s, idx) => {
                 const color = SIGNER_COLORS[idx % SIGNER_COLORS.length].hex;
                 return (
-                  <SelectItem key={s.email} value={s.email}>
+                  <SelectItem key={recipientIdOf(s)} value={recipientIdOf(s)}>
                     <span className="inline-flex items-center gap-2">
                       <span
                         className="w-2.5 h-2.5 rounded-full ring-1 ring-black/10"
@@ -128,6 +129,7 @@ export function StudioPreviewDialog({
               }
               signers={signers}
               showFields={true}
+              readOnly
               selectedSignerId={previewSignerEmail === '__all__' ? undefined : previewSignerEmail}
             />
           ) : (
@@ -141,8 +143,7 @@ export function StudioPreviewDialog({
               signer={
                 previewSignerEmail === '__all__'
                   ? eligibleSigners[0] // best-effort fallback
-                  : (eligibleSigners.find((s) => s.email === previewSignerEmail) ??
-                    eligibleSigners[0])
+                  : (findRecipient(eligibleSigners, previewSignerEmail) ?? eligibleSigners[0])
               }
             />
           )}

@@ -23,6 +23,7 @@ import * as kv from './kv_store.tsx';
 import { EsignKeys } from './esign-keys.ts';
 import { downloadDocument, uploadDocument, calculateHash } from './esign-storage.ts';
 import { applyManifest, type PageManifest } from './esign-pdf-transform.ts';
+import { getEnvelopeDetails } from './esign-services.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
 import type { EsignEnvelope, EsignEnvelopeDocumentRef, EsignField } from './esign-types.ts';
@@ -137,12 +138,18 @@ export async function removeEnvelopeDocument(
   const next = current.filter((d) => d.document_id !== documentId);
   await setEnvelopeDocuments(envelopeId, next);
   // Drop fields anchored to the removed document so the studio doesn't
-  // show ghost placements.
-  const fields =
-    ((await kv.get(EsignKeys.envelopeFields(envelopeId))) as EsignField[] | null) ?? [];
-  const filtered = fields.filter((f) => (f.document_id ?? envelope.document_id) !== documentId);
-  if (filtered.length !== fields.length) {
-    await kv.set(EsignKeys.envelopeFields(envelopeId), filtered);
+  // show ghost placements. The list holds field IDS (getEnvelopeDetails
+  // resolves them); this used to read it as objects and write objects back.
+  const details = await getEnvelopeDetails(envelopeId);
+  const fields: EsignField[] = details?.fields ?? [];
+  const isOnRemovedDoc = (f: EsignField) => (f.document_id ?? envelope.document_id) === documentId;
+  const removed = fields.filter(isOnRemovedDoc);
+  if (removed.length > 0) {
+    await kv.set(
+      EsignKeys.envelopeFields(envelopeId),
+      fields.filter((f) => !isOnRemovedDoc(f)).map((f) => f.id),
+    );
+    for (const f of removed) await kv.del(EsignKeys.field(f.id));
   }
   // Best-effort manifest cleanup (ok if it didn't exist).
   try {

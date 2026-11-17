@@ -43,6 +43,12 @@ interface StudioToolbarProps {
   sendActionLabel: string;
   sending: boolean;
   setShowPageManager: Dispatch<SetStateAction<boolean>>;
+  /**
+   * Why the page manager can't be used here, if it can't. It edits a single
+   * document; on a multi-document envelope its edits were never applied at
+   * send and it renumbered every document's fields with the first one's map.
+   */
+  pageManagerDisabledReason?: string;
   setShowPreview: Dispatch<SetStateAction<boolean>>;
   setShowRecipients: Dispatch<SetStateAction<boolean>>;
   setShowSettings: Dispatch<SetStateAction<boolean>>;
@@ -70,6 +76,7 @@ export function StudioToolbar({
   sendActionLabel,
   sending,
   setShowPageManager,
+  pageManagerDisabledReason,
   setShowPreview,
   setShowRecipients,
   setShowSettings,
@@ -158,7 +165,8 @@ export function StudioToolbar({
             size="sm"
             onClick={() => setShowPageManager(true)}
             className="h-8 px-2 gap-1"
-            title="Reorder, rotate, or delete pages"
+            disabled={!!pageManagerDisabledReason}
+            title={pageManagerDisabledReason ?? 'Reorder, rotate, or delete pages'}
           >
             <Layers className="h-3.5 w-3.5" />
             <span className="text-xs">Pages</span>

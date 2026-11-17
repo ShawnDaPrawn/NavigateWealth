@@ -11,6 +11,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import type { EsignEnvelope, EsignField, SignerFormData } from '../types';
+import { recipientIdOf } from '../recipientIdentity';
 
 /** Convenience alias for a single candidate entry. */
 export type Candidate = NonNullable<EsignEnvelope['field_candidates']>[number];
@@ -22,6 +23,11 @@ export function useCandidateManagement(params: {
   fields: EsignField[];
   pushToHistory: (fields: EsignField[]) => void;
   selectedSignerId: string | undefined;
+  /**
+   * Who accepted suggestions are assigned to — chosen in the suggestions
+   * banner. Falls back to the recipient fields are being placed for.
+   */
+  targetSignerId?: string;
   eligibleSigners: SignerFormData[];
   buildFieldsFromCandidates: (candidates: Candidate[], signerId: string) => EsignField[];
 }) {
@@ -32,9 +38,19 @@ export function useCandidateManagement(params: {
     fields,
     pushToHistory,
     selectedSignerId,
+    targetSignerId,
     eligibleSigners,
     buildFieldsFromCandidates,
   } = params;
+
+  const firstEligible = eligibleSigners[0];
+  const resolveTarget = useCallback(
+    (): string | undefined =>
+      targetSignerId ||
+      selectedSignerId ||
+      (firstEligible ? recipientIdOf(firstEligible) : undefined),
+    [targetSignerId, selectedSignerId, firstEligible],
+  );
 
   const [candidates, setCandidates] = useState<NonNullable<EsignEnvelope['field_candidates']>>(
     initialCandidates ?? [],
@@ -54,7 +70,7 @@ export function useCandidateManagement(params: {
     (candidateId: string) => {
       const cand = candidates.find((c) => c.id === candidateId);
       if (!cand) return;
-      const target = selectedSignerId || eligibleSigners[0]?.email;
+      const target = resolveTarget();
       if (!target) {
         toast.error('Add a recipient first.');
         return;
@@ -78,7 +94,7 @@ export function useCandidateManagement(params: {
       pushToHistory([...fields, newField]);
       setCandidates((prev) => prev.filter((c) => c.id !== candidateId));
     },
-    [candidates, selectedSignerId, eligibleSigners, fields, envelopeId, pushToHistory],
+    [candidates, resolveTarget, fields, envelopeId, pushToHistory],
   );
 
   /**
@@ -87,7 +103,7 @@ export function useCandidateManagement(params: {
    * never carpet-bomb the doc with overlapping fields.
    */
   const acceptAllCandidates = useCallback(() => {
-    const target = selectedSignerId || eligibleSigners[0]?.email;
+    const target = resolveTarget();
     if (!target) {
       toast.error('Add a recipient first.');
       return;
@@ -104,14 +120,7 @@ export function useCandidateManagement(params: {
     toast.success(
       `Accepted ${newFields.length} suggested field${newFields.length === 1 ? '' : 's'}`,
     );
-  }, [
-    candidates,
-    selectedSignerId,
-    eligibleSigners,
-    buildFieldsFromCandidates,
-    fields,
-    pushToHistory,
-  ]);
+  }, [candidates, resolveTarget, buildFieldsFromCandidates, fields, pushToHistory]);
 
   // Auto-populate effect: fires once per envelope upload when
   // autoPopulateSuggestedFields is true. Immediately applies all candidates
@@ -127,7 +136,16 @@ export function useCandidateManagement(params: {
     }
     if (autoPopulateHandledRef.current === envelopeId) return;
 
-    const target = selectedSignerId || eligibleSigners[0]?.email;
+    // With more than one recipient there is no safe guess: every suggestion
+    // used to go to the first one, signature boxes for the spouse included.
+    // Leave them in the banner, where the sender picks who they are for.
+    if (eligibleSigners.length > 1) {
+      autoPopulateHandledRef.current = envelopeId;
+      setShowCandidatesPanel(true);
+      return;
+    }
+
+    const target = resolveTarget();
     if (!target) return;
 
     const newFields = buildFieldsFromCandidates(candidates, target);
@@ -147,8 +165,8 @@ export function useCandidateManagement(params: {
   }, [
     autoPopulateSuggestedFields,
     candidates,
-    selectedSignerId,
-    eligibleSigners,
+    resolveTarget,
+    eligibleSigners.length,
     buildFieldsFromCandidates,
     envelopeId,
     fields,

@@ -108,6 +108,7 @@ import {
   addFieldsToEnvelope,
   updateFieldValue,
   getAuditTrail,
+  checkEnvelopeCompletion,
 } from '../esign-services.ts';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -266,5 +267,71 @@ describe('E-Sign mutation idempotency: replaying createEnvelope', () => {
       signers: [],
     });
     expect(a.envelopeId).not.toBe(b.envelopeId);
+  });
+});
+
+describe('E-Sign send path keeps what the studio placed', () => {
+  it('stores field metadata, default value and document on the sent field', async () => {
+    // addFieldsToEnvelope rebuilt each field from geometry alone, so every
+    // sent envelope lost prefill bindings, dropdown options, validation,
+    // labels and default values.
+    const create = await createEnvelope({
+      firmId: FIRM_ID,
+      clientId: CLIENT_ID,
+      title: 'Mandate',
+      documentId: DOC_ID,
+      createdByUserId: ADMIN_ID,
+      signers: [],
+    });
+    const envId = create.envelopeId!;
+    const { signerIds } = await addSignersToEnvelope(envId, [{ name: 'A', email: 'a@x.co' }]);
+    const metadata = {
+      label: 'Fund choice',
+      options: ['Growth', 'Income'],
+      prefill: { token: 'client.name', locked: true, source_signer_id: signerIds[0] },
+    };
+    await addFieldsToEnvelope(envId, [
+      {
+        signerId: signerIds[0],
+        type: 'dropdown',
+        page: 1,
+        x: 10,
+        y: 10,
+        width: 100,
+        height: 14,
+        required: true,
+        value: 'Growth',
+        metadata,
+        document_id: 'doc-2',
+      },
+    ]);
+    const details = (await getEnvelopeDetails(envId)) as unknown as {
+      fields: Array<Record<string, unknown>>;
+    };
+    expect(details.fields[0]).toMatchObject({
+      value: 'Growth',
+      metadata,
+      document_id: 'doc-2',
+      height: 14,
+    });
+  });
+
+  it('does not wait for a copy-only recipient to complete', async () => {
+    const create = await createEnvelope({
+      firmId: FIRM_ID,
+      clientId: CLIENT_ID,
+      title: 'Mandate',
+      documentId: DOC_ID,
+      createdByUserId: ADMIN_ID,
+      signers: [],
+    });
+    const envId = create.envelopeId!;
+    const { signerIds } = await addSignersToEnvelope(envId, [
+      { name: 'Signer', email: 's@x.co' },
+      { name: 'Copy', email: 'cc@x.co', kind: 'cc' },
+    ]);
+    expect(await checkEnvelopeCompletion(envId)).toBe(false);
+    await updateSignerStatus(signerIds[0], 'signed');
+    expect(await checkEnvelopeCompletion(envId)).toBe(true);
   });
 });

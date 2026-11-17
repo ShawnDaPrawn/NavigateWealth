@@ -11,6 +11,8 @@
 import { useEffect } from 'react';
 import type { EsignField, SignerFormData } from '../types';
 import { isEditableTarget } from './prepareFormStudioUtils';
+import { recipientIdOf } from '../recipientIdentity';
+import { toast } from 'sonner';
 
 export function useKeyboardShortcuts(params: {
   selectedFieldIds: Set<string>;
@@ -121,7 +123,10 @@ export function useKeyboardShortcuts(params: {
         const target = eligibleSigners[idx];
         if (target) {
           e.preventDefault();
-          setSelectedSignerId(target.email);
+          setSelectedSignerId(recipientIdOf(target));
+          // This used to switch silently, so a stray digit sent the next
+          // fields to a different recipient without the sender noticing.
+          toast.info(`Now placing fields for ${target.name || target.email}`);
         }
         return;
       }

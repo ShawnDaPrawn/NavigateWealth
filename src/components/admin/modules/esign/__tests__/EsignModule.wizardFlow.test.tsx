@@ -421,14 +421,15 @@ describe('EsignModule wizard flow', () => {
     ]);
 
     // Template field (recipientIndex 1) lands on the live document, addressed
-    // to that recipient's email, with geometry carried over verbatim.
+    // to that recipient's stable key (not their email — see
+    // recipientIdentity.ts), with geometry carried over verbatim.
     const [envelopeId, fields] = spies.saveFields.mock.calls[0];
     expect(envelopeId).toBe('env-42');
     expect(fields).toHaveLength(1);
     expect(fields[0]).toMatchObject({
       envelope_id: 'env-42',
       document_id: 'doc-live-1',
-      signer_id: 'adviser@x.co',
+      signer_id: expect.stringMatching(/^r_/),
       type: 'signature',
       page: 1,
       x: 10,
@@ -455,6 +456,7 @@ describe('EsignModule wizard flow', () => {
     // The hydrated template fields are the ones dispatched, stamped with each
     // recipient's index rather than their email.
     expect(invitePayload.fields).toHaveLength(1);
+    expect(invitePayload.fields[0]).toMatchObject({ signerIndex: 1 });
     expect(toast.success).toHaveBeenCalledWith('Document sent for signature!');
   });
 

@@ -27,7 +27,11 @@ export const signingApi = {
    * Void envelope (admin only)
    */
   async voidEnvelope(envelopeId: string, reason?: string): Promise<{ success: boolean }> {
-    return api.post<{ success: boolean }>(`/esign/envelopes/${envelopeId}/void`, {
+    // The server has no `/void` route — this posted to one, got a 404, and
+    // nothing was voided. `/recall` is the route that voids an envelope in
+    // flight: it marks it voided, closes every outstanding signer and burns
+    // their links.
+    return api.post<{ success: boolean }>(`/esign/envelopes/${envelopeId}/recall`, {
       reason: reason || 'Voided by admin',
     });
   },

@@ -264,8 +264,10 @@ app.post('/signer/attachment', rateLimit('SIGNER_SUBMIT'), async (c) => {
     if (signer.status === 'signed') return c.json({ error: 'Already signed' }, 409);
 
     // Confirm the field exists and is the attachment type assigned to this signer.
-    const fields =
-      ((await kv.get(EsignKeys.envelopeFields(signer.envelope_id))) as EsignField[]) ?? [];
+    // The envelope's field list stores field IDS; getEnvelopeDetails resolves
+    // them. Reading the list as field objects made every upload "not found".
+    const attachmentEnvelope = await getEnvelopeDetails(signer.envelope_id);
+    const fields: EsignField[] = attachmentEnvelope?.fields ?? [];
     const field = fields.find((f) => f.id === fieldId);
     if (!field) return c.json({ error: 'Field not found' }, 404);
     if (field.type !== 'attachment')

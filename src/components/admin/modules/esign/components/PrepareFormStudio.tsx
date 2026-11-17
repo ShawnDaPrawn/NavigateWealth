@@ -39,6 +39,14 @@ import { RecipientsPage } from './studio/RecipientsPage';
 import { StudioPreviewDialog } from './studio/StudioPreviewDialog';
 import type { SettingsDraft } from './studio/settingsDraft';
 import { useConfirm } from '../../../layout/page';
+import {
+  findRecipient,
+  normaliseFieldRecipients,
+  recipientIdOf,
+  withRecipientKeys,
+} from '../recipientIdentity';
+import { toDraftSignerPayload } from '../wizardDerivations';
+import { preflightIssues } from './studioPreflight';
 
 interface PrepareFormStudioProps {
   envelope: EsignEnvelope;
@@ -49,6 +57,11 @@ interface PrepareFormStudioProps {
   onSendForSignature?: (fields?: EsignField[]) => Promise<void>;
   sendActionLabel?: string;
   sendActionBusyLabel?: string;
+  /**
+   * Building a template rather than sending: skips the per-recipient
+   * "has a signature field" warnings (template recipients are slots).
+   */
+  isTemplate?: boolean;
   /**
    * Optional callback for when the user updates recipients (Phase 2 quick
    * edit). The studio will save the new signer list to the draft envelope
@@ -75,6 +88,7 @@ export function PrepareFormStudio({
   onSendForSignature,
   sendActionLabel = 'Send',
   sendActionBusyLabel = 'Sending...',
+  isTemplate = false,
   onSignersChange,
   onEnvelopeUpdated,
   saving = false,
@@ -82,13 +96,28 @@ export function PrepareFormStudio({
   documentUrl,
 }: PrepareFormStudioProps) {
   const { confirm: askConfirm, confirmDialog } = useConfirm();
-  // Core field state
-  const [fields, setFields] = useState<EsignField[]>(envelope.fields || []);
+  // Core field state. Fields from older drafts point at a recipient's email;
+  // they are re-pointed at the recipient's stable key (recipientIdentity.ts)
+  // so later email edits don't detach them.
+  const [initialFields] = useState<EsignField[]>(() =>
+    normaliseFieldRecipients(envelope.fields || [], signers),
+  );
+  const [fields, setFields] = useState<EsignField[]>(initialFields);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Simple local state (snap, page count, dialog toggles)
-  const [selectedSignerId, setSelectedSignerId] = useState<string | undefined>(signers[0]?.email);
-  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [selectedSignerId, setSelectedSignerId] = useState<string | undefined>(() => {
+    const first = signers.find((s) => s.kind !== 'cc');
+    return first ? recipientIdOf(first) : undefined;
+  });
+  // Grid snapping starts OFF: with it on, sizes and positions jumped in 8pt
+  // steps, so a field could not be made to match a printed box. Edge
+  // alignment with neighbouring fields still works with it off.
+  const [snapEnabled, setSnapEnabled] = useState(false);
+  // Page sizes of the active document, in points (Layout panel shows mm).
+  const [pageSizes, setPageSizes] = useState<
+    Array<{ pageNumber: number; width: number; height: number }>
+  >([]);
   // P2.5 2.3 — total page count, populated by PDFViewer once the doc loads.
   const [pageCount, setPageCount] = useState<number>(1);
 
@@ -136,10 +165,11 @@ export function PrepareFormStudio({
   const fieldClipboardRef = useRef<EsignField[] | null>(null);
 
   // ── Hook: Undo/redo history ──
-  const { pushToHistory, undo, redo, canUndo, canRedo } = useFieldHistory(
-    envelope.fields || [],
+  const { pushToHistory, checkpoint, undo, redo, canUndo, canRedo } = useFieldHistory(
+    initialFields,
     setFields,
     setHasUnsavedChanges,
+    fields,
   );
 
   // ── Hook: Field selection + signer-filter state machine ──
@@ -164,22 +194,32 @@ export function PrepareFormStudio({
   // If the currently-selected signer is a CC (e.g. they were edited after
   // selection), drop the selection back to the first eligible signer.
   useEffect(() => {
-    if (!selectedSignerId) return;
-    const cur = signers.find((s) => s.email === selectedSignerId);
+    const cur = findRecipient(signers, selectedSignerId);
     if (!cur || cur.kind === 'cc') {
-      setSelectedSignerId(eligibleSigners[0]?.email);
+      const first = eligibleSigners[0];
+      setSelectedSignerId(first ? recipientIdOf(first) : undefined);
+    } else if (recipientIdOf(cur) !== selectedSignerId) {
+      setSelectedSignerId(recipientIdOf(cur));
     }
   }, [selectedSignerId, signers, eligibleSigners]);
+
+  // When the recipient list changes (keys assigned, emails edited), keep
+  // every field pointing at its recipient's canonical id.
+  useEffect(() => {
+    setFields((prev) => normaliseFieldRecipients(prev, signers));
+  }, [signers]);
 
   // Field counts per signer — drives the legend badges.
   const fieldCountsBySigner = useMemo(() => {
     const counts: Record<string, number> = {};
     fields.forEach((f) => {
-      if (!f.signer_id) return;
-      counts[f.signer_id] = (counts[f.signer_id] ?? 0) + 1;
+      const r = findRecipient(signers, f.signer_id);
+      if (!r) return;
+      const id = recipientIdOf(r);
+      counts[id] = (counts[id] ?? 0) + 1;
     });
     return counts;
-  }, [fields]);
+  }, [fields, signers]);
 
   const buildFieldsFromCandidates = useCallback(
     (
@@ -215,6 +255,10 @@ export function PrepareFormStudio({
     confirm: askConfirm,
   });
 
+  // Who accepted suggestions go to — picked in the suggestions banner.
+  const [suggestionTargetId, setSuggestionTargetId] = useState<string | undefined>(undefined);
+  const suggestionTarget = findRecipient(eligibleSigners, suggestionTargetId ?? selectedSignerId);
+
   // ── Hook: Autodetect candidate management ──
   const {
     candidates,
@@ -230,6 +274,7 @@ export function PrepareFormStudio({
     fields,
     pushToHistory,
     selectedSignerId,
+    targetSignerId: suggestionTarget ? recipientIdOf(suggestionTarget) : undefined,
     eligibleSigners,
     buildFieldsFromCandidates,
   });
@@ -262,7 +307,7 @@ export function PrepareFormStudio({
   // Build signer color map for consistent color assignment
   const signerColorMap = signers.reduce(
     (map, signer, index) => {
-      map[signer.email] = SIGNER_COLORS[index % SIGNER_COLORS.length].hex;
+      map[recipientIdOf(signer)] = SIGNER_COLORS[index % SIGNER_COLORS.length].hex;
       return map;
     },
     {} as Record<string, string>,
@@ -274,11 +319,11 @@ export function PrepareFormStudio({
     (newField: Partial<EsignField>) => {
       // Guard: never place a field on a CC recipient. Falls back to the first
       // eligible signer (or the currently-selected one if they're not a CC).
-      let assignedSigner = newField.signer_id || selectedSignerId || eligibleSigners[0]?.email;
-      const assigneeRecord = signers.find((s) => s.email === assignedSigner);
+      let assigneeRecord = findRecipient(signers, newField.signer_id || selectedSignerId);
       if (!assigneeRecord || assigneeRecord.kind === 'cc') {
-        assignedSigner = eligibleSigners[0]?.email;
+        assigneeRecord = eligibleSigners[0];
       }
+      const assignedSigner = assigneeRecord ? recipientIdOf(assigneeRecord) : undefined;
 
       const field: EsignField = {
         id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -321,13 +366,37 @@ export function PrepareFormStudio({
     ],
   );
 
-  const handleFieldUpdate = useCallback(
+  // Live updates (drag, resize, typing in the properties panel). They skip
+  // the undo stack while they stream; `checkpoint` records the result.
+  // Functional update: a bulk drag fires one update per field per mouse
+  // move, and reading `fields` from the closure dropped all but the last.
+  const handleFieldUpdate = useCallback((fieldId: string, updates: Partial<EsignField>) => {
+    setFields((prev) => prev.map((f) => (f.id === fieldId ? { ...f, ...updates } : f)));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // Property edits have no "gesture end", so record them once typing pauses.
+  const propertyCheckpointTimer = useRef<number | null>(null);
+  const handlePropertyUpdate = useCallback(
     (fieldId: string, updates: Partial<EsignField>) => {
-      const updatedFields = fields.map((f) => (f.id === fieldId ? { ...f, ...updates } : f));
-      setFields(updatedFields);
-      setHasUnsavedChanges(true);
+      handleFieldUpdate(fieldId, updates);
+      if (propertyCheckpointTimer.current) window.clearTimeout(propertyCheckpointTimer.current);
+      propertyCheckpointTimer.current = window.setTimeout(() => {
+        propertyCheckpointTimer.current = null;
+        checkpointRef.current();
+      }, 600);
     },
-    [fields],
+    [handleFieldUpdate],
+  );
+  const checkpointRef = useRef(checkpoint);
+  useEffect(() => {
+    checkpointRef.current = checkpoint;
+  }, [checkpoint]);
+  useEffect(
+    () => () => {
+      if (propertyCheckpointTimer.current) window.clearTimeout(propertyCheckpointTimer.current);
+    },
+    [],
   );
 
   const handleFieldDelete = useCallback(
@@ -460,9 +529,22 @@ export function PrepareFormStudio({
   };
 
   const handleSend = async () => {
-    if (fields.length === 0) {
-      toast.error('Please place at least one field');
+    const check = preflightIssues(fields, signers, { isTemplate });
+    if (check.blocking.length > 0) {
+      if (check.unassignedFieldIds.length > 0) selectMany(check.unassignedFieldIds);
+      toast.error(check.blocking[0], {
+        description: check.blocking.slice(1).join(' ') || undefined,
+      });
       return;
+    }
+    if (check.warnings.length > 0) {
+      const proceed = await askConfirm({
+        title: isTemplate ? 'Save anyway?' : 'Send anyway?',
+        description: check.warnings.join(' '),
+        confirmLabel: isTemplate ? 'Save anyway' : 'Send anyway',
+        cancelLabel: 'Keep editing',
+      });
+      if (!proceed) return;
     }
 
     if (hasUnsavedChanges) {
@@ -532,20 +614,9 @@ export function PrepareFormStudio({
     async (next: SignerFormData[]): Promise<boolean> => {
       if (!envelope.id) return false;
       try {
-        await esignApi.saveDraftSigners(
-          envelope.id,
-          next.map((s, idx) => ({
-            name: s.name,
-            email: s.email,
-            role: s.role || 'Signer',
-            order: s.order ?? idx + 1,
-            otpRequired: s.otpRequired,
-            accessCode: s.accessCode,
-            clientId: s.clientId,
-            isSystemClient: s.isSystemClient,
-          })),
-        );
-        onSignersChange?.(next);
+        const keyed = withRecipientKeys(next);
+        await esignApi.saveDraftSigners(envelope.id, toDraftSignerPayload(keyed));
+        onSignersChange?.(keyed);
         toast.success('Recipients updated');
         return true;
       } catch (err) {
@@ -612,6 +683,11 @@ export function PrepareFormStudio({
           sendActionLabel={sendActionLabel}
           sending={sending}
           setShowPageManager={setShowPageManager}
+          pageManagerDisabledReason={
+            envelopeDocuments.length > 1
+              ? 'Page editing works on single-document envelopes only'
+              : undefined
+          }
           setShowPreview={setShowPreview}
           setShowRecipients={setShowRecipients}
           setShowSettings={setShowSettings}
@@ -662,8 +738,7 @@ export function PrepareFormStudio({
                         }}
                       />
                       <span className="truncate text-sm">
-                        {eligibleSigners.find((s) => s.email === selectedSignerId)?.name ||
-                          'Select signer'}
+                        {findRecipient(eligibleSigners, selectedSignerId)?.name || 'Select signer'}
                       </span>
                     </div>
                     <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
@@ -671,12 +746,13 @@ export function PrepareFormStudio({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="start">
                   {eligibleSigners.map((signer) => {
-                    const idx = signers.findIndex((s) => s.email === signer.email);
-                    const color = SIGNER_COLORS[idx % SIGNER_COLORS.length];
+                    const id = recipientIdOf(signer);
+                    const idx = signers.indexOf(signer);
+                    const color = SIGNER_COLORS[Math.max(0, idx) % SIGNER_COLORS.length];
                     return (
                       <DropdownMenuItem
-                        key={signer.email}
-                        onClick={() => setSelectedSignerId(signer.email)}
+                        key={id}
+                        onClick={() => setSelectedSignerId(id)}
                         className="flex items-center gap-2"
                       >
                         <div
@@ -699,7 +775,7 @@ export function PrepareFormStudio({
                 signers={eligibleSigners}
                 fields={fields}
                 onAddField={handleFieldPlace}
-                onUpdateField={handleFieldUpdate}
+                onUpdateField={handlePropertyUpdate}
                 onDeleteField={handleFieldDelete}
                 selectedSignerId={selectedSignerId}
               />
@@ -728,14 +804,26 @@ export function PrepareFormStudio({
                       {candidates.filter((c) => c.source === 'acroform').length} from PDF form
                       {' · '}
                       {candidates.filter((c) => c.source === 'anchor').length} from text anchors
-                      {selectedSignerId && (
-                        <>
-                          {' · will be assigned to '}
-                          <span className="font-medium">{selectedSignerId}</span>
-                        </>
-                      )}
                     </div>
                   </div>
+                  {/* Who accepted suggestions are for. With several recipients
+                      the sender must choose; they used to all go to whoever
+                      was first in the list. */}
+                  <label className="flex items-center gap-1.5 text-xs text-amber-900 shrink-0">
+                    <span>Assign to</span>
+                    <select
+                      className="h-7 rounded border border-amber-300 bg-white px-1.5 text-xs"
+                      value={suggestionTarget ? recipientIdOf(suggestionTarget) : ''}
+                      onChange={(e) => setSuggestionTargetId(e.target.value || undefined)}
+                      aria-label="Recipient for suggested fields"
+                    >
+                      {eligibleSigners.map((s) => (
+                        <option key={recipientIdOf(s)} value={recipientIdOf(s)}>
+                          {s.name || s.email}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <button
                     type="button"
                     onClick={acceptAllCandidates}
@@ -903,6 +991,8 @@ export function PrepareFormStudio({
                 onFieldDelete={handleFieldDelete}
                 onFieldClick={handleFieldClick}
                 onPageCount={setPageCount}
+                onPageSizes={setPageSizes}
+                onInteractionEnd={checkpoint}
                 onMarqueeSelect={handleMarqueeSelect}
                 selectedSignerId={selectedSignerId}
                 selectedFieldId={primarySelectedId}
@@ -920,8 +1010,9 @@ export function PrepareFormStudio({
               field={propertiesField}
               signers={signers}
               allFields={fields}
-              onUpdate={handleFieldUpdate}
+              onUpdate={handlePropertyUpdate}
               onDelete={handleFieldDelete}
+              pageSize={pageSizes.find((p) => p.pageNumber === propertiesField?.page)}
             />
           </div>
         </div>
@@ -943,28 +1034,31 @@ export function PrepareFormStudio({
           documentUrl={documentUrl || envelope.document?.url || envelope.documentUrl || ''}
           sourcePageCount={envelope.document?.page_count ?? pageCount}
           onApplied={(_newPageCount, pageMap) => {
-            // Drop placed fields whose source page no longer exists; remap
-            // surviving fields to their new page index. Wrap in a history
-            // push so undo works after page edits.
-            setFields((prev) => {
-              const remapped: EsignField[] = [];
-              for (const f of prev) {
-                const newPage = pageMap[f.page];
-                if (newPage == null) continue;
-                remapped.push({ ...f, page: newPage });
-              }
-              return remapped;
-            });
+            // Page edits are applied ON SEND: the server rebuilds the PDF and
+            // renumbers the fields itself. The editor keeps showing the
+            // original pages, so fields stay where they are here. This used
+            // to renumber them immediately as well — they then sat on the
+            // wrong pages of the original PDF, and were renumbered a second
+            // time at send.
+            const lost = fields.filter((f) => pageMap[f.page] == null).length;
+            if (lost > 0) {
+              toast.warning(
+                `${lost} field${lost === 1 ? ' is' : 's are'} on a page you removed and will be dropped when you send.`,
+              );
+            } else {
+              toast.info('Page changes will be applied when you send.');
+            }
           }}
         />
 
         <ShortcutsDialog setShowShortcuts={setShowShortcuts} showShortcuts={showShortcuts} />
 
         <StudioPreviewDialog
-          documentUrl={documentUrl}
+          // The document on screen, not always the first one.
+          documentUrl={activeDocumentUrl ?? documentUrl}
           eligibleSigners={eligibleSigners}
           envelope={envelope}
-          fields={fields}
+          fields={visibleFields}
           previewMode={previewMode}
           previewSignerEmail={previewSignerEmail}
           setPreviewMode={setPreviewMode}

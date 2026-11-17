@@ -40,12 +40,21 @@ export function getMissingSignerFactors(envelope: RecordLike, signer: RecordLike
   return missing;
 }
 
+/**
+ * A "receives a copy" recipient. They are notified, never asked to sign, so
+ * they must not be invited to sign, block anyone's turn, or hold up completion.
+ */
+export function isCarbonCopy(signer: RecordLike | null | undefined): boolean {
+  return (signer as { kind?: unknown } | null | undefined)?.kind === 'cc';
+}
+
 export function isSignerTurn(envelope: RecordLike, signer: RecordLike): boolean {
   if ((envelope.signing_mode || 'sequential') === 'parallel') return true;
   const signerOrder = Number(signer.order || 1);
   const signers = Array.isArray(envelope.signers) ? envelope.signers : [];
   return signers
     .filter((candidate: RecordLike) => Number(candidate.order || 0) < signerOrder)
+    .filter((candidate: RecordLike) => !isCarbonCopy(candidate))
     .every((candidate: RecordLike) => candidate.status === 'signed');
 }
 

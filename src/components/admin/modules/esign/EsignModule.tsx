@@ -41,6 +41,7 @@ import {
 } from './components/wizard';
 import { documentStepBlocker } from './components/documentStepModel';
 import { esignApi } from './api';
+import { withRecipientKeys } from './recipientIdentity';
 import {
   canExpressSend,
   templateHasSavedDocuments,
@@ -556,12 +557,18 @@ export function EsignModule() {
       // the backend wants each field stamped with the signer's index.
       const fieldsForInvite = attachSignerIndexes(fieldsToUse, wizardData.signers);
 
-      await sendInvites(envelope.id, {
+      const sent = await sendInvites(envelope.id, {
         signers: toInviteSignerPayload(wizardData.signers),
         fields: fieldsForInvite,
         message: wizardData.message,
         expiryDays: wizardData.expiryDays,
       });
+      // sendInvites reports failure by returning false. Ignoring it announced
+      // "sent" and cleared the wizard for an envelope that never went out.
+      if (!sent) {
+        toast.error('The envelope was not sent. Check the recipients and try again.');
+        return;
+      }
       toast.success('Document sent for signature!');
 
       // All done — clear all wizard/prepare state so the next
@@ -964,13 +971,14 @@ export function EsignModule() {
             onSaveFields={handleSaveFields}
             onSendForSignature={templateBuilder ? handleSaveTemplate : handleSend}
             sendActionLabel={templateBuilder ? 'Save Template' : 'Send'}
+            isTemplate={!!templateBuilder}
             sendActionBusyLabel={templateBuilder ? 'Saving template...' : 'Sending...'}
             onSignersChange={(next) => {
               // Phase 2: keep the wizard's signer list in sync with edits
               // performed via the studio's Recipients side-sheet so the
               // legend, "Placing fields for" picker, and properties panel
               // all reflect the change without a remount.
-              setWizardData((prev) => ({ ...prev, signers: next }));
+              setWizardData((prev) => ({ ...prev, signers: withRecipientKeys(next) }));
               setRefreshTrigger((p) => p + 1);
             }}
             onEnvelopeUpdated={(updated) => {
@@ -1078,7 +1086,9 @@ export function EsignModule() {
         >
           <RecipientsStepView
             signers={wizardData.signers}
-            onSignersChange={(signers) => setWizardData((prev) => ({ ...prev, signers }))}
+            onSignersChange={(signers) =>
+              setWizardData((prev) => ({ ...prev, signers: withRecipientKeys(signers) }))
+            }
             templateContext={templateContext}
             isTemplateBuilder={!!templateBuilder}
             autoPopulateSuggestedFields={autoPopulateSuggestedFields}
@@ -1103,10 +1113,18 @@ export function EsignModule() {
                     onVoidEnvelope={
                       canSend
                         ? async (id, reason) => {
-                            await voidEnvelope(id, reason);
+                            // The result was ignored, so a failed void said
+                            // "Voided successfully" and signers could still sign.
+                            const ok = await voidEnvelope(id, reason);
+                            if (!ok) {
+                              toast.error(
+                                'The envelope was not voided. It may already be completed, voided or still a draft.',
+                              );
+                              throw new Error('void failed');
+                            }
                             closeEnvelope();
                             setRefreshTrigger((prev) => prev + 1);
-                            toast.success('Voided successfully');
+                            toast.success('Envelope voided. Signers can no longer sign it.');
                           }
                         : undefined
                     }

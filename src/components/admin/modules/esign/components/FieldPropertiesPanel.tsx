@@ -46,6 +46,8 @@ import type {
   CalculatedMetadata,
 } from '../types';
 import { SIGNER_COLORS } from '../constants';
+import { findRecipient, findRecipientIndex, recipientIdOf } from '../recipientIdentity';
+import { MIN_FIELD_PT, mmToPct, mmToPt, pctToMm, ptToMm } from './placementMath';
 
 // P3.6 — closed list of CRM tokens. Adding one requires backend changes
 // in `esign-prefill.ts`; the Select renders only what the resolver knows.
@@ -92,6 +94,12 @@ interface FieldPropertiesPanelProps {
   allFields?: EsignField[];
   onUpdate: (fieldId: string, updates: Partial<EsignField>) => void;
   onDelete: (fieldId: string) => void;
+  /**
+   * Size of the page the field sits on, in PDF points. Lets the Layout
+   * section show and take millimetres. Without it the section falls back
+   * to percent / points.
+   */
+  pageSize?: { width: number; height: number };
 }
 
 // P4.5 — Operators surfaced in the conditional editor, with copy that
@@ -157,6 +165,7 @@ export function FieldPropertiesPanel({
   allFields,
   onUpdate,
   onDelete,
+  pageSize,
 }: FieldPropertiesPanelProps) {
   // Pull validation metadata from the field. We cast through `unknown` because
   // `EsignField.metadata` is intentionally typed as a free-form record so the
@@ -185,8 +194,10 @@ export function FieldPropertiesPanel({
     );
   }
 
-  const assignedSigner = signers.find((s) => s.email === field.signer_id);
-  const signerIndex = signers.findIndex((s) => s.email === field.signer_id);
+  const assignedSigner = findRecipient(signers, field.signer_id);
+  const signerIndex = findRecipientIndex(signers, field.signer_id);
+  // Copy-only recipients never complete fields, so they are not offered.
+  const assignableSigners = signers.filter((s) => s.kind !== 'cc');
   const signerColor =
     signerIndex >= 0 ? SIGNER_COLORS[signerIndex % SIGNER_COLORS.length].hex : '#6d28d9';
 
@@ -225,11 +236,16 @@ export function FieldPropertiesPanel({
           <div className="relative">
             <select
               className="w-full p-2 border rounded-md text-sm bg-white focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
-              value={field.signer_id ?? ''}
+              value={assignedSigner ? recipientIdOf(assignedSigner) : ''}
               onChange={(e) => onUpdate(field.id, { signer_id: e.target.value })}
             >
-              {signers.map((signer) => (
-                <option key={signer.email} value={signer.email}>
+              {!assignedSigner && (
+                <option value="" disabled>
+                  Nobody — choose a recipient
+                </option>
+              )}
+              {assignableSigners.map((signer) => (
+                <option key={recipientIdOf(signer)} value={recipientIdOf(signer)}>
                   {signer.name} ({signer.role || 'Signer'})
                 </option>
               ))}
@@ -362,27 +378,42 @@ export function FieldPropertiesPanel({
             {/* P3.6 — CRM Prefill binding */}
             {(() => {
               const meta = (field.metadata ?? {}) as {
-                prefill?: { token?: PrefillToken; locked?: boolean };
+                prefill?: { token?: PrefillToken; locked?: boolean; source?: string };
               };
               const currentToken = meta.prefill?.token ?? '';
               const locked = !!meta.prefill?.locked;
+              const source = meta.prefill?.source;
+              const writePrefill = (next: {
+                token: PrefillToken;
+                locked: boolean;
+                source?: string;
+              }) => {
+                const prefill: Record<string, unknown> = { token: next.token, locked: next.locked };
+                if (next.source) prefill.source = next.source;
+                onUpdate(field.id, { metadata: { ...(field.metadata ?? {}), prefill } });
+              };
               const setToken = (token: PrefillToken | '') => {
-                const nextMeta: Record<string, unknown> = { ...(field.metadata ?? {}) };
                 if (!token) {
+                  const nextMeta: Record<string, unknown> = { ...(field.metadata ?? {}) };
                   delete nextMeta.prefill;
-                } else {
-                  nextMeta.prefill = { token, locked };
+                  onUpdate(field.id, { metadata: nextMeta });
+                  return;
                 }
-                onUpdate(field.id, { metadata: nextMeta });
+                writePrefill({ token, locked, source });
               };
               const setLocked = (next: boolean) => {
                 if (!currentToken) return;
-                const nextMeta: Record<string, unknown> = {
-                  ...(field.metadata ?? {}),
-                  prefill: { token: currentToken, locked: next },
-                };
-                onUpdate(field.id, { metadata: nextMeta });
+                writePrefill({ token: currentToken, locked: next, source });
               };
+              const setSource = (next: string | undefined) => {
+                if (!currentToken) return;
+                writePrefill({ token: currentToken, locked, source: next });
+              };
+              // Whose client record the value comes from. Defaults to the
+              // field's own assignee; "Fill from" lets the sender pick another
+              // recipient (e.g. the spouse's details on the client's form).
+              const sourceRecipient = findRecipient(assignableSigners, source) ?? assignedSigner;
+              const fillsFromRecipient = !!currentToken && !currentToken.startsWith('envelope.');
               return (
                 <div className="space-y-2 pt-3 border-t border-gray-100">
                   <div className="flex items-center gap-2">
@@ -418,9 +449,58 @@ export function FieldPropertiesPanel({
                       <Checkbox checked={locked} onCheckedChange={(v) => setLocked(v === true)} />
                     </label>
                   )}
-                  {currentToken && (
+                  {fillsFromRecipient && (
+                    <div className="space-y-1 pt-1">
+                      <Label className="text-xs">Fill from</Label>
+                      <Select
+                        value={
+                          source && findRecipient(assignableSigners, source)
+                            ? source
+                            : '__assignee__'
+                        }
+                        onValueChange={(v) => setSource(v === '__assignee__' ? undefined : v)}
+                      >
+                        <SelectTrigger className="h-8" aria-label="Whose details fill this field">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__assignee__">
+                            {assignedSigner
+                              ? `${assignedSigner.name} (completes this field)`
+                              : 'Whoever completes this field'}
+                          </SelectItem>
+                          {assignableSigners
+                            .filter(
+                              (s) =>
+                                !assignedSigner ||
+                                recipientIdOf(s) !== recipientIdOf(assignedSigner),
+                            )
+                            .map((s) => (
+                              <SelectItem key={recipientIdOf(s)} value={recipientIdOf(s)}>
+                                {s.name || s.email}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      {sourceRecipient && !sourceRecipient.clientId ? (
+                        <p className="text-xs text-amber-700 flex items-start gap-1">
+                          <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                          {sourceRecipient.name || 'This recipient'} isn't linked to a client
+                          record. Only their name, email and phone from this envelope can fill in;
+                          anything else is left for the signer to complete.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-500">
+                          Filled when you send, from{' '}
+                          {sourceRecipient ? `${sourceRecipient.name}'s` : "the recipient's"} client
+                          record.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {currentToken && !fillsFromRecipient && (
                     <p className="text-xs text-gray-500">
-                      Resolved at send-time from the assigned signer's client record.
+                      Filled when you send, from the envelope.
                     </p>
                   )}
                 </div>
@@ -754,31 +834,71 @@ export function FieldPropertiesPanel({
             );
           })()}
 
-        {/* Position & Size (Advanced) */}
+        {/* Position & Size — exact numbers, so a field can be made to fit a
+            printed box precisely. Millimetres when the page size is known;
+            the whole-percent X/Y this used to offer moved a field ~2mm per
+            step and had no width or height at all. */}
         <div className="space-y-4 pt-4 border-t border-gray-100">
           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Layout</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">X Position (%)</Label>
-              <NumberInputField
-                value={Math.round(field.x)}
-                onValueChange={(v) => {
-                  if (v !== undefined) onUpdate(field.id, { x: v });
-                }}
-                className="h-8"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Y Position (%)</Label>
-              <NumberInputField
-                value={Math.round(field.y)}
-                onValueChange={(v) => {
-                  if (v !== undefined) onUpdate(field.id, { y: v });
-                }}
-                className="h-8"
-              />
-            </div>
-          </div>
+          {(() => {
+            const pw = pageSize?.width;
+            const ph = pageSize?.height;
+            const round = (n: number) => Math.round(n * 10) / 10;
+            const inMm = !!(pw && ph);
+            const unit = inMm ? 'mm' : null;
+            const box = (
+              label: string,
+              value: number,
+              onCommit: (v: number) => void,
+              aria: string,
+            ) => (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{label}</Label>
+                <NumberInputField
+                  value={round(value)}
+                  onValueChange={(v) => {
+                    if (v !== undefined && Number.isFinite(v)) onCommit(v);
+                  }}
+                  className="h-8"
+                  aria-label={aria}
+                />
+              </div>
+            );
+            return (
+              <div className="grid grid-cols-2 gap-3">
+                {box(
+                  `X (${unit ?? '%'})`,
+                  inMm ? pctToMm(field.x, pw!) : field.x,
+                  (v) => onUpdate(field.id, { x: Math.max(0, inMm ? mmToPct(v, pw!) : v) }),
+                  'Distance from the left edge of the page',
+                )}
+                {box(
+                  `Y (${unit ?? '%'})`,
+                  inMm ? pctToMm(field.y, ph!) : field.y,
+                  (v) => onUpdate(field.id, { y: Math.max(0, inMm ? mmToPct(v, ph!) : v) }),
+                  'Distance from the top edge of the page',
+                )}
+                {box(
+                  `Width (${unit ?? 'pt'})`,
+                  inMm ? ptToMm(field.width) : field.width,
+                  (v) =>
+                    onUpdate(field.id, { width: Math.max(MIN_FIELD_PT, inMm ? mmToPt(v) : v) }),
+                  'Field width',
+                )}
+                {box(
+                  `Height (${unit ?? 'pt'})`,
+                  inMm ? ptToMm(field.height) : field.height,
+                  (v) =>
+                    onUpdate(field.id, { height: Math.max(MIN_FIELD_PT, inMm ? mmToPt(v) : v) }),
+                  'Field height',
+                )}
+              </div>
+            );
+          })()}
+          <p className="text-xs text-muted-foreground">
+            Tip: drag any edge or corner of a field to resize it. Hold Alt while dragging to turn
+            snapping off.
+          </p>
         </div>
       </div>
     </div>

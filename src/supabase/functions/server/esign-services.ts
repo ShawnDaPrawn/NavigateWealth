@@ -772,6 +772,13 @@ export async function addFieldsToEnvelope(
     width: number;
     height: number;
     required: boolean;
+    // Carried through verbatim. These were dropped here, so every sent
+    // envelope lost its prefill bindings, dropdown options, validation,
+    // conditional rules, labels and default values — the studio saved them,
+    // and the send path rebuilt each field without them.
+    value?: string | null;
+    metadata?: Record<string, unknown>;
+    document_id?: string;
   }>,
 ): Promise<{ fieldIds: string[]; error?: string }> {
   try {
@@ -791,6 +798,13 @@ export async function addFieldsToEnvelope(
         width: fieldData.width,
         height: fieldData.height,
         required: fieldData.required,
+        ...(fieldData.value !== undefined && fieldData.value !== null
+          ? { value: fieldData.value }
+          : {}),
+        ...(fieldData.metadata && typeof fieldData.metadata === 'object'
+          ? { metadata: fieldData.metadata }
+          : {}),
+        ...(fieldData.document_id ? { document_id: fieldData.document_id } : {}),
         created_at: new Date().toISOString(),
       };
 
@@ -858,7 +872,10 @@ export async function createDocument(document: EsignDocument): Promise<void> {
  */
 export async function checkEnvelopeCompletion(envelopeId: string): Promise<boolean> {
   try {
-    const signers = await getEnvelopeSigners(envelopeId);
+    // Copy-only recipients never sign, so they never count towards completion.
+    const signers = (await getEnvelopeSigners(envelopeId)).filter(
+      (s: EsignSigner) => s.kind !== 'cc',
+    );
 
     if (signers.length === 0) return false;
 

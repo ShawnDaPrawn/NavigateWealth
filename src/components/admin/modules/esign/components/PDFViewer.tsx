@@ -25,7 +25,14 @@ import {
 } from 'lucide-react';
 import type { EsignField, FieldType, SignerFormData } from '../types';
 import { SIGNER_COLORS } from '../constants';
-import { computeDropPosition, defaultDimensionsFor } from './placementMath';
+import {
+  computeDropPosition,
+  defaultDimensionsFor,
+  resizeRect,
+  type ResizeHandle,
+} from './placementMath';
+import { findRecipientIndex, findRecipient } from '../recipientIdentity';
+import { usePdfZoom } from './usePdfZoom';
 
 // ── pdf.js bootstrap (npm import — avoids CSP issues with CDN script injection) ──
 import * as pdfjsLib from 'pdfjs-dist';
@@ -116,11 +123,27 @@ interface PDFViewerProps {
    * the studio can offer "Apply to all pages" without re-parsing the PDF.
    */
   onPageCount?: (count: number) => void;
+  /** Every page's size in PDF points, once the document loads. */
+  onPageSizes?: (sizes: Array<{ pageNumber: number; width: number; height: number }>) => void;
+  /**
+   * Fired when a drag, resize or keyboard nudge FINISHES. Moves stream through
+   * `onFieldUpdate` while the pointer moves; this marks the end of one
+   * gesture so the studio can record a single undo step for it.
+   */
+  onInteractionEnd?: () => void;
 }
 
-type ZoomLevel = 25 | 50 | 75 | 100 | 125 | 150 | 200;
-
-const ZOOM_LEVELS: ZoomLevel[] = [25, 50, 75, 100, 125, 150, 200];
+const RESIZE_HANDLES: Array<{ handle: ResizeHandle; cursor: string; style: React.CSSProperties }> =
+  [
+    { handle: 'nw', cursor: 'nwse-resize', style: { left: 0, top: 0 } },
+    { handle: 'n', cursor: 'ns-resize', style: { left: '50%', top: 0 } },
+    { handle: 'ne', cursor: 'nesw-resize', style: { left: '100%', top: 0 } },
+    { handle: 'e', cursor: 'ew-resize', style: { left: '100%', top: '50%' } },
+    { handle: 'se', cursor: 'nwse-resize', style: { left: '100%', top: '100%' } },
+    { handle: 's', cursor: 'ns-resize', style: { left: '50%', top: '100%' } },
+    { handle: 'sw', cursor: 'nesw-resize', style: { left: 0, top: '100%' } },
+    { handle: 'w', cursor: 'ew-resize', style: { left: 0, top: '50%' } },
+  ];
 
 // Fallback A4 size in PDF points — used if a page's mediaBox is unavailable
 
@@ -153,10 +176,22 @@ export function PDFViewer({
   isFullScreen = false,
   onToggleFullScreen,
   onPageCount,
+  onPageSizes,
+  onInteractionEnd,
 }: PDFViewerProps) {
   const [pages, setPages] = useState<PageInfo[]>([]);
-  const [zoom, setZoom] = useState<ZoomLevel>(100);
   const [loading, setLoading] = useState(true);
+  const pageWidths = useMemo(() => pages.map((p) => p.width), [pages]);
+  const {
+    zoom,
+    fitMode,
+    setFitMode,
+    scrollRef,
+    pageWrapRefs,
+    handleZoomIn,
+    handleZoomOut,
+    handleFitToWidth,
+  } = usePdfZoom(pageWidths, loading);
   const [error, setError] = useState<string | null>(null);
 
   // Refs for canvas rendering
@@ -276,9 +311,12 @@ export function PDFViewer({
         if (!cancelled) {
           setPages(pageInfos);
           setLoading(false);
+          // Each new document opens fitted to the canvas width.
+          setFitMode('width');
           // P2.5 2.3 — surface the page count to the parent so it can offer
           // "Apply to all pages" without re-parsing the PDF.
           onPageCount?.(pdf.numPages);
+          onPageSizes?.(pageInfos);
           logger.info('PDF loaded', {
             numPages: pdf.numPages,
             urlPrefix: documentUrl.slice(0, 80),
@@ -317,6 +355,16 @@ export function PDFViewer({
   }, [documentUrl]);
 
   // ── Render pages to canvases ──────────────────────────────────────
+  //
+  // The canvas keeps the page's NATIVE CSS size; the page container scales it
+  // with a CSS transform. Only the bitmap resolution follows the zoom, so text
+  // stays crisp. This effect used to set the canvas's CSS size to the ZOOMED
+  // size as well — scaled again by the container, the PDF shrank to zoom²: at
+  // 25% it was a small rectangle in the top-left of a 25% page, and the fields
+  // no longer lined up with it at any zoom except 100%.
+  //
+  // Rendering waits a moment so a ctrl+scroll zoom does not re-render every
+  // page on every wheel tick; meanwhile the old bitmap is shown scaled.
 
   useEffect(() => {
     if (!pdfDocRef.current || pages.length === 0) return;
@@ -324,59 +372,50 @@ export function PDFViewer({
     const pdf = pdfDocRef.current;
     const scale = zoom / 100;
 
-    // Cancel previous render tasks
-    renderTasksRef.current.forEach((task) => {
-      try {
-        task.cancel();
-      } catch {
-        /* noop */
-      }
-    });
-    renderTasksRef.current.clear();
-
-    pages.forEach(async (info) => {
-      const canvas = canvasRefs.current.get(info.pageNumber);
-      if (!canvas) return;
-
-      try {
-        const page = await pdf.getPage(info.pageNumber);
-        const viewport = page.getViewport({ scale });
-
-        // Set canvas size to match the scaled viewport (for crisp rendering)
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = Math.floor(viewport.width * dpr);
-        canvas.height = Math.floor(viewport.height * dpr);
-        canvas.style.width = `${viewport.width}px`;
-        canvas.style.height = `${viewport.height}px`;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-        const renderTask = page.render({ canvas, canvasContext: ctx, viewport });
-        renderTasksRef.current.set(info.pageNumber, renderTask);
-        await renderTask.promise;
-      } catch (err: unknown) {
-        if ((err as { name?: string })?.name !== 'RenderingCancelledException') {
-          console.error(`Failed to render page ${info.pageNumber}:`, err);
+    const timer = window.setTimeout(() => {
+      // Cancel previous render tasks
+      renderTasksRef.current.forEach((task) => {
+        try {
+          task.cancel();
+        } catch {
+          /* noop */
         }
-      }
-    });
+      });
+      renderTasksRef.current.clear();
+
+      pages.forEach(async (info) => {
+        const canvas = canvasRefs.current.get(info.pageNumber);
+        if (!canvas) return;
+
+        try {
+          const page = await pdf.getPage(info.pageNumber);
+          const viewport = page.getViewport({ scale });
+
+          // Bitmap at the zoomed size (times DPR) for crisp rendering; CSS
+          // size stays native — see the note above.
+          const dpr = window.devicePixelRatio || 1;
+          canvas.width = Math.floor(viewport.width * dpr);
+          canvas.height = Math.floor(viewport.height * dpr);
+          canvas.style.width = `${info.width}px`;
+          canvas.style.height = `${info.height}px`;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+          const renderTask = page.render({ canvas, canvasContext: ctx, viewport });
+          renderTasksRef.current.set(info.pageNumber, renderTask);
+          await renderTask.promise;
+        } catch (err: unknown) {
+          if ((err as { name?: string })?.name !== 'RenderingCancelledException') {
+            console.error(`Failed to render page ${info.pageNumber}:`, err);
+          }
+        }
+      });
+    }, 120);
+
+    return () => window.clearTimeout(timer);
   }, [pages, zoom]);
-
-  // ── Zoom controls ─────────────────────────────────────────────────
-
-  const handleZoomIn = () => {
-    const idx = ZOOM_LEVELS.indexOf(zoom);
-    if (idx < ZOOM_LEVELS.length - 1) setZoom(ZOOM_LEVELS[idx + 1]);
-  };
-
-  const handleZoomOut = () => {
-    const idx = ZOOM_LEVELS.indexOf(zoom);
-    if (idx > 0) setZoom(ZOOM_LEVELS[idx - 1]);
-  };
-
-  const handleFitToWidth = () => setZoom(100);
 
   // ── Drag-and-drop field placement ─────────────────────────────────
 
@@ -588,12 +627,23 @@ export function PDFViewer({
         setGuides(null);
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        onInteractionEnd?.();
       };
 
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [readOnly, onFieldUpdate, fields, pages, effectiveSelection, gridSize, snapPctX, snapPctY],
+    [
+      readOnly,
+      onFieldUpdate,
+      onInteractionEnd,
+      fields,
+      pages,
+      effectiveSelection,
+      gridSize,
+      snapPctX,
+      snapPctY,
+    ],
   );
 
   // ── Marquee selection ──────────────────────────────────────────────
@@ -675,58 +725,75 @@ export function PDFViewer({
     [readOnly, onMarqueeSelect, fields, pages],
   );
 
+  /**
+   * Resize from any of the eight handles. The opposite edge stays where it
+   * is, so a field lined up on a box's left/top edge can be stretched to its
+   * right/bottom edge exactly. Previously there was one bottom-right handle,
+   * a 20pt minimum, and the size was always rounded to the 8pt grid.
+   */
   const handleFieldResizeMouseDown = useCallback(
-    (e: React.MouseEvent, field: EsignField) => {
+    (e: React.MouseEvent, field: EsignField, handle: ResizeHandle = 'se') => {
       if (readOnly || !onFieldUpdate) return;
 
       e.stopPropagation();
       e.preventDefault();
 
+      const pageInfo = pages.find((p) => p.pageNumber === field.page);
+      const page = { width: pageInfo?.width || 595, height: pageInfo?.height || 842 };
+      const start = {
+        left: (field.x / 100) * page.width,
+        top: (field.y / 100) * page.height,
+        width: field.width,
+        height: field.height,
+      };
       const startX = e.clientX;
       const startY = e.clientY;
-      const startWidth = field.width;
-      const startHeight = field.height;
+      const zoomFactor = zoom / 100;
 
       setResizingField(field.id);
 
-      const zoomFactor = zoom / 100;
-
       const handleMouseMove = (moveEvent: MouseEvent) => {
-        let nextW = Math.max(20, startWidth + (moveEvent.clientX - startX) / zoomFactor);
-        let nextH = Math.max(20, startHeight + (moveEvent.clientY - startY) / zoomFactor);
-        // Snap dimensions to the grid so resized fields stay aligned with
-        // their neighbours. Hold Alt to disable.
-        if (snapToGrid && !moveEvent.altKey) {
-          nextW = Math.round(nextW / gridSize) * gridSize;
-          nextH = Math.round(nextH / gridSize) * gridSize;
-        }
-        onFieldUpdate(field.id, { width: nextW, height: nextH });
+        const next = resizeRect(
+          start,
+          handle,
+          (moveEvent.clientX - startX) / zoomFactor,
+          (moveEvent.clientY - startY) / zoomFactor,
+          page,
+          snapToGrid && !moveEvent.altKey ? gridSize : 0,
+        );
+        onFieldUpdate(field.id, {
+          x: (next.left / page.width) * 100,
+          y: (next.top / page.height) * 100,
+          width: next.width,
+          height: next.height,
+        });
       };
 
       const handleMouseUp = () => {
         setResizingField(null);
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        onInteractionEnd?.();
       };
 
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
-    [readOnly, onFieldUpdate, zoom, snapToGrid, gridSize],
+    [readOnly, onFieldUpdate, onInteractionEnd, pages, zoom, snapToGrid, gridSize],
   );
 
   // ── Field rendering ───────────────────────────────────────────────
 
   const getSignerColor = useCallback(
     (signerId: string): string => {
-      const idx = signers.findIndex((s) => s.email === signerId);
-      return idx >= 0 ? SIGNER_COLORS[idx % SIGNER_COLORS.length].hex : '#6d28d9';
+      const idx = findRecipientIndex(signers, signerId);
+      return idx >= 0 ? SIGNER_COLORS[idx % SIGNER_COLORS.length].hex : '#6b7280';
     },
     [signers],
   );
 
   const getSignerName = useCallback(
-    (signerId: string): string => signers.find((s) => s.email === signerId)?.name || 'Unknown',
+    (signerId: string): string => findRecipient(signers, signerId)?.name || 'No recipient',
     [signers],
   );
 
@@ -736,32 +803,36 @@ export function PDFViewer({
       const signerName = getSignerName(field.signer_id || '');
       const isSelected = isFieldSelected(field.id);
       const isPrimary = isPrimarySelection(field.id);
-      const isRelatedSigner = field.signer_id === selectedSignerId;
       const isDragging = draggingField === field.id;
       const isResizing = resizingField === field.id;
 
+      // Overlay drawn to sit ON a printed box, not around it: square corners,
+      // a one-screen-pixel outline (inset, so the field's edge IS its
+      // outline) and a light fill that leaves the box's own lines visible.
+      // It had rounded corners and a 2px border, so a field covering a box
+      // looked bigger than it and could never be seen to fit.
+      const px = 100 / zoom; // one screen pixel, in page units
+      const showHandles = !readOnly && (isPrimary || isResizing);
       return (
         <div
           key={field.id}
           data-field-overlay="true"
-          className={`absolute border-2 rounded cursor-move hover:shadow-lg transition-all group ${
-            isDragging ? 'opacity-50' : ''
-          } ${
-            isPrimary
-              ? 'ring-2 ring-purple-500 ring-offset-2 z-30'
-              : isSelected
-                ? 'ring-2 ring-purple-300 ring-offset-1 z-20'
-                : isRelatedSigner
-                  ? 'ring-1 ring-opacity-50'
-                  : ''
+          className={`absolute cursor-move group ${isDragging ? 'opacity-60' : ''} ${
+            isSelected ? '' : 'hover:brightness-95'
           }`}
           style={{
             left: `${field.x}%`,
             top: `${field.y}%`,
             width: `${field.width}px`,
             height: `${field.height}px`,
-            borderColor: color,
-            backgroundColor: `${color}20`,
+            backgroundColor: `${color}${isSelected ? '2e' : '1f'}`,
+            boxShadow: `inset 0 0 0 ${px}px ${color}`,
+            outline: isPrimary
+              ? `${2 * px}px solid #7c3aed`
+              : isSelected
+                ? `${2 * px}px solid #c4b5fd`
+                : undefined,
+            outlineOffset: 0,
             zIndex: isDragging || isResizing || isSelected ? 50 : 10,
             pointerEvents: 'auto',
           }}
@@ -771,48 +842,76 @@ export function PDFViewer({
           }}
           onMouseDown={(e) => handleFieldMouseDown(e, field)}
         >
-          {/* Hover label */}
+          {/* Hover label — outside the field so it never covers the box */}
           <div
-            className="absolute -top-6 left-0 px-2 py-0.5 rounded text-xs font-medium text-white [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity whitespace-nowrap flex items-center gap-1 pointer-events-none"
+            className="absolute bottom-full left-0 mb-0.5 px-1.5 py-0.5 text-xs font-medium text-white [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity whitespace-nowrap flex items-center gap-1 pointer-events-none"
             style={{
               backgroundColor: color,
-              transform: `scale(${100 / zoom})`,
+              transform: `scale(${px})`,
               transformOrigin: 'bottom left',
             }}
           >
             <Move className="h-3 w-3" />
-            {signerName} — {field.type}
+            {signerName} — {field.type.replace('_', ' ')}
             {field.required && ' *'}
           </div>
 
           {/* Delete button */}
           {!readOnly && onFieldDelete && (
             <button
+              type="button"
+              aria-label="Delete field"
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 onFieldDelete(field.id);
               }}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-red-600 z-50"
+              className="absolute bg-red-500 text-white rounded-full p-0.5 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity hover:bg-red-600 z-50"
+              style={{
+                left: '100%',
+                bottom: '100%',
+                transform: `translate(-50%, 50%) scale(${px})`,
+              }}
             >
               <X className="h-3 w-3" />
             </button>
           )}
 
-          {/* Resize handle */}
-          {!readOnly && (
-            <div
-              className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize flex items-center justify-center z-40 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100 transition-opacity"
-              onMouseDown={(e) => handleFieldResizeMouseDown(e, field)}
-              style={{ transform: `scale(${100 / zoom})`, transformOrigin: 'bottom right' }}
-            >
-              <div className="w-2 h-2 bg-white border border-gray-400 rounded-sm" />
-            </div>
-          )}
+          {/* Resize handles — all four edges and corners. Shown on the
+              selected field; on hover the bottom-right one appears too. */}
+          {!readOnly &&
+            RESIZE_HANDLES.map(({ handle, cursor, style }) => {
+              const visible = showHandles || handle === 'se';
+              return (
+                <div
+                  key={handle}
+                  role="presentation"
+                  data-resize-handle={handle}
+                  className={`absolute z-40 bg-white ${
+                    showHandles
+                      ? ''
+                      : '[@media(hover:hover)]:opacity-0 group-hover:opacity-100 [@media(hover:hover)]:group-hover:opacity-100'
+                  } ${visible ? '' : 'hidden'}`}
+                  onMouseDown={(e) => handleFieldResizeMouseDown(e, field, handle)}
+                  style={{
+                    ...style,
+                    width: `${8 * px}px`,
+                    height: `${8 * px}px`,
+                    transform: 'translate(-50%, -50%)',
+                    boxShadow: `0 0 0 ${px}px #7c3aed`,
+                    cursor,
+                  }}
+                />
+              );
+            })}
 
           {/* Content placeholder — prefer the human label a palette preset
               or accepted candidate stored (e.g. "First name") over the raw
-              type name. */}
-          <div className="w-full h-full flex items-center justify-center text-xs font-medium opacity-50 pointer-events-none">
+              type name. Clipped to the field so it never spills past it. */}
+          <div
+            className="w-full h-full flex items-center justify-center overflow-hidden whitespace-nowrap font-medium opacity-60 pointer-events-none select-none"
+            style={{ fontSize: `${Math.max(5, Math.min(11, field.height * 0.55))}px` }}
+          >
             {field.type === 'checkbox'
               ? '☐'
               : (
@@ -826,7 +925,6 @@ export function PDFViewer({
     [
       draggingField,
       resizingField,
-      selectedSignerId,
       readOnly,
       onFieldDelete,
       onFieldClick,
@@ -897,44 +995,63 @@ export function PDFViewer({
       onKeyDown={(e) => {
         if (effectiveSelection.size === 0 || readOnly || !onFieldUpdate) return;
 
-        // Use BIG steps with shift, GRID-sized steps without (so arrow nudge
-        // respects the configured snap grid and feels precise).
-        const step = e.shiftKey ? 1.0 : 0.1;
+        // Arrows move the selection by 1pt (10pt with Shift). With Alt they
+        // RESIZE it instead — right/down grow, left/up shrink — for fitting a
+        // field to a box without the mouse.
+        const stepPts = e.shiftKey ? 10 : 1;
 
         let dx = 0;
         let dy = 0;
         switch (e.key) {
           case 'ArrowLeft':
-            dx = -step;
+            dx = -stepPts;
             break;
           case 'ArrowRight':
-            dx = step;
+            dx = stepPts;
             break;
           case 'ArrowUp':
-            dy = -step;
+            dy = -stepPts;
             break;
           case 'ArrowDown':
-            dy = step;
+            dy = stepPts;
             break;
           default:
             return;
         }
 
         e.preventDefault();
-        // Nudge every selected field by the same delta so a multi-select stays
-        // visually grouped (matches the bulk-drag behaviour).
         effectiveSelection.forEach((id) => {
           const f = fields.find((ff) => ff.id === id);
           if (!f) return;
+          const info = pages.find((p) => p.pageNumber === f.page);
+          const pw = info?.width || 595;
+          const ph = info?.height || 842;
+          if (e.altKey) {
+            const next = resizeRect(
+              { left: (f.x / 100) * pw, top: (f.y / 100) * ph, width: f.width, height: f.height },
+              'se',
+              dx,
+              dy,
+              { width: pw, height: ph },
+            );
+            onFieldUpdate(f.id, { width: next.width, height: next.height });
+            return;
+          }
+          const wPct = (f.width / pw) * 100;
+          const hPct = (f.height / ph) * 100;
           onFieldUpdate(f.id, {
-            x: Math.max(0, Math.min(100, f.x + dx)),
-            y: Math.max(0, Math.min(100, f.y + dy)),
+            x: Math.max(0, Math.min(100 - wPct, f.x + (dx / pw) * 100)),
+            y: Math.max(0, Math.min(100 - hPct, f.y + (dy / ph) * 100)),
           });
         });
+      }}
+      onKeyUp={(e) => {
+        if (e.key.startsWith('Arrow') && effectiveSelection.size > 0) onInteractionEnd?.();
       }}
     >
       {/* Scroll area */}
       <div
+        ref={scrollRef}
         className={`flex-1 overflow-auto relative ${isFullScreen ? 'p-0' : 'p-8'}`}
         onClick={() => onFieldClick?.(null)}
       >
@@ -961,6 +1078,10 @@ export function PDFViewer({
               return (
                 <div
                   key={pageNumber}
+                  ref={(el) => {
+                    if (el) pageWrapRefs.current.set(pageNumber, el);
+                    else pageWrapRefs.current.delete(pageNumber);
+                  }}
                   style={{
                     width: `${pageW * scale}px`,
                     height: `${pageH * scale}px`,
@@ -1082,7 +1203,9 @@ export function PDFViewer({
             >
               <ZoomOut className="h-3 w-3" />
             </Button>
-            <span className="text-xs font-medium min-w-[3ch] text-center">{zoom}%</span>
+            <span className="text-xs font-medium min-w-[4ch] text-center tabular-nums">
+              {zoom}%
+            </span>
             <Button
               variant="ghost"
               size="icon"
@@ -1104,10 +1227,13 @@ export function PDFViewer({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-xs hover:bg-white/20 text-white"
+              className={`h-6 px-2 text-xs hover:bg-white/20 text-white ${
+                fitMode === 'width' ? 'bg-white/20' : ''
+              }`}
               onClick={handleFitToWidth}
+              aria-pressed={fitMode === 'width'}
             >
-              Fit Width
+              Fit width
             </Button>
             {onToggleFullScreen && (
               <Button
