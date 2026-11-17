@@ -779,13 +779,25 @@ export async function addFieldsToEnvelope(
     value?: string | null;
     metadata?: Record<string, unknown>;
     document_id?: string;
+    /** The id the sender's studio gave the field (draft id). */
+    id?: string;
   }>,
 ): Promise<{ fieldIds: string[]; error?: string }> {
   try {
     const fieldIds: string[] = [];
 
-    for (const fieldData of fields) {
-      const fieldId = crypto.randomUUID();
+    // Every field gets a fresh id here. Conditional rules and calculated
+    // formulas name OTHER fields by their draft id, so those references are
+    // rewritten to the new ids — otherwise a field shown "when the box is
+    // ticked" stayed hidden whatever the signer did.
+    const newIds = fields.map(() => crypto.randomUUID());
+    const idMap = new Map<string, string>();
+    fields.forEach((f, i) => {
+      if (f.id) idMap.set(f.id, newIds[i]);
+    });
+
+    for (const [i, fieldData] of fields.entries()) {
+      const fieldId = newIds[i];
 
       const field: EsignField = {
         id: fieldId,
@@ -802,7 +814,7 @@ export async function addFieldsToEnvelope(
           ? { value: fieldData.value }
           : {}),
         ...(fieldData.metadata && typeof fieldData.metadata === 'object'
-          ? { metadata: fieldData.metadata }
+          ? { metadata: remapFieldReferences(fieldData.metadata, idMap) }
           : {}),
         ...(fieldData.document_id ? { document_id: fieldData.document_id } : {}),
         created_at: new Date().toISOString(),
@@ -827,6 +839,47 @@ export async function addFieldsToEnvelope(
     log.error('Failed to add fields:', error);
     return { fieldIds: [], error: getErrMsg(error) };
   }
+}
+
+/**
+ * Rewrite the field ids a field's rules refer to: `conditional.rules[].
+ * sourceFieldId` and `{field:<id>}` tokens in `calculated.formula` (the
+ * shapes `ruleEngine.ts` reads). Ids not in the map are left as they are.
+ */
+export function remapFieldReferences(
+  metadata: Record<string, unknown>,
+  idMap: Map<string, string>,
+): Record<string, unknown> {
+  if (idMap.size === 0) return metadata;
+  let next = metadata;
+  const conditional = metadata.conditional as { rules?: unknown } | undefined;
+  if (conditional && Array.isArray(conditional.rules)) {
+    next = {
+      ...next,
+      conditional: {
+        ...conditional,
+        rules: conditional.rules.map((r) => {
+          const rule = r as { sourceFieldId?: unknown };
+          return typeof rule?.sourceFieldId === 'string' && idMap.has(rule.sourceFieldId)
+            ? { ...rule, sourceFieldId: idMap.get(rule.sourceFieldId) }
+            : r;
+        }),
+      },
+    };
+  }
+  const calculated = metadata.calculated as { formula?: unknown } | undefined;
+  if (calculated && typeof calculated.formula === 'string') {
+    next = {
+      ...next,
+      calculated: {
+        ...calculated,
+        formula: calculated.formula.replace(/\{field:([^}]+)\}/g, (whole, id: string) =>
+          idMap.has(id) ? `{field:${idMap.get(id)}}` : whole,
+        ),
+      },
+    };
+  }
+  return next;
 }
 
 /**
