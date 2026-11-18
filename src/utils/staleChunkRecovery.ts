@@ -61,6 +61,7 @@ const RELOAD_WINDOW_MS = 60_000;
 // m.<Name> }))` exports. See the module-level comment above for how this
 // list is derived and kept honest.
 const LAZY_EXPORT_SUFFIXES = [
+  'Bar',
   'Builder',
   'Dashboard',
   'Dialog',

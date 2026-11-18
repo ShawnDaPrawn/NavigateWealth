@@ -7,3 +7,4 @@ import '../styles/navigator.css';
 
 export { NavigatorHeader } from './NavigatorHeader';
 export { NavigatorFooter } from './NavigatorFooter';
+export { NavigatorMobileBar } from './NavigatorMobileBar';

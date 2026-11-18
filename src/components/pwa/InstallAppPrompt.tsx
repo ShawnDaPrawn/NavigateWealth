@@ -95,7 +95,7 @@ function isDismissedThisSession(): boolean {
  * again — a persistent `nw-pwa-installed` flag suppresses the prompt across
  * future browser visits (the only reliable safeguard on iOS).
  */
-export function InstallAppPrompt() {
+export function InstallAppPrompt({ variant = 'live' }: { variant?: 'live' | 'navigator' } = {}) {
   const location = useLocation();
   const { showInstallOption, isAppInstalled, installApp } = usePWAInstall();
 
@@ -212,43 +212,82 @@ export function InstallAppPrompt() {
     return null;
   }
 
-  return (
-    <>
-      <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-4 sm:pb-4">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-xl border border-border bg-background p-3 shadow-lg sm:gap-4 sm:p-4">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary sm:size-12">
-            <Download className="size-5 sm:size-6" />
+  const banner =
+    variant === 'navigator' ? (
+      // The redesign's banner (src/site/styles/navigator.css); same behaviour.
+      <div className="nwi-wrap">
+        <div className="nwi-banner" role="region" aria-label="Install the Navigate Wealth app">
+          <span className="nwi-icon" aria-hidden="true">
+            <Download size={22} strokeWidth={1.75} />
+          </span>
+          <div className="nwi-copy">
+            <p className="nwi-title">Get the Navigate Wealth app</p>
+            <p className="nwi-sub">Install the client portal for quick, full-screen access.</p>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium sm:text-base">Get the Navigate Wealth app</p>
-            <p className="truncate text-xs text-muted-foreground sm:text-sm">
-              Install the client portal for quick, full-screen access.
-            </p>
-          </div>
-          <Button size="sm" onClick={handleInstall} className="shrink-0">
+          <button type="button" className="nw-btn" onClick={handleInstall}>
             {iosSafari ? (
               <>
-                <Share className="size-4" />
+                <Share size={16} strokeWidth={1.75} aria-hidden="true" />
                 How to
               </>
             ) : (
               <>
-                <Download className="size-4" />
+                <Download size={16} strokeWidth={1.75} aria-hidden="true" />
                 Install
               </>
             )}
-          </Button>
-          <Button
-            size="icon"
-            variant="ghost"
+          </button>
+          <button
+            type="button"
+            className="nwi-x"
             onClick={handleDismiss}
             aria-label="Dismiss install prompt"
-            className="size-8 shrink-0"
           >
-            <X className="size-4" />
-          </Button>
+            <X size={18} strokeWidth={1.75} aria-hidden="true" />
+          </button>
         </div>
       </div>
+    ) : null;
+
+  return (
+    <>
+      {banner ?? (
+        <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-4 sm:pb-4">
+          <div className="mx-auto flex max-w-3xl items-center gap-3 rounded-xl border border-border bg-background p-3 shadow-lg sm:gap-4 sm:p-4">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary sm:size-12">
+              <Download className="size-5 sm:size-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium sm:text-base">Get the Navigate Wealth app</p>
+              <p className="truncate text-xs text-muted-foreground sm:text-sm">
+                Install the client portal for quick, full-screen access.
+              </p>
+            </div>
+            <Button size="sm" onClick={handleInstall} className="shrink-0">
+              {iosSafari ? (
+                <>
+                  <Share className="size-4" />
+                  How to
+                </>
+              ) : (
+                <>
+                  <Download className="size-4" />
+                  Install
+                </>
+              )}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleDismiss}
+              aria-label="Dismiss install prompt"
+              className="size-8 shrink-0"
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Sheet open={showIosSheet} onOpenChange={setShowIosSheet}>
         <SheetContent side="bottom" className="rounded-t-2xl">

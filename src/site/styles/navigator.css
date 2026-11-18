@@ -1080,3 +1080,175 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Phone quick actions (Call · WhatsApp · Get a Free Quote) ── */
+.nw-site .nwm-bar,
+.nw-site .nwm-spacer {
+  display: none;
+}
+@media (max-width: 760px) {
+  .nw-site .nwm-spacer {
+    display: block;
+    height: calc(68px + env(safe-area-inset-bottom));
+  }
+  .nw-site .nwm-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid var(--nw-line);
+    box-shadow: 0 -14px 32px -20px rgba(17, 24, 39, 0.4);
+    box-sizing: border-box;
+  }
+}
+.nw-site .nwm-ic {
+  flex: 0 0 auto;
+  min-width: 52px;
+  height: 48px;
+  padding: 0 6px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--nw-text-strong);
+  text-decoration: none;
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwm-ic svg {
+  color: var(--nw-ink);
+}
+.nw-site .nwm-wa svg {
+  color: var(--nw-success);
+}
+.nw-site .nwm-ic:hover {
+  border-color: #b8c0ce;
+  color: var(--nw-ink);
+  background: var(--nw-white);
+}
+.nw-site .nwm-cta {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  text-decoration: none;
+  background: var(--nw-violet);
+  box-shadow: 0 10px 24px -12px rgba(13, 22, 38, 0.48);
+  transition: background-color 0.2s;
+}
+.nw-site .nwm-cta:hover {
+  background: var(--nw-violet-hover);
+  color: #ffffff;
+}
+
+/* ── "Get the app" install banner (desktop, Home / Log in / Sign up) ── */
+@keyframes nwiUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.nw-site .nwi-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  padding: 0 16px 16px;
+  animation: nwiUp 0.4s var(--nw-ease);
+}
+.nw-site .nwi-banner {
+  max-width: 768px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 14px 14px 16px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.55);
+}
+.nw-site .nwi-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-ink);
+  color: var(--nw-cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwi-copy {
+  flex: 1;
+  min-width: 0;
+}
+.nw-site .nwi-title {
+  margin: 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-body);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--nw-ink);
+}
+.nw-site .nwi-sub {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--nw-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nw-site .nwi-x {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--nw-r-sm);
+  background: transparent;
+  color: var(--nw-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwi-x:hover {
+  background: var(--nw-paper-2);
+  color: var(--nw-ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwi-wrap {
+    animation: none;
+  }
+}

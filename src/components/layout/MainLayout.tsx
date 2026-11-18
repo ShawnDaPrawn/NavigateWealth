@@ -28,6 +28,9 @@ const NavigatorHeader = lazy(() =>
 const NavigatorFooter = lazy(() =>
   import('../../site/layout/NavigatorChrome').then((m) => ({ default: m.NavigatorFooter })),
 );
+const NavigatorMobileBar = lazy(() =>
+  import('../../site/layout/NavigatorChrome').then((m) => ({ default: m.NavigatorMobileBar })),
+);
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -158,8 +161,11 @@ export function MainLayout({
             <NavigatorFooter />
           </Suspense>
         )}
+        <Suspense fallback={null}>
+          <NavigatorMobileBar />
+        </Suspense>
         <StandaloneRedirect />
-        <InstallAppPrompt />
+        <InstallAppPrompt variant="navigator" />
       </div>
     );
   }
