@@ -6,13 +6,44 @@
  * client portal, the admin and the legacy public site never carry that class,
  * so nothing in this file can restyle them.
  *
- * Fonts are self-hosted from the @fontsource-variable packages (SIL Open Font
- * License). Each @font-face carries a unicode-range, so a browser downloads
- * only the Latin files this site uses.
+ * Fonts are self-hosted from src/site/fonts/ (SIL Open Font License; the
+ * licence texts sit beside the files). Only the Latin subset ships — it covers
+ * English and Afrikaans, including ê, ë and ô — because every other subset
+ * (Cyrillic, Greek, Vietnamese, Latin Extended) only added build weight: the
+ * full @fontsource packages pushed the bundle-size gate's totalDistBytes over
+ * its ceiling. Newsreader uses its opsz+wght file so display headings get the
+ * optical-size cut the design was drawn with.
  */
-@import '@fontsource-variable/inter/index.css';
-@import '@fontsource-variable/newsreader/standard.css';
-@import '@fontsource-variable/newsreader/standard-italic.css';
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('../fonts/newsreader-latin-standard-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('../fonts/newsreader-latin-standard-italic.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 /* ── Tokens ── */
 .nw-site {
@@ -231,8 +262,13 @@
 }
 
 /* ── Header ── */
+/* The whole header is the sticky element. Stickiness is bounded by the parent
+   box, so a sticky bar *inside* the header would scroll away with it; pinning
+   the header itself (a direct child of the page-height layout) keeps the
+   navigation in view, and the top bar collapses to nothing once scrolled. */
 .nw-site .nwh {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 50;
   font-family: var(--nw-font-sans);
   color: var(--nw-ink);
@@ -255,6 +291,7 @@
 .nw-site .nwh-top[data-collapsed='true'] {
   max-height: 0;
   opacity: 0;
+  border-bottom-width: 0;
 }
 .nw-site .nwh-top-row {
   height: 40px;
@@ -303,9 +340,7 @@
   color: var(--nw-ink);
 }
 .nw-site .nwh-bar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
+  position: relative;
   background: rgba(255, 255, 255, 0.97);
   border-bottom: 1px solid var(--nw-line);
   transition: box-shadow 0.2s;
