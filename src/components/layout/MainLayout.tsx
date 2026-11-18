@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { SITE_DESIGN } from '../../site/design';
 import { useAuth } from '../auth/AuthContext';
 import { TopBar } from './TopBar';
 import { Navigation } from './Navigation';
@@ -18,6 +19,15 @@ import { useIsArticleBrowserEscape } from '../../hooks/useIsArticleBrowserEscape
 // TopBar / nav / footer) when running as an installed PWA. The website in a normal
 // browser is unaffected — this only applies in standalone display mode.
 const APP_AUTH_ROUTES = ['/login', '/signup', '/forgot-password'];
+
+// The Navigator redesign's header and footer: one lazy chunk, fetched only when
+// the design switch is on, so the legacy site's bundle does not grow.
+const NavigatorHeader = lazy(() =>
+  import('../../site/layout/NavigatorChrome').then((m) => ({ default: m.NavigatorHeader })),
+);
+const NavigatorFooter = lazy(() =>
+  import('../../site/layout/NavigatorChrome').then((m) => ({ default: m.NavigatorFooter })),
+);
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -126,6 +136,30 @@ export function MainLayout({
           </ErrorBoundary>
         </main>
         <StandaloneRedirect />
+      </div>
+    );
+  }
+
+  // Logged-out public pages in the Navigator design. Everything a signed-in
+  // user sees, and the legacy design, take the branch below unchanged.
+  if (SITE_DESIGN === 'navigator' && !effectivelyAuthenticated) {
+    return (
+      <div className="nw-site min-h-screen flex flex-col">
+        <Suspense fallback={<div style={{ height: 113 }} aria-hidden="true" />}>
+          <NavigatorHeader isScrolled={isScrolled} />
+        </Suspense>
+        <main id="main-content" className="flex-1">
+          <ErrorBoundary inline fallbackTitle="Page Error">
+            {isArticleBrowserEscape ? <ArticleBrowserRedirect /> : children}
+          </ErrorBoundary>
+        </main>
+        {(!isFocusedExperience || isAccountTypeSelection) && !isAdminDashboard && (
+          <Suspense fallback={null}>
+            <NavigatorFooter />
+          </Suspense>
+        )}
+        <StandaloneRedirect />
+        <InstallAppPrompt />
       </div>
     );
   }
