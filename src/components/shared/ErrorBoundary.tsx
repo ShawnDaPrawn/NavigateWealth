@@ -80,6 +80,10 @@ export class ErrorBoundary extends Component<Props, State> {
       // genuine lazy-miswiring bug that a reload will not fix, and that
       // would otherwise vanish from Issue Manager entirely.
       if (isDefinitiveStaleChunkLoadFailure(error)) {
+        // React logs the render error one tick BEFORE componentDidCatch.
+        // Mark it or that deferred console.error files a handled-error issue
+        // for a crash we have already decided is a stale deploy.
+        markErrorReported(error);
         return;
       }
     }

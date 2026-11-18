@@ -59,7 +59,10 @@ export const EsignFieldSchema = z
     width: z.number().positive().optional(),
     height: z.number().positive().optional(),
     signerId: z.string().optional(),
-    value: z.string().optional(),
+    // The studio places a field with `value: null` until someone fills it,
+    // and the stored row round-trips that null. `.optional()` alone rejects
+    // JSON null, which is what made Save fields answer 400 Validation failed.
+    value: z.string().nullish(),
     options: z.array(z.string()).optional(),
   })
   .passthrough();

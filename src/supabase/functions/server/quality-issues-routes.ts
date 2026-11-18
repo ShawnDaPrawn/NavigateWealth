@@ -15,6 +15,7 @@ import {
 } from './public-form-rate-limit.ts';
 import { buildRuntimeClientIssue, trimRuntimeIssues } from './quality-issues-runtime-client.ts';
 import { isAutomatedUserAgent } from '../../../shared/quality/automatedUserAgent.ts';
+import { isSuppressedRuntimeIssue } from '../../../shared/quality/runtimeNoise.ts';
 
 import {
   ISSUE_WORKFLOW_KEY,
@@ -202,6 +203,13 @@ app.post(
         issues.find((issue) => issue.fingerprint === fingerprint || issue.id === id),
     );
 
+    // Stale chunks, localhost preview, expected auth refusals, and the
+    // pre-retry "Failed to fetch" blip. Dropped here so a cached bundle
+    // cannot write them back after the dashboard has stopped showing them.
+    if (isSuppressedRuntimeIssue(nextIssue)) {
+      return c.json({ success: true, suppressed: true });
+    }
+
     const nextIssues = [
       nextIssue,
       ...issues.filter(
@@ -236,13 +244,6 @@ app.post(
 app.post(
   '/runtime-client/public',
   asyncHandler(async (c) => {
-    const limit = await checkIpOnlyRateLimit(
-      'runtime-client',
-      (name) => c.req.header(name),
-      RUNTIME_CLIENT_PUBLIC_IP_LIMIT_PER_HOUR,
-    );
-    if (!limit.allowed) return c.body(null, 204);
-
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object' || typeof body.message !== 'string') {
       return c.body(null, 204);
@@ -253,6 +254,7 @@ app.post(
     // request failed" issue over and over. The browser reporter now stays quiet
     // for them too — this catches bundles cached before that shipped. Either
     // the header or the reported agent is enough. See automatedUserAgent.ts.
+    // Checked before the rate limit so a bot cannot spend a visitor's budget.
     if (
       isAutomatedUserAgent(c.req.header('user-agent')) ||
       isAutomatedUserAgent(typeof body.userAgent === 'string' ? body.userAgent : undefined)
@@ -262,6 +264,16 @@ app.post(
 
     // Look the fingerprint up first, then build against that one row.
     const probe = buildRuntimeClientIssue(body, { anonymous: true }, () => undefined);
+    if (isSuppressedRuntimeIssue(probe.issue)) {
+      return c.body(null, 204);
+    }
+
+    const limit = await checkIpOnlyRateLimit(
+      'runtime-client',
+      (name) => c.req.header(name),
+      RUNTIME_CLIENT_PUBLIC_IP_LIMIT_PER_HOUR,
+    );
+    if (!limit.allowed) return c.body(null, 204);
     const existing = (await publicRuntimeRepo.get(probe.fingerprint)) ?? undefined;
     const { issue } = buildRuntimeClientIssue(body, { anonymous: true }, () => existing);
     await publicRuntimeRepo.put(probe.fingerprint, issue);

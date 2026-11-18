@@ -31,6 +31,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../../../utils/api';
 import { vascoKeys } from '../../../../../utils/queryKeys';
+import { reindexKnowledge } from '../../../../../utils/vasco/reindexKnowledge';
 import { toast } from 'sonner';
 import { useConfirm } from '../../../layout/page';
 
@@ -52,14 +53,6 @@ interface ArticleIndexStatus {
   }>;
   totalChunks: number;
   lastFullIndex: string | null;
-}
-
-interface IndexResult {
-  success: boolean;
-  articlesIndexed: number;
-  totalChunks: number;
-  errors: string[];
-  durationMs: number;
 }
 
 export function PlatformFeaturesCard() {
@@ -112,7 +105,8 @@ export function PlatformFeaturesCard() {
 
   // Index articles mutation
   const indexMutation = useMutation({
-    mutationFn: () => api.post<IndexResult>('/vasco/index', {}),
+    mutationFn: () =>
+      reindexKnowledge((cursor) => api.post('/vasco/index', cursor ? { cursor } : {})),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: vascoKeys.indexStatus() });
       if (data.errors && data.errors.length > 0) {

@@ -234,13 +234,101 @@ describe('public (signed-out) ingest', () => {
     expect(publicIssues()).toHaveLength(0);
   });
 
-  it('still files the same failure from an ordinary browser', async () => {
+  it('drops a bare Failed to fetch; that is the pre-retry blip, not a failure the user was left with', async () => {
     await postPublic({
       ...articlesFetchFailure,
       userAgent:
         'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36',
     });
+    expect(publicIssues()).toHaveLength(0);
+  });
+
+  it('drops a report from a loopback preview', async () => {
+    await postPublic(
+      crash({
+        href: 'http://localhost:4173/',
+        userAgent:
+          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.8078.4 Safari/537.36',
+      }),
+    );
+    expect(publicIssues()).toHaveLength(0);
+  });
+
+  it('still files a real failure from an ordinary browser', async () => {
+    await postPublic({
+      kind: 'api-failure',
+      message: 'GET /publications/articles returned 503 Service Unavailable',
+      method: 'GET',
+      path: '/publications/articles',
+      statusCode: 503,
+      href: 'https://www.navigatewealth.co/',
+      userAgent:
+        'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36',
+    });
     expect(publicIssues()).toHaveLength(1);
+  });
+});
+
+describe('noise that must not reach the panel', () => {
+  it('does not store a definitive stale-chunk crash', async () => {
+    const res = await postSignedIn(
+      crash({
+        message: "Cannot read properties of undefined (reading 'ClientGroupsTab')",
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(signedInIssues()).toHaveLength(0);
+  });
+
+  it('hides stored network blips and keeps a 546 and a validation failure', async () => {
+    const { combineSnapshots } = await import('../quality-issues-state.ts');
+    const { createEmptyQualityIssueSnapshot } =
+      await import('../../../../shared/quality/qualityIssues.ts');
+    const base = {
+      source: 'runtime-client',
+      category: 'runtime',
+      priority: 'medium',
+      severity: 'error',
+      status: 'open',
+      firstSeenAt: '2026-11-14T00:00:00.000Z',
+      lastSeenAt: '2026-11-14T00:00:00.000Z',
+      occurrences: 1,
+    };
+    const snapshot = combineSnapshots(
+      createEmptyQualityIssueSnapshot(),
+      [
+        {
+          ...base,
+          id: 'noise',
+          fingerprint: 'noise',
+          title: 'GET /admin/stats failed: Network request failed',
+          message: 'Failed to fetch',
+          ruleId: 'api-failure',
+        },
+        {
+          ...base,
+          id: 'real',
+          fingerprint: 'real',
+          title: 'POST /vasco/index failed (546)',
+          message: 'POST /vasco/index returned 546',
+          ruleId: 'api-failure',
+        },
+        {
+          ...base,
+          id: 'fields',
+          fingerprint: 'fields',
+          title: 'Save fields',
+          message: 'Validation failed',
+          ruleId: 'handled-error',
+        },
+      ] as never,
+      [],
+      {},
+    );
+    const messages = snapshot.issues.map((issue) => issue.message);
+    expect(messages).not.toContain('Failed to fetch');
+    expect(messages).toContain('POST /vasco/index returned 546');
+    expect(messages).toContain('Validation failed');
   });
 });
 

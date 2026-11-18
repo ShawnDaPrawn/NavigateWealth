@@ -42,7 +42,7 @@ import {
 } from './vasco-service.ts';
 import { evaluateVascoPublicGuardrails } from './vasco-guardrails.ts';
 import {
-  indexAllArticles,
+  indexArticleBatch,
   getIndexStatus,
   clearArticleIndex,
 } from './vasco-rag-service.ts';
@@ -357,8 +357,10 @@ app.put('/config', requireAdmin, asyncHandler(async (c) => {
 // ============================================================================
 
 app.post('/index', requireAdmin, asyncHandler(async (c) => {
-  log.info('Knowledge index rebuild triggered by admin');
-  const result = await indexAllArticles();
+  const body = (await c.req.json().catch(() => ({}))) as { cursor?: unknown };
+  const cursor = typeof body?.cursor === 'string' && body.cursor.length > 0 ? body.cursor : null;
+  log.info('Knowledge index batch triggered by admin', { cursor: cursor ?? 'start' });
+  const result = await indexArticleBatch(cursor);
   return c.json({ success: true, ...result });
 }));
 

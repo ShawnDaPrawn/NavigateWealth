@@ -241,12 +241,52 @@ describe('ragIndexApi', () => {
     expect(result).toBeNull();
   });
 
-  it('triggerReindex posts to index endpoint', async () => {
-    const indexResult = { success: true, articlesIndexed: 25, chunksCreated: 100 };
-    mockApiPost.mockResolvedValue(indexResult);
+  it('triggerReindex posts once when the server still answers with a full rebuild', async () => {
+    mockApiPost.mockResolvedValue({
+      success: true,
+      articlesIndexed: 25,
+      kbEntriesIndexed: 2,
+      totalChunks: 100,
+      errors: [],
+      durationMs: 40,
+    });
     const result = await ragIndexApi.triggerReindex();
-    expect((result as unknown as Record<string, unknown>).success).toBe(true);
+    expect(result.articlesIndexed).toBe(25);
+    expect(result.kbEntriesIndexed).toBe(2);
+    expect(mockApiPost).toHaveBeenCalledTimes(1);
     expect(mockApiPost).toHaveBeenCalledWith('/vasco/index', {});
+  });
+
+  it('triggerReindex walks cursors until the rebuild is done', async () => {
+    mockApiPost
+      .mockResolvedValueOnce({
+        articlesIndexed: 8,
+        kbEntriesIndexed: 0,
+        totalChunks: 8,
+        errors: [],
+        durationMs: 10,
+        done: false,
+        nextCursor: 'a:art-08',
+      })
+      .mockResolvedValueOnce({
+        articlesIndexed: 1,
+        kbEntriesIndexed: 1,
+        totalChunks: 2,
+        errors: ['one source failed'],
+        durationMs: 5,
+        done: true,
+        nextCursor: null,
+      });
+    const result = await ragIndexApi.triggerReindex();
+    expect(result).toMatchObject({
+      articlesIndexed: 9,
+      kbEntriesIndexed: 1,
+      totalChunks: 10,
+      errors: ['one source failed'],
+      durationMs: 15,
+    });
+    expect(mockApiPost).toHaveBeenNthCalledWith(1, '/vasco/index', {});
+    expect(mockApiPost).toHaveBeenNthCalledWith(2, '/vasco/index', { cursor: 'a:art-08' });
   });
 
   it('clearIndex deletes index', async () => {

@@ -30,6 +30,7 @@ import {
   reportRuntimeClientIssue,
   runtimeIssueFromUnknown,
 } from '../runtimeIssueReporter';
+import { ownRetryFetch } from '../fetchRetryOwnership';
 import { logger } from '../../logger';
 
 // ── runtimeIssueFromUnknown ───────────────────────────────────────────────────
@@ -222,6 +223,23 @@ describe('reportHandledError', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it('skips a wrong password, the staff Ask Vasco refusal, and a stale chunk', async () => {
+    reportHandledError(
+      'sign-in',
+      Object.assign(new Error('Invalid credentials'), { code: 'invalid_credentials' }),
+    );
+    reportHandledError(
+      'sessions',
+      Object.assign(new Error('Cannot open Ask Vasco for staff accounts'), { statusCode: 403 }),
+    );
+    reportHandledError(
+      'render',
+      new TypeError("Cannot read properties of undefined (reading 'LockedModule')"),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });
 
 // ── Global capture ────────────────────────────────────────────────────────────
@@ -264,6 +282,35 @@ describe('installRuntimeIssueCapture', () => {
       method: 'GET',
       path: '/clients/12/policies',
       statusCode: 504,
+    });
+  });
+
+  it('does not report a Failed to fetch the API client will retry', async () => {
+    upstream.mockImplementationOnce(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    await expect(window.fetch(`${API}/admin/stats`, ownRetryFetch({}))).rejects.toThrow(
+      'Failed to fetch',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(reports).toHaveLength(0);
+    const forwarded = upstream.mock.calls[0]?.[1] as RequestInit | undefined;
+    expect(forwarded && Object.getOwnPropertySymbols(forwarded)).toEqual([]);
+  });
+
+  it('reports a Failed to fetch from a caller that does not retry', async () => {
+    upstream.mockImplementationOnce(async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    await expect(window.fetch(`${API}/requests/req-1/submit`, { method: 'POST' })).rejects.toThrow(
+      'Failed to fetch',
+    );
+    await vi.waitFor(() => expect(reports).toHaveLength(1));
+    expect(reports[0]).toMatchObject({
+      kind: 'api-failure',
+      method: 'POST',
+      path: '/requests/req-1/submit',
+      message: 'POST /requests/req-1/submit did not get a response: Failed to fetch',
     });
   });
 

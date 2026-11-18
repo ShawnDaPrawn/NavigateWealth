@@ -25,6 +25,7 @@ import { APIError, api } from '../../../../../utils/api';
 import { advisorKeys } from '../../../../../utils/queryKeys';
 import { PERSONNEL_ROLES } from '../constants';
 import type { Client } from '../types';
+import { isStaffVascoRefusal } from './staffVascoRefusal';
 
 interface AskVascoPortalTabProps {
   selectedClient: Client;
@@ -305,6 +306,7 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
   const sessionsQuery = useQuery({
     queryKey: advisorKeys.adminClientSessions(selectedClient.id),
     enabled: !isStaffAccount,
+    retry: (failureCount, error) => !isStaffVascoRefusal(error) && failureCount < 1,
     queryFn: async () =>
       api.get<{ sessions: VascoChatSessionSummary[] }>(
         `/ai-advisor/admin/sessions?clientUserId=${encodeURIComponent(selectedClient.id)}`,
@@ -336,6 +338,7 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
   const sessionDetailQuery = useQuery({
     queryKey: advisorKeys.adminClientSession(selectedClient.id, activeSessionId),
     enabled: !!activeSessionId,
+    retry: (failureCount, error) => !isStaffVascoRefusal(error) && failureCount < 1,
     queryFn: async () =>
       api.get<{
         session: VascoChatSessionSummary;
@@ -501,10 +504,20 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
     </Alert>
   ) : null;
 
-  const loadError = sessionsQuery.error || sessionDetailQuery.error;
+  const staffRefusal =
+    isStaffAccount ||
+    isStaffVascoRefusal(sessionsQuery.error) ||
+    isStaffVascoRefusal(sessionDetailQuery.error);
+  const loadError = staffRefusal ? null : sessionsQuery.error || sessionDetailQuery.error;
 
   // The chat list itself failed: the shared error state instead of an empty list.
-  if (sessionsQuery.error && !sessionsQuery.isFetching && sessions.length === 0) {
+  // A staff refusal is explained below, not as a load failure.
+  if (
+    sessionsQuery.error &&
+    !isStaffVascoRefusal(sessionsQuery.error) &&
+    !sessionsQuery.isFetching &&
+    sessions.length === 0
+  ) {
     return (
       <ErrorState
         title="Couldn't load Ask Vasco chats"
@@ -532,7 +545,7 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
         </AlertDescription>
       </Alert>
 
-      {isStaffAccount && (
+      {staffRefusal && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-sm">
@@ -541,160 +554,164 @@ export function AskVascoPortalTab({ selectedClient }: AskVascoPortalTabProps) {
         </Alert>
       )}
 
-      <Card className="border-gray-200 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Ask Vasco</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            The client&apos;s own Vasco conversations from their portal. You can read them and reply
-            as Vasco.
-          </p>
-        </CardHeader>
-        <CardContent className="grid gap-4 lg:grid-cols-[240px_1fr]">
-          <nav aria-label="Chats" className="min-w-0">
-            <p className="mb-2 text-xs font-medium text-nw-text-3">Chats · {sessions.length}</p>
-            {sessions.length === 0 ? (
-              <p className="text-sm text-nw-text-3">No saved chats yet.</p>
-            ) : (
-              <ul className="flex flex-col gap-1">
-                {sessions.map((session) => {
-                  const active = session.id === activeSessionId;
-                  return (
-                    <li key={session.id}>
-                      <button
-                        type="button"
-                        onClick={() => setActiveSessionId(session.id)}
-                        aria-current={active ? 'true' : undefined}
-                        disabled={isStreaming}
-                        className={`w-full rounded-lg px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 ${
-                          active ? 'bg-nw-violet-50' : 'hover:bg-gray-50'
-                        }`}
-                      >
-                        <span
-                          className={`block truncate text-sm ${active ? 'font-medium text-nw-violet-600' : 'text-nw-ink'}`}
-                        >
-                          {session.title || 'Untitled chat'}
-                        </span>
-                        <span className="text-xs text-nw-text-3">
-                          {new Date(session.updatedAt || session.createdAt).toLocaleDateString(
-                            'en-ZA',
-                            { day: 'numeric', month: 'short' },
-                          )}{' '}
-                          · {session.messageCount}{' '}
-                          {session.messageCount === 1 ? 'message' : 'messages'}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </nav>
-          {loadError && !sessionsQuery.error && (
-            <p className="text-sm text-red-700 lg:col-start-2">
-              Couldn&apos;t load this chat.{' '}
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0"
-                onClick={() => void sessionDetailQuery.refetch()}
-              >
-                Try again
-              </Button>
-            </p>
-          )}
-          <InlineChatCard
-            clientLabel={clientLabel}
-            activeSession={activeSession}
-            messages={messages}
-            input={input}
-            error={error}
-            isStreaming={isStreaming}
-            streamingContent={streamingContent}
-            apiKeyWarning={apiKeyWarningBanner}
-            onInputChange={setInput}
-            onSendMessage={() => void handleSendMessage()}
-            onExpand={() => setIsExpanded(true)}
-            onMinimize={() => setIsExpanded(false)}
-            onClearCurrent={() => setShowClearConfirm(true)}
-            onDeleteCurrent={() => setShowDeleteConfirm(true)}
-            onNewChat={() => createSessionMutation.mutate()}
-          />
-        </CardContent>
-      </Card>
-
-      <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
-        <DialogContent
-          className="h-[92vh] max-w-[96vw] w-[96vw] gap-0 overflow-hidden border-none p-0 shadow-2xl sm:rounded-[28px]"
-          hideCloseButton
-        >
-          <VascoSessionWorkspace
-            title="AI Advisor"
-            subtitle={`Manage ${clientLabel}'s Ask Vasco chats, start new threads, or clean up the current conversation.`}
-            sessions={sessions}
-            activeSessionId={activeSessionId}
-            messages={messages}
-            input={input}
-            isLoading={isStreaming}
-            streamingContent={streamingContent}
-            error={error}
-            apiKeyWarning={apiKeyWarningBanner}
-            contextBanner={
-              <p className="text-sm text-gray-700">
-                You are acting inside the shared client portal workspace for{' '}
-                <strong>{clientLabel}</strong>. Anything you send or remove here will appear the
-                same way for the client.
+      {!staffRefusal && (
+        <>
+          <Card className="border-gray-200 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Ask Vasco</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                The client&apos;s own Vasco conversations from their portal. You can read them and
+                reply as Vasco.
               </p>
-            }
-            footer={
-              <p className="text-center text-[10px] text-gray-400">
-                Shared client portal chat. Use clear to empty a thread or delete to remove it from
-                the client&apos;s list.
-              </p>
-            }
-            emptyRailLabel="No saved Ask Vasco chats yet. Start a new chat to create the client's first thread."
-            onInputChange={setInput}
-            onSendMessage={() => void handleSendMessage()}
-            onSelectSession={setActiveSessionId}
-            onCreateSession={() => createSessionMutation.mutate()}
-            onClearSession={() => setShowClearConfirm(true)}
-            onDeleteSession={() => setShowDeleteConfirm(true)}
-            onClose={() => setIsExpanded(false)}
-            disableSessionActions={isStreaming}
+            </CardHeader>
+            <CardContent className="grid gap-4 lg:grid-cols-[240px_1fr]">
+              <nav aria-label="Chats" className="min-w-0">
+                <p className="mb-2 text-xs font-medium text-nw-text-3">Chats · {sessions.length}</p>
+                {sessions.length === 0 ? (
+                  <p className="text-sm text-nw-text-3">No saved chats yet.</p>
+                ) : (
+                  <ul className="flex flex-col gap-1">
+                    {sessions.map((session) => {
+                      const active = session.id === activeSessionId;
+                      return (
+                        <li key={session.id}>
+                          <button
+                            type="button"
+                            onClick={() => setActiveSessionId(session.id)}
+                            aria-current={active ? 'true' : undefined}
+                            disabled={isStreaming}
+                            className={`w-full rounded-lg px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 ${
+                              active ? 'bg-nw-violet-50' : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <span
+                              className={`block truncate text-sm ${active ? 'font-medium text-nw-violet-600' : 'text-nw-ink'}`}
+                            >
+                              {session.title || 'Untitled chat'}
+                            </span>
+                            <span className="text-xs text-nw-text-3">
+                              {new Date(session.updatedAt || session.createdAt).toLocaleDateString(
+                                'en-ZA',
+                                { day: 'numeric', month: 'short' },
+                              )}{' '}
+                              · {session.messageCount}{' '}
+                              {session.messageCount === 1 ? 'message' : 'messages'}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </nav>
+              {loadError && !sessionsQuery.error && (
+                <p className="text-sm text-red-700 lg:col-start-2">
+                  Couldn&apos;t load this chat.{' '}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0"
+                    onClick={() => void sessionDetailQuery.refetch()}
+                  >
+                    Try again
+                  </Button>
+                </p>
+              )}
+              <InlineChatCard
+                clientLabel={clientLabel}
+                activeSession={activeSession}
+                messages={messages}
+                input={input}
+                error={error}
+                isStreaming={isStreaming}
+                streamingContent={streamingContent}
+                apiKeyWarning={apiKeyWarningBanner}
+                onInputChange={setInput}
+                onSendMessage={() => void handleSendMessage()}
+                onExpand={() => setIsExpanded(true)}
+                onMinimize={() => setIsExpanded(false)}
+                onClearCurrent={() => setShowClearConfirm(true)}
+                onDeleteCurrent={() => setShowDeleteConfirm(true)}
+                onNewChat={() => createSessionMutation.mutate()}
+              />
+            </CardContent>
+          </Card>
+
+          <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
+            <DialogContent
+              className="h-[92vh] max-w-[96vw] w-[96vw] gap-0 overflow-hidden border-none p-0 shadow-2xl sm:rounded-[28px]"
+              hideCloseButton
+            >
+              <VascoSessionWorkspace
+                title="AI Advisor"
+                subtitle={`Manage ${clientLabel}'s Ask Vasco chats, start new threads, or clean up the current conversation.`}
+                sessions={sessions}
+                activeSessionId={activeSessionId}
+                messages={messages}
+                input={input}
+                isLoading={isStreaming}
+                streamingContent={streamingContent}
+                error={error}
+                apiKeyWarning={apiKeyWarningBanner}
+                contextBanner={
+                  <p className="text-sm text-gray-700">
+                    You are acting inside the shared client portal workspace for{' '}
+                    <strong>{clientLabel}</strong>. Anything you send or remove here will appear the
+                    same way for the client.
+                  </p>
+                }
+                footer={
+                  <p className="text-center text-[10px] text-gray-400">
+                    Shared client portal chat. Use clear to empty a thread or delete to remove it
+                    from the client&apos;s list.
+                  </p>
+                }
+                emptyRailLabel="No saved Ask Vasco chats yet. Start a new chat to create the client's first thread."
+                onInputChange={setInput}
+                onSendMessage={() => void handleSendMessage()}
+                onSelectSession={setActiveSessionId}
+                onCreateSession={() => createSessionMutation.mutate()}
+                onClearSession={() => setShowClearConfirm(true)}
+                onDeleteSession={() => setShowDeleteConfirm(true)}
+                onClose={() => setIsExpanded(false)}
+                disableSessionActions={isStreaming}
+              />
+            </DialogContent>
+          </Dialog>
+
+          <ConfirmDialog
+            isOpen={showClearConfirm}
+            onClose={() => setShowClearConfirm(false)}
+            onConfirm={() => {
+              if (!activeSessionId) return;
+              setShowClearConfirm(false);
+              clearChatMutation.mutate(activeSessionId);
+            }}
+            title="Clear this client's current chat?"
+            description="This keeps the chat in the history list but removes every message inside it for both you and the client."
+            confirmLabel="Clear chat"
+            cancelLabel="Cancel"
+            variant="danger"
+            isLoading={clearChatMutation.isPending}
           />
-        </DialogContent>
-      </Dialog>
 
-      <ConfirmDialog
-        isOpen={showClearConfirm}
-        onClose={() => setShowClearConfirm(false)}
-        onConfirm={() => {
-          if (!activeSessionId) return;
-          setShowClearConfirm(false);
-          clearChatMutation.mutate(activeSessionId);
-        }}
-        title="Clear this client's current chat?"
-        description="This keeps the chat in the history list but removes every message inside it for both you and the client."
-        confirmLabel="Clear chat"
-        cancelLabel="Cancel"
-        variant="danger"
-        isLoading={clearChatMutation.isPending}
-      />
-
-      <ConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={() => {
-          if (!activeSessionId) return;
-          setShowDeleteConfirm(false);
-          deleteSessionMutation.mutate(activeSessionId);
-        }}
-        title="Delete this client's chat?"
-        description="This removes the full Ask Vasco thread from the client's chat list."
-        confirmLabel="Delete chat"
-        cancelLabel="Cancel"
-        variant="danger"
-        isLoading={deleteSessionMutation.isPending}
-      />
+          <ConfirmDialog
+            isOpen={showDeleteConfirm}
+            onClose={() => setShowDeleteConfirm(false)}
+            onConfirm={() => {
+              if (!activeSessionId) return;
+              setShowDeleteConfirm(false);
+              deleteSessionMutation.mutate(activeSessionId);
+            }}
+            title="Delete this client's chat?"
+            description="This removes the full Ask Vasco thread from the client's chat list."
+            confirmLabel="Delete chat"
+            cancelLabel="Cancel"
+            variant="danger"
+            isLoading={deleteSessionMutation.isPending}
+          />
+        </>
+      )}
     </div>
   );
 }
