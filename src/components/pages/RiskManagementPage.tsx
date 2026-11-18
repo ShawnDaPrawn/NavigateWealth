@@ -311,6 +311,7 @@ export function RiskManagementPage() {
           badgeText: 'Risk Management Solutions',
           titleLine1: 'Protecting What',
           titleLine2: 'Matters Most',
+          searchHeading: { lead: 'Life Cover and Risk Management', accent: 'in South Africa' },
           description:
             'Comprehensive risk cover for individuals and businesses. We search the market to find you the best protection at the right price — tailored to your life.',
           heroImage: outdoorFamilyImage,

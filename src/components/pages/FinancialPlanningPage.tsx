@@ -347,6 +347,7 @@ export function FinancialPlanningPage() {
           badgeText: 'Financial Planning',
           titleLine1: 'Your Roadmap to',
           titleLine2: 'Financial Success',
+          searchHeading: { lead: 'Independent Financial Planning', accent: 'in South Africa' },
           description:
             'Comprehensive financial planning that aligns your money with your life goals. We create personalised strategies covering investments, retirement, tax, and estate planning.',
           heroImage: heroImage,

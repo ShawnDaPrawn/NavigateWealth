@@ -432,8 +432,9 @@ body.schedule-consultation-modal-open footer.bg-black {
   }
 
   /* Standardized H3 styling across all sections (the public site's; admin
-     screens size their headings themselves, from the redesign). */
-  h3:not(.nw-admin h3) {
+     screens and the redesigned public site — .nw-site, see src/site/ — size
+     their headings themselves). */
+  h3:not(.nw-admin h3):not(.nw-site h3) {
     font-size: 1.25rem !important; /* 20px */
     font-weight: 600 !important; /* Semi-bold for better prominence */
     line-height: 1.3 !important;
@@ -451,10 +452,10 @@ body.schedule-consultation-modal-open footer.bg-black {
   }
 
   /* Override any existing text color classes on H3 elements */
-  h3.text-black:not(.nw-admin h3),
-  h3.text-white:not(.nw-admin h3),
-  h3.text-gray-900:not(.nw-admin h3),
-  h3[class*='text-']:not(.nw-admin h3) {
+  h3.text-black:not(.nw-admin h3):not(.nw-site h3),
+  h3.text-white:not(.nw-admin h3):not(.nw-site h3),
+  h3.text-gray-900:not(.nw-admin h3):not(.nw-site h3),
+  h3[class*='text-']:not(.nw-admin h3):not(.nw-site h3) {
     font-size: 1.25rem !important;
     font-weight: 600 !important;
     line-height: 1.3 !important;
