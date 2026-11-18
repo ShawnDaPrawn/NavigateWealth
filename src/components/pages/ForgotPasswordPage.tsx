@@ -1,56 +1,30 @@
-import { sendPasswordResetEmail } from '../../utils/auth/authService';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Mail, ArrowLeft, Shield, CheckCircle, Lock, Clock, AlertCircle } from 'lucide-react';
-import { getUserErrorMessage } from '../../utils/errorUtils';
-import { useNavigate, Link } from 'react-router';
-import { useState } from 'react';
+import { Link } from 'react-router';
 import { MobileAuthLayout } from './auth/MobileAuthLayout';
+import { FORGOT_PASSWORD_FEATURES } from './auth/authConstants';
+import { useForgotPasswordForm } from './auth/useForgotPasswordForm';
 import { useIsStandalone } from '../../hooks/useIsStandalone';
 
+const FEATURE_ICONS = { Shield, Clock, Lock } as const;
+
 export function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState('');
-  const [_currentSlide] = useState(0);
-
-  const navigate = useNavigate();
+  // The request itself lives in useForgotPasswordForm, shared with the
+  // Navigator redesign of this page.
+  const {
+    email,
+    setEmail,
+    isLoading,
+    isSubmitted,
+    sendAnother,
+    error,
+    handleSubmit,
+    handleBackToLogin,
+  } = useForgotPasswordForm();
   const isStandalone = useIsStandalone();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!email) {
-      setError('Please enter your email address.');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email address.');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // Simulate API call
-      await sendPasswordResetEmail(email);
-      setIsSubmitted(true);
-    } catch (error: unknown) {
-      setError(getUserErrorMessage(error));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleBackToLogin = () => {
-    navigate('/login');
-  };
 
   if (isSubmitted) {
     const successContent = (
@@ -80,11 +54,7 @@ export function ForgotPasswordPage() {
 
         {/* Actions */}
         <div className="space-y-3 mt-6">
-          <Button
-            variant="outline"
-            onClick={() => setIsSubmitted(false)}
-            className="w-full border-gray-300"
-          >
+          <Button variant="outline" onClick={sendAnother} className="w-full border-gray-300">
             Send Another Link
           </Button>
           <Button onClick={handleBackToLogin} className="w-full bg-purple-700 hover:bg-purple-800">
@@ -253,41 +223,20 @@ export function ForgotPasswordPage() {
           </p>
 
           <div className="space-y-8">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white mb-1 text-[15px]">Bank-Level Encryption</h3>
-                <p className="text-purple-100 text-[12px]">
-                  256-bit SSL encryption protects your data and reset tokens at all times.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <Clock className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white mb-1 text-[15px]">Time-Limited Tokens</h3>
-                <p className="text-purple-100 text-[12px]">
-                  Reset links expire after 15 minutes to prevent unauthorized access.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                <Lock className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white mb-1 text-[15px]">Verified Access Only</h3>
-                <p className="text-purple-100 text-[12px]">
-                  Only registered email addresses can receive password reset links.
-                </p>
-              </div>
-            </div>
+            {FORGOT_PASSWORD_FEATURES.map((feature) => {
+              const Icon = FEATURE_ICONS[feature.iconSlug];
+              return (
+                <div key={feature.title} className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Icon className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white mb-1 text-[15px]">{feature.title}</h3>
+                    <p className="text-purple-100 text-[12px]">{feature.description}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

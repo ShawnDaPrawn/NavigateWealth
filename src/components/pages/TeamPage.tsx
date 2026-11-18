@@ -8,41 +8,13 @@ import { Badge } from '../ui/badge';
 import { Linkedin, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { OptimizedImage } from '../shared/OptimizedImage';
 import { ResponsiveImage } from '../shared/ResponsiveImage';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import {
+  TEAM_APPROACH,
+  fetchTeamMembers,
+  withoutFounder,
+  type TeamMember,
+} from '@/site/company/teamContent';
 import { COMPANY, FOUNDER } from '@/config/companyFacts';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface TeamMember {
-  id: string;
-  name: string;
-  title: string;
-  credentials: string;
-  bio: string;
-  specialties: string[];
-  image: string;
-  linkedinUrl?: string;
-  email?: string;
-  sortOrder: number;
-}
-
-async function fetchTeamMembers(): Promise<TeamMember[]> {
-  try {
-    const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications/team`,
-      { headers: { Authorization: `Bearer ${publicAnonKey}` } },
-    );
-    const json = await res.json();
-    if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-      return json.data;
-    }
-  } catch (err) {
-    console.error('Failed to fetch team members from API:', err);
-  }
-  return [];
-}
 
 /**
  * Navigate Wealth is founder-led, so the founder is always shown — from
@@ -102,8 +74,7 @@ export function TeamPage() {
     let cancelled = false;
     fetchTeamMembers().then((members) => {
       if (!cancelled) {
-        const founderName = FOUNDER.name.toLowerCase();
-        setTeamMembers(members.filter((m) => m.name?.trim().toLowerCase() !== founderName));
+        setTeamMembers(withoutFounder(members));
         setLoading(false);
       }
     });
@@ -273,22 +244,7 @@ export function TeamPage() {
           </p>
 
           <div className="grid md:grid-cols-3 gap-8 mb-12">
-            {[
-              {
-                title: 'Direct Access',
-                description:
-                  'You deal directly with the person advising you, from first meeting on.',
-              },
-              {
-                title: 'Continuous Education',
-                description: 'We stay current with market trends and regulatory changes.',
-              },
-              {
-                title: 'Client-Centric Focus',
-                description:
-                  'Every decision is made with your best interests as our primary consideration.',
-              },
-            ].map((approach, index) => (
+            {TEAM_APPROACH.map((approach, index) => (
               <div key={index} className="text-center space-y-3">
                 <h3 className="text-lg font-semibold text-black">{approach.title}</h3>
                 <p className="text-gray-600">{approach.description}</p>

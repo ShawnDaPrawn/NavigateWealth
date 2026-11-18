@@ -21,18 +21,17 @@ import { submitContactEnquiry } from '../../services/contactEnquiry';
 import saFlag from 'figma:asset/543ae964645db88228743731ee3eebbbc2e3686e.png';
 // WORKAROUND: consultationImage reused as retirementPlanningImage — same asset hash.
 // If a distinct retirement image is added in Figma, replace this alias.
+import { ArrowRight, Phone, Mail, MapPin, Loader2 } from 'lucide-react';
 import {
-  ArrowRight,
-  Shield,
-  Target,
-  CheckCircle,
-  Phone,
-  Mail,
-  MapPin,
-  Zap,
-  Loader2,
-} from 'lucide-react';
-import { seoData, homePageStructuredData, heroSlides, providers, services } from './homePageData';
+  seoData,
+  homePageStructuredData,
+  heroSlides,
+  providers,
+  services,
+  ctaTrustPoints,
+  serviceInterestOptions,
+  DEFAULT_SERVICE_INTEREST,
+} from './homePageData';
 import { TRUST_FACTS } from '@/config/companyFacts';
 import { PublishedReviews } from '../shared/PublishedReviews';
 import {
@@ -51,7 +50,7 @@ export function HomePage() {
     lastName: '',
     email: '',
     phone: '',
-    services: 'General consultation / All Service',
+    services: DEFAULT_SERVICE_INTEREST,
   });
 
   // ── Hero auto-advance ──────────────────────────────────────────
@@ -165,7 +164,7 @@ export function HomePage() {
         lastName: '',
         email: '',
         phone: '',
-        services: 'General consultation / All Service',
+        services: DEFAULT_SERVICE_INTEREST,
       });
     } catch (error) {
       console.error('Home CTA network error:', error);
@@ -409,12 +408,7 @@ export function HomePage() {
 
                 {/* Trust points */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[
-                    { text: 'Personalised financial advice', icon: Target },
-                    { text: 'Independent & unbiased', icon: Shield },
-                    { text: 'No-obligation consultation', icon: CheckCircle },
-                    { text: 'Response within 24 hours', icon: Zap },
-                  ].map(({ text, icon: Icon }) => (
+                  {ctaTrustPoints.map(({ text, icon: Icon }) => (
                     <div key={text} className="flex items-center gap-2.5">
                       <div className="w-7 h-7 rounded-md bg-primary/15 flex items-center justify-center flex-shrink-0">
                         <Icon className="h-3.5 w-3.5 text-purple-400" />
@@ -546,18 +540,11 @@ export function HomePage() {
                           <SelectValue placeholder="Select a service..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="General consultation / All Service">
-                            General consultation
-                          </SelectItem>
-                          <SelectItem value="Risk Management">Risk Management</SelectItem>
-                          <SelectItem value="Medical Aid">Medical Aid</SelectItem>
-                          <SelectItem value="Investment Management">
-                            Investment Management
-                          </SelectItem>
-                          <SelectItem value="Retirement Planning">Retirement Planning</SelectItem>
-                          <SelectItem value="Group Benefits">Group Benefits</SelectItem>
-                          <SelectItem value="Tax Planning">Tax Planning</SelectItem>
-                          <SelectItem value="Estate Planning">Estate Planning</SelectItem>
+                          {serviceInterestOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

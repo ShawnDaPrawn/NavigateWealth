@@ -1,0 +1,364 @@
+/*
+ * Navigator account pages without the site chrome — reset password, verify
+ * email, verification success: logo, one card, compliance line. Ported from
+ * the ResetPassword, VerifyEmail and VerificationSuccess boards. Loaded after
+ * account.css, whose field, message and meter classes these pages also use.
+ *
+ * Scoped to `.nw-site`, like navigator.css.
+ */
+
+/* ── Standalone pages: logo, one card, compliance line ── */
+.nw-site.nwac-solo {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 16px 48px;
+  box-sizing: border-box;
+  background-color: var(--nw-paper);
+  background-image:
+    linear-gradient(rgba(13, 22, 38, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 22, 38, 0.035) 1px, transparent 1px);
+  background-size:
+    96px 96px,
+    96px 96px;
+}
+.nw-site .nwac-home {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  justify-content: center;
+  border-radius: var(--nw-r-sm);
+  text-decoration: none;
+}
+/* The current logo file has a white ground; let the paper show through it. */
+.nw-site .nwac-home > div img {
+  mix-blend-mode: multiply;
+}
+.nw-site .nwac-home-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  box-shadow: var(--nw-shadow-1);
+}
+.nw-site .nwac-card {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 28px;
+  overflow: hidden;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  box-shadow: 0 0 0 1px var(--nw-line);
+}
+.nw-site .nwac-steps + .nwac-card {
+  margin-top: 24px;
+}
+.nw-site .nwac-card-rule {
+  height: 4px;
+  background: var(--nw-ink);
+}
+.nw-site .nwac-card-rule--success {
+  background: var(--nw-success);
+}
+.nw-site .nwac-card-body {
+  padding: clamp(24px, 6vw, 40px);
+}
+.nw-site .nwac-solo-fsp {
+  margin-top: 28px;
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-align: center;
+  color: var(--nw-muted);
+}
+.nw-site .nwac-centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwac-centre > .nwac-title {
+  margin-top: 22px;
+}
+.nw-site .nwac-disc {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid;
+}
+.nw-site .nwac-disc--warn {
+  background: var(--nw-warn-bg);
+  border-color: var(--nw-warn-line);
+  color: var(--nw-warn);
+}
+.nw-site .nwac-disc--ok {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 18px;
+  background: var(--nw-success-bg);
+  border-color: var(--nw-success-line);
+  color: var(--nw-success);
+}
+.nw-site .nwac-disc--warn + .nwac-title {
+  margin-top: 18px;
+}
+.nw-site .nwac-email {
+  margin-top: 4px;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+  overflow-wrap: anywhere;
+}
+
+/* Reset password: verifying + developer notes */
+.nw-site .nwac-verifying {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 0;
+}
+.nw-site .nwac-verifying p {
+  margin-top: 20px;
+  font-size: 15px;
+  color: var(--nw-text);
+}
+.nw-site .nwac-sweep {
+  transform-origin: 50% 50%;
+  animation: nwacSpin 2.4s linear infinite;
+}
+.nw-site .nwac-dev-h {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.nw-site .nwac-dev-p {
+  margin-top: 6px;
+  font-size: 12.5px;
+}
+.nw-site .nwac-dev-warn {
+  font-weight: 600;
+  color: var(--nw-danger-dark);
+}
+.nw-site .nwac-dev-codes {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nw-site .nwac-dev-code {
+  display: block;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--nw-r-sm);
+  background: rgba(253, 230, 138, 0.5);
+  text-align: left;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: inherit;
+  cursor: copy;
+  overflow-wrap: anywhere;
+}
+
+/* Verify email: progress steps + expiry note */
+.nw-site .nwac-steps {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.nw-site .nwac-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nw-muted);
+}
+.nw-site .nwac-step + .nwac-step::before {
+  content: '';
+  width: 24px;
+  border-top: 1.5px dashed var(--nw-line-strong);
+}
+.nw-site .nwac-step-n {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--nw-paper-2);
+  font-size: 11px;
+  color: var(--nw-muted);
+}
+.nw-site .nwac-step.is-done {
+  color: var(--nw-success);
+}
+.nw-site .nwac-step.is-done .nwac-step-n {
+  background: var(--nw-success-bg);
+  color: var(--nw-success);
+}
+.nw-site .nwac-step.is-current {
+  color: var(--nw-ink);
+}
+.nw-site .nwac-step.is-current .nwac-step-n {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwac-expiry {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--nw-muted);
+}
+
+/* Verification success */
+@keyframes nwacPop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes nwacDraw {
+  from {
+    stroke-dashoffset: 40;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.nw-site .nwac-pop {
+  width: 84px;
+  height: 84px;
+  animation: nwacPop 0.6s var(--nw-ease) both;
+}
+.nw-site .nwac-draw {
+  stroke-dasharray: 40;
+  animation: nwacDraw 0.6s 0.25s ease-out both;
+}
+.nw-site .nwac-centre > .nwac-copy {
+  margin-top: 12px;
+  line-height: 1.65;
+}
+.nw-site .nwac-divider {
+  width: 100%;
+  height: 1px;
+  margin: 26px 0;
+  background: var(--nw-paper-2);
+}
+.nw-site .nwac-cta {
+  width: 100%;
+}
+.nw-site .nwac-countdown {
+  width: 100%;
+  margin-top: 16px;
+}
+.nw-site .nwac-countdown-bar {
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+}
+.nw-site .nwac-countdown-bar span {
+  display: block;
+  height: 100%;
+  background: var(--nw-ink);
+  transition: width 1s linear;
+}
+.nw-site .nwac-countdown p {
+  margin-top: 10px;
+  font-size: 13.5px;
+  color: var(--nw-muted);
+}
+.nw-site .nwac-help {
+  margin-top: 22px;
+  font-size: 14px;
+  color: var(--nw-text);
+}
+.nw-site .nwac-help-links {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0 10px;
+}
+.nw-site .nwac-help .nwac-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+.nw-site .nwac-dot {
+  color: var(--nw-line-strong);
+}
+.nw-site .nwac-centre > .nwac-note {
+  margin-top: 22px;
+}
+.nw-site .nwac-quiet {
+  margin-top: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 14px;
+  color: var(--nw-text);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nw-site .nwac-quiet:hover {
+  color: var(--nw-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nw-site .nwac-quiet + .nwac-solo-fsp {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .nw-site .nwac-steps {
+    gap: 6px 14px;
+  }
+  .nw-site .nwac-step {
+    font-size: 12px;
+  }
+  .nw-site .nwac-step + .nwac-step::before {
+    display: none;
+  }
+  .nw-site.nwac-solo {
+    padding-top: 28px;
+  }
+  .nw-site .nwac-card-body {
+    padding: 28px 20px;
+  }
+  .nw-site .nwac-cta.nw-btn--lg {
+    height: 48px;
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwac-sweep,
+  .nw-site .nwac-pop,
+  .nw-site .nwac-draw {
+    animation: none;
+  }
+}

@@ -11,25 +11,9 @@ import { ProvidersModal } from '../modals/ProvidersModal';
 import { PublishedReviews } from '../shared/PublishedReviews';
 import { FounderNote } from './about/FounderNote';
 import { COMPANY, TRUST_FACTS } from '@/config/companyFacts';
+import { ABOUT_SECTIONS } from '@/site/company/aboutContent';
 
-import {
-  Award,
-  Users,
-  TrendingUp,
-  Shield,
-  Heart,
-  Eye,
-  Target,
-  ArrowRight,
-  CheckCircle,
-  Handshake,
-  Calendar,
-  FileText,
-  HandHeart,
-  Scale,
-  Lightbulb,
-  Stethoscope,
-} from 'lucide-react';
+import { Users, Shield, ArrowRight, CheckCircle, Calendar, FileText } from 'lucide-react';
 
 export function AboutPage() {
   const [consultationModalOpen, setConsultationModalOpen] = useState(false);
@@ -54,103 +38,7 @@ export function AboutPage() {
   // About page structured data
   const aboutPageStructuredData = createAboutPageSchema();
 
-  const sections = {
-    mission: {
-      label: 'Mission & Culture',
-      icon: Heart,
-      title: 'Our Mission & Culture',
-      description: 'Learn about our values, purpose, and the culture that drives everything we do.',
-      content: [
-        {
-          title: 'Our Mission',
-          text: 'To empower our clients to achieve financial independence and peace of mind through personalized wealth management strategies, exceptional service, and unwavering commitment to their success.',
-          icon: Target,
-        },
-        {
-          title: 'Our Approach',
-          text: 'As a founder-led practice, we keep advice personal: you deal directly with the person advising you. We stay current with markets and regulation so that the advice stays relevant as your life changes.',
-          icon: Users,
-        },
-        {
-          title: 'Our Promise',
-          text: 'Every client relationship is built on trust, transparency, and a deep understanding of your unique financial journey. We promise to be your trusted partner every step of the way.',
-          icon: Handshake,
-        },
-      ],
-    },
-    partners: {
-      label: 'Our Partners',
-      icon: HandHeart,
-      title: 'Trusted Product Providers',
-      description:
-        'We work with established South African product providers, so you can compare real options side by side.',
-      content: [
-        {
-          title: 'Investment Partners',
-          text: 'Investment managers and platforms including Allan Gray, Sygnia, Stanlib and INN8, used to build diversified investment and retirement portfolios.',
-          icon: TrendingUp,
-        },
-        {
-          title: 'Insurance Partners',
-          text: 'Life, disability and severe illness cover compared across insurers including Discovery, Old Mutual, Momentum, Sanlam, Liberty, BrightRock and Hollard.',
-          icon: Shield,
-        },
-        {
-          title: 'Medical & Estate Partners',
-          text: 'Medical aid options from Discovery Health and Momentum Health, and estate planning support from Capital Legacy and EW Serfontein & Associates.',
-          icon: Stethoscope,
-        },
-      ],
-    },
-    licensing: {
-      label: 'Licensing',
-      icon: Scale,
-      title: 'Regulatory Compliance',
-      description:
-        'Every detail below can be checked independently, starting with the FSCA’s public register.',
-      content: [
-        {
-          title: 'FSP Licence',
-          text: `${COMPANY.tradingName} is the trading name of ${COMPANY.legalName} (registration ${COMPANY.registrationNumber}), an authorised Financial Services Provider (FSP ${COMPANY.fspNumber}) licensed by the ${COMPANY.regulator} on ${COMPANY.fscaAuthorisedOn}.`,
-          icon: Award,
-        },
-        {
-          title: 'Fit and Proper Advice',
-          text: 'Everyone who gives advice at Navigate Wealth meets the FSCA’s Fit and Proper requirements for honesty, qualifications, experience and continuous professional development.',
-          icon: Users,
-        },
-        {
-          title: 'Regulatory Oversight',
-          text: 'We operate under the FAIS Act and the FSCA’s General Code of Conduct, and our authorisation can be confirmed on the FSCA’s public register of financial services providers.',
-          icon: CheckCircle,
-        },
-      ],
-    },
-    transparency: {
-      label: 'Radical Transparency',
-      icon: Eye,
-      title: 'Complete Transparency',
-      description:
-        'We believe in radical transparency - no hidden fees, no complex structures, just honest, straightforward advice.',
-      content: [
-        {
-          title: 'Fee Transparency',
-          text: "All fees are clearly disclosed upfront with no hidden charges. We believe you should know exactly what you're paying for and why.",
-          icon: FileText,
-        },
-        {
-          title: 'Investment Transparency',
-          text: 'You have full visibility into your investments with regular reporting, real-time access to your portfolio, and clear explanations of all investment decisions.',
-          icon: Lightbulb,
-        },
-        {
-          title: 'Performance Transparency',
-          text: 'We provide honest, comprehensive performance reporting that shows both successes and areas for improvement, along with clear benchmarking.',
-          icon: TrendingUp,
-        },
-      ],
-    },
-  };
+  const sections = ABOUT_SECTIONS;
 
   return (
     <div className="contents">

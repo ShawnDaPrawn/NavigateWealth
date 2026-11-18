@@ -26,147 +26,28 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { CVUploadModal } from '../modals/CVUploadModal';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import {
+  CAREER_CATEGORIES as categories,
+  CAREER_HIGHLIGHTS,
+  CAREER_PERKS as PERKS,
+  CAREER_VALUES as values,
+  fetchJobListings,
+  formatClosingDate,
+  type JobListing,
+} from '@/site/company/careersContent';
 import {
   Briefcase,
-  Users,
-  FileText,
-  TrendingUp,
   ArrowRight,
   CheckCircle,
   Shield,
-  Megaphone,
   Globe,
   MapPin,
   Clock,
   Calendar,
   Loader2,
-  Heart,
-  Lightbulb,
-  UserCheck,
-  GraduationCap,
-  Coffee,
   ChevronRight,
   Send,
 } from 'lucide-react';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface JobListing {
-  id: string;
-  title: string;
-  category: string;
-  location: string;
-  type: string;
-  description: string;
-  requirements: string[];
-  benefits: string[];
-  closingDate?: string;
-}
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications`;
-const AUTH_HEADERS = { Authorization: `Bearer ${publicAnonKey}` };
-
-const categories = [
-  {
-    id: 'advisory',
-    title: 'Advisory',
-    icon: Users,
-    description:
-      'Client-facing roles providing financial advice and building lasting relationships.',
-  },
-  {
-    id: 'administration',
-    title: 'Administration',
-    icon: FileText,
-    description: 'Operational support roles ensuring smooth business operations.',
-  },
-  {
-    id: 'compliance',
-    title: 'Compliance',
-    icon: Shield,
-    description: 'Regulatory and compliance roles maintaining standards and oversight.',
-  },
-  {
-    id: 'marketing',
-    title: 'Marketing',
-    icon: Megaphone,
-    description: 'Creative and strategic roles driving brand growth and client acquisition.',
-  },
-];
-
-const values = [
-  {
-    title: 'Founder-Led',
-    description: 'Work directly alongside the founder and see how every part of the practice runs.',
-    icon: UserCheck,
-  },
-  {
-    title: 'Client Excellence',
-    description: "Every decision we make is guided by what's best for our clients.",
-    icon: Heart,
-  },
-  {
-    title: 'Professional Growth',
-    description: 'We support continuous learning, CPD and professional development.',
-    icon: GraduationCap,
-  },
-  {
-    title: 'Independence',
-    description: 'We give advice that is not tied to any single product provider.',
-    icon: Globe,
-  },
-];
-
-const PERKS = [
-  {
-    icon: TrendingUp,
-    title: 'Competitive Remuneration',
-    description: 'Market-related pay, discussed openly for each role',
-  },
-  {
-    icon: GraduationCap,
-    title: 'Continuous Learning',
-    description: 'Support for CPD and industry qualifications',
-  },
-  {
-    icon: Coffee,
-    title: 'Flexible Working',
-    description: 'Hybrid working from our Pretoria office',
-  },
-  {
-    icon: Shield,
-    title: 'Meaningful Work',
-    description: 'Help clients make real, well-informed financial decisions',
-  },
-  {
-    icon: Lightbulb,
-    title: 'Innovation Culture',
-    description: 'AI tools, modern tech stack & creative freedom',
-  },
-  { icon: Users, title: 'Mentorship', description: 'One-on-one mentorship from the founder' },
-];
-
-// ============================================================================
-// Data fetching
-// ============================================================================
-
-async function fetchJobListings(): Promise<JobListing[]> {
-  try {
-    const res = await fetch(`${BASE_URL}/careers`, { headers: AUTH_HEADERS });
-    const json = await res.json();
-    if (json.success && Array.isArray(json.data)) return json.data;
-  } catch (err) {
-    console.error('Failed to fetch job listings:', err);
-  }
-  return [];
-}
 
 // ============================================================================
 // Main Component
@@ -396,12 +277,7 @@ export function CareersPage() {
                             {listing.closingDate && (
                               <span className="flex items-center gap-1.5">
                                 <Calendar className="h-3.5 w-3.5" />
-                                Closes{' '}
-                                {new Date(listing.closingDate).toLocaleDateString('en-ZA', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric',
-                                })}
+                                Closes {formatClosingDate(listing.closingDate)}
                               </span>
                             )}
                           </div>
@@ -520,14 +396,7 @@ export function CareersPage() {
 
                 {/* Mini perks grid */}
                 <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-left max-w-2xl mx-auto">
-                  {[
-                    'Competitive remuneration',
-                    'Professional development',
-                    'Growth opportunities',
-                    'Modern work environment',
-                    'Flexible working options',
-                    'Close-knit, founder-led culture',
-                  ].map((item) => (
+                  {CAREER_HIGHLIGHTS.map((item) => (
                     <div
                       key={item}
                       className="flex items-center gap-2 text-sm text-gray-500 px-3 py-2 rounded-lg bg-gray-50"

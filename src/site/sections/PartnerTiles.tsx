@@ -1,3 +1,4 @@
+import { NwLogo } from '../components/NwLogo';
 import { SectionHead } from './SectionHead';
 import '../styles/sections.css';
 
@@ -32,7 +33,7 @@ export function PartnerTiles({
         <ul className="nwl-grid">
           {partners.map((p) => (
             <li key={p.id} className="nwl-tile">
-              <img src={p.logo} alt={`${p.name} logo`} loading="lazy" decoding="async" />
+              <NwLogo src={p.logo} alt={`${p.name} logo`} sizes="140px" />
               <span className="nwl-est nw-mono">Est. {p.est}</span>
             </li>
           ))}

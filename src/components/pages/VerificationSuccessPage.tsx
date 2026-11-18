@@ -1,58 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { Logo } from '../layout/Logo';
-import { useAuth } from '../auth/AuthContext';
-import { logger } from '../../utils/logger';
+import { useVerificationRedirect } from './auth/useVerificationRedirect';
 
 export default function VerificationSuccessPage() {
-  const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
-  const [countdown, setCountdown] = useState(5);
-
-  useEffect(() => {
-    // Determine where to redirect based on authentication status
-    const getRedirectPath = () => {
-      if (isAuthenticated && user) {
-        // User is authenticated, redirect to application flow
-        if (user.applicationStatus === 'incomplete') {
-          return !user.accountType ? '/account-type' : '/application';
-        }
-        return '/dashboard';
-      }
-      // User is not authenticated, redirect to login
-      return '/login';
-    };
-
-    // Start countdown
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          const redirectPath = getRedirectPath();
-          logger.info('Redirecting', { path: redirectPath });
-          navigate(redirectPath, { replace: true });
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [navigate, isAuthenticated, user]);
-
-  // Determine the call-to-action based on authentication status
-  const ctaPath =
-    isAuthenticated && user
-      ? user.applicationStatus === 'incomplete'
-        ? !user.accountType
-          ? '/account-type'
-          : '/application'
-        : '/dashboard'
-      : '/login';
-
-  const ctaText = isAuthenticated ? 'Continue to Application' : 'Continue to Login';
+  // The destination and countdown live in useVerificationRedirect, shared
+  // with the Navigator redesign of this page.
+  const { countdown, ctaPath, ctaText } = useVerificationRedirect();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

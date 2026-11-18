@@ -8,84 +8,28 @@ import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { MediaAccessModal } from '../modals/MediaAccessModal';
 import { ImageWithFallback } from '../shared/ImageWithFallback';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
 import { COMPANY, FOUNDER } from '@/config/companyFacts';
 import {
+  CATEGORY_TABS,
+  MEDIA_ASSETS as mediaAssets,
+  PRESS_CATEGORY_LABEL_MAP,
+  PRESS_FACTS as companyFacts,
+  fetchPressArticles,
+  formatPressDate as formatDate,
+  matchesPressFilter,
+  type PressArticle,
+} from '@/site/company/pressContent';
+import {
   Newspaper,
   Calendar,
-  Shield,
-  UserCheck,
-  Users,
   ArrowRight,
   Building,
-  FileText,
   Search,
   Mail,
   Clock,
   Loader2,
 } from 'lucide-react';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface PressArticle {
-  id: string;
-  title: string;
-  subtitle?: string;
-  slug: string;
-  excerpt: string;
-  press_category: string;
-  hero_image_url?: string;
-  thumbnail_image_url?: string;
-  published_at?: string;
-  author_name?: string;
-  reading_time_minutes?: number;
-}
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications`;
-const AUTH_HEADERS = { Authorization: `Bearer ${publicAnonKey}` };
-
-const PRESS_CATEGORY_MAP: Record<string, string> = {
-  'Company News': 'company_news',
-  'Product Launch': 'product_launch',
-  Awards: 'awards',
-  'Team News': 'team_news',
-  'Industry Insights': 'industry_insights',
-};
-
-const PRESS_CATEGORY_LABEL_MAP: Record<string, string> = {
-  company_news: 'Company News',
-  product_launch: 'Product Launch',
-  awards: 'Awards',
-  team_news: 'Team News',
-  industry_insights: 'Industry Insights',
-};
-
-// "Awards" and "Team News" are kept in the label maps above so any article
-// already tagged with them still shows its badge, but they are not offered as
-// tabs: an empty "Awards" tab reads as a claim the firm has awards.
-const CATEGORY_TABS = ['All', 'Company News', 'Product Launch', 'Industry Insights'];
-
-// ============================================================================
-// Data fetching
-// ============================================================================
-
-async function fetchPressArticles(): Promise<PressArticle[]> {
-  try {
-    const res = await fetch(`${BASE_URL}/press/articles`, { headers: AUTH_HEADERS });
-    const json = await res.json();
-    if (json.success && Array.isArray(json.data)) return json.data;
-  } catch {
-    /* fall through */
-  }
-  return [];
-}
 
 // ============================================================================
 // Component
@@ -113,79 +57,11 @@ export function PressPage() {
     setIsMediaAccessModalOpen(true);
   };
 
-  // Checkable company facts only — see src/config/companyFacts.ts for why the
-  // headline client, experience and asset figures were removed.
-  const companyFacts = [
-    { label: 'FSCA-authorised FSP', value: COMPANY.fspNumber, icon: Shield },
-    { label: 'Licensed by the FSCA', value: COMPANY.fscaAuthorisedOn, icon: Calendar },
-    { label: 'Company founded', value: String(COMPANY.foundedYear), icon: Building },
-    { label: `Led by ${FOUNDER.name}`, value: 'Founder-led', icon: UserCheck },
-  ];
-
   // Filter articles by selected category tab + search query
-  const filteredArticles = useMemo(() => {
-    let result = articles;
-
-    // Category filter
-    if (selectedCategory !== 'All') {
-      const catKey = PRESS_CATEGORY_MAP[selectedCategory];
-      if (catKey) {
-        result = result.filter((a) => a.press_category === catKey);
-      }
-    }
-
-    // Search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(
-        (a) =>
-          a.title.toLowerCase().includes(q) ||
-          a.excerpt.toLowerCase().includes(q) ||
-          (a.subtitle || '').toLowerCase().includes(q),
-      );
-    }
-
-    return result;
-  }, [articles, selectedCategory, searchQuery]);
-
-  const mediaAssets = [
-    {
-      title: 'Brand Assets',
-      description: 'Logo packages, brand guidelines, and visual identity resources',
-      type: 'ZIP',
-      icon: Building,
-    },
-    {
-      title: 'Founder Photos',
-      description: `High-resolution photography of our founder, ${FOUNDER.name}`,
-      type: 'ZIP',
-      icon: Users,
-    },
-    {
-      title: 'Company Fact Sheet',
-      description: 'Licensing details, milestones, and company overview',
-      type: 'PDF',
-      icon: FileText,
-    },
-    {
-      title: 'Product Brochures',
-      description: 'Comprehensive service and solution overviews',
-      type: 'PDF',
-      icon: Newspaper,
-    },
-  ];
-
-  function formatDate(dateStr: string): string {
-    try {
-      return new Date(dateStr).toLocaleDateString('en-ZA', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
-    } catch {
-      return dateStr;
-    }
-  }
+  const filteredArticles = useMemo(
+    () => articles.filter((a) => matchesPressFilter(a, selectedCategory, searchQuery)),
+    [articles, selectedCategory, searchQuery],
+  );
 
   return (
     <div className="min-h-screen">

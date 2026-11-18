@@ -40,6 +40,10 @@ import {
   Briefcase,
   Compass,
   Stethoscope,
+  Globe,
+  Heart,
+  Zap,
+  CheckCircle,
 } from 'lucide-react';
 
 export const seoData = getSEOData('home');
@@ -206,4 +210,44 @@ export const heroSlides = [
       link: '/services',
     },
   },
+];
+
+/** The "Why us?" points. */
+export const whyNavigate = [
+  {
+    title: "We're Independent",
+    description: 'Unbiased advice and access to top-tier products from multiple providers.',
+    icon: Globe,
+  },
+  {
+    title: "We're Customer-Centric",
+    description: "We tailor all planning around each client's goals, values, and timeline.",
+    icon: Heart,
+  },
+  {
+    title: "We're Technology-Enabled",
+    description: 'We integrate tech to streamline onboarding, analysis, and portfolio monitoring.',
+    icon: Zap,
+  },
+];
+
+/** What the "Get Started" enquiry promises, beside the form. */
+export const ctaTrustPoints = [
+  { text: 'Personalised financial advice', icon: Target },
+  { text: 'Independent & unbiased', icon: Shield },
+  { text: 'No-obligation consultation', icon: CheckCircle },
+  { text: 'Response within 24 hours', icon: Zap },
+];
+
+/** The "Get Started" form's service choice: `value` is what the enquiry records. */
+export const DEFAULT_SERVICE_INTEREST = 'General consultation / All Service';
+export const serviceInterestOptions = [
+  { value: DEFAULT_SERVICE_INTEREST, label: 'General consultation' },
+  { value: 'Risk Management', label: 'Risk Management' },
+  { value: 'Medical Aid', label: 'Medical Aid' },
+  { value: 'Investment Management', label: 'Investment Management' },
+  { value: 'Retirement Planning', label: 'Retirement Planning' },
+  { value: 'Group Benefits', label: 'Group Benefits' },
+  { value: 'Tax Planning', label: 'Tax Planning' },
+  { value: 'Estate Planning', label: 'Estate Planning' },
 ];

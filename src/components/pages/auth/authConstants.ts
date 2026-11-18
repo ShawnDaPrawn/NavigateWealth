@@ -89,6 +89,25 @@ export const SIGNUP_BRAND_FEATURES = [
   },
 ] as const;
 
+// ─── Forgot Password Showcase (account recovery reassurance) ─────────────────
+export const FORGOT_PASSWORD_FEATURES = [
+  {
+    iconSlug: 'Shield',
+    title: 'Bank-Level Encryption',
+    description: '256-bit SSL encryption protects your data and reset tokens at all times.',
+  },
+  {
+    iconSlug: 'Clock',
+    title: 'Time-Limited Tokens',
+    description: 'Reset links expire after 15 minutes to prevent unauthorized access.',
+  },
+  {
+    iconSlug: 'Lock',
+    title: 'Verified Access Only',
+    description: 'Only registered email addresses can receive password reset links.',
+  },
+] as const;
+
 // ─── Country Codes ─────────────────────────────────────────────────────────────
 export interface CountryCode {
   code: string;

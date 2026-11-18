@@ -7,127 +7,27 @@ import { Card, CardContent } from '../ui/card';
 import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
-import {
-  Heart,
-  Shield,
-  DollarSign,
-  TrendingUp,
-  ArrowRight,
-  CheckCircle,
-  Trophy,
-  FileText,
-  Briefcase,
-  Home,
-  Baby,
-  GraduationCap,
-  Smartphone,
-  HeadphonesIcon,
-  Monitor,
-  Calendar,
-  ChevronRight,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowRight, CheckCircle, Calendar, ChevronRight, Sparkles } from 'lucide-react';
 import { TRUST_FACTS } from '@/config/companyFacts';
+import {
+  INDIVIDUAL_DIGITAL_FEATURES,
+  INDIVIDUAL_SERVICES,
+  INDIVIDUALS_JOURNEY_IMAGE,
+  LIFE_MILESTONES,
+} from '@/site/solutions/solutionsContent';
 
 // ---------------------------------------------------------------------------
-// Data — identical content to legacy, restructured for the new layout
+// Data — shared with the Navigator design, see src/site/solutions/solutionsContent.ts
 // ---------------------------------------------------------------------------
 
-const services = [
-  {
-    title: 'Medical Aid & Gap Cover',
-    description:
-      "Access South Africa's leading medical schemes and products with comprehensive gap cover protection.",
-    icon: Heart,
-    link: '/medical-aid',
-    features: ['Medical scheme comparison', 'Gap cover options', 'Specialist networks'],
-    accent: 'from-rose-500 to-pink-600',
-    accentLight: 'bg-rose-50 text-rose-600',
-  },
-  {
-    title: 'Life, Disability & Severe Illness Cover',
-    description:
-      'Protecting your income and your loved ones with comprehensive risk management solutions.',
-    icon: Shield,
-    link: '/risk-management',
-    features: ['Income protection', 'Family security', 'Critical illness cover'],
-    accent: 'from-blue-500 to-indigo-600',
-    accentLight: 'bg-blue-50 text-blue-600',
-  },
-  {
-    title: 'Retirement Planning',
-    description:
-      'Build a future you can count on with proven investment platforms and retirement strategies.',
-    icon: Trophy,
-    link: '/retirement-planning',
-    features: ['Investment platforms', 'Retirement annuities', 'Pension funds'],
-    accent: 'from-amber-500 to-orange-600',
-    accentLight: 'bg-amber-50 text-amber-600',
-  },
-  {
-    title: 'Investments (Local & Offshore)',
-    description:
-      'Diversify your wealth and hedge against rand depreciation with local and international investments.',
-    icon: TrendingUp,
-    link: '/investment-management',
-    features: ['Local investments', 'Offshore diversification', 'Currency hedging'],
-    accent: 'from-emerald-500 to-teal-600',
-    accentLight: 'bg-emerald-50 text-emerald-600',
-  },
-  {
-    title: 'Estate Planning',
-    description: 'Wills, trusts, and tax-efficient transfer of your legacy to the next generation.',
-    icon: FileText,
-    link: '/estate-planning',
-    features: ['Will drafting', 'Trust structures', 'Tax efficiency'],
-    accent: 'from-violet-500 to-purple-600',
-    accentLight: 'bg-violet-50 text-violet-600',
-  },
-  {
-    title: 'Tax Planning',
-    description:
-      'Optimize your tax strategy and minimize liability through expert planning and compliance.',
-    icon: DollarSign,
-    link: '/tax-planning',
-    features: ['Tax optimization', 'SARS compliance', 'Strategic planning'],
-    accent: 'from-cyan-500 to-blue-600',
-    accentLight: 'bg-cyan-50 text-cyan-600',
-  },
-];
+const services = INDIVIDUAL_SERVICES;
 
-const lifeMilestones = [
-  { icon: Briefcase, title: 'First Job', description: 'Starting your career' },
-  { icon: Home, title: 'First Home', description: 'Purchasing property' },
-  { icon: Heart, title: 'Marriage', description: 'Building together' },
-  { icon: Baby, title: 'Children', description: 'Growing family' },
-  { icon: GraduationCap, title: 'Retirement', description: 'Enjoying freedom' },
-];
+const lifeMilestones = LIFE_MILESTONES;
 
 // Checkable facts only — see src/config/companyFacts.ts.
 const stats = TRUST_FACTS.slice(0, 3);
 
-const digitalFeatures = [
-  {
-    icon: Smartphone,
-    title: 'Mobile Access',
-    description: 'Manage your finances on the go from any device',
-  },
-  {
-    icon: Monitor,
-    title: 'Client Portal',
-    description: 'View all policies, statements and documents in one place',
-  },
-  {
-    icon: FileText,
-    title: 'Document Access',
-    description: 'Download and sign documents instantly — no paperwork',
-  },
-  {
-    icon: HeadphonesIcon,
-    title: 'Personal Support',
-    description: 'Real human advice from a dedicated financial adviser',
-  },
-];
+const digitalFeatures = INDIVIDUAL_DIGITAL_FEATURES;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -269,8 +169,8 @@ export function ForIndividualsPage() {
           <div className="relative">
             <div className="aspect-[4/3] rounded-xl sm:rounded-2xl overflow-hidden shadow-xl">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1758686254550-c5d8f4de1b3a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmYW1pbHklMjBmaW5hbmNpYWwlMjBwbGFubmluZyUyMGNvbnN1bHRhdGlvbnxlbnwxfHx8fDE3NzE5Mjk5ODF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Family financial planning consultation"
+                src={INDIVIDUALS_JOURNEY_IMAGE.src}
+                alt={INDIVIDUALS_JOURNEY_IMAGE.alt}
                 className="w-full h-full object-cover"
               />
             </div>

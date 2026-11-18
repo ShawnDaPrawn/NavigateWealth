@@ -13,84 +13,18 @@ import { Badge } from '../ui/badge';
 import { Shield, CheckCircle, Stethoscope, Users, FileText, TrendingUp } from 'lucide-react';
 
 import {
-  allanGrayLogo,
-  brightRockLogo,
-  capitalLegacyLogo,
-  discoveryLogo,
-  ewSerfonteinLogo,
-  hollardLogo,
-  inn8Logo,
-  justLogo,
-  libertyLogo,
-  momentumLogo,
-  oldMutualLogo,
-  sanlamLogo,
-  stanlibLogo,
-  sygniaLogo,
-} from '../shared/assets/provider-logos';
+  estatePlanningProviders,
+  groupBenefitsProviders,
+  investmentProviders,
+  medicalAidProviders,
+  riskProviders,
+  type ProviderEntry,
+} from './providerGroups';
 
 interface ProvidersModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-interface ProviderEntry {
-  name: string;
-  logo: string | null;
-}
-
-/**
- * Provider lists per category — sourced from each service page's partnerLogos array.
- * Each provider appears only in the categories where they actually operate.
- */
-const riskProviders: ProviderEntry[] = [
-  { name: 'Discovery', logo: discoveryLogo },
-  { name: 'Sanlam', logo: sanlamLogo },
-  { name: 'Momentum', logo: momentumLogo },
-  { name: 'Liberty', logo: libertyLogo },
-  { name: 'Old Mutual', logo: oldMutualLogo },
-  { name: 'BrightRock', logo: brightRockLogo },
-  { name: 'Hollard', logo: hollardLogo },
-];
-
-const medicalAidProviders: ProviderEntry[] = [
-  { name: 'Discovery Health', logo: discoveryLogo },
-  { name: 'Momentum Health', logo: momentumLogo },
-];
-
-const investmentProviders: ProviderEntry[] = [
-  { name: 'Allan Gray', logo: allanGrayLogo },
-  { name: 'Sygnia', logo: sygniaLogo },
-  { name: 'Discovery', logo: discoveryLogo },
-  { name: 'Liberty', logo: libertyLogo },
-  { name: 'Stanlib', logo: stanlibLogo },
-  { name: 'INN8', logo: inn8Logo },
-  { name: 'Old Mutual', logo: oldMutualLogo },
-  { name: 'Sanlam', logo: sanlamLogo },
-  { name: 'Momentum', logo: momentumLogo },
-  { name: 'JUST', logo: justLogo },
-];
-
-const groupBenefitsProviders: ProviderEntry[] = [
-  { name: 'Discovery', logo: discoveryLogo },
-  { name: 'Momentum', logo: momentumLogo },
-  { name: 'Liberty', logo: libertyLogo },
-  { name: 'BrightRock', logo: brightRockLogo },
-  { name: 'Sanlam', logo: sanlamLogo },
-  { name: 'Old Mutual', logo: oldMutualLogo },
-  { name: 'Allan Gray', logo: allanGrayLogo },
-  { name: 'Sygnia', logo: sygniaLogo },
-  { name: 'Hollard', logo: hollardLogo },
-  { name: 'Stanlib', logo: stanlibLogo },
-  { name: 'INN8', logo: inn8Logo },
-  { name: 'JUST', logo: justLogo },
-  { name: 'Capital Legacy', logo: capitalLegacyLogo },
-];
-
-const estatePlanningProviders: ProviderEntry[] = [
-  { name: 'Capital Legacy', logo: capitalLegacyLogo },
-  { name: 'EW Serfontein & Associates', logo: ewSerfonteinLogo },
-];
 
 // ── Shared provider card ──────────────────────────────────────────────────────
 

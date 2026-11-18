@@ -7,104 +7,27 @@ import { Card, CardContent } from '../ui/card';
 import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
-import {
-  Building,
-  Shield,
-  Users,
-  Calculator,
-  Globe,
-  ArrowRight,
-  CheckCircle,
-  TrendingUp,
-  Trophy,
-  FileText,
-  Smartphone,
-  HeadphonesIcon,
-  Monitor,
-  Calendar,
-  ChevronRight,
-  Sparkles,
-  PieChart,
-} from 'lucide-react';
+import { ArrowRight, CheckCircle, Calendar, ChevronRight, Sparkles } from 'lucide-react';
 import { TRUST_FACTS } from '@/config/companyFacts';
+import {
+  BUSINESS_DIGITAL_FEATURES,
+  BUSINESS_SERVICES,
+  BUSINESS_STAGES,
+  BUSINESSES_JOURNEY_IMAGE,
+} from '@/site/solutions/solutionsContent';
 
 // ---------------------------------------------------------------------------
-// Data
+// Data — shared with the Navigator design, see src/site/solutions/solutionsContent.ts
 // ---------------------------------------------------------------------------
 
-const services = [
-  {
-    title: 'Employee Benefits',
-    description:
-      'Comprehensive group health plans, retirement schemes, and employee benefit packages.',
-    icon: Users,
-    link: '/employee-benefits',
-    features: ['Group health insurance', 'Retirement benefits', 'Wellness programs'],
-    accent: 'from-blue-500 to-indigo-600',
-    accentLight: 'bg-blue-50 text-blue-600',
-  },
-  {
-    title: 'Risk Management',
-    description: 'Comprehensive business insurance and risk protection strategies.',
-    icon: Shield,
-    link: '/risk-management',
-    features: ['Business insurance', 'Key person cover', 'Professional indemnity'],
-    accent: 'from-rose-500 to-pink-600',
-    accentLight: 'bg-rose-50 text-rose-600',
-  },
-  {
-    title: 'Investment Solutions',
-    description: 'Corporate treasury management and investment portfolio optimization.',
-    icon: PieChart,
-    link: '/investment-management',
-    features: ['Corporate treasury', 'Investment portfolios', 'Asset allocation'],
-    accent: 'from-violet-500 to-purple-600',
-    accentLight: 'bg-violet-50 text-violet-600',
-  },
-  {
-    title: 'Tax Planning',
-    description: 'Corporate tax optimization, compliance, and strategic tax planning.',
-    icon: Calculator,
-    link: '/tax-planning',
-    features: ['Corporate tax strategy', 'SARS compliance', 'Tax optimization'],
-    accent: 'from-amber-500 to-orange-600',
-    accentLight: 'bg-amber-50 text-amber-600',
-  },
-];
+const services = BUSINESS_SERVICES;
 
-const businessStages = [
-  { icon: Building, title: 'Startup', description: 'Launch phase' },
-  { icon: TrendingUp, title: 'Growth', description: 'Scaling up' },
-  { icon: Users, title: 'Expansion', description: 'Market presence' },
-  { icon: Trophy, title: 'Maturity', description: 'Market leader' },
-  { icon: Globe, title: 'Global', description: 'International' },
-];
+const businessStages = BUSINESS_STAGES;
 
 // Checkable facts only — see src/config/companyFacts.ts.
 const stats = TRUST_FACTS.slice(0, 3);
 
-const digitalFeatures = [
-  {
-    icon: Smartphone,
-    title: 'Mobile Access',
-    description: 'Manage your business finances from any device, anywhere',
-  },
-  {
-    icon: Monitor,
-    title: 'Dashboard',
-    description: 'Real-time insights into your corporate portfolio and benefits',
-  },
-  {
-    icon: FileText,
-    title: 'Reporting',
-    description: 'Detailed analytics and compliance reporting on demand',
-  },
-  {
-    icon: HeadphonesIcon,
-    title: 'Dedicated Support',
-    description: 'One adviser who knows your business, for proactive guidance',
-  },
-];
+const digitalFeatures = BUSINESS_DIGITAL_FEATURES;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -245,8 +168,8 @@ export function ForBusinessesPage() {
           <div className="relative">
             <div className="aspect-[4/3] rounded-xl sm:rounded-2xl overflow-hidden shadow-xl">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1760346546771-a81d986459ff?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb3Jwb3JhdGUlMjBidXNpbmVzcyUyMHRlYW0lMjBtZWV0aW5nJTIwc3RyYXRlZ3l8ZW58MXx8fHwxNzcxOTMxMTI1fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Corporate business team discussing financial strategy"
+                src={BUSINESSES_JOURNEY_IMAGE.src}
+                alt={BUSINESSES_JOURNEY_IMAGE.alt}
                 className="w-full h-full object-cover"
               />
             </div>

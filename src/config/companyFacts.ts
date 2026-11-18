@@ -54,6 +54,17 @@ export const FOUNDER = {
   /** Optimised variants live under public/img/optimized/<imageKey>-<width>.<format>. */
   imageKey: 'founder-shawn-francisco',
   /**
+   * Confirmed by the owner, November 2026: all three obtained through
+   * Moonstone. The RE1 and RE5 are the FSCA regulatory examinations, checkable
+   * against the FSCA's representative register.
+   */
+  qualifications: [
+    { name: 'RE1', detail: 'Regulatory Examination for Key Individuals' },
+    { name: 'RE5', detail: 'Regulatory Examination for Representatives' },
+    { name: 'Higher Diploma in Wealth Management', detail: null },
+  ],
+  qualificationsFrom: 'Moonstone',
+  /**
    * The founder's note on the About page. Every statement in it is either a
    * checkable fact from COMPANY or a commitment about how the practice works —
    * no invented biography, credentials or figures.
