@@ -194,6 +194,7 @@ export function EstatePlanningPage() {
           badgeText: 'Estate Planning Solutions',
           titleLine1: 'Protect Your',
           titleLine2: 'Legacy',
+          searchHeading: { lead: 'Estate Planning, Wills and Trusts', accent: 'in South Africa' },
           description:
             'Comprehensive estate planning for individuals and businesses — wills, trusts, succession planning, and business continuity through our estate planning partners.',
           heroImage: estatePlanningHeroImage,

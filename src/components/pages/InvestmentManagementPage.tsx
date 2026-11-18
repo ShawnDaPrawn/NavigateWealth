@@ -303,6 +303,7 @@ export function InvestmentManagementPage() {
           badgeText: 'Investment Management Solutions',
           titleLine1: 'Grow Your Wealth',
           titleLine2: 'Professionally',
+          searchHeading: { lead: 'Investment Management', accent: 'in South Africa' },
           description:
             "Expert investment management to build and preserve your wealth over time — with access to South Africa's leading fund managers.",
           heroImage: investmentGrowthImage,

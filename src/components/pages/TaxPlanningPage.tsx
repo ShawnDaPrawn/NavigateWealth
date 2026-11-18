@@ -266,8 +266,9 @@ export function TaxPlanningPage() {
         seoKey: 'tax-planning',
         hero: {
           badgeText: 'Tax Planning Solutions',
-          titleLine1: 'Maximize Your',
+          titleLine1: 'Maximise Your',
           titleLine2: 'Tax Efficiency',
+          searchHeading: { lead: 'Tax Planning', accent: 'in South Africa' },
           description:
             'Expert tax planning strategies to minimize your tax burden and maximize your wealth — for individuals and businesses.',
           heroImage: taxPlanningHeroImage,

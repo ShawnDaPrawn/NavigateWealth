@@ -320,6 +320,7 @@ export function RetirementPlanningPage() {
           badgeText: 'Retirement Planning Solutions',
           titleLine1: 'Secure Your',
           titleLine2: 'Financial Future',
+          searchHeading: { lead: 'Retirement Planning', accent: 'in South Africa' },
           description:
             'Comprehensive retirement planning for individuals and businesses — from retirement annuities to pension funds, tailored to your goals.',
           heroImage: retirementHeroImage,

@@ -252,6 +252,7 @@ export function MedicalAidPage() {
           badgeText: 'Medical Aid Solutions',
           titleLine1: 'Your Health,',
           titleLine2: 'Our Priority',
+          searchHeading: { lead: 'Independent Medical Aid Advice', accent: 'in South Africa' },
           description:
             'Comprehensive medical aid solutions to ensure you and your family receive the best healthcare — tailored to your needs and budget.',
           heroImage: medicalHeroImage,

@@ -12,15 +12,9 @@
  * Each service page provides its unique data via props.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { lazy, Suspense, useState, useRef } from 'react';
 import { Link } from 'react-router';
-import {
-  SEO,
-  createServiceSchema,
-  createBreadcrumbSchema,
-  createOrganizationSchema,
-  createFAQSchema,
-} from '../seo/SEO';
+import { SEO } from '../seo/SEO';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
@@ -49,6 +43,16 @@ import { ThankYouModal } from '../modals/ThankYouModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
 import { toast } from 'sonner';
 import { splitFullName, submitContactEnquiry } from '../../services/contactEnquiry';
+import { SITE_DESIGN } from '../../site/design';
+import { buildServiceStructuredData } from './serviceStructuredData';
+
+// The redesigned page loads only when the build selects it, so the live
+// design's visitors never download it (see src/site/design.ts).
+const NavigatorServicePage = lazy(() =>
+  import('../../site/pages/NavigatorServicePage').then((m) => ({
+    default: m.NavigatorServicePage,
+  })),
+);
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -100,6 +104,12 @@ export interface ServicePageConfig {
     statusIcon?: React.ComponentType<{ className?: string }>;
     /** Get quote link */
     quoteLink?: string;
+    /**
+     * The H1 in the redesign: the phrase people search for, e.g. "Independent
+     * Medical Aid Advice" + "in South Africa". titleLine1/titleLine2 then
+     * become the slogan beneath it. The live design ignores this.
+     */
+    searchHeading?: { lead: string; accent?: string };
     /**
      * Hero layout style.
      *   - 'classic'  — split-panel with image occupying right 44% (default)
@@ -192,19 +202,37 @@ export interface ServicePageConfig {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-interface ServicePageTemplateProps {
+export interface ServicePageSeoData {
+  title: string;
+  description: string;
+  keywords: string;
+  canonicalUrl: string;
+  ogType: string;
+}
+
+export interface ServicePageTemplateProps {
   config: ServicePageConfig;
-  seoData: {
-    title: string;
-    description: string;
-    keywords: string;
-    canonicalUrl: string;
-    ogType: string;
-  };
+  seoData: ServicePageSeoData;
   children?: React.ReactNode;
 }
 
-export function ServicePageTemplate({ config, seoData, children }: ServicePageTemplateProps) {
+/**
+ * Every service page renders through here. The build's design switch picks
+ * the layout; both take the same config, so a page's content lives in one
+ * place whichever design is live.
+ */
+export function ServicePageTemplate(props: ServicePageTemplateProps) {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorServicePage {...props} />
+      </Suspense>
+    );
+  }
+  return <LegacyServicePageTemplate {...props} />;
+}
+
+function LegacyServicePageTemplate({ config, seoData, children }: ServicePageTemplateProps) {
   const [activeIndividual, setActiveIndividual] = useState(config.individuals.toggleOptions[0].id);
   const [activeBusiness, setActiveBusiness] = useState(config.business.toggleOptions[0].id);
   const [formData, setFormData] = useState({
@@ -279,21 +307,7 @@ export function ServicePageTemplate({ config, seoData, children }: ServicePageTe
   };
 
   // SEO structured data — includes FAQPage when FAQ content is provided
-  const graphNodes: Record<string, unknown>[] = [
-    createOrganizationSchema(),
-    createServiceSchema({
-      name: config.structuredDataServiceName,
-      description: seoData.description,
-      url: seoData.canonicalUrl,
-      serviceType: config.structuredDataServiceType,
-      offers: config.structuredDataOffers,
-    }),
-    createBreadcrumbSchema(config.breadcrumbs),
-  ];
-  if (config.faqs && config.faqs.length > 0) {
-    graphNodes.push(createFAQSchema(config.faqs));
-  }
-  const structuredData = { '@context': 'https://schema.org', '@graph': graphNodes };
+  const structuredData = buildServiceStructuredData(config, seoData);
 
   const IndivCardIcon = config.individuals.cardIcon;
   const BizCardIcon = config.business.cardIcon;

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { SITE_DESIGN } from '../site/design';
 
 /**
  * Custom hook to preload images for better tab switching performance
@@ -21,6 +22,11 @@ import { useEffect } from 'react';
  */
 export function useImagePreload(imageUrls: string[], priority: boolean = true) {
   useEffect(() => {
+    // The redesign serves each photo as a sized AVIF/WebP variant, and none at
+    // all on phones where the layout hides it. Preloading the original files
+    // here would download every product photo a second time, at full size, on
+    // every device — so it does not.
+    if (SITE_DESIGN === 'navigator') return;
     if (!priority || imageUrls.length === 0) return;
 
     const preloadImages: HTMLImageElement[] = [];

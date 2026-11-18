@@ -295,6 +295,7 @@ export function EmployeeBenefitsPage() {
           badgeText: 'Employee Benefits Solutions',
           titleLine1: 'Invest in Your',
           titleLine2: 'Greatest Asset',
+          searchHeading: { lead: 'Employee Benefits', accent: 'for South African Businesses' },
           description:
             'Tailored employee benefits solutions — from group risk cover and retirement funds to medical aid and wellness programmes.',
           heroImage: image_e687c01861aee919fa24cf06bfbd5e069af5249c,
