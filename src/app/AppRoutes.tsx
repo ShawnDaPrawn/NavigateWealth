@@ -52,42 +52,53 @@ import {
 } from '../components/auth/RouteGuards';
 
 // ==================== LAZY-LOADED PAGES ====================
+
+// Public pages, in whichever design this build serves.
+import {
+  AboutPage,
+  ArticleDetailPage,
+  AskVascoPage,
+  CareersPage,
+  ContactPage,
+  ForAdvisersPage,
+  ForBusinessesPage,
+  ForIndividualsPage,
+  ForgotPasswordPage,
+  GetQuotePage,
+  HomePage,
+  LegalDocumentPage,
+  LegalPage,
+  LinktreePage,
+  LoginPage,
+  NewsletterClickThroughPage,
+  NewsletterConfirmPage,
+  NewsletterDetailPage,
+  NewsletterUnsubscribePage,
+  NotFoundPage,
+  PressPage,
+  ProductQuotePage,
+  QuoteServiceContactPage,
+  RequestCompletionPage,
+  ResetPasswordPage,
+  ResourcesPage,
+  ScheduleConsultationPage,
+  ServicesPage,
+  SignupPage,
+  SitemapPage,
+  TeamPage,
+  VerificationSuccessPage,
+  VerifyDocumentPage,
+  VerifyEmailPage,
+  WhyUsPage,
+} from './publicPages';
+
 // All non-critical pages are lazy-loaded to reduce initial bundle parse time.
-const LoginPage = React.lazy(() => import('../components/pages/LoginPage'));
-const SignupPage = React.lazy(() => import('../components/pages/SignupPage'));
-const NotFoundPage = React.lazy(() =>
-  import('../components/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
-);
 const AuthCallbackPage = React.lazy(() => import('../components/pages/AuthCallbackPage'));
-const VerificationSuccessPage = React.lazy(
-  () => import('../components/pages/VerificationSuccessPage'),
-);
-const HomePage = React.lazy(() => import('../components/pages/HomePage'));
-const ServicesPage = React.lazy(() => import('../components/pages/ServicesPage'));
-const AboutPage = React.lazy(() => import('../components/pages/AboutPage'));
-const TeamPage = React.lazy(() => import('../components/pages/TeamPage'));
-const ContactPage = React.lazy(() => import('../components/pages/ContactPage'));
-const ScheduleConsultationPage = React.lazy(
-  () => import('../components/pages/ScheduleConsultationPage'),
-);
 
-const ResourcesPage = React.lazy(() => import('../components/pages/ResourcesPage'));
-const ArticleDetailPage = React.lazy(() => import('../components/pages/ArticleDetailPage'));
 const DesignSystemPage = React.lazy(() => import('../components/pages/DesignSystemPage'));
-const LegalPage = React.lazy(() => import('../components/pages/LegalPage'));
-const LegalDocumentPage = React.lazy(() => import('../components/pages/LegalDocumentPage'));
-const NewsletterDetailPage = React.lazy(() => import('../components/pages/NewsletterDetailPage'));
 const LegalPdfQaPage = React.lazy(() => import('../components/pages/LegalPdfQaPage'));
-const ForgotPasswordPage = React.lazy(() => import('../components/pages/ForgotPasswordPage'));
-const ResetPasswordPage = React.lazy(() => import('../components/pages/ResetPasswordPage'));
-const VerifyEmailPage = React.lazy(() => import('../components/pages/VerifyEmailPage'));
 const GetStartedPage = React.lazy(() => import('../components/pages/GetStartedPage'));
-const GetQuotePage = React.lazy(() => import('../components/pages/GetQuotePage'));
-const QuoteServiceContactPage = React.lazy(
-  () => import('../components/pages/QuoteServiceContactPage'),
-);
 
-const ProductQuotePage = React.lazy(() => import('../components/pages/ProductQuotePage'));
 const AccountTypeSelectionPage = React.lazy(
   () => import('../components/pages/AccountTypeSelectionPage'),
 );
@@ -149,29 +160,11 @@ const EstatePlanningPage = React.lazy(() => import('../components/pages/EstatePl
 const FinancialPlanningPage = React.lazy(() => import('../components/pages/FinancialPlanningPage'));
 const MedicalAidPage = React.lazy(() => import('../components/pages/MedicalAidPage'));
 const MyAdviserPage = React.lazy(() => import('../components/pages/MyAdviserPage'));
-const ForIndividualsPage = React.lazy(() => import('../components/pages/ForIndividualsPage'));
-const ForBusinessesPage = React.lazy(() => import('../components/pages/ForBusinessesPage'));
-const ForAdvisersPage = React.lazy(() => import('../components/pages/ForAdvisersPage'));
-const WhyUsPage = React.lazy(() => import('../components/pages/WhyUsPage'));
-const CareersPage = React.lazy(() => import('../components/pages/CareersPage'));
-const PressPage = React.lazy(() => import('../components/pages/PressPage'));
 const EmployeeBenefitsPage = React.lazy(() => import('../components/pages/EmployeeBenefitsPage'));
-const SitemapPage = React.lazy(() => import('../components/pages/SitemapPage'));
-const RequestCompletionPage = React.lazy(() => import('../components/pages/RequestCompletionPage'));
-const NewsletterConfirmPage = React.lazy(() => import('../components/pages/NewsletterConfirmPage'));
-const NewsletterClickThroughPage = React.lazy(
-  () => import('../components/pages/NewsletterClickThroughPage'),
-);
-const NewsletterUnsubscribePage = React.lazy(
-  () => import('../components/pages/NewsletterUnsubscribePage'),
-);
 const RobotsTxtPage = React.lazy(() => import('../components/pages/RobotsTxtPage'));
 const SignerLandingPage = React.lazy(() => import('../components/esign-signer/SignerLandingPage'));
-const VerifyDocumentPage = React.lazy(() => import('../components/pages/VerifyDocumentPage'));
 const OGImageGeneratorPage = React.lazy(() => import('../components/pages/OGImageGeneratorPage'));
-const LinktreePage = React.lazy(() => import('../components/pages/LinktreePage'));
 const LinkedInCallbackPage = React.lazy(() => import('../components/pages/LinkedInCallbackPage'));
-const AskVascoPage = React.lazy(() => import('../components/pages/AskVascoPage'));
 const AdminDashboardPage = React.lazy(() =>
   import('../components/pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })),
 );
