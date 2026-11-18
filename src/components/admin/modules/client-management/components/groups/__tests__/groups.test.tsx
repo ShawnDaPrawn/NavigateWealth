@@ -13,6 +13,12 @@ const api = vi.hoisted(() => ({
   updateGroup: vi.fn(),
   deleteGroup: vi.fn(),
   recalculateGroupMemberships: vi.fn(),
+  // GroupEditorPage previews a dynamic group's members after a 400 ms debounce.
+  // On a loaded machine that timer can fire before a test finishes, and without
+  // this the editor called an undefined mock and Vitest reported an unhandled
+  // TypeError that failed the whole run. A promise that never settles keeps the
+  // preview in its loading state, which none of these tests assert on.
+  previewGroup: vi.fn(() => new Promise<never>(() => {})),
 }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('sonner', () => ({ toast }));
