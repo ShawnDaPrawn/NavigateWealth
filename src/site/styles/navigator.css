@@ -2,8 +2,9 @@
  * Navigator design system — the redesigned public website.
  *
  * Everything here is scoped to `.nw-site`, the wrapper the public layout
- * renders when VITE_SITE_DESIGN is 'navigator' (see src/site/design.ts). The
- * client portal, the admin and the legacy public site never carry that class,
+ * renders when the site design is 'navigator' (the default; see
+ * src/site/design.ts). The client portal, the admin and the legacy public site
+ * never carry that class,
  * so nothing in this file can restyle them.
  *
  * Fonts are self-hosted from src/site/fonts/ (SIL Open Font License; the

@@ -44,6 +44,7 @@ Written for someone acting under time pressure.
 - [`form-prefill.md`](runbooks/form-prefill.md) — form prefill operations
 - [`fna-intake.md`](runbooks/fna-intake.md) — adviser and support operations for client-led FNA intake
 - [`seo.md`](runbooks/seo.md) — the SEO build pipeline and its recurring operational steps
+- [`site-design.md`](runbooks/site-design.md) — the public site's two designs (Navigator, legacy), the build switch between them, and how to revert
 - [`vercel-deployment-storage.md`](runbooks/vercel-deployment-storage.md) — why the Vercel storage allowance fills, and how to reclaim it
 - [`social-automation.md`](runbooks/social-automation.md) — the routine-driven weekly social pipeline: the database contract a Claude/ChatGPT routine works through, Buffer as the publishing rail, setup, monitoring and failure modes
 - [`social-channel-assets.md`](runbooks/social-channel-assets.md) — the Assets tab's media per channel: the `/social-library` endpoint an outside agent (ChatGPT) fills it through, the token in Vault, what is accepted, and the SQL a publishing routine uses

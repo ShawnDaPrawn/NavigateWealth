@@ -1,7 +1,8 @@
 /**
  * The Navigator design's page chrome, loaded as one lazy chunk by MainLayout
- * only when VITE_SITE_DESIGN is 'navigator'. Importing the stylesheet here, not
- * in main.tsx, keeps the fonts and CSS out of the legacy site's bundle entirely.
+ * only when the site design is 'navigator' (the default; see src/site/design.ts).
+ * Importing the stylesheet here, not in main.tsx, keeps the fonts and CSS out of
+ * a legacy build's bundle entirely.
  */
 import '../styles/navigator.css';
 

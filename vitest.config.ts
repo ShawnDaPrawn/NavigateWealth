@@ -69,6 +69,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // The live-design page tests (src/components/pages/__tests__ …) keep
+    // testing the live design, which a revert would bring back; the redesign's
+    // tests select it themselves by mocking src/site/design.ts.
+    env: { VITE_SITE_DESIGN: 'legacy' },
     css: false,
     // v8 coverage instrumentation makes the suite run ~2-3x slower, which pushes
     // a few dialog/interaction tests past the 5s Vitest default and flakes the
