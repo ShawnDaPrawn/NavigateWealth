@@ -42,6 +42,12 @@ export function ResponsiveImage({
   onError,
 }: ResponsiveImageProps) {
   const fallback = fallbackSrc ?? getOptimizedFallbackUrl(imageKey, widths);
+  // React 18 does not know the camel-cased `fetchPriority` prop: it logs an
+  // unknown-prop warning instead of treating it as the fetch-priority hint.
+  // The lower-case attribute passes straight through to the DOM, as in
+  // NwImage. 'auto' is the browser default, so it is not emitted at all.
+  const priorityHint =
+    fetchPriority === 'auto' ? null : ({ fetchpriority: fetchPriority } as Record<string, string>);
 
   return (
     <picture>
@@ -63,8 +69,7 @@ export function ResponsiveImage({
         height={height}
         loading={loading}
         decoding={decoding}
-        // React uses `fetchPriority` attribute casing.
-        fetchPriority={fetchPriority}
+        {...priorityHint}
         onLoad={onLoad}
         onError={onError}
       />
