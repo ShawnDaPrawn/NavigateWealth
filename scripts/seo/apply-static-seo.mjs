@@ -7,6 +7,7 @@ import {
   DEFAULT_OG_IMAGE_HEIGHT,
   DEFAULT_OG_IMAGE_PATH,
   DEFAULT_OG_IMAGE_WIDTH,
+  SHARE_IMAGE_DIR,
   DEFAULT_SITE_URL,
   clampSeoDescription,
   createArticleRoute,
@@ -212,7 +213,8 @@ ${ogImageDimensionTags(ogImageUrl)}      <meta property="og:image:alt" content="
  * arbitrary page images (article heroes) are unknown at build time.
  */
 function ogImageDimensionTags(ogImageUrl) {
-  if (!ogImageUrl.endsWith(DEFAULT_OG_IMAGE_PATH)) return '';
+  if (!ogImageUrl.endsWith(DEFAULT_OG_IMAGE_PATH) && !ogImageUrl.includes(SHARE_IMAGE_DIR))
+    return '';
   return (
     `      <meta property="og:image:width" content="${DEFAULT_OG_IMAGE_WIDTH}" />\n` +
     `      <meta property="og:image:height" content="${DEFAULT_OG_IMAGE_HEIGHT}" />\n`
