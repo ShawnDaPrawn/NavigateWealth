@@ -44,6 +44,8 @@ export interface ServiceBoard {
   partnerNote?: string;
   /** The FAQ lead, where the board words it differently from the default. */
   faqLead?: string;
+  /** The first product section's anchor, where it is not "individuals". */
+  firstGroupId?: string;
   /** The H1's two lines, where the board spells them differently. */
   heading?: [string, string];
 }
@@ -79,6 +81,7 @@ export const SERVICE_BOARDS: Record<string, ServiceBoard> = {
   'employee-benefits': {
     layout: 'standard',
     icons: { badge: 'briefcase', status: 'users', ind: 'users', biz: 'briefcase' },
+    firstGroupId: 'employees',
     tiles: STANDARD_TILES,
     approachLead: 700,
     faqLead: 'Clear answers to the questions employers ask us most about group benefits.',

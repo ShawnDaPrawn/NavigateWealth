@@ -100,7 +100,7 @@ function Hero({ config, board, quotePath }: HeroProps) {
   const { hero } = config;
   const { layout } = board;
   const crumbs = board.shortCrumbs
-    ? config.breadcrumbs.filter((c, i) => i === 0 || i === config.breadcrumbs.length - 1)
+    ? config.breadcrumbs.filter((_, i) => i === 0 || i === config.breadcrumbs.length - 1)
     : config.breadcrumbs;
   const book = (
     <Link
@@ -215,7 +215,7 @@ export function NavigatorServicePage({ config, seoData, children }: ServicePageT
   const board = serviceBoard(config.seoKey);
   const { layout } = board;
   const quotePath = hero.quoteLink ?? DEFAULT_QUOTE_PATH;
-  const indId = individuals.badgeText === 'For Employees' ? 'employees' : 'individuals';
+  const indId = board.firstGroupId ?? 'individuals';
   const showApproach = Boolean(approach) && layout !== 'risk';
   const showPartners = partners.logos.length > 0;
   const showFaq = Boolean(faqs && faqs.length > 0);
