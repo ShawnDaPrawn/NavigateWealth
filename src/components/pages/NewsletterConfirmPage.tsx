@@ -1,24 +1,42 @@
-import { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SEO } from '../seo/SEO';
+import { SITE_DESIGN } from '../../site/design';
+import { NEWSLETTER_CONFIRM_SEO as seoProps } from './newsletterStatusData';
 
+const NavigatorNewsletterConfirmPage = React.lazy(() =>
+  import('../../site/pages/NavigatorNewsletterConfirmPage').then((m) => ({
+    default: m.NavigatorNewsletterConfirmPage,
+  })),
+);
+
+/**
+ * The page a subscriber reaches from the double opt-in email. The build's
+ * design switch picks the layout; both confirm through the same endpoint and
+ * emit the same SEO tags (newsletterStatusData.ts).
+ */
 export function NewsletterConfirmPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorNewsletterConfirmPage />
+      </Suspense>
+    );
+  }
+  return <LegacyNewsletterConfirmPage />;
+}
+
+function LegacyNewsletterConfirmPage() {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'already'>('loading');
   const [message, setMessage] = useState('');
 
   const token = searchParams.get('token');
   const email = searchParams.get('email');
-  const seoProps = {
-    title: 'Newsletter Confirmation | Navigate Wealth',
-    description: 'Newsletter subscription confirmation status for Navigate Wealth.',
-    canonicalUrl: 'https://www.navigatewealth.co/newsletter/confirm',
-    robotsContent: 'noindex, nofollow',
-  };
 
   useEffect(() => {
     const confirmSubscription = async () => {

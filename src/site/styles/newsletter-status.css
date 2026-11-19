@@ -1,0 +1,641 @@
+/*
+ * Navigator newsletter status pages — /newsletter/confirm,
+ * /newsletter/unsubscribe and /newsletter/click — ported from the "Newsletter
+ * Confirm", "Newsletter Unsubscribe" and "Newsletter Click" boards of the
+ * Claude Design canvas, their inline styles turned into classes. Buttons, the
+ * focus ring and tokens come from navigator.css.
+ *
+ * These routes render outside MainLayout, so the page root carries `.nw-site`
+ * itself. Scoped to `.nw-site`, like navigator.css. Every class is prefixed
+ * `nwnl-`.
+ */
+
+/* The boards have a 16px base and the browser's normal line height. The
+   site's root is 14px and its global base typography gives p, headings,
+   labels, buttons and inputs line heights of their own; restated here at
+   zero specificity, so every rule below that sets a line height still wins. */
+.nw-site.nwnl {
+  --nwnl-glow: 0.18;
+  --nwnl-fs-title: 28px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-ink);
+  /* The boards' ruled paper. */
+  background-color: var(--nw-paper);
+  background-image:
+    radial-gradient(
+      ellipse 60% 50% at 50% 0%,
+      rgba(246, 244, 239, var(--nwnl-glow)),
+      transparent 70%
+    ),
+    linear-gradient(rgba(13, 22, 38, 0.036) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 22, 38, 0.036) 1px, transparent 1px);
+  background-size:
+    auto,
+    64px 64px,
+    64px 64px;
+}
+.nw-site.nwnl--bright {
+  --nwnl-glow: 0.22;
+}
+:where(.nw-site.nwnl) :where(p, h1, h2, label, button, input) {
+  line-height: inherit;
+}
+.nw-site .nwnl-mono {
+  font-family: var(--nw-font-sans);
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Header ── */
+.nw-site .nwnl-head {
+  max-width: 1320px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 22px clamp(16px, 4vw, 48px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.nw-site .nwnl-logo {
+  display: flex;
+}
+/* The site's logo file has a white matte; multiplied onto the paper it drops
+   out, as the board's transparent logo does. */
+.nw-site .nwnl-logo img {
+  display: block;
+  height: 24px;
+  width: auto;
+  max-width: none;
+  mix-blend-mode: multiply;
+}
+.nw-site .nwnl-label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+
+/* ── The card ── */
+.nw-site .nwnl-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 48px) 16px var(--nw-sec-sm);
+}
+/* Content-box, as on the board: the 480px is the inside of the 1px border. */
+.nw-site .nwnl-card {
+  box-sizing: content-box;
+  width: 100%;
+  max-width: 480px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  box-shadow: 0 40px 80px -48px rgba(17, 24, 39, 0.5);
+  overflow: hidden;
+  animation: nwnl-pop 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.nw-site .nwnl-card--narrow {
+  max-width: 440px;
+}
+@keyframes nwnl-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The rule across the top, coloured by state. */
+.nw-site .nwnl-rule {
+  height: 4px;
+}
+.nw-site .nwnl-rule--ink {
+  background: var(--nw-ink);
+}
+.nw-site .nwnl-rule--wait {
+  background: var(--nw-on-dark);
+}
+.nw-site .nwnl-rule--success {
+  background: var(--nw-success-bright);
+}
+.nw-site .nwnl-rule--warn {
+  background: #b45309;
+}
+.nw-site .nwnl-rule--danger {
+  background: var(--nw-danger);
+}
+.nw-site .nwnl-rule--quiet {
+  background: var(--nw-on-dark-muted);
+}
+.nw-site .nwnl-rule--track {
+  position: relative;
+  background: var(--nw-line-soft);
+  overflow: hidden;
+}
+.nw-site .nwnl-track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: var(--nw-ink);
+  border-radius: var(--nw-r-sm);
+  animation: nwnl-track 1.4s ease-in-out infinite;
+}
+@keyframes nwnl-track {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+.nw-site .nwnl-body {
+  padding: clamp(28px, 5vw, 44px) clamp(22px, 5vw, 40px);
+  text-align: center;
+}
+.nw-site .nwnl-body--column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: clamp(32px, 5vw, 44px) clamp(22px, 5vw, 36px);
+}
+
+/* ── The badge each state opens with ── */
+.nw-site .nwnl-badge {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--nw-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwnl-badge--ring {
+  box-shadow: 0 0 0 8px rgba(13, 22, 38, 0.036);
+}
+.nw-site .nwnl-badge--success {
+  background: #f0fdf4;
+  box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.08);
+}
+.nw-site .nwnl-badge--warn {
+  background: #fffbeb;
+  box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.08);
+}
+.nw-site .nwnl-badge--danger {
+  background: var(--nw-danger-bg);
+  box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.07);
+}
+.nw-site .nwnl-badge--quiet {
+  background: var(--nw-paper-2);
+}
+.nw-site .nwnl-badge--sm {
+  width: 64px;
+  height: 64px;
+  margin: 0;
+}
+.nw-site .nwnl-spin {
+  animation: nwnl-spin 1s linear infinite;
+}
+@keyframes nwnl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Words ── */
+.nw-site .nwnl-title {
+  margin: 24px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nwnl-fs-title);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+/* The unsubscribe board's later states use its smaller heading. */
+.nw-site .nwnl-title--sm {
+  font-size: var(--nw-fs-h4);
+}
+.nw-site .nwnl-text {
+  margin: 10px 0 0;
+  font-size: 15.5px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwnl-text--short {
+  line-height: normal;
+}
+
+/* ── Actions ── */
+.nw-site .nwnl-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 26px;
+}
+.nw-site .nwnl-actions--failed {
+  margin-top: 22px;
+}
+.nw-site .nwnl-actions--choose {
+  margin-top: 24px;
+}
+.nw-site .nwnl-actions--click {
+  width: 100%;
+  margin-top: 8px;
+}
+.nw-site .nwnl-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: normal;
+}
+.nw-site button.nwnl-action,
+.nw-site .nwnl-state > .nwnl-action {
+  width: 100%;
+}
+.nw-site .nwnl-action--solo {
+  margin-top: 24px;
+}
+.nw-site .nwnl-go > svg:last-child:not(:first-child) {
+  transition: transform var(--nw-dur-2) var(--nw-ease);
+}
+.nw-site .nwnl-go:hover > svg:last-child:not(:first-child) {
+  transform: translateX(3px);
+}
+
+/* ── "Need help?" and the copyright line ── */
+.nw-site .nwnl-help {
+  margin: 28px 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--nw-line-soft);
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--nw-muted);
+}
+/* The board's inline `text-decoration: none` outranks its hover underline, so
+   this link does not underline on hover. */
+.nw-site .nwnl-help a {
+  font-weight: 600;
+  color: var(--nw-ink);
+  text-decoration: none;
+}
+.nw-site .nwnl-foot {
+  padding: 20px 16px 28px;
+  text-align: center;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--nw-muted);
+}
+.nw-site .nwnl-foot a {
+  color: var(--nw-muted);
+  text-decoration: underline;
+}
+.nw-site .nwnl-foot a:hover {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* ── Confirm: "Start reading" ── */
+.nw-site .nwnl-reading {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--nw-line-soft);
+  text-align: left;
+}
+.nw-site .nwnl-reading-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwnl-reading-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nw-site .nwnl-read {
+  display: block;
+  padding: 10px 12px;
+  margin: 0 -12px;
+  border-radius: var(--nw-r-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+.nw-site .nwnl-read:hover {
+  background: var(--nw-paper);
+}
+.nw-site .nwnl-read-cat {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwnl-read-t {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--nw-ink);
+}
+.nw-site .nwnl-read-cat + .nwnl-read-t {
+  margin-top: 3px;
+}
+
+/* ── Confirm: "Subscribe again" under an expired link ── */
+.nw-site .nwnl-box {
+  margin-top: 24px;
+  padding: 18px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+  text-align: left;
+}
+.nw-site .nwnl-form {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nw-site .nwnl-form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwnl-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nw-site .nwnl-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  height: 46px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  background: var(--nw-white);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--nw-ink);
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site .nwnl-input::placeholder {
+  color: var(--nw-on-dark-muted);
+  opacity: 1;
+}
+/* Focus: the design system's violet edge with the board's soft ring. (On the
+   board the field's inline border outranks its focus rule, leaving only the
+   faint ring — too weak to show where focus is.) */
+.nw-site .nwnl-input:focus {
+  outline: none;
+  border-color: var(--nw-violet);
+  box-shadow: 0 0 0 3px rgba(13, 22, 38, 0.09);
+}
+.nw-site .nwnl-input[aria-invalid='true'] {
+  border-color: var(--nw-danger);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+.nw-site .nwnl-submit {
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: normal;
+}
+/* The design system's field error, 6px under the field. */
+.nw-site .nwnl-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: -4px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--nw-danger);
+}
+.nw-site .nwnl-field-error svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+/* The design system's form alert, for a sign-up the server turned down. */
+.nw-site .nwnl-alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-danger-line);
+  background: var(--nw-danger-bg);
+  color: var(--nw-danger-dark);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.nw-site .nwnl-form .nwnl-alert {
+  margin-top: 0;
+}
+.nw-site .nwnl-alert svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.nw-site .nwnl-trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* "Check your email!" — the answer, in place of the form or the offer. */
+.nw-site .nwnl-note {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  text-align: left;
+}
+.nw-site .nwnl-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.nw-site .nwnl-note-t {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.nw-site .nwnl-note-p {
+  margin-top: 2px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--nw-text);
+}
+
+/* ── Unsubscribe ── */
+.nw-site .nwnl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 20px;
+  padding: 8px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+  font-size: 14px;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwnl-chip strong {
+  min-width: 0;
+  font-weight: 700;
+  color: var(--nw-ink);
+  overflow-wrap: anywhere;
+}
+.nw-site .nwnl-danger {
+  box-sizing: border-box;
+  height: 50px;
+  margin: 0;
+  padding: 0 22px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-danger-line);
+  background: var(--nw-white);
+  color: var(--nw-danger);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: normal;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwnl-danger:hover:not(:disabled) {
+  border-color: var(--nw-danger);
+  background: var(--nw-danger-bg);
+}
+/* Not drawn on the board: the live page's button with no address in the link. */
+.nw-site .nwnl-danger:disabled {
+  border-color: var(--nw-line);
+  background: var(--nw-paper-2);
+  color: var(--nw-muted);
+  cursor: not-allowed;
+}
+.nw-site .nwnl-aside {
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--nw-muted);
+}
+.nw-site .nwnl-offer {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwnl-offer-p {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--nw-text);
+  overflow-wrap: anywhere;
+}
+.nw-site .nwnl-linkbtn {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  color: var(--nw-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nw-site .nwnl-linkbtn[aria-disabled='true'] {
+  cursor: progress;
+}
+
+/* ── Click ── */
+.nw-site .nwnl-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.nw-site .nwnl-state--ready,
+.nw-site .nwnl-state--error {
+  width: 100%;
+}
+.nw-site .nwnl-state--error,
+.nw-site .nwnl-state--error .nwnl-say {
+  gap: 14px;
+}
+.nw-site .nwnl-state--error .nwnl-say {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.nw-site .nwnl-lead {
+  margin: 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-lead);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+.nw-site .nwnl-click-text {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 400;
+  color: var(--nw-text);
+}
+.nw-site .nwnl-click-note {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+
+@media (max-width: 640px) {
+  .nw-site.nwnl {
+    --nwnl-fs-title: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwnl-card,
+  .nw-site .nwnl-track {
+    animation: none;
+  }
+}
