@@ -118,7 +118,7 @@ export const publicSeoRoutes = [
   {
     path: '/services',
     lastmod: '2026-04-17',
-    title: 'Our Services | Navigate Wealth',
+    title: 'Financial Advice Services in South Africa | Navigate Wealth',
     description:
       'Wealth management services from Navigate Wealth: risk, retirement, investments, medical aid, estate planning, tax planning and employee benefits.',
     keywords:
@@ -140,7 +140,7 @@ export const publicSeoRoutes = [
   {
     path: '/about',
     lastmod: '2026-10-16',
-    title: 'About Us | Navigate Wealth',
+    title: 'About Navigate Wealth | Independent Financial Advisors',
     description:
       'About Navigate Wealth, an independent, founder-led financial advisory practice (FSP 54606). Read a note from our founder, Shawn Francisco.',
     keywords:
@@ -151,7 +151,7 @@ export const publicSeoRoutes = [
   {
     path: '/team',
     lastmod: '2026-10-16',
-    title: 'Meet Our Founder | Navigate Wealth',
+    title: 'Meet Our Founder, Shawn Francisco | Navigate Wealth',
     description:
       'Meet Shawn Francisco, founder of Navigate Wealth — an independent, founder-led financial advisory practice authorised by the FSCA (FSP 54606).',
     keywords:
@@ -162,7 +162,7 @@ export const publicSeoRoutes = [
   {
     path: '/contact',
     lastmod: '2026-10-16',
-    title: 'Contact Us | Navigate Wealth',
+    title: 'Contact a Financial Advisor in Pretoria | Navigate Wealth',
     description:
       "Get in touch with Navigate Wealth for a free consultation. We're ready to help you plan your financial future.",
     keywords:
@@ -232,7 +232,7 @@ export const publicSeoRoutes = [
   {
     path: '/investment-management',
     lastmod: '2026-07-01',
-    title: 'Investment Management | Navigate Wealth',
+    title: 'Investment Management in South Africa | Navigate Wealth',
     description:
       'Professional investment management in South Africa. Unit trusts, tax-free savings, offshore investments & corporate fund solutions.',
     keywords:
@@ -258,7 +258,7 @@ export const publicSeoRoutes = [
     lastmod: '2026-07-01',
     title: 'Estate Planning | Wills & Trusts | Navigate Wealth',
     description:
-      'Comprehensive estate planning in South Africa — wills, trusts, succession planning, estate duty optimisation and business continuity through our estate planning partners.',
+      'Estate planning in South Africa — wills, trusts, succession planning, estate duty and business continuity, through our estate planning partners.',
     keywords:
       'estate planning South Africa, wills, trusts, succession planning, estate duty, inheritance, business succession, Navigate Wealth',
     ogType: 'website',
@@ -370,7 +370,7 @@ export const publicSeoRoutes = [
   {
     path: '/careers',
     lastmod: '2026-10-16',
-    title: 'Careers | Navigate Wealth',
+    title: 'Careers in Financial Advice | Navigate Wealth',
     description:
       'Explore careers at Navigate Wealth, an independent, founder-led financial advisory practice helping South Africans achieve financial independence.',
     keywords:

@@ -17,10 +17,12 @@ const {
   createOrganizationSchema: createBuildOrganizationSchema,
   publicSeoRoutes,
   SEO_TITLE_MAX,
+  SEO_DESCRIPTION_MAX,
 } = seoStaticData as {
   createOrganizationSchema: (siteUrl: string) => Record<string, unknown>;
-  publicSeoRoutes: Array<{ path: string; title: string }>;
+  publicSeoRoutes: Array<{ path: string; title: string; description: string }>;
   SEO_TITLE_MAX: number;
+  SEO_DESCRIPTION_MAX: number;
 };
 
 describe('organization schema parity', () => {
@@ -59,6 +61,43 @@ describe('title constraints', () => {
       const clientTitle = clientTitleByPath.get(route.path);
       if (clientTitle) {
         expect(clientTitle, `title mismatch for ${route.path}`).toBe(route.title);
+      }
+    }
+  });
+});
+
+/**
+ * Descriptions drifted apart once: on nine pages the hydrated description
+ * replaced a trimmed static one with a 168–201 character version, which Google
+ * truncates mid-sentence. One text per page, within the snippet length.
+ */
+describe('description constraints', () => {
+  it('every client and build-time description fits within the snippet length', () => {
+    for (const [key, data] of Object.entries(seoPages)) {
+      expect(
+        data.description.length,
+        `seoPages['${key}'] description exceeds ${SEO_DESCRIPTION_MAX} chars`,
+      ).toBeLessThanOrEqual(SEO_DESCRIPTION_MAX);
+    }
+    for (const route of publicSeoRoutes) {
+      expect(
+        route.description.length,
+        `route '${route.path}' description exceeds ${SEO_DESCRIPTION_MAX} chars`,
+      ).toBeLessThanOrEqual(SEO_DESCRIPTION_MAX);
+    }
+  });
+
+  it('client and build-time descriptions agree for pages defined in both', () => {
+    const clientByPath = new Map(
+      Object.values(seoPages).map((data) => [
+        data.canonicalUrl.replace(SITE_ORIGIN, '') || '/',
+        data.description,
+      ]),
+    );
+    for (const route of publicSeoRoutes) {
+      const client = clientByPath.get(route.path);
+      if (client) {
+        expect(client, `description mismatch for ${route.path}`).toBe(route.description);
       }
     }
   });

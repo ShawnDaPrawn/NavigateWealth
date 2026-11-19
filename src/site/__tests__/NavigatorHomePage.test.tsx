@@ -152,9 +152,20 @@ describe('Navigator home page', () => {
     expect(
       screen.getByRole('button', { name: 'Show highlight 4 of 4' }).getAttribute('aria-current'),
     ).toBe('true');
+  });
 
-    // The board has no pause button; it has no control beyond the dots.
-    expect(screen.queryByRole('button', { name: /Pause|Play/ })).toBeNull();
+  it('can be paused and played again (WCAG 2.2.2)', async () => {
+    await renderPage();
+    const carousel = screen.getByRole('group', { name: 'Highlights' });
+    fireEvent.click(screen.getByRole('button', { name: 'Pause slides' }));
+    expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('paused');
+    expect(carousel.getAttribute('aria-live')).toBe('polite');
+    endProgress();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Secure Your Financial Future.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Play slides' }));
+    expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('running');
   });
 
   it('pauses while the pointer is over the highlights', async () => {
@@ -175,6 +186,7 @@ describe('Navigator home page', () => {
     );
     await renderPage();
     expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('paused');
+    expect(screen.getByRole('button', { name: 'Play slides' })).toBeDefined();
     // navigator.css shortens every animation to 0.01ms under reduced motion, so
     // the bar does end at once; that must not move the slide on.
     endProgress();
