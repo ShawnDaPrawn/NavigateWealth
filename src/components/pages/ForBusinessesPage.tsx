@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -7,110 +7,37 @@ import { Card, CardContent } from '../ui/card';
 import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
-import {
-  Building,
-  Shield,
-  Users,
-  Calculator,
-  Globe,
-  ArrowRight,
-  CheckCircle,
-  TrendingUp,
-  Trophy,
-  FileText,
-  Smartphone,
-  HeadphonesIcon,
-  Monitor,
-  Calendar,
-  ChevronRight,
-  Sparkles,
-  PieChart,
-} from 'lucide-react';
-import { TRUST_FACTS } from '@/config/companyFacts';
+import { ArrowRight, CheckCircle, Calendar, ChevronRight, Sparkles } from 'lucide-react';
+import { SITE_DESIGN } from '../../site/design';
+import { services, businessStages, stats, digitalFeatures } from './forBusinessesPageData';
 
-// ---------------------------------------------------------------------------
-// Data
-// ---------------------------------------------------------------------------
-
-const services = [
-  {
-    title: 'Employee Benefits',
-    description:
-      'Comprehensive group health plans, retirement schemes, and employee benefit packages.',
-    icon: Users,
-    link: '/employee-benefits',
-    features: ['Group health insurance', 'Retirement benefits', 'Wellness programs'],
-    accent: 'from-blue-500 to-indigo-600',
-    accentLight: 'bg-blue-50 text-blue-600',
-  },
-  {
-    title: 'Risk Management',
-    description: 'Comprehensive business insurance and risk protection strategies.',
-    icon: Shield,
-    link: '/risk-management',
-    features: ['Business insurance', 'Key person cover', 'Professional indemnity'],
-    accent: 'from-rose-500 to-pink-600',
-    accentLight: 'bg-rose-50 text-rose-600',
-  },
-  {
-    title: 'Investment Solutions',
-    description: 'Corporate treasury management and investment portfolio optimization.',
-    icon: PieChart,
-    link: '/investment-management',
-    features: ['Corporate treasury', 'Investment portfolios', 'Asset allocation'],
-    accent: 'from-violet-500 to-purple-600',
-    accentLight: 'bg-violet-50 text-violet-600',
-  },
-  {
-    title: 'Tax Planning',
-    description: 'Corporate tax optimization, compliance, and strategic tax planning.',
-    icon: Calculator,
-    link: '/tax-planning',
-    features: ['Corporate tax strategy', 'SARS compliance', 'Tax optimization'],
-    accent: 'from-amber-500 to-orange-600',
-    accentLight: 'bg-amber-50 text-amber-600',
-  },
-];
-
-const businessStages = [
-  { icon: Building, title: 'Startup', description: 'Launch phase' },
-  { icon: TrendingUp, title: 'Growth', description: 'Scaling up' },
-  { icon: Users, title: 'Expansion', description: 'Market presence' },
-  { icon: Trophy, title: 'Maturity', description: 'Market leader' },
-  { icon: Globe, title: 'Global', description: 'International' },
-];
-
-// Checkable facts only — see src/config/companyFacts.ts.
-const stats = TRUST_FACTS.slice(0, 3);
-
-const digitalFeatures = [
-  {
-    icon: Smartphone,
-    title: 'Mobile Access',
-    description: 'Manage your business finances from any device, anywhere',
-  },
-  {
-    icon: Monitor,
-    title: 'Dashboard',
-    description: 'Real-time insights into your corporate portfolio and benefits',
-  },
-  {
-    icon: FileText,
-    title: 'Reporting',
-    description: 'Detailed analytics and compliance reporting on demand',
-  },
-  {
-    icon: HeadphonesIcon,
-    title: 'Dedicated Support',
-    description: 'One adviser who knows your business, for proactive guidance',
-  },
-];
+const NavigatorForBusinessesPage = React.lazy(() =>
+  import('../../site/pages/NavigatorForBusinessesPage').then((m) => ({
+    default: m.NavigatorForBusinessesPage,
+  })),
+);
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
+/**
+ * The For Businesses page. The build's design switch picks the layout; both
+ * read the same content from forBusinessesPageData.ts, so it lives in one
+ * place whichever design is live.
+ */
 export function ForBusinessesPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorForBusinessesPage />
+      </Suspense>
+    );
+  }
+  return <LegacyForBusinessesPage />;
+}
+
+function LegacyForBusinessesPage() {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
 

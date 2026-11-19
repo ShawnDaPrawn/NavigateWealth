@@ -1,0 +1,1055 @@
+/*
+ * Navigator "For Businesses" page (/solutions/businesses) — ported from the
+ * "ForBusinesses" board of the Claude Design canvas, its inline styles turned
+ * into classes. Every class here is prefixed `nwfb-` and every rule is scoped
+ * to `.nw-site`, like navigator.css, so nothing here can reach the portal, the
+ * admin, the legacy public site or another Navigator page.
+ *
+ * Two things the board inherits that the app does not, restored here so the
+ * page measures as the board does:
+ * - The board's body has the browser's `line-height: normal` and a 16px body
+ *   size; the app's root is 14px with line-height 1.5 (1.6 on p, 1.3 on
+ *   headings). The `:where()` reset has no specificity, so any class that sets
+ *   a line-height still wins.
+ * - The board's boxes are `content-box` unless they say otherwise; the app's
+ *   preflight makes everything `border-box`. Only the boxes whose size the
+ *   difference changes opt back in (the stage markers, the portal sketch's
+ *   sidebar, the FAQ toggles and the final call to action's links).
+ */
+
+:where(.nw-site.nwfb) {
+  line-height: normal;
+}
+.nw-site.nwfb {
+  font-size: 16px;
+  overflow-x: hidden;
+}
+:where(.nw-site.nwfb) :where(p, button, h1, h2, h3, h4, li) {
+  line-height: normal;
+}
+
+.nw-site .nwfb-rel {
+  position: relative;
+}
+.nw-site .nwfb-h2 {
+  margin: 16px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h2);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+.nw-site .nwfb-lead {
+  margin: 14px 0 0;
+  font-size: var(--nw-fs-lead);
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+.nw-site .nwfb-lead--loose {
+  margin-top: 18px;
+  line-height: 1.7;
+}
+/* Two columns that stack when there is no room for both. */
+.nw-site .nwfb-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 48px 72px;
+  align-items: center;
+}
+.nw-site .nwfb-checks {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}
+.nw-site .nwfb-checks li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+/* The route and card arrows nudge forward on hover, as the board's do. */
+.nw-site .nwfb-arr {
+  transition: transform 0.2s;
+}
+.nw-site .nwfb-route:hover .nwfb-arr,
+.nw-site .nwfb-card:hover .nwfb-arr {
+  transform: translateX(3px);
+}
+.nw-site .nw-btn.nwfb-btn-md {
+  gap: 8px;
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: normal;
+}
+.nw-site .nw-btn.nwfb-btn-lg {
+  gap: 10px;
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: normal;
+}
+
+/* ── Hero ── */
+.nw-site .nwfb-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--nw-ink) 0%, var(--nw-ink-2) 58%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+}
+.nw-site .nwfb-hero-grid {
+  -webkit-mask-image: radial-gradient(ellipse 75% 80% at 70% 40%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 75% 80% at 70% 40%, #000 0%, transparent 72%);
+}
+.nw-site .nwfb-hero-glow {
+  position: absolute;
+  top: -220px;
+  right: -180px;
+  width: 720px;
+  height: 720px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 22, 38, 0.168) 0%, rgba(13, 22, 38, 0) 68%);
+  pointer-events: none;
+}
+.nw-site .nwfb-hero-main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+  gap: 48px 64px;
+  align-items: center;
+  padding-top: clamp(48px, 7vw, 88px);
+  padding-bottom: clamp(48px, 6vw, 72px);
+}
+.nw-site .nwfb-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfb-h1 {
+  margin: 26px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-display);
+  font-weight: 500;
+  line-height: 1.03;
+  letter-spacing: -0.012em;
+  color: var(--nw-white);
+}
+.nw-site .nwfb-hero-lead {
+  margin: 22px 0 0;
+  max-width: 580px;
+  font-size: var(--nw-fs-lead);
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwfb-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 36px;
+}
+.nw-site .nw-btn.nwfb-hero-btn,
+.nw-site .nw-ghost-dark.nwfb-hero-ghost {
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: normal;
+  flex: 1 1 auto;
+  max-width: 260px;
+}
+.nw-site .nw-btn.nwfb-hero-btn {
+  gap: 10px;
+}
+/*
+ * As on the board: the label and arrow are wider than the 260px cap leaves
+ * room for at desktop widths, and the board's arrow is the item that gives
+ * way (it shrinks to a sliver). It shows again once the button runs full
+ * width on phones.
+ */
+.nw-site .nw-btn.nwfb-hero-btn > svg {
+  flex-shrink: 1;
+  min-width: 0;
+}
+.nw-site .nwfb-hero-checks {
+  font-size: 13.5px;
+  color: var(--nw-on-dark);
+}
+
+/* The "Choose your course" panel. */
+.nw-site .nwfb-routes {
+  padding: 10px;
+  border-radius: var(--nw-r-md);
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.7);
+}
+.nw-site .nwfb-routes-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px 14px;
+}
+.nw-site .nwfb-routes-k {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwfb-routes-s {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfb-routes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site .nwfb-route {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid transparent;
+  color: var(--nw-line);
+  text-decoration: none;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+.nw-site .nwfb-route--on {
+  background: rgba(13, 22, 38, 0.132);
+  border-color: rgba(201, 209, 224, 0.5);
+}
+.nw-site .nwfb-route:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--nw-white);
+}
+.nw-site .nwfb-route-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.077);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwfb-route--on .nwfb-route-icon {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwfb-route-text {
+  flex: 1;
+  min-width: 0;
+}
+.nw-site .nwfb-route-t {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+}
+.nw-site .nwfb-route--on .nwfb-route-t {
+  color: var(--nw-white);
+}
+.nw-site .nwfb-route-d {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwfb-route--on .nwfb-route-d {
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfb-route-here {
+  padding: 4px 8px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--nw-cream);
+}
+
+/* The trust strip. */
+.nw-site .nwfb-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nw-site .nwfb-fact {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 20px 28px 0;
+}
+.nw-site .nwfb-fact-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.066);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwfb-fact-v {
+  display: block;
+  font-family: var(--nw-font-serif);
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+.nw-site .nwfb-fact-l {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--nw-on-dark-muted);
+}
+
+/* ── Every stage ── */
+.nw-site .nwfb-stage {
+  background: var(--nw-white);
+}
+.nw-site .nwfb-stages {
+  position: relative;
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 24px 8px;
+}
+/* The dashed line the stages sit on. */
+.nw-site .nwfb-stages::before {
+  content: '';
+  position: absolute;
+  top: 23px;
+  left: 10%;
+  right: 10%;
+  border-top: 1.5px dashed var(--nw-on-dark);
+}
+.nw-site .nwfb-stages > li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+.nw-site .nwfb-stage-dot {
+  box-sizing: content-box;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--nw-white);
+  border: 1.5px solid var(--nw-on-dark);
+  box-shadow: 0 0 0 6px var(--nw-white);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwfb-stage-dot--on {
+  background: var(--nw-ink);
+  border: 0;
+  color: var(--nw-white);
+}
+.nw-site .nwfb-stage-t {
+  font-size: 14px;
+  font-weight: 600;
+}
+.nw-site .nwfb-stage-d {
+  margin-top: -4px;
+  font-size: 12.5px;
+  color: var(--nw-muted);
+}
+.nw-site .nwfb-figure {
+  margin: 0;
+  position: relative;
+}
+.nw-site .nwfb-photo {
+  position: relative;
+  aspect-ratio: 5 / 4;
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-paper-2);
+}
+.nw-site .nwfb-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nw-site .nwfb-figcap {
+  position: absolute;
+  left: -20px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  box-shadow: 0 30px 60px -30px rgba(17, 24, 39, 0.6);
+}
+.nw-site .nwfb-figcap-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.11);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwfb-figcap-k {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwfb-figcap-t {
+  display: block;
+  margin-top: 2px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+/* ── Services ── */
+.nw-site .nwfb-svc {
+  background: var(--nw-paper);
+}
+.nw-site .nwfb-svc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.nw-site .nwfb-svc-head {
+  max-width: 640px;
+}
+.nw-site .nwfb-svc-grid {
+  list-style: none;
+  margin: 48px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 20px;
+}
+.nw-site .nwfb-card {
+  box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s,
+    border-color 0.3s;
+}
+.nw-site .nwfb-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 50px -30px rgba(17, 24, 39, 0.45);
+  border-color: var(--nw-on-dark);
+  color: inherit;
+}
+.nw-site .nwfb-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.nw-site .nwfb-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(13, 22, 38, 0.06);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwfb-card-no {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--nw-muted);
+}
+.nw-site .nwfb-card-body {
+  display: block;
+}
+.nw-site .nwfb-card-t {
+  margin: 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h5);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+.nw-site .nwfb-card-d {
+  display: block;
+  margin-top: 8px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+  text-wrap: pretty;
+}
+.nw-site .nwfb-card-feats {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.nw-site .nwfb-card-f {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwfb-card-f svg {
+  flex-shrink: 0;
+}
+.nw-site .nwfb-card-cta {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--nw-line-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+
+/* ── Independent advice band ── */
+.nw-site .nwfb-band {
+  position: relative;
+  overflow: hidden;
+  padding: var(--nw-sec-md) 0;
+  background: var(--nw-ink-2);
+  color: var(--nw-white);
+}
+.nw-site .nwfb-band-grid {
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, #000 0%, transparent 75%);
+}
+.nw-site .nwfb-band-art {
+  position: absolute;
+  right: -90px;
+  top: 50%;
+  margin-top: -210px;
+  opacity: 0.55;
+}
+.nw-site .nwfb-band-inner {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+.nw-site .nwfb-band-copy {
+  flex: 1 1 520px;
+  max-width: 720px;
+}
+.nw-site .nwfb-band-k {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfb-h2.nwfb-band-t {
+  margin-top: 14px;
+  line-height: 1.1;
+  color: var(--nw-white);
+}
+.nw-site .nwfb-band-p {
+  margin: 14px 0 0;
+  font-size: var(--nw-fs-lead);
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfb-band-btn {
+  position: relative;
+}
+
+/* ── Technology & partnership ── */
+.nw-site .nwfb-tech {
+  background: var(--nw-white);
+}
+.nw-site .nwfb-mock {
+  position: relative;
+  padding: clamp(14px, 2vw, 24px);
+  border-radius: var(--nw-r-md);
+  background: linear-gradient(160deg, var(--nw-ink), var(--nw-ink-2));
+  box-shadow: 0 50px 100px -50px rgba(17, 24, 39, 0.7);
+}
+.nw-site .nwfb-mock-grid {
+  border-radius: var(--nw-r-md);
+}
+.nw-site .nwfb-mock-screen {
+  position: relative;
+  display: flex;
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-white);
+  min-height: 340px;
+}
+.nw-site .nwfb-mock-side {
+  box-sizing: content-box;
+  width: 160px;
+  flex-shrink: 0;
+  padding: 18px 14px;
+  background: var(--nw-paper);
+  border-right: 1px solid var(--nw-line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site .nwfb-mock-brand {
+  padding: 0 8px 10px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--nw-muted);
+}
+.nw-site .nwfb-mock-nav {
+  padding: 9px 10px;
+  border-radius: var(--nw-r-sm);
+  font-size: 12.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwfb-mock-nav--on {
+  background: var(--nw-line-soft);
+  color: var(--nw-ink);
+  font-weight: 600;
+}
+.nw-site .nwfb-mock-main {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.nw-site .nwfb-mock-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nw-site .nwfb-mock-title {
+  width: 140px;
+  height: 12px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line);
+}
+.nw-site .nwfb-mock-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--nw-line-soft);
+}
+.nw-site .nwfb-mock-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+.nw-site .nwfb-mock-card {
+  padding: 12px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwfb-mock-sq {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--nw-r-sm);
+}
+.nw-site .nwfb-mock-line {
+  margin-top: 10px;
+  height: 7px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line);
+}
+.nw-site .nwfb-mock-chart {
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwfb-mock-chart-t {
+  width: 40%;
+  height: 8px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line);
+}
+.nw-site .nwfb-mock-bars {
+  margin-top: 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 90px;
+}
+.nw-site .nwfb-mock-bars > div {
+  flex: 1;
+  border-radius: 4px 6px 2px 2px;
+}
+.nw-site .nwfb-mock-foot {
+  margin-top: auto;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nw-site .nwfb-mock-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--nw-ink);
+}
+.nw-site .nwfb-mock-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.2);
+}
+.nw-site .nwfb-tech-body {
+  margin: 12px 0 0;
+  font-size: var(--nw-fs-body);
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--nw-muted);
+}
+.nw-site .nwfb-feats {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+.nw-site .nwfb-feat {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwfb-feat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(13, 22, 38, 0.06);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwfb-feat-t {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwfb-feat-d {
+  display: block;
+  margin-top: 3px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--nw-text);
+}
+
+/* ── How we work ── */
+.nw-site .nwfb-proc {
+  background: var(--nw-paper);
+}
+.nw-site .nwfb-proc-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwfb-proc-lead {
+  max-width: 620px;
+}
+.nw-site .nwfb-proc-track {
+  position: relative;
+  margin-top: 56px;
+}
+/* The dashed course line through the markers. */
+.nw-site .nwfb-proc-track::before {
+  content: '';
+  position: absolute;
+  top: 27px;
+  left: 28px;
+  right: 12%;
+  border-top: 1.5px dashed var(--nw-on-dark);
+}
+.nw-site .nwfb-legs {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 36px 28px;
+}
+.nw-site .nwfb-leg-dot {
+  box-sizing: border-box;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  border: 1.5px solid var(--nw-on-dark);
+  box-shadow: 0 0 0 8px var(--nw-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+.nw-site .nwfb-leg-dot--on {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwfb-leg-k {
+  display: block;
+  margin-top: 20px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--nw-ink);
+}
+.nw-site .nwfb-leg-t {
+  margin: 8px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h5);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+.nw-site .nwfb-leg-d {
+  margin: 8px 0 0;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+
+/* ── FAQ (the shared FaqRail, drawn on white here, as the board has it) ── */
+.nw-site.nwfb > #faq {
+  background: var(--nw-white);
+}
+/* The board's questions wrap plainly, not balanced. */
+.nw-site.nwfb .nw-faq-item h3 {
+  text-wrap: wrap;
+}
+.nw-site.nwfb .nw-faq-help-t {
+  letter-spacing: -0.012em;
+}
+.nw-site.nwfb .nw-faq-contact svg {
+  width: 18px;
+  height: 18px;
+}
+.nw-site.nwfb .nw-faq-actions .nw-outline {
+  padding: 0 20px;
+}
+.nw-site.nwfb .nw-faq-actions .nw-outline svg {
+  width: 15px;
+  height: 15px;
+}
+.nw-site.nwfb .nw-faq-icon {
+  box-sizing: content-box;
+}
+@media (min-width: 641px) {
+  .nw-site.nwfb .nw-faq-list {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .nw-site.nwfb .nw-faq-q {
+    min-height: 64px;
+  }
+  .nw-site.nwfb .nw-faq-a {
+    font-size: 15.5px;
+  }
+}
+
+/* ── Final call to action ── */
+.nw-site .nwfb-cta {
+  padding: 0 0 var(--nw-sec-lg);
+  background: var(--nw-white);
+}
+.nw-site .nwfb-cta-box {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--nw-r-md);
+  padding: clamp(32px, 5vw, 72px);
+  background: linear-gradient(135deg, var(--nw-ink) 0%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+  box-shadow: 0 50px 100px -50px rgba(13, 22, 38, 0.42);
+}
+.nw-site .nwfb-cta-grid {
+  opacity: 0.9;
+}
+.nw-site .nwfb-cta-art {
+  position: absolute;
+  right: -80px;
+  bottom: -120px;
+  opacity: 0.5;
+}
+.nw-site .nwfb-cta-copy {
+  position: relative;
+  max-width: 700px;
+}
+.nw-site .nwfb-h2.nwfb-cta-t {
+  margin: 0;
+  line-height: 1.1;
+  color: var(--nw-white);
+}
+.nw-site .nwfb-cta-p {
+  margin: 16px 0 0;
+  font-size: var(--nw-fs-lead);
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--nw-line-soft);
+}
+.nw-site .nwfb-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+.nw-site .nwfb-cta-light,
+.nw-site .nwfb-cta-ghost {
+  /* As on the board: max-width is the label's room, padding sits outside it. */
+  box-sizing: content-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 28px;
+  border-radius: var(--nw-r-sm);
+  font-size: 16px;
+  flex: 1 1 auto;
+  text-decoration: none;
+}
+.nw-site .nwfb-cta-light {
+  gap: 10px;
+  max-width: 280px;
+  font-weight: 700;
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
+}
+.nw-site .nwfb-cta-light:hover {
+  background: var(--nw-paper);
+  color: var(--nw-ink);
+}
+.nw-site .nwfb-cta-ghost {
+  max-width: 240px;
+  font-weight: 600;
+  color: var(--nw-white);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: background-color 0.2s;
+}
+.nw-site .nwfb-cta-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--nw-white);
+}
+.nw-site .nwfb-cta-checks {
+  font-size: 14px;
+  color: var(--nw-line-soft);
+}
+
+/* ── Narrower screens, as the board's media queries draw them ── */
+@media (max-width: 860px) {
+  .nw-site .nwfb-band-art,
+  .nw-site .nwfb-cta-art,
+  .nw-site .nwfb-proc-track::before {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .nw-site .nwfb-figure {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .nw-site .nwfb-stages::before,
+  .nw-site .nwfb-figcap,
+  .nw-site .nwfb-mock-side {
+    display: none;
+  }
+  /* Paired actions stack full-width; 56px actions drop to 48px. */
+  .nw-site .nwfb-hero-actions,
+  .nw-site .nwfb-cta-actions,
+  .nw-site.nwfb .nw-faq-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site .nwfb-hero-actions > a,
+  .nw-site .nwfb-cta-actions > a,
+  .nw-site.nwfb .nw-faq-actions > a {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+    justify-content: center;
+    text-align: center;
+  }
+  .nw-site .nw-btn.nwfb-hero-btn,
+  .nw-site .nw-ghost-dark.nwfb-hero-ghost {
+    max-width: none;
+    flex: 0 0 auto;
+  }
+  .nw-site .nw-btn.nwfb-hero-btn,
+  .nw-site .nw-ghost-dark.nwfb-hero-ghost,
+  .nw-site .nw-btn.nwfb-btn-lg,
+  .nw-site .nwfb-cta-light,
+  .nw-site .nwfb-cta-ghost {
+    height: 48px;
+    font-size: 15px;
+  }
+  .nw-site.nwfb .nw-faq-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+  .nw-site.nwfb :is(h1, h2, h3) {
+    overflow-wrap: break-word;
+  }
+}
