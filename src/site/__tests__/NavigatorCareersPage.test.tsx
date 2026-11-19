@@ -136,7 +136,8 @@ describe('Navigator careers page', () => {
     await renderPage();
     const calls = vi.mocked(fetch).mock.calls.filter(([url]) => url === CAREERS_URL);
     expect(calls).toHaveLength(1);
-    expect(calls[0][1]).toEqual({ headers: { Authorization: 'Bearer anon' } });
+    // A public route: no anon key posing as a credential.
+    expect(calls[0][1]).toBeUndefined();
   });
 
   it('shows the copy the live page shows', async () => {

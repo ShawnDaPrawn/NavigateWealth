@@ -13,7 +13,7 @@ import { SEO, createWebPageSchema } from '../../components/seo/SEO';
 import { getSEOData } from '../../components/seo/seo-config';
 import { COMPANY, FOUNDER, TRUST_FACTS } from '../../config/companyFacts';
 import { getOptimizedFallbackUrl } from '../../utils/optimizedImages';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { projectId } from '../../utils/supabase/info';
 import { PHONE_DISPLAY, PHONE_HREF } from '../siteLinks';
 import { TeamApproach, type TeamWaypoint } from '../sections/TeamApproach';
 import { TeamFounder, type TeamCardMember, type TeamFact } from '../sections/TeamFounder';
@@ -76,9 +76,10 @@ const WAYPOINTS: readonly TeamWaypoint[] = [
  */
 async function fetchPublishedTeam(): Promise<TeamCardMember[]> {
   try {
+    // A public route (no auth middleware, and the function runs with
+    // verify_jwt = false), so no bearer: see anon-key-bearer-ratchet.test.ts.
     const res = await fetch(
       `https://${projectId}.supabase.co/functions/v1/make-server-91ed8379/publications/team`,
-      { headers: { Authorization: `Bearer ${publicAnonKey}` } },
     );
     const json = await res.json();
     if (json.success && Array.isArray(json.data) && json.data.length > 0) {

@@ -31,7 +31,7 @@ import {
 import { SEO, createWebPageSchema } from '../../components/seo/SEO';
 import { getSEOData } from '../../components/seo/seo-config';
 import { COMPANY } from '../../config/companyFacts';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { projectId } from '../../utils/supabase/info';
 import { CareersCvDialog } from '../sections/CareersCvDialog';
 import { CareersHero } from '../sections/CareersHero';
 import {
@@ -152,7 +152,9 @@ const PERKS: readonly Point[] = [
 /** Same request and fallback as the live page: any failure means no listings. */
 async function fetchJobListings(): Promise<JobListing[]> {
   try {
-    const res = await fetch(CAREERS_URL, { headers: { Authorization: `Bearer ${publicAnonKey}` } });
+    // A public route (no auth middleware, and the function runs with
+    // verify_jwt = false), so no bearer: see anon-key-bearer-ratchet.test.ts.
+    const res = await fetch(CAREERS_URL);
     const json = await res.json();
     if (json.success && Array.isArray(json.data)) return json.data;
   } catch (err) {
