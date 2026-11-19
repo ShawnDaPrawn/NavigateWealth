@@ -214,7 +214,7 @@ export function ServicesPage() {
   return (
     <div className="contents">
       <SEO
-        title="Our Services | Navigate Wealth"
+        title="Financial Advice Services in South Africa | Navigate Wealth"
         description="Comprehensive wealth management services from Navigate Wealth — financial planning, risk management, retirement planning, investments, medical aid, estate planning, tax planning, and employee benefits."
         keywords={[
           'financial services',

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -10,6 +10,11 @@ import { OptimizedImage } from '../shared/OptimizedImage';
 import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { COMPANY, FOUNDER } from '@/config/companyFacts';
+import { SITE_DESIGN } from '../../site/design';
+
+const NavigatorTeamPage = React.lazy(() =>
+  import('../../site/pages/NavigatorTeamPage').then((m) => ({ default: m.NavigatorTeamPage })),
+);
 
 // ============================================================================
 // Types
@@ -94,7 +99,23 @@ function FounderProfile() {
 // Component
 // ============================================================================
 
+/**
+ * The Team page. The build's design switch picks the layout; both show the
+ * founder from companyFacts and anyone published through the admin Team
+ * manager (the publications/team endpoint).
+ */
 export function TeamPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorTeamPage />
+      </Suspense>
+    );
+  }
+  return <LegacyTeamPage />;
+}
+
+function LegacyTeamPage() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 

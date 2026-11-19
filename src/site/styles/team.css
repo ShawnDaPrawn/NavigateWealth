@@ -1,0 +1,548 @@
+/*
+ * Navigator Team page ("Meet Our Founder") — ported from the "Team" board of
+ * the Claude Design canvas, its inline styles turned into classes. Section
+ * labels, section titles, the grid texture and the photo grade come from
+ * sections.css; buttons and tokens from navigator.css.
+ *
+ * Scoped to `.nw-site`, like navigator.css, so nothing here can reach the
+ * portal, the admin or the legacy public site.
+ */
+
+/* The board's page has a 16px base and the browser's normal line height. The
+   site's root is 14px and its global base typography gives every p and h3 a
+   line height of its own (1.6 / 1.3); restated here at near-zero specificity,
+   so every rule below that sets a line height still wins. */
+.nw-site.nwtm {
+  font-size: 16px;
+  line-height: normal;
+}
+:where(.nw-site) .nwtm :where(p, h3) {
+  line-height: inherit;
+}
+
+/* ── Actions: the board's 10px gap between label and arrow ── */
+.nw-site .nwtm .nw-btn {
+  gap: 10px;
+}
+
+/* ── Hero ── */
+.nw-site .nwtm-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--nw-ink) 0%, var(--nw-ink-2) 60%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+}
+.nw-site .nwtm-hero > .nw-grid-bg {
+  -webkit-mask-image: radial-gradient(ellipse 75% 80% at 30% 40%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 75% 80% at 30% 40%, #000 0%, transparent 72%);
+}
+.nw-site .nwtm-glow {
+  position: absolute;
+  top: -220px;
+  right: -180px;
+  width: 720px;
+  height: 720px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 22, 38, 0.156) 0%, rgba(13, 22, 38, 0) 68%);
+  pointer-events: none;
+}
+.nw-site .nwtm-hero-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: clamp(40px, 6vw, 72px);
+  align-items: center;
+  padding-top: clamp(48px, 7vw, 88px);
+  padding-bottom: clamp(56px, 8vw, 104px);
+}
+.nw-site .nwtm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwtm-pill svg {
+  flex-shrink: 0;
+}
+.nw-site .nwtm-h1 {
+  margin: 28px 0 0;
+  font-size: var(--nw-fs-display);
+  line-height: 1.02;
+  color: var(--nw-white);
+}
+.nw-site .nwtm-lead {
+  margin: 24px 0 0;
+  max-width: 520px;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwtm-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 36px;
+}
+.nw-site .nwtm-facts {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin: 40px 0 0;
+  padding: 24px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nw-site .nwtm-facts li {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwtm-figure {
+  position: relative;
+  justify-self: center;
+  width: 100%;
+  max-width: 480px;
+  margin: 0;
+}
+.nw-site .nwtm-ring {
+  position: absolute;
+  inset: -18px;
+  border-radius: var(--nw-r-md);
+  border: 1px dashed rgba(201, 209, 224, 0.35);
+}
+.nw-site .nwtm-portrait {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-ink-3);
+  box-shadow: 0 50px 100px -50px rgba(0, 0, 0, 0.85);
+}
+.nw-site .nwtm-portrait img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nw-site .nwtm-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(17, 24, 39, 0.7), rgba(17, 24, 39, 0) 42%);
+}
+.nw-site .nwtm-cap {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: var(--nw-r-md);
+  background: rgba(17, 24, 39, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.nw-site .nwtm-cap-name {
+  display: block;
+  font-size: 18px;
+  color: var(--nw-white);
+}
+.nw-site .nwtm-cap-role {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwtm-cap-badge {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.099);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--nw-cream);
+}
+
+/* ── 01 — The founder ── */
+.nw-site .nwtm-profile {
+  padding: var(--nw-sec-lg) 0;
+  background: var(--nw-white);
+}
+.nw-site .nwtm-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: 48px clamp(40px, 6vw, 80px);
+  align-items: start;
+}
+.nw-site .nwtm-role {
+  margin: 8px 0 0;
+  font-size: var(--nw-fs-body);
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwtm-note {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwtm-note p {
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+.nw-site .nwtm-note-cta {
+  margin-top: 32px;
+}
+
+/* "Working with …" card */
+.nw-site .nwtm-card {
+  border-radius: var(--nw-r-md);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-paper);
+  overflow: hidden;
+}
+.nw-site .nwtm-card-head {
+  padding: 22px 26px;
+  border-bottom: 1px solid var(--nw-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwtm-card-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwtm-card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nw-success);
+}
+.nw-site .nwtm-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nw-success);
+}
+.nw-site .nwtm-dl {
+  margin: 0;
+  padding: 6px 26px 10px;
+}
+.nw-site .nwtm-dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwtm-dl > div:last-child {
+  border-bottom: 0;
+}
+.nw-site .nwtm-dl dt,
+.nw-site .nwtm-dl dd {
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwtm-dl dt {
+  font-size: 12px;
+  color: var(--nw-muted);
+}
+.nw-site .nwtm-dl dd {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-align: right;
+}
+.nw-site .nwtm-contact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  padding: 0 26px 26px;
+}
+.nw-site .nwtm-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  /* The board's boxes: 48px inside a 1px border (the site's base is border-box). */
+  box-sizing: content-box;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-white);
+  color: var(--nw-text);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwtm-icon-btn:hover {
+  color: var(--nw-ink);
+  border-color: var(--nw-on-dark);
+  background: var(--nw-paper);
+}
+.nw-site .nwtm-icon-btn svg {
+  flex-shrink: 0;
+}
+.nw-site .nwtm-icon-btn--sq {
+  width: 44px;
+  height: 44px;
+  gap: 0;
+}
+
+/* Team members published through the admin Team manager */
+.nw-site .nwtm-members {
+  margin-top: 72px;
+}
+.nw-site .nwtm-members-label {
+  margin: 0;
+  font-family: var(--nw-font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: inherit;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwtm-members-grid {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 20px;
+}
+.nw-site .nwtm-tile {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 28px;
+  border-radius: var(--nw-r-md);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-white);
+  text-align: center;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s,
+    border-color 0.3s;
+}
+.nw-site .nwtm-tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 44px -30px rgba(17, 24, 39, 0.45);
+  border-color: var(--nw-on-dark);
+}
+.nw-site .nwtm-avatar {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto;
+  box-sizing: content-box;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--nw-paper-2);
+  border: 1px dashed var(--nw-line-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwtm-avatar--photo {
+  border: 0;
+}
+.nw-site .nwtm-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nw-site .nwtm-member-name {
+  margin: 18px 0 0;
+  font-size: var(--nw-fs-h5);
+  color: var(--nw-ink);
+}
+.nw-site .nwtm-member-title {
+  margin: 4px 0 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwtm-member-cred {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--nw-muted);
+}
+.nw-site .nwtm-member-bio {
+  margin: 16px 0 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--nw-text);
+  text-align: left;
+}
+.nw-site .nwtm-chips {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.nw-site .nwtm-chips li {
+  padding: 4px 10px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  font-size: 12px;
+  color: var(--nw-ink);
+}
+.nw-site .nwtm-member-links {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ── 02 — Approach ── */
+.nw-site .nwtm-approach {
+  position: relative;
+  overflow: hidden;
+  padding: var(--nw-sec-lg) 0;
+  background: var(--nw-paper);
+}
+.nw-site .nwtm-approach-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwtm-approach-lead {
+  margin: 16px 0 0;
+  max-width: 680px;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+.nw-site .nwtm-track {
+  position: relative;
+  margin-top: 56px;
+}
+.nw-site .nwtm-course {
+  position: absolute;
+  top: 32px;
+  left: 16.6%;
+  right: 16.6%;
+  border-top: 1.5px dashed var(--nw-on-dark);
+}
+.nw-site .nwtm-steps {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 36px 32px;
+}
+.nw-site .nwtm-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwtm-marker {
+  width: 64px;
+  height: 64px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  border: 1.5px solid var(--nw-on-dark);
+  box-shadow: 0 0 0 8px var(--nw-paper);
+}
+.nw-site .nwtm-step:first-child .nwtm-marker {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  border: 0;
+}
+.nw-site .nwtm-leg {
+  margin-top: 20px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--nw-ink);
+}
+.nw-site .nwtm-step-t {
+  margin: 8px 0 0;
+  font-size: var(--nw-fs-h5);
+  color: var(--nw-ink);
+}
+.nw-site .nwtm-step-d {
+  margin: 10px 0 0;
+  max-width: 320px;
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+.nw-site .nwtm-actions {
+  margin-top: 56px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* ── Narrower screens: the board's media rules ── */
+@media (max-width: 860px) {
+  .nw-site .nwtm-course {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .nw-site .nwtm-portrait {
+    aspect-ratio: auto;
+    height: 300px;
+  }
+  .nw-site .nwtm-portrait img {
+    object-position: center 20%;
+  }
+}
+@media (max-width: 640px) {
+  .nw-site .nwtm :is(h1, h2, h3) {
+    overflow-wrap: break-word;
+  }
+  /* Paired actions stack, full width, and the 56px actions drop to 48px. */
+  .nw-site .nwtm-ctas,
+  .nw-site .nwtm-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site :is(.nwtm-ctas, .nwtm-actions) > a {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: none;
+    justify-content: center;
+    text-align: center;
+  }
+  .nw-site .nwtm .nw-btn--lg {
+    height: 48px;
+    font-size: 15px;
+  }
+}

@@ -9,6 +9,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 vi.mock('../design', () => ({ SITE_DESIGN: 'navigator', resolveSiteDesign: () => 'navigator' }));
 vi.mock('../../utils/supabase/info', async (importOriginal) => ({
@@ -152,9 +154,20 @@ describe('Navigator home page', () => {
     expect(
       screen.getByRole('button', { name: 'Show highlight 4 of 4' }).getAttribute('aria-current'),
     ).toBe('true');
+  });
 
-    // The board has no pause button; it has no control beyond the dots.
-    expect(screen.queryByRole('button', { name: /Pause|Play/ })).toBeNull();
+  it('can be paused and played again (WCAG 2.2.2)', async () => {
+    await renderPage();
+    const carousel = screen.getByRole('group', { name: 'Highlights' });
+    fireEvent.click(screen.getByRole('button', { name: 'Pause slides' }));
+    expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('paused');
+    expect(carousel.getAttribute('aria-live')).toBe('polite');
+    endProgress();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Secure Your Financial Future.',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Play slides' }));
+    expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('running');
   });
 
   it('pauses while the pointer is over the highlights', async () => {
@@ -175,11 +188,23 @@ describe('Navigator home page', () => {
     );
     await renderPage();
     expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('paused');
+    expect(screen.getByRole('button', { name: 'Play slides' })).toBeDefined();
     // navigator.css shortens every animation to 0.01ms under reduced motion, so
     // the bar does end at once; that must not move the slide on.
     endProgress();
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       'Secure Your Financial Future.',
+    );
+  });
+
+  it('keeps the slide timer at its real length under reduced motion', () => {
+    // jsdom applies no stylesheets, so this pins the rule itself: navigator.css
+    // shortens every animation to 0.01ms under reduced motion, and without this
+    // exemption pressing Play would flick through the slides.
+    const css = readFileSync(resolve(__dirname, '../styles/home.css'), 'utf8');
+    const reduced = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
+    expect(reduced).toMatch(
+      /\.nwhh-dot-fill\s*\{\s*animation-duration:\s*var\(--nwhh-slide-ms, 8000ms\) !important;/,
     );
   });
 

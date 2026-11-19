@@ -203,6 +203,28 @@
   background: var(--nw-on-dark);
   animation: nwFill var(--nwhh-slide-ms, 8000ms) linear forwards;
 }
+/* Pause / Play: the owner's addition to the board, drawn in the dots' language. */
+.nw-site .nwhh-pause {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: var(--nw-on-dark-muted);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwhh-pause:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  color: var(--nw-white);
+}
 /* Phones and narrow tablets: a compact heading chip instead of the dial. */
 .nw-site .nwhh-chip {
   display: none;
@@ -1470,5 +1492,12 @@
   }
   .nw-site .nwhh-needle {
     transition: none;
+  }
+  /* The progress bar is the slide timer (HomeHero advances on its animationend).
+     navigator.css shortens every animation to 0.01ms under reduced motion, which
+     would flick through the slides once a visitor presses Play. A slow, linear
+     fill the visitor chose to start keeps its real length. */
+  .nw-site .nwhh-dot-fill {
+    animation-duration: var(--nwhh-slide-ms, 8000ms) !important;
   }
 }

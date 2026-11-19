@@ -25,14 +25,14 @@ export const seoPages: Record<string, SEOPageData> = {
   home: {
     title: 'Independent Financial Advisors SA | Navigate Wealth',
     description:
-      'Navigate Wealth provides independent financial planning, investment management, retirement planning, risk management, tax planning and estate planning services across South Africa.',
+      'Independent financial planning, investment management, retirement, risk, tax and estate planning services across South Africa from Navigate Wealth.',
     keywords:
       'financial advisor, wealth management, investment planning, retirement planning, risk management, tax planning, estate planning, South Africa, independent financial advisor',
     canonicalUrl: BASE_URL,
     ogType: 'website',
   },
   about: {
-    title: 'About Us | Navigate Wealth',
+    title: 'About Navigate Wealth | Independent Financial Advisors',
     description:
       'About Navigate Wealth, an independent, founder-led financial advisory practice (FSP 54606). Read a note from our founder, Shawn Francisco.',
     keywords:
@@ -41,7 +41,7 @@ export const seoPages: Record<string, SEOPageData> = {
     ogType: 'website',
   },
   contact: {
-    title: 'Contact Us | Navigate Wealth',
+    title: 'Contact a Financial Advisor in Pretoria | Navigate Wealth',
     description:
       "Get in touch with Navigate Wealth for a free consultation. We're ready to help you plan your financial future.",
     keywords:
@@ -61,14 +61,14 @@ export const seoPages: Record<string, SEOPageData> = {
   'medical-aid': {
     title: 'Medical Aid & Health Insurance | Navigate Wealth',
     description:
-      'Independent medical aid advice for individuals and businesses in South Africa. Comprehensive plans, hospital plans, savings plans, group schemes, and corporate wellness from leading medical schemes.',
+      'Independent medical aid advice in South Africa: hospital and comprehensive plans, savings plans, group schemes and corporate wellness from leading schemes.',
     keywords:
       'medical aid South Africa, health insurance, hospital plan, medical savings, gap cover, group medical scheme, corporate wellness, Discovery Health, Momentum Health, Navigate Wealth',
     canonicalUrl: `${BASE_URL}/medical-aid`,
     ogType: 'website',
   },
   'investment-management': {
-    title: 'Investment Management | Navigate Wealth',
+    title: 'Investment Management in South Africa | Navigate Wealth',
     description:
       'Professional investment management in South Africa. Unit trusts, tax-free savings, offshore investments & corporate fund solutions.',
     keywords:
@@ -88,7 +88,7 @@ export const seoPages: Record<string, SEOPageData> = {
   'tax-planning': {
     title: 'Tax Planning & Optimisation | Navigate Wealth',
     description:
-      'Expert tax planning and optimisation for individuals and businesses in South Africa. Tax-efficient structures, estate duty planning, capital gains management, and corporate tax strategies.',
+      'Expert tax planning for individuals and businesses in South Africa — tax-efficient structures, estate duty, capital gains and corporate tax strategies.',
     keywords:
       'tax planning South Africa, tax optimisation, estate duty, capital gains tax, corporate tax, tax-free savings, tax deductions, Navigate Wealth',
     canonicalUrl: `${BASE_URL}/tax-planning`,
@@ -97,7 +97,7 @@ export const seoPages: Record<string, SEOPageData> = {
   'estate-planning': {
     title: 'Estate Planning | Wills & Trusts | Navigate Wealth',
     description:
-      'Comprehensive estate planning for individuals and businesses in South Africa. Wills, trusts, succession planning, estate duty optimisation, and business continuity through our estate planning partners.',
+      'Estate planning in South Africa — wills, trusts, succession planning, estate duty and business continuity, through our estate planning partners.',
     keywords:
       'estate planning South Africa, wills, trusts, succession planning, estate duty, inheritance, business succession, Navigate Wealth',
     canonicalUrl: `${BASE_URL}/estate-planning`,
@@ -131,7 +131,7 @@ export const seoPages: Record<string, SEOPageData> = {
     ogType: 'website',
   },
   careers: {
-    title: 'Careers | Navigate Wealth',
+    title: 'Careers in Financial Advice | Navigate Wealth',
     description:
       'Explore careers at Navigate Wealth, an independent, founder-led financial advisory practice helping South Africans achieve financial independence.',
     keywords:
@@ -140,7 +140,7 @@ export const seoPages: Record<string, SEOPageData> = {
     ogType: 'website',
   },
   team: {
-    title: 'Meet Our Founder | Navigate Wealth',
+    title: 'Meet Our Founder, Shawn Francisco | Navigate Wealth',
     description:
       'Meet Shawn Francisco, founder of Navigate Wealth — an independent, founder-led financial advisory practice authorised by the FSCA (FSP 54606).',
     keywords:
@@ -178,7 +178,7 @@ export const seoPages: Record<string, SEOPageData> = {
   legal: {
     title: 'Legal & Compliance | Navigate Wealth',
     description:
-      'Navigate Wealth legal documents, privacy policy, terms and conditions, POPIA compliance, FAIS disclosure, and regulatory information for our financial advisory services.',
+      'Navigate Wealth legal information: privacy policy, terms and conditions, POPIA compliance, FAIS disclosure and regulatory details for our services.',
     keywords:
       'Navigate Wealth legal, privacy policy, terms and conditions, POPIA, FAIS disclosure, financial services compliance, South Africa',
     canonicalUrl: `${BASE_URL}/legal`,
@@ -187,7 +187,7 @@ export const seoPages: Record<string, SEOPageData> = {
   'for-individuals': {
     title: 'Financial Planning for Individuals | Navigate Wealth',
     description:
-      'Personal financial planning services for individuals in South Africa. Risk management, investments, retirement planning, tax optimisation, estate planning, and medical aid from independent advisors.',
+      'Personal financial planning for individuals in South Africa — risk, investments, retirement, tax, estate planning and medical aid from independent advisors.',
     keywords:
       'personal financial planning, individual wealth management, personal insurance, investment advice, retirement planning individual, South Africa, Navigate Wealth',
     canonicalUrl: `${BASE_URL}/solutions/individuals`,
@@ -196,7 +196,7 @@ export const seoPages: Record<string, SEOPageData> = {
   'for-businesses': {
     title: 'Financial Solutions for Businesses | Navigate Wealth',
     description:
-      'Corporate financial services for businesses in South Africa. Employee benefits, group risk cover, business insurance, corporate investments, and tax planning from independent advisors.',
+      'Corporate financial services in South Africa — employee benefits, group risk cover, business insurance, corporate investments and tax planning.',
     keywords:
       'business financial planning, corporate wealth management, employee benefits, group risk cover, business insurance, corporate investments, South Africa, Navigate Wealth',
     canonicalUrl: `${BASE_URL}/solutions/businesses`,
@@ -223,7 +223,7 @@ export const seoPages: Record<string, SEOPageData> = {
   resources: {
     title: 'Resources & Insights | Navigate Wealth',
     description:
-      'Financial planning articles, market insights, and educational resources from Navigate Wealth. Stay informed with expert commentary on investments, retirement, tax, and more.',
+      'Financial planning articles, market insights and educational resources from Navigate Wealth — expert commentary on investing, retirement, tax and more.',
     keywords:
       'financial planning articles, investment insights, retirement planning resources, tax planning guides, market commentary, Navigate Wealth blog, South Africa',
     canonicalUrl: `${BASE_URL}/resources`,
@@ -232,7 +232,7 @@ export const seoPages: Record<string, SEOPageData> = {
   'ask-vasco': {
     title: 'Ask Vasco | AI Financial Navigator | Navigate Wealth',
     description:
-      'Ask Vasco, Navigate Wealth’s public AI financial navigator, for general South African financial guidance on retirement, tax, risk cover, investing, and estate planning.',
+      "Ask Vasco, Navigate Wealth's AI financial navigator, for general South African guidance on retirement, tax, risk cover, investing and estate planning.",
     keywords:
       'AI financial navigator South Africa, financial planning chatbot, retirement questions, tax planning guidance, Navigate Wealth Vasco',
     canonicalUrl: `${BASE_URL}/ask-vasco`,

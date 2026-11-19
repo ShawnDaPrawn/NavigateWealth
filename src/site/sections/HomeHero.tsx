@@ -4,10 +4,11 @@
  * one is what search engines read), the compass "instrument" and the trust
  * strip.
  *
- * Rotation follows the WAI-ARIA carousel pattern without adding anything the
- * board does not show:
+ * Rotation follows the WAI-ARIA carousel pattern and WCAG 2.2.2. Beyond the
+ * board, the owner asked for a pause control (November 2026):
+ * - a Pause / Play button beside the progress dots stops rotation for good;
  * - hovering or focusing the slides pauses it while you are there;
- * - with reduced motion requested, it does not rotate on its own;
+ * - with reduced motion requested, it starts paused;
  * - while it runs the slides are not a live region, so a screen reader is not
  *   interrupted; while paused, changing slide is announced.
  *
@@ -17,7 +18,7 @@
  */
 import { useId, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Pause, Play } from 'lucide-react';
 import type { TrustFact } from '../../config/companyFacts';
 import { pad2 } from './format';
 import '../styles/navigator.css';
@@ -68,7 +69,7 @@ export function HomeHero({ badge, flagSrc, slides, trustFacts, slideMs = 8000 }:
   // Read before the first render: under reduced motion navigator.css shortens
   // every animation to 0.01ms, so a bar that ran for even one frame would end
   // at once and skip a slide.
-  const [autoplay] = useState(() => !prefersReducedMotion());
+  const [autoplay, setAutoplay] = useState(() => !prefersReducedMotion());
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
 
@@ -164,6 +165,18 @@ export function HomeHero({ badge, flagSrc, slides, trustFacts, slideMs = 8000 }:
                     );
                   })}
                 </div>
+                <button
+                  type="button"
+                  className="nwhh-pause"
+                  aria-label={autoplay ? 'Pause slides' : 'Play slides'}
+                  onClick={() => setAutoplay((on) => !on)}
+                >
+                  {autoplay ? (
+                    <Pause size={13} strokeWidth={2} aria-hidden="true" />
+                  ) : (
+                    <Play size={13} strokeWidth={2} aria-hidden="true" />
+                  )}
+                </button>
               </div>
             ) : null}
 

@@ -15,10 +15,13 @@
  *   4. Perks & Benefits (white)
  *   5. CTA (dark)
  *
+ * The build's design switch (src/site/design.ts) picks the layout: this
+ * legacy page, or the Navigator redesign in src/site/pages/NavigatorCareersPage.
+ *
  * @module pages/CareersPage
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { Suspense, useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -27,6 +30,7 @@ import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { CVUploadModal } from '../modals/CVUploadModal';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { SITE_DESIGN } from '../../site/design';
 import {
   Briefcase,
   Users,
@@ -172,7 +176,28 @@ async function fetchJobListings(): Promise<JobListing[]> {
 // Main Component
 // ============================================================================
 
+const NavigatorCareersPage = React.lazy(() =>
+  import('../../site/pages/NavigatorCareersPage').then((m) => ({
+    default: m.NavigatorCareersPage,
+  })),
+);
+
+/**
+ * The Careers page. The build's design switch picks the layout; both list the
+ * same roles and send applications to the same place.
+ */
 export function CareersPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorCareersPage />
+      </Suspense>
+    );
+  }
+  return <LegacyCareersPage />;
+}
+
+function LegacyCareersPage() {
   const [activeCategory, setActiveCategory] = useState('advisory');
   const [showCVModal, setShowCVModal] = useState(false);
   const [listings, setListings] = useState<JobListing[]>([]);

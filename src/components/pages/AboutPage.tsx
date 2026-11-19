@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { SEO, createAboutPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -11,6 +11,7 @@ import { ProvidersModal } from '../modals/ProvidersModal';
 import { PublishedReviews } from '../shared/PublishedReviews';
 import { FounderNote } from './about/FounderNote';
 import { COMPANY, TRUST_FACTS } from '@/config/companyFacts';
+import { SITE_DESIGN } from '../../site/design';
 
 import {
   Award,
@@ -31,7 +32,26 @@ import {
   Stethoscope,
 } from 'lucide-react';
 
+const NavigatorAboutPage = React.lazy(() =>
+  import('../../site/pages/NavigatorAboutPage').then((m) => ({ default: m.NavigatorAboutPage })),
+);
+
+/**
+ * The About page. The build's design switch picks the layout; both read the
+ * firm's facts and the founder's note from companyFacts.
+ */
 export function AboutPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorAboutPage />
+      </Suspense>
+    );
+  }
+  return <LegacyAboutPage />;
+}
+
+function LegacyAboutPage() {
   const [consultationModalOpen, setConsultationModalOpen] = useState(false);
   const [thankYouModalOpen, setThankYouModalOpen] = useState(false);
   const [providersModalOpen, setProvidersModalOpen] = useState(false);

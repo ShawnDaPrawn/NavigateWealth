@@ -78,11 +78,15 @@
 
   --nw-font-serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
   --nw-font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --nw-fs-display: clamp(2.5rem, 4.6vw, 3.75rem);
-  --nw-fs-h1s: clamp(2.2rem, 4vw, 3.25rem);
-  --nw-fs-h2: clamp(1.95rem, 3.3vw, 2.75rem);
-  --nw-fs-h2s: clamp(1.6rem, 2.6vw, 2.25rem);
-  --nw-fs-h3: clamp(1.5rem, 2.3vw, 1.875rem);
+  /* Pixels, not rem: the boards are drawn on a 16px root, but this site's root
+     is 14px (globals.css --font-size), so rem tokens came out at 87.5% of the
+     board (a 52.5px display heading where the board has 60px). These are the
+     board's values × 16. */
+  --nw-fs-display: clamp(40px, 4.6vw, 60px);
+  --nw-fs-h1s: clamp(35.2px, 4vw, 52px);
+  --nw-fs-h2: clamp(31.2px, 3.3vw, 44px);
+  --nw-fs-h2s: clamp(25.6px, 2.6vw, 36px);
+  --nw-fs-h3: clamp(24px, 2.3vw, 30px);
   --nw-fs-h4: 22px;
   --nw-fs-h5: 19px;
   --nw-fs-lead: clamp(16.5px, 1.35vw, 18px);
@@ -109,10 +113,10 @@
 }
 @media (max-width: 640px) {
   .nw-site {
-    --nw-fs-display: clamp(1.8rem, 7.6vw, 2.1rem);
-    --nw-fs-h1s: clamp(1.8rem, 7.6vw, 2.1rem);
-    --nw-fs-h2: clamp(1.4rem, 6.2vw, 1.6rem);
-    --nw-fs-h2s: clamp(1.4rem, 6.2vw, 1.6rem);
+    --nw-fs-display: clamp(28.8px, 7.6vw, 33.6px);
+    --nw-fs-h1s: clamp(28.8px, 7.6vw, 33.6px);
+    --nw-fs-h2: clamp(22.4px, 6.2vw, 25.6px);
+    --nw-fs-h2s: clamp(22.4px, 6.2vw, 25.6px);
     --nw-fs-h3: 21px;
     --nw-fs-h4: 19px;
     --nw-fs-h5: 17.5px;
