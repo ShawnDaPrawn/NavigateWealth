@@ -202,7 +202,7 @@ export function NavigatorCareersPage() {
   }, []);
 
   return (
-    <div className="nw-site nwcr">
+    <div className="nw-site nw-base nwcr">
       <SEO {...SEO_DATA} structuredData={STRUCTURED_DATA} />
 
       <CareersHero

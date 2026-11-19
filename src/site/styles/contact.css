@@ -502,6 +502,13 @@
   padding: 0 28px;
   font-size: 16px;
 }
+/* The board's label is its own element, so the system's arrow nudge applies. */
+.nw-site .nwct-submit > svg {
+  transition: transform var(--nw-dur-2) var(--nw-ease);
+}
+.nw-site .nwct-submit:hover:not(:disabled) > svg {
+  transform: translateX(3px);
+}
 .nw-site .nwct-note {
   margin: -4px 0 0;
   font-size: 12.5px;

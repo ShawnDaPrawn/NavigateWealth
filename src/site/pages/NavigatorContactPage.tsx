@@ -126,7 +126,7 @@ export function NavigatorContactPage() {
   }, [location.search, navigate]);
 
   return (
-    <div className="nw-site nwct">
+    <div className="nw-site nw-base nwct">
       <SEO
         title={seoData.title}
         description={seoData.description}

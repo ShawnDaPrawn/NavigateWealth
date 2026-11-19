@@ -82,6 +82,7 @@ export function HomeHero({ badge, flagSrc, slides, trustFacts, slideMs = 8000 }:
   return (
     <section className="nwhh" aria-label="Hero">
       <div className="nw-grid-bg" aria-hidden="true" />
+      <div className="nwhh-glow" aria-hidden="true" />
       <div className="nw-wrap nwhh-inner">
         <div className="nwhh-grid">
           <div>

@@ -136,7 +136,11 @@
 .nw-site :is(.nwwu-hero-btn, .nwwu-aside-btn, .nwwu-dlg-quote) > svg:last-child {
   transition: transform var(--nw-dur-2) var(--nw-ease);
 }
-.nw-site :is(.nwwu-hero-btn, .nwwu-aside-btn, .nwwu-dlg-quote):hover > svg:last-child {
+/* The board's rule needs an element before the arrow; a bare label is text, so
+   these arrows stay put on hover, as they do on the board. */
+.nw-site
+  :is(.nwwu-hero-btn, .nwwu-aside-btn, .nwwu-dlg-quote):hover
+  > svg:last-child:not(:first-child) {
   transform: translateX(3px);
 }
 .nw-site .nwwu-tiles {
@@ -378,7 +382,6 @@
 .nw-site .nwwu-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--nw-shadow-2);
-  border-color: var(--nw-on-dark);
 }
 .nw-site .nwwu-card-icon {
   width: 48px;
@@ -512,7 +515,6 @@
 }
 .nw-site .nwwu-step:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(201, 209, 224, 0.35);
 }
 .nw-site .nwwu-leg {
   display: block;

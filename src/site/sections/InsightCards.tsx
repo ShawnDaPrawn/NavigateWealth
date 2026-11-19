@@ -62,6 +62,7 @@ export function InsightCards({ index, articles, allLink, vascoLink }: InsightCar
 
         <div className="nwvp">
           <div className="nw-grid-bg" aria-hidden="true" />
+          <div className="nwvp-glow" aria-hidden="true" />
           <div className="nwvp-intro">
             <span className="nwvp-icon" aria-hidden="true">
               <Compass size={24} strokeWidth={1.75} />
