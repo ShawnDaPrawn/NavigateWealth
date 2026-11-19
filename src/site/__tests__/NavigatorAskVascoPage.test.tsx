@@ -216,6 +216,8 @@ describe('Navigator Ask Vasco page', () => {
     expect(input().value).toBe('');
     expect(screen.getByText('9 free questions left', { selector: '.nw-sr-only' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Helpful' })).toBeDefined();
+    // The board offers an adviser from the first question on.
+    expect(screen.getByText('Want personalised advice?', { exact: false })).toBeDefined();
 
     expect(localStorage.getItem('vasco_session_id')).toBe('sess-1');
     const saved = JSON.parse(localStorage.getItem('vasco_session_messages')!);

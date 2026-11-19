@@ -66,8 +66,11 @@ import '../styles/ask-vasco.css';
 const SESSION_MESSAGES_KEY = 'vasco_session_messages';
 const SESSION_ID_KEY = 'vasco_session_id';
 
-/** The live page's adviser nudge appears once this many questions are asked. */
-const ADVICE_NUDGE_AFTER = 4;
+/**
+ * The adviser nudge appears once this many questions are asked: the board
+ * shows it from the first question (the live page waits for four).
+ */
+const ADVICE_NUDGE_AFTER = 1;
 
 const HAND_OFF_LABEL = 'Book a Free Consultation';
 
@@ -471,7 +474,7 @@ export function NavigatorAskVascoPage() {
         onAction={openHandoff}
       />
     );
-  } else if (userMessageCount >= ADVICE_NUDGE_AFTER && !showHandoff) {
+  } else if (userMessageCount >= ADVICE_NUDGE_AFTER) {
     note = (
       <VascoNote
         text={
