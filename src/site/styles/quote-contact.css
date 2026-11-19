@@ -1,0 +1,797 @@
+/*
+ * Navigator quote funnel, "your details" step — ported from the "Quote — your
+ * details" board of the Claude Design canvas, its inline styles turned into
+ * classes. The grid texture, the eyebrow, the accent and the entrance
+ * animation come from sections.css and navigator.css; buttons and tokens from
+ * navigator.css.
+ *
+ * Scoped to `.nw-site`, like navigator.css. Every class is prefixed `nwqc-`.
+ */
+
+/* The board's page has a 16px base, the browser's normal line height and
+   content-box sizing. The site's root is 14px, Tailwind's preflight sizes
+   every box by its border, and the global base typography gives p, headings,
+   labels, buttons and inputs line heights of their own; all restated here at
+   zero specificity, so every rule below (and navigator.css's border-box
+   buttons and wrap) still wins. */
+.nw-site.nwqc {
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-text);
+  background: var(--nw-paper);
+}
+:where(.nw-site.nwqc) :where(p, h1, h2, h3, label, button, input, select, legend) {
+  line-height: inherit;
+}
+:where(.nw-site.nwqc),
+:where(.nw-site.nwqc) :where(*, ::before, ::after) {
+  box-sizing: content-box;
+}
+
+/* ── Hero ── */
+.nw-site .nwqc-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--nw-ink);
+  color: var(--nw-paper);
+}
+.nw-site .nwqc-compass {
+  position: absolute;
+  right: clamp(24px, 6vw, 96px);
+  top: 50%;
+  margin-top: -180px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.nw-site .nw-wrap.nwqc-hero-wrap {
+  position: relative;
+  padding-top: clamp(28px, 4vw, 44px);
+  padding-bottom: clamp(88px, 10vw, 120px);
+}
+.nw-site .nwqc-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.nw-site .nwqc-crumb {
+  color: var(--nw-on-dark-muted);
+  text-decoration: none;
+}
+.nw-site .nwqc-crumb:hover {
+  color: var(--nw-paper);
+}
+.nw-site .nwqc-crumb-sep {
+  color: var(--nw-muted);
+}
+.nw-site .nwqc-crumb-here {
+  color: var(--nw-paper);
+}
+.nw-site .nwqc-eyebrow {
+  margin: 36px 0 0;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwqc-title {
+  margin: 16px 0 0;
+  max-width: 760px;
+  font-size: var(--nw-fs-display);
+  line-height: 1.06;
+  color: var(--nw-paper);
+}
+.nw-site .nwqc-lead {
+  margin: 18px 0 0;
+  max-width: 560px;
+  font-size: clamp(15.5px, 1.5vw, 17px);
+  line-height: 1.7;
+  color: var(--nw-on-dark);
+}
+
+/* ── Progress ── */
+.nw-site .nwqc-main {
+  padding-bottom: var(--nw-sec-lg);
+}
+.nw-site .nw-wrap.nwqc-main-wrap {
+  margin-top: -56px;
+  position: relative;
+}
+.nw-site .nwqc-steps {
+  padding: 20px clamp(16px, 3vw, 32px);
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwqc-steps-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.nw-site .nwqc-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.nw-site .nwqc-step-done {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--nw-ink);
+  color: var(--nw-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwqc-step-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-ink);
+  text-decoration: none;
+}
+.nw-site .nwqc-step-rule {
+  flex: 0 0 32px;
+  height: 1px;
+  background: var(--nw-ink);
+}
+.nw-site .nwqc-step-rule--todo {
+  height: 0;
+  background: none;
+  border-top: 1px dashed var(--nw-line-heavy);
+}
+.nw-site .nwqc-step-no {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--nw-ink);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.nw-site .nwqc-step-no--todo {
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-muted);
+}
+.nw-site .nwqc-step-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-step-label--todo {
+  font-weight: 500;
+  color: var(--nw-muted);
+}
+
+/* ── Form ── */
+.nw-site .nwqc-layout {
+  margin-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+.nw-site .nwqc-form {
+  flex: 999 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0;
+  padding: clamp(22px, 3.5vw, 44px);
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwqc-form-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site .nwqc-form-intro {
+  min-width: 0;
+  max-width: 460px;
+}
+.nw-site .nwqc-form-title {
+  margin: 0;
+  font-size: var(--nw-fs-h3);
+  line-height: 1.1;
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-form-lead {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwqc-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 0 1 260px;
+  min-width: 220px;
+}
+.nw-site .nwqc-pick-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwqc-pick-box {
+  position: relative;
+}
+.nw-site .nwqc-select {
+  width: 100%;
+  height: 46px;
+  margin: 0;
+  padding: 0 38px 0 12px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  background: var(--nw-white);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: normal;
+  color: var(--nw-ink);
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  cursor: default;
+  transition: border-color 0.2s;
+}
+.nw-site .nwqc-select-chev {
+  position: absolute;
+  right: 12px;
+  top: 15px;
+  pointer-events: none;
+}
+.nw-site .nwqc-alert {
+  /* Brought into view after a failed send, clear of the sticky header. */
+  scroll-margin-top: calc(72px + 40px);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-danger-line);
+  background: var(--nw-danger-bg);
+  color: var(--nw-danger-dark);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.nw-site .nwqc-alert svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.nw-site .nwqc-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 18px 16px;
+}
+.nw-site .nwqc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nw-site .nwqc-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-req {
+  color: var(--nw-danger);
+}
+.nw-site .nwqc-input {
+  height: 50px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  background: var(--nw-white);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--nw-ink);
+  box-sizing: border-box;
+  /* A field focused after a failed send clears the sticky header, label too. */
+  scroll-margin-top: calc(72px + 40px);
+  transition: border-color 0.2s;
+}
+.nw-site .nwqc-input::placeholder {
+  color: var(--nw-muted);
+  opacity: 1;
+}
+/* Focus, as the board draws it: the violet ring just outside the field, its
+   border unchanged (the board's inline border outranks its focus and hover
+   border colours, so neither shows). */
+.nw-site :is(.nwqc-input, .nwqc-select):focus,
+.nw-site :is(.nwqc-input, .nwqc-select):focus-visible {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 1px;
+}
+/* Errors: the design system's form state, as the Contact board draws it. */
+.nw-site .nwqc-input[aria-invalid='true'] {
+  border-color: var(--nw-danger);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+.nw-site .nwqc-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--nw-danger);
+}
+.nw-site .nwqc-error svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+/* The honeypot: out of sight, out of the tab order, hidden from readers. */
+.nw-site .nwqc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Estate planning: consultation or will */
+.nw-site .nwqc-choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.nw-site .nwqc-choice-legend {
+  padding: 0;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-opts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 12px;
+}
+.nw-site .nwqc-opt {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 18px;
+  border-radius: var(--nw-r-sm);
+  min-height: 44px;
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line-strong);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.3333px;
+  font-weight: 400;
+  text-align: left;
+  color: var(--nw-ink);
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site .nwqc-opt:hover {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwqc-opt[aria-pressed='true'] {
+  border-color: var(--nw-ink);
+  box-shadow: inset 0 0 0 1px var(--nw-ink);
+}
+.nw-site .nwqc-radio {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  border-radius: 50%;
+  border: 1px solid var(--nw-on-dark-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.nw-site .nwqc-opt[aria-pressed='true'] .nwqc-radio {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwqc-radio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nw-ink);
+}
+.nw-site .nwqc-opt-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-opt-title--badge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.nw-site .nwqc-opt-badge {
+  padding: 2px 6px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nw-text);
+}
+.nw-site .nwqc-opt-text {
+  display: block;
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--nw-muted);
+}
+
+/* Actions */
+.nw-site .nwqc-actions {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 6px;
+}
+.nw-site .nw-outline.nwqc-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 22px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 500;
+}
+.nw-site .nw-btn.nwqc-submit {
+  flex: 1 1 260px;
+  max-width: 340px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 28px;
+  border-radius: var(--nw-r-sm);
+  font-size: 16px;
+  font-weight: 600;
+}
+/* Keyboard focus, as the board draws it: the ring alone, the fill unchanged
+   (navigator.css darkens .nw-btn on focus as on hover). */
+.nw-site .nw-btn.nwqc-submit:focus-visible:not(:hover, :disabled) {
+  background: var(--nw-violet);
+}
+.nw-site .nwqc-note {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--nw-muted);
+}
+.nw-site .nwqc-note svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.nw-site .nwqc-note a {
+  color: var(--nw-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nw-site .nwqc-note a:hover {
+  text-decoration-thickness: 1px;
+}
+
+/* Partners */
+.nw-site .nwqc-partners {
+  padding-top: 22px;
+  border-top: 1px solid var(--nw-line);
+}
+.nw-site .nwqc-partners-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwqc-partners-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwqc-partners-count {
+  font-size: 15px;
+  font-style: italic;
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-logos {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  border-top: 1px solid var(--nw-line);
+  border-left: 1px solid var(--nw-line);
+}
+.nw-site .nwqc-logo {
+  height: 60px;
+  padding: 10px;
+  border-right: 1px solid var(--nw-line);
+  border-bottom: 1px solid var(--nw-line);
+  background: var(--nw-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.nw-site .nwqc-logo img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 84px;
+  max-height: 32px;
+  object-fit: contain;
+  filter: grayscale(1);
+  opacity: 0.85;
+}
+.nw-site .nwqc-logo-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--nw-text);
+}
+
+/* ── Sidebar ── */
+.nw-site .nwqc-aside {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.nw-site .nwqc-svc {
+  position: relative;
+  overflow: hidden;
+  padding: 28px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-ink);
+  color: var(--nw-paper);
+}
+.nw-site .nwqc-svc-inner {
+  position: relative;
+}
+.nw-site .nwqc-svc-kicker {
+  margin: 0;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwqc-svc-title {
+  margin: 14px 0 0;
+  font-size: var(--nw-fs-h3);
+  line-height: 1.1;
+  color: var(--nw-paper);
+}
+.nw-site .nwqc-svc-desc {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--nw-cream);
+}
+.nw-site .nwqc-svc-summary {
+  margin: 14px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwqc-chips {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nw-site .nwqc-chip {
+  padding: 5px 9px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 12px;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwqc-card {
+  padding: 24px 26px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwqc-card-title {
+  margin: 0;
+  font-size: var(--nw-fs-h5);
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-why {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.nw-site .nwqc-why li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--nw-paper-2);
+  font-size: 14px;
+  color: var(--nw-text);
+}
+.nw-site .nwqc-how {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.nw-site .nwqc-how li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.nw-site .nwqc-how-done {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--nw-ink);
+  color: var(--nw-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwqc-how-no {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--nw-ink);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.nw-site .nwqc-how-no--todo {
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-muted);
+}
+.nw-site .nwqc-how-text {
+  padding-top: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--nw-muted);
+}
+.nw-site .nwqc-how-text--now {
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-talk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwqc-talk-title {
+  font-size: 18px;
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-talk-accent {
+  font-style: italic;
+  font-weight: 400;
+}
+.nw-site .nwqc-talk-links {
+  display: flex;
+  gap: 8px;
+}
+.nw-site .nwqc-iconlink {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nw-ink);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwqc-iconlink:hover {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+
+/* ── Unknown service ── */
+.nw-site .nwqc-missing {
+  padding: var(--nw-sec-lg) 0;
+}
+.nw-site .nw-wrap.nwqc-missing-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.nw-site .nwqc-missing-title {
+  margin: 0;
+  font-size: var(--nw-fs-h2s);
+  line-height: 1.1;
+  color: var(--nw-ink);
+}
+.nw-site .nwqc-missing-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+
+/* ── Narrow screens ── */
+@media (max-width: 860px) {
+  .nw-site .nwqc-hide-md {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  /* The actions stack, back above continue, each full width, and the
+     continue button steps down to the standard 48px, as on the board. */
+  .nw-site .nwqc-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site .nwqc-actions > :is(.nwqc-back, .nwqc-submit) {
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+  .nw-site .nw-btn.nwqc-submit {
+    height: 48px;
+    font-size: 15px;
+  }
+}

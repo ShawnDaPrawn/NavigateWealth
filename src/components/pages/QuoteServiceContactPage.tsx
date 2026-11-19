@@ -5,7 +5,7 @@
  * Shareable URL: /get-quote/:service/contact
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router';
 import { toast } from 'sonner';
 import { SEO, createWebPageSchema } from '../seo/SEO';
@@ -26,10 +26,34 @@ import {
   saveGatewaySession,
   clearGatewaySession,
 } from './quote/gatewaySession';
+import { QUOTE_CONTACT_POINTS, QUOTE_CONTACT_STEPS } from './quoteServiceContactPageData';
+import { SITE_DESIGN } from '../../site/design';
+
+const NavigatorQuoteContactPage = React.lazy(() =>
+  import('../../site/pages/NavigatorQuoteContactPage').then((m) => ({
+    default: m.NavigatorQuoteContactPage,
+  })),
+);
 
 type EstateChoice = 'consultation' | 'will';
 
+/**
+ * The quote funnel's "your details" step. The build's design switch picks the
+ * layout; both read the services from quote/constants.ts and the sidebar's
+ * lists from quoteServiceContactPageData.ts, and send the same lead.
+ */
 export function QuoteServiceContactPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorQuoteContactPage />
+      </Suspense>
+    );
+  }
+  return <LegacyQuoteServiceContactPage />;
+}
+
+function LegacyQuoteServiceContactPage() {
   const { service: serviceParam } = useParams<{ service: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -433,12 +457,7 @@ export function QuoteServiceContactPage() {
                 {selectedConfig.heroDescription}
               </p>
               <div className="space-y-2.5">
-                {[
-                  'Independent, unbiased advice',
-                  'Compare options from top providers',
-                  'No cost, no obligation',
-                  'Personalised to your needs',
-                ].map((point) => (
+                {QUOTE_CONTACT_POINTS.map((point) => (
                   <div key={point} className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                     <span className="text-sm text-gray-700">{point}</span>
@@ -450,11 +469,7 @@ export function QuoteServiceContactPage() {
             <div className="bg-gradient-to-br from-primary/5 to-primary/[0.02] rounded-2xl border border-primary/10 p-6">
               <h4 className="text-sm font-bold text-gray-900 mb-3">How It Works</h4>
               <div className="space-y-3">
-                {[
-                  { step: '1', text: 'Choose your service' },
-                  { step: '2', text: "Share your details (you're here!)" },
-                  { step: '3', text: 'Tell us your needs and receive your quote' },
-                ].map(({ step, text }) => (
+                {QUOTE_CONTACT_STEPS.map(({ step, text }) => (
                   <div key={step} className="flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {step}
