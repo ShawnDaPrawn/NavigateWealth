@@ -279,11 +279,10 @@ describe('Navigator quote contact step', () => {
     expect(within(progress).getAllByRole('listitem')[1].getAttribute('aria-current')).toBe('step');
   });
 
-  it("uses the live page's words where the board promises more", async () => {
+  it("uses the board's eyebrow and the live page's words elsewhere", async () => {
     await renderPage();
     const text = document.body.textContent ?? '';
-    expect(text).not.toMatch(/minute/i);
-    expect(text).toContain('Step 2 of 3 — Your details');
+    expect(text).toContain('Step 2 of 3 — Your details · about a minute left');
     expect(liveSource).toContain('Step 2 of 3 — Your details');
     expect(text).toContain(
       'Tell us who you are so we can prepare your personalised quote. Next step: your specific needs.',

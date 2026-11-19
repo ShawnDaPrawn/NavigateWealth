@@ -16,10 +16,8 @@
  * and the sidebar's lists from quoteServiceContactPageData.ts — both designs
  * read them there. The firm's number is companyFacts'.
  *
- * Where the board says more than the live page does, the live page's words
- * are used: the eyebrow reads "Step 2 of 3 — Your details", without the
- * board's "about a minute left", since how long the next step takes depends
- * on the service.
+ * The eyebrow reads as the board draws it: "Step 2 of 3 — Your details ·
+ * about a minute left" (the live page stops at "Your details").
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -212,7 +210,7 @@ export function NavigatorQuoteContactPage() {
 
       <QuoteContactHero
         label={config.label}
-        eyebrow="Step 2 of 3 — Your details"
+        eyebrow="Step 2 of 3 — Your details · about a minute left"
         lead="Tell us who you are so we can prepare your personalised quote. Next step: your specific needs."
         servicesHref={SERVICES_HREF}
       />
