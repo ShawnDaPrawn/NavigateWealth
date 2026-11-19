@@ -1,0 +1,573 @@
+/*
+ * Navigator sitemap page — ported from the "Sitemap" board of the Claude
+ * Design canvas, its inline styles turned into classes.
+ *
+ * Scoped to `.nw-site`, like navigator.css. Every class is prefixed `nwsm-`.
+ *
+ * Type and boxes. The board is drawn on a 16px root and inherits the
+ * browser's "normal" line height and content-box sizing; the app's root is
+ * 14px, its base styles set line heights on p, h1–h3, button and input, and
+ * Tailwind's preflight makes every box border-box. So the page root goes back
+ * to 16px and "normal", every element the base styles reach states the
+ * board's value itself, and the boxes the board sizes with a border or
+ * padding keep content-box sizing, as they render there (a category link with
+ * a 64px minimum height is 94px tall on the board).
+ */
+
+/* ── Page ── */
+.nw-site.nwsm {
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-ink);
+  background: var(--nw-white);
+}
+/* No specificity, so any rule below wins; unlayered, so it still beats the
+   base styles' line heights. */
+:where(.nw-site.nwsm) :where(p, h1, h2, button, input, label, code) {
+  line-height: normal;
+}
+
+/* ── Hero ── */
+.nw-site .nwsm-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--nw-ink) 0%, var(--nw-ink-2) 60%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+}
+.nw-site .nwsm-fade {
+  -webkit-mask-image: radial-gradient(ellipse 75% 80% at 30% 40%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 75% 80% at 30% 40%, #000 0%, transparent 72%);
+}
+.nw-site .nwsm-glow {
+  position: absolute;
+  top: -200px;
+  right: -120px;
+  width: 640px;
+  height: 640px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 22, 38, 0.192) 0%, rgba(13, 22, 38, 0) 70%);
+  pointer-events: none;
+}
+.nw-site .nwsm-rose {
+  position: absolute;
+  right: clamp(-120px, -4vw, 0px);
+  top: 50%;
+  margin-top: -230px;
+  opacity: 0.75;
+}
+.nw-site .nwsm-hero-inner {
+  position: relative;
+  padding-top: clamp(40px, 6vw, 80px);
+  padding-bottom: clamp(48px, 6vw, 88px);
+}
+.nw-site .nwsm-hero-copy {
+  max-width: 720px;
+}
+.nw-site .nwsm-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwsm-crumb {
+  color: var(--nw-on-dark-muted);
+  text-decoration: none;
+}
+.nw-site .nwsm-crumb-here {
+  color: var(--nw-white);
+}
+.nw-site .nwsm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.nw-site .nwsm-pill span {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwsm-title {
+  margin: 22px 0 0;
+  font-size: var(--nw-fs-display);
+  line-height: 1.04;
+  color: var(--nw-white);
+}
+.nw-site .nwsm-lead {
+  margin: 20px 0 0;
+  max-width: 620px;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwsm-search {
+  position: relative;
+  margin-top: 30px;
+  max-width: 580px;
+}
+.nw-site .nwsm-search-ic {
+  position: absolute;
+  left: 18px;
+  top: 17px;
+  pointer-events: none;
+}
+.nw-site .nwsm-search-input {
+  width: 100%;
+  height: 52px;
+  margin: 0;
+  padding: 0 18px 0 48px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--nw-white);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwsm-search-input::placeholder {
+  color: var(--nw-on-dark-muted);
+  opacity: 1;
+}
+/* The board's focus state, as its stylesheet writes it: a light rule and halo
+   instead of the violet ring. (On the board the input's inline border and fill
+   override the rule and fill, leaving a faint halo; kept here so focus stays
+   clearly visible.) */
+.nw-site .nwsm-search-input:focus {
+  outline: none;
+  border-color: var(--nw-on-dark);
+  box-shadow: 0 0 0 4px rgba(246, 244, 239, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+}
+.nw-site .nwsm-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwsm-stats > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Body ── */
+.nw-site .nwsm-body {
+  padding: var(--nw-sec-sm) 0 var(--nw-sec-md);
+  background: var(--nw-paper);
+}
+
+/* "01 — Chart index". The board's hover rules also change the border colour
+   of a category card and a page link, but the cards' inline borders win, so
+   their borders stay put on hover; so they do here. */
+.nw-site .nwsm-index {
+  margin-bottom: clamp(40px, 6vw, 64px);
+}
+.nw-site .nw-sec-head.nwsm-head {
+  max-width: none;
+}
+.nw-site .nw-sec-head.nwsm-head .nw-kicker {
+  line-height: normal;
+}
+.nw-site .nw-sec-head.nwsm-head .nw-sec-title {
+  margin: 12px 0 0;
+  font-size: var(--nw-fs-h2s);
+  line-height: normal;
+}
+.nw-site .nwsm-jumps {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+}
+.nw-site .nwsm-jump {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  color: inherit;
+  text-decoration: none;
+  box-sizing: content-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s;
+}
+.nw-site .nwsm-jump:hover {
+  box-shadow: 0 18px 36px -26px rgba(17, 24, 39, 0.45);
+  transform: translateY(-2px);
+}
+.nw-site .nwsm-jump-ic {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--nw-paper);
+  color: var(--nw-ink);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwsm-jump:hover .nwsm-jump-ic {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwsm-jump-copy {
+  min-width: 0;
+}
+.nw-site .nwsm-jump-t {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nw-site .nwsm-jump-n {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--nw-muted);
+}
+
+/* Search results */
+.nw-site .nwsm-results {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.nw-site .nwsm-results-label {
+  margin: 0;
+  font-size: 15px;
+  color: var(--nw-text);
+}
+.nw-site .nwsm-clear {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: var(--nw-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nw-site .nwsm-clear--row {
+  min-height: 44px;
+}
+.nw-site .nwsm-empty {
+  padding: 64px 24px;
+  border-radius: var(--nw-r-md);
+  border: 1.5px dashed var(--nw-line-strong);
+  background: var(--nw-white);
+  text-align: center;
+}
+/* Inline on the board, so it sits on a text line like any glyph. */
+.nw-site .nwsm-empty-ic {
+  display: inline;
+  vertical-align: baseline;
+}
+.nw-site .nwsm-empty-t {
+  margin: 14px 0 0;
+  font-size: var(--nw-fs-lead);
+}
+.nw-site .nwsm-empty-p {
+  margin: 8px auto 0;
+  max-width: 420px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-muted);
+}
+
+/* ── Category cards ── */
+.nw-site .nwsm-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.nw-site .nwsm-card {
+  scroll-margin-top: 96px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  overflow: hidden;
+}
+.nw-site .nwsm-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  padding: clamp(18px, 2.4vw, 26px) clamp(18px, 2.6vw, 30px);
+  border-bottom: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwsm-card-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.nw-site .nwsm-card-ic {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwsm-ic-fallback {
+  display: flex;
+}
+.nw-site .nwsm-ic-fallback svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.75;
+}
+.nw-site .nwsm-card-copy {
+  min-width: 0;
+}
+.nw-site .nwsm-card-title {
+  margin: 0;
+  font-size: clamp(18px, 2vw, 21px);
+  color: var(--nw-ink);
+}
+.nw-site .nwsm-card-desc {
+  margin: 3px 0 0;
+  font-size: 14px;
+  color: var(--nw-muted);
+}
+.nw-site .nwsm-count {
+  padding: 5px 11px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+  font-size: 11.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwsm-links {
+  list-style: none;
+  margin: 0;
+  padding: clamp(10px, 1.6vw, 16px);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 10px;
+}
+.nw-site .nwsm-links > li {
+  display: flex;
+}
+.nw-site .nwsm-link {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-soft);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+.nw-site .nwsm-link:hover {
+  background: var(--nw-paper);
+}
+.nw-site .nwsm-link-body {
+  flex: 1;
+  min-width: 0;
+}
+.nw-site .nwsm-link-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.nw-site .nwsm-link-t {
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwsm-link-d {
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--nw-text);
+}
+.nw-site .nwsm-link-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 10px;
+}
+.nw-site .nwsm-path {
+  padding: 2px 8px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+  font-size: 11.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwsm-date {
+  font-size: 11.5px;
+  color: var(--nw-muted);
+}
+.nw-site .nwsm-link-arrow {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--nw-on-dark-muted);
+  transition:
+    color 0.2s,
+    transform 0.2s;
+}
+.nw-site .nwsm-link:hover .nwsm-link-arrow {
+  color: var(--nw-ink);
+  transform: translate(2px, -2px);
+}
+
+/* Access badges */
+.nw-site .nwsm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.nw-site .nwsm-badge--public {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: var(--nw-success);
+}
+.nw-site .nwsm-badge--auth {
+  border-color: var(--nw-cream);
+  background: var(--nw-paper);
+  color: var(--nw-ink);
+}
+.nw-site .nwsm-badge--flexible {
+  border-color: var(--nw-line);
+  background: var(--nw-paper-3);
+  color: var(--nw-text);
+}
+
+/* ── Help ── */
+.nw-site .nwsm-help {
+  margin-top: clamp(40px, 6vw, 64px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: 20px;
+}
+.nw-site .nwsm-about {
+  padding: clamp(22px, 3vw, 32px);
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwsm-help-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+}
+.nw-site .nwsm-help-p {
+  margin: 12px 0 0;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+.nw-site .nwsm-legend {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--nw-text);
+}
+.nw-site .nwsm-legend > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.nw-site .nwsm-next {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(22px, 3vw, 32px);
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwsm-next-copy {
+  position: relative;
+}
+.nw-site .nwsm-next .nwsm-help-p {
+  color: var(--nw-on-dark);
+}
+.nw-site .nwsm-next-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+/* The board's buttons are full-width rows with the arrow at the end. */
+.nw-site .nwsm-next .nwsm-next-btn {
+  display: flex;
+  justify-content: space-between;
+  height: auto;
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 600;
+}
+/* Plain links on the board, so content-box: 50px tall, where the button is
+   48px. Their inline "text-decoration: none" also beats the board's hover
+   underline, so nothing changes on hover. */
+.nw-site .nwsm-next-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--nw-white);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  box-sizing: content-box;
+}
+
+@media (max-width: 860px) {
+  .nw-site .nwsm-rose {
+    display: none;
+  }
+}

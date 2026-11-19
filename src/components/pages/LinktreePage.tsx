@@ -2,7 +2,7 @@
  * Public link-in-bio page for /links.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowUpRight,
   BookOpen,
@@ -25,32 +25,20 @@ import { normalizeNavigateWealthUrl, SITE_ORIGIN } from '../../utils/siteOrigin'
 import { XIcon } from '../shared/XIcon';
 import { SEO } from '../seo/SEO';
 import navigateWealthLogo from '/brand-assets/navigate-wealth-logo-black-purple.png';
+import { SITE_DESIGN } from '../../site/design';
+import {
+  formatDisplayUrl,
+  seoProps,
+  SOCIAL_LABEL_MAP,
+  type LinktreeLink,
+  type LinktreeSettings,
+} from './linktree/linktreeData';
 
-interface LinktreeLink {
-  id: string;
-  title: string;
-  url: string;
-  description?: string;
-  enabled: boolean;
-  order: number;
-  clicks: number;
-}
-
-interface LinktreeSettings {
-  title: string;
-  bio: string;
-  avatarUrl?: string;
-  theme: 'navy' | 'gold' | 'light' | 'dark';
-  showBranding: boolean;
-  socialProfiles?: Record<string, string>;
-}
-
-const seoProps = {
-  title: 'Navigate Wealth Links',
-  description: 'Official Navigate Wealth links, resources, services, and contact details.',
-  canonicalUrl: `${SITE_ORIGIN}/links`,
-  robotsContent: 'noindex, nofollow',
-};
+const NavigatorLinktreePage = React.lazy(() =>
+  import('../../site/pages/NavigatorLinktreePage').then((m) => ({
+    default: m.NavigatorLinktreePage,
+  })),
+);
 
 const LINK_ACCENTS = [
   { surface: 'bg-[#6d28d9]/10 border-[#6d28d9]/20', icon: 'text-[#6d28d9]' },
@@ -67,14 +55,6 @@ const SOCIAL_ICON_MAP: Record<string, React.ComponentType<{ className?: string }
   email: Mail,
 };
 
-const SOCIAL_LABEL_MAP: Record<string, string> = {
-  instagram: 'Instagram',
-  linkedin: 'LinkedIn',
-  facebook: 'Facebook',
-  twitter: 'X',
-  email: 'Email',
-};
-
 function getLinkIcon(url: string): React.ComponentType<{ className?: string }> {
   const lower = url.toLowerCase();
   if (lower.includes('instagram.com')) return Instagram;
@@ -88,19 +68,6 @@ function getLinkIcon(url: string): React.ComponentType<{ className?: string }> {
   if (lower.includes('/resources') || lower.includes('/blog')) return BookOpen;
   if (lower.includes('/services')) return FileText;
   return ExternalLink;
-}
-
-function formatDisplayUrl(url: string): string {
-  if (url.startsWith('mailto:')) return url.replace(/^mailto:/, '');
-  if (url.startsWith('tel:')) return url.replace(/^tel:/, '');
-
-  try {
-    const parsed = new URL(url);
-    const path = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, '');
-    return `${parsed.hostname}${path}`;
-  } catch {
-    return url.replace(/^https?:\/\//, '');
-  }
 }
 
 function PageBackground() {
@@ -125,7 +92,23 @@ function PageBackground() {
   );
 }
 
+/**
+ * The link-in-bio page. A bare route: no site header or footer in either
+ * design. The build's design switch picks the layout; both read the same
+ * links from the same public route.
+ */
 export function LinktreePage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorLinktreePage />
+      </Suspense>
+    );
+  }
+  return <LegacyLinktreePage />;
+}
+
+function LegacyLinktreePage() {
   const [links, setLinks] = useState<LinktreeLink[]>([]);
   const [settings, setSettings] = useState<LinktreeSettings | null>(null);
   const [loading, setLoading] = useState(true);

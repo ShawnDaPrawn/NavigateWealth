@@ -1,11 +1,33 @@
-import { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { ArrowLeft, Home, FileText, BookOpen, MessageCircle, ArrowRight } from 'lucide-react';
+import { SITE_DESIGN } from '../../site/design';
 
+const NavigatorNotFoundPage = React.lazy(() =>
+  import('../../site/pages/NavigatorNotFoundPage').then((m) => ({
+    default: m.NavigatorNotFoundPage,
+  })),
+);
+
+/**
+ * The page for any URL the app has no route for. The build's design switch
+ * picks the layout; both set the same title and noindex robots tag.
+ */
 export function NotFoundPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorNotFoundPage />
+      </Suspense>
+    );
+  }
+  return <LegacyNotFoundPage />;
+}
+
+function LegacyNotFoundPage() {
   const navigate = useNavigate();
 
   useEffect(() => {

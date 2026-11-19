@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
-import { SEO, createBreadcrumbSchema, createWebPageSchema } from '../seo/SEO';
-import { SITE_ORIGIN } from '@/utils/siteOrigin';
+import { SEO } from '../seo/SEO';
+import { SITE_DESIGN } from '../../site/design';
 import {
   Users,
   FileText,
@@ -21,60 +21,19 @@ import {
   Lock,
 } from 'lucide-react';
 import { sitemapSections } from './sitemap/sitemapData';
+import {
+  SITEMAP_SEO,
+  lastUpdatedLabel,
+  publicPages,
+  sitemapStructuredData,
+  totalPages,
+} from './sitemap/sitemapMeta';
 
-const SITEMAP_URL = `${SITE_ORIGIN}/sitemap`;
-
-const allLinks = sitemapSections.flatMap((section) => section.links);
-const totalPages = allLinks.length;
-const publicPages = allLinks.filter((link) => link.status !== 'auth-required').length;
-
-/** Most recent lastModified date across every entry, formatted for display. */
-const lastUpdatedLabel = (() => {
-  const dates = allLinks
-    .map((link) => link.lastModified)
-    .filter((value): value is string => Boolean(value))
-    .sort();
-  const latest = dates[dates.length - 1];
-  if (!latest) return null;
-  const parsed = new Date(`${latest}T00:00:00`);
-  return parsed.toLocaleDateString('en-ZA', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-})();
-
-/**
- * Structured data: WebPage + breadcrumb trail + a SiteNavigationElement listing
- * every publicly indexable page. The SiteNavigationElement helps search engines
- * understand the site hierarchy and can power rich sitelinks.
- */
-const sitemapStructuredData: Record<string, unknown> = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    createWebPageSchema(
-      'Sitemap — Navigate Wealth',
-      'Complete sitemap of the Navigate Wealth website covering every service, resource, and tool.',
-      SITEMAP_URL,
-    ),
-    createBreadcrumbSchema([{ name: 'Home', url: SITE_ORIGIN }, { name: 'Sitemap' }]),
-    {
-      '@type': 'SiteNavigationElement',
-      name: 'Navigate Wealth Site Navigation',
-      hasPart: allLinks
-        .filter(
-          (link) =>
-            link.indexable !== false && link.status !== 'auth-required' && !link.path.includes('?'),
-        )
-        .map((link) => ({
-          '@type': 'WebPage',
-          name: link.title,
-          description: link.description,
-          url: `${SITE_ORIGIN}${link.path === '/' ? '' : link.path}`,
-        })),
-    },
-  ],
-};
+const NavigatorSitemapPage = React.lazy(() =>
+  import('../../site/pages/NavigatorSitemapPage').then((m) => ({
+    default: m.NavigatorSitemapPage,
+  })),
+);
 
 function getStatusBadge(status?: string) {
   switch (status) {
@@ -107,7 +66,23 @@ function getStatusBadge(status?: string) {
   }
 }
 
+/**
+ * The sitemap page. The build's design switch picks the layout; both read the
+ * sections from sitemap/sitemapData.ts and the SEO tags from
+ * sitemap/sitemapMeta.ts.
+ */
 export function SitemapPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorSitemapPage />
+      </Suspense>
+    );
+  }
+  return <LegacySitemapPage />;
+}
+
+function LegacySitemapPage() {
   const [query, setQuery] = useState('');
 
   const filteredSections = useMemo(() => {
@@ -131,18 +106,7 @@ export function SitemapPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <SEO
-        title="Sitemap — Navigate Wealth | Complete Site Navigation"
-        description="Complete sitemap of the Navigate Wealth website. Find every page, service, resource, and tool for wealth management, financial planning, and investment services in South Africa."
-        keywords={[
-          'Navigate Wealth sitemap',
-          'financial planning South Africa',
-          'wealth management pages',
-          'site navigation',
-        ]}
-        canonicalUrl={SITEMAP_URL}
-        structuredData={sitemapStructuredData}
-      />
+      <SEO {...SITEMAP_SEO} structuredData={sitemapStructuredData} />
 
       {/* Hero Section — matches the site-standard dark hero (Home, Services, Why Us) */}
       <section className="relative overflow-hidden bg-[#111827]" aria-label="Sitemap hero">
