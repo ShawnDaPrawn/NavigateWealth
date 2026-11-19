@@ -1,0 +1,596 @@
+/*
+ * Navigator contact page — ported from the "Contact" board of the Claude
+ * Design canvas, its inline styles turned into classes. Section labels and
+ * titles, the grid texture, the entrance animation and the honeypot come from
+ * sections.css; buttons and tokens from navigator.css.
+ *
+ * Scoped to `.nw-site`, like navigator.css. Every class is prefixed `nwct-`.
+ */
+
+/* The board's page has a 16px base and the browser's normal line height. The
+   site's root is 14px and its global base typography gives p, headings,
+   labels, buttons and inputs line heights of their own; restated here at
+   zero specificity, so every rule below that sets a line height still wins. */
+.nw-site.nwct {
+  font-size: 16px;
+  line-height: normal;
+}
+:where(.nw-site.nwct) :where(p, h1, h2, h3, label, button, input, textarea, dt, dd) {
+  line-height: inherit;
+}
+
+/* ── Hero ── */
+.nw-site .nwct-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--nw-ink) 0%, var(--nw-ink-2) 60%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+}
+.nw-site .nwct-hero > .nw-grid-bg {
+  -webkit-mask-image: radial-gradient(ellipse 75% 80% at 30% 40%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 75% 80% at 30% 40%, #000 0%, transparent 72%);
+}
+.nw-site .nwct-hero-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+  gap: 48px;
+  align-items: center;
+  padding-top: clamp(48px, 7vw, 88px);
+  padding-bottom: clamp(56px, 8vw, 96px);
+}
+.nw-site .nwct-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.nw-site .nwct-pill span {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwct-title {
+  margin: 28px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-display);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.012em;
+  color: var(--nw-white);
+}
+.nw-site .nwct-lead {
+  margin: 24px 0 0;
+  max-width: 540px;
+  font-size: var(--nw-fs-lead);
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwct-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 36px;
+  max-width: 560px;
+}
+/* On hover the board changes the fill only: its border stays put. */
+.nw-site .nwct-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--nw-white);
+  text-decoration: none;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+.nw-site .nwct-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--nw-white);
+}
+.nw-site .nwct-chip-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.088);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwct-chip-l {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwct-chip-v {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Office chart */
+.nw-site .nwct-chart {
+  position: relative;
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-ink-deep);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.8);
+}
+.nw-site .nwct-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.nw-site .nwct-chart-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nw-site .nwct-chart-fact {
+  padding: 20px 24px;
+}
+.nw-site .nwct-chart-fact + .nwct-chart-fact {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nw-site .nwct-chart-l {
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwct-chart-v {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--nw-line);
+}
+.nw-site .nwct-chart-s {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--nw-on-dark-muted);
+}
+
+/* ── Other ways to reach us ── */
+.nw-site .nwct-routes {
+  background: var(--nw-white);
+  border-bottom: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwct-routes-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.nw-site .nwct-route {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 100%;
+  padding: 24px 20px 24px 0;
+  min-height: 44px;
+  color: var(--nw-ink);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nw-site .nwct-routes-list > li:last-child .nwct-route {
+  padding: 24px 0;
+}
+.nw-site .nwct-route:hover {
+  color: var(--nw-ink);
+}
+.nw-site .nwct-route-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(13, 22, 38, 0.06);
+  color: var(--nw-ink);
+}
+.nw-site .nwct-route-icon--info {
+  background: rgba(14, 116, 144, 0.1);
+  color: #1d4ed8;
+}
+.nw-site .nwct-route-icon--success {
+  background: rgba(21, 128, 61, 0.1);
+  color: var(--nw-success);
+}
+.nw-site .nwct-route-t {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+.nw-site .nwct-route-d {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--nw-muted);
+}
+
+/* ── How can we help ── */
+.nw-site .nwct-help {
+  padding: var(--nw-sec-lg) 0;
+  background: var(--nw-paper);
+}
+.nw-site .nwct-help-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+}
+.nw-site .nw-sec-head.nwct-head {
+  max-width: 640px;
+}
+.nw-site .nwct-tablist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 5px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line-soft);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwct-tab {
+  height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--nw-r-sm);
+  background: transparent;
+  color: var(--nw-text);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site .nwct-tab:hover {
+  color: var(--nw-ink);
+  background: rgba(255, 255, 255, 0.7);
+}
+.nw-site .nwct-tab[aria-selected='true'] {
+  background: var(--nw-white);
+  color: var(--nw-violet);
+  box-shadow:
+    0 1px 2px rgba(17, 24, 39, 0.08),
+    0 0 0 1px var(--nw-line);
+}
+
+.nw-site .nwct-grid {
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+
+/* Audience card */
+.nw-site .nwct-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(24px, 3vw, 40px);
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwct-card[hidden] {
+  display: none;
+}
+.nw-site .nwct-card-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.nw-site .nwct-card-code {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwct-card-title {
+  margin: 12px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h3);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-white);
+}
+.nw-site .nwct-card-desc {
+  margin: 12px 0 0;
+  font-size: var(--nw-fs-body);
+  line-height: 1.65;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwct-services {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.nw-site .nwct-services li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--nw-line);
+}
+.nw-site .nwct-services svg {
+  flex-shrink: 0;
+}
+.nw-site .nwct-card-dl {
+  margin: 32px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.nw-site .nwct-card-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.nw-site .nwct-card-row:last-child {
+  border-bottom: 0;
+}
+.nw-site .nwct-card-row dt {
+  font-size: 12px;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwct-card-row dd {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Form */
+.nw-site .nwct-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: clamp(24px, 3vw, 40px);
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwct-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwct-form-title,
+.nw-site .nwct-done-title {
+  margin: 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h4);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+.nw-site .nwct-badge {
+  padding: 5px 10px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(13, 22, 38, 0.048);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--nw-ink);
+}
+.nw-site .nwct-alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-danger-line);
+  background: var(--nw-danger-bg);
+  color: var(--nw-danger-dark);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.nw-site .nwct-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.nw-site .nwct-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.nw-site .nwct-field--grow {
+  flex: 1;
+}
+.nw-site .nwct-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwct-req {
+  color: var(--nw-danger);
+}
+.nw-site .nwct-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 48px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  background: var(--nw-paper-3);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--nw-ink);
+  /* A field focused after a failed send clears the sticky header, label too. */
+  scroll-margin-top: calc(72px + 32px);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+.nw-site textarea.nwct-input {
+  flex: 1;
+  height: auto;
+  min-height: 150px;
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.nw-site .nwct-input::placeholder {
+  color: var(--nw-on-dark-muted);
+  opacity: 1;
+}
+/* Focus: the design system's violet edge on white, with the board's soft
+   ring. (On the board the field's inline border and fill outrank its focus
+   rule, leaving only a faint ring — too weak to show where focus is.) */
+.nw-site .nwct-input:focus {
+  outline: none;
+  border-color: var(--nw-violet);
+  background: var(--nw-white);
+  box-shadow: 0 0 0 3px rgba(13, 22, 38, 0.09);
+}
+.nw-site .nwct-input[aria-invalid='true'] {
+  border-color: var(--nw-danger);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+.nw-site .nwct-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--nw-danger);
+}
+.nw-site .nwct-error svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.nw-site .nwct-submit {
+  width: 100%;
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+}
+.nw-site .nwct-note {
+  margin: -4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--nw-muted);
+}
+
+/* Confirmation */
+.nw-site .nwct-done {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: clamp(24px, 3vw, 40px);
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwct-done-icon {
+  width: 48px;
+  height: 48px;
+  box-sizing: content-box;
+  border-radius: 50%;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: var(--nw-success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwct-done-title:focus {
+  outline: none;
+}
+.nw-site .nwct-done-text {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwct-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwct-steps li {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwct-step-no {
+  flex: 0 0 28px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--nw-muted);
+}
+.nw-site .nwct-step-text {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--nw-text);
+}
+.nw-site .nwct-step-text strong {
+  color: var(--nw-ink);
+}
+.nw-site .nwct-done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ── Phones ── */
+@media (max-width: 640px) {
+  .nw-site .nwct :is(h1, h2, h3) {
+    overflow-wrap: break-word;
+  }
+  .nw-site .nwct-tablist {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .nw-site .nwct-tab {
+    flex: 1 1 auto;
+    padding: 0 10px;
+    white-space: normal;
+    text-align: center;
+  }
+  .nw-site .nwct-submit {
+    height: 48px;
+    font-size: 15px;
+  }
+}

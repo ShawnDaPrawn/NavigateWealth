@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { SEO, createContactPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -16,15 +16,37 @@ import {
   MessageCircle,
   Users,
   CheckCircle,
-  Building,
-  UserCheck,
   Loader2,
 } from 'lucide-react';
 import { ThankYouModal } from '../modals/ThankYouModal';
 import { submitContactEnquiry } from '../../services/contactEnquiry';
 import { toast } from 'sonner';
+import { SITE_DESIGN } from '../../site/design';
+import { clientTypes } from './contactPageData';
 
+const NavigatorContactPage = React.lazy(() =>
+  import('../../site/pages/NavigatorContactPage').then((m) => ({
+    default: m.NavigatorContactPage,
+  })),
+);
+
+/**
+ * The contact page. The build's design switch picks the layout; both read the
+ * audiences from contactPageData.ts and send enquiries through the same
+ * client, so a lead lands in the same place whichever design is live.
+ */
 export function ContactPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorContactPage />
+      </Suspense>
+    );
+  }
+  return <LegacyContactPage />;
+}
+
+function LegacyContactPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -133,52 +155,6 @@ export function ContactPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const clientTypes = {
-    individuals: {
-      label: 'Individuals',
-      icon: Users,
-      phone: '+27 (0)12 667 2505',
-      email: 'info@navigatewealth.co',
-      description:
-        'Personal wealth management and financial planning for individuals and families.',
-      services: [
-        'Personal Investment Management',
-        'Retirement Planning',
-        'Risk Management',
-        'Estate Planning',
-        'Tax Planning',
-      ],
-    },
-    business: {
-      label: 'Business',
-      icon: Building,
-      phone: '+27 (0)12 667 2505',
-      email: 'info@navigatewealth.co',
-      description: 'Comprehensive financial solutions for businesses of all sizes.',
-      services: [
-        'Corporate Investment Solutions',
-        'Employee Benefits',
-        'Business Risk Management',
-        'Corporate Tax Planning',
-        'Executive Benefits',
-      ],
-    },
-    advisors: {
-      label: 'Advisors',
-      icon: UserCheck,
-      phone: '+27 (0)12 667 2505',
-      email: 'info@navigatewealth.co',
-      description: 'Succession planning and practice transitions for financial advisers.',
-      services: [
-        'Succession Planning',
-        'Practice Valuation',
-        'Practice Sales',
-        'Client Transitions',
-        'Legacy Planning',
-      ],
-    },
   };
 
   return (
