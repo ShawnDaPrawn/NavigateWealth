@@ -6,11 +6,33 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { Mail, ArrowLeft, Shield, CheckCircle, Lock, Clock, AlertCircle } from 'lucide-react';
 import { getUserErrorMessage } from '../../utils/errorUtils';
 import { useNavigate, Link } from 'react-router';
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { MobileAuthLayout } from './auth/MobileAuthLayout';
 import { useIsStandalone } from '../../hooks/useIsStandalone';
+import { SITE_DESIGN } from '../../site/design';
 
+const NavigatorForgotPasswordPage = lazy(() =>
+  import('../../site/pages/NavigatorForgotPasswordPage').then((m) => ({
+    default: m.NavigatorForgotPasswordPage,
+  })),
+);
+
+/**
+ * The forgot-password page. The build's design switch picks the layout; both
+ * ask for the reset link through the same sendPasswordResetEmail call.
+ */
 export function ForgotPasswordPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorForgotPasswordPage />
+      </Suspense>
+    );
+  }
+  return <LegacyForgotPasswordPage />;
+}
+
+function LegacyForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
