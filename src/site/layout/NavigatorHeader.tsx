@@ -221,7 +221,12 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
               <Compass size={16} strokeWidth={1.75} aria-hidden="true" />
               Ask Vasco
             </Link>
-            <Link className="nwh-link" to="/resources" aria-current={current('/resources')}>
+            <Link
+              className="nwh-link"
+              to="/resources"
+              aria-current={current('/resources')}
+              data-active={pathname.startsWith('/resources/') ? 'true' : undefined}
+            >
               Resources
             </Link>
             <Link

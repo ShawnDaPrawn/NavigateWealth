@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { Suspense, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Link, useSearchParams, useLocation } from 'react-router';
 import DOMPurify from 'dompurify';
 import { SEO, createWebPageSchema } from '../seo/SEO';
@@ -13,6 +13,13 @@ import { FileText, Shield, Scale, Archive, Mail, Phone, Eye, Printer } from 'luc
 import { toast } from 'sonner';
 import { escapeHtmlText, navigateWealthPdfDocumentTitle } from '../../utils/pdfPrintTitle';
 import { BASE_PDF_CSS } from '../shared/pdf';
+import { SITE_DESIGN } from '../../site/design';
+
+const NavigatorLegalPage = React.lazy(() =>
+  import('../../site/pages/NavigatorLegalPage').then((m) => ({
+    default: m.NavigatorLegalPage,
+  })),
+);
 
 // ============================================================================
 // TYPES
@@ -222,7 +229,23 @@ function LegalBlockRenderer({ blocks, title }: { blocks: LegalBlock[]; title: st
 // LEGAL PAGE
 // ============================================================================
 
+/**
+ * The Legal & Compliance hub (/legal). The build's design switch picks the
+ * layout; both list the same documents and keep the same `?section=` tabs, so
+ * the footer's deep links land on the right section whichever design is live.
+ */
 export function LegalPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorLegalPage />
+      </Suspense>
+    );
+  }
+  return <LegacyLegalPage />;
+}
+
+function LegacyLegalPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('legal-notices');

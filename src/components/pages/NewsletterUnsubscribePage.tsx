@@ -1,23 +1,41 @@
-import { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { api } from '../../utils/api/client';
 import { SEO } from '../seo/SEO';
+import { SITE_DESIGN } from '../../site/design';
+import { NEWSLETTER_UNSUBSCRIBE_SEO as seoProps } from './newsletterStatusData';
 
+const NavigatorNewsletterUnsubscribePage = React.lazy(() =>
+  import('../../site/pages/NavigatorNewsletterUnsubscribePage').then((m) => ({
+    default: m.NavigatorNewsletterUnsubscribePage,
+  })),
+);
+
+/**
+ * The unsubscribe page every newsletter links to. The build's design switch
+ * picks the layout; both unsubscribe through the same endpoint and emit the
+ * same SEO tags (newsletterStatusData.ts).
+ */
 export function NewsletterUnsubscribePage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorNewsletterUnsubscribePage />
+      </Suspense>
+    );
+  }
+  return <LegacyNewsletterUnsubscribePage />;
+}
+
+function LegacyNewsletterUnsubscribePage() {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<'initial' | 'loading' | 'success' | 'error'>('initial');
   const [message, setMessage] = useState('');
 
   const email = searchParams.get('email');
-  const seoProps = {
-    title: 'Newsletter Unsubscribe | Navigate Wealth',
-    description: 'Newsletter unsubscribe page for Navigate Wealth.',
-    canonicalUrl: 'https://www.navigatewealth.co/newsletter/unsubscribe',
-    robotsContent: 'noindex, nofollow',
-  };
 
   const handleUnsubscribe = async () => {
     if (!email) {

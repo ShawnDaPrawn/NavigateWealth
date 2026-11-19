@@ -1,0 +1,440 @@
+/*
+ * Navigator 404 page — ported from the "NotFound" board of the Claude Design
+ * canvas, its inline styles turned into classes.
+ *
+ * Scoped to `.nw-site`, like navigator.css. Every class is prefixed `nwnf-`.
+ *
+ * Type and boxes, as in sitemap.css: the board is drawn on a 16px root with
+ * the browser's "normal" line height and content-box sizing, so the page root
+ * goes back to 16px and "normal", every element the app's base styles reach
+ * states the board's value itself, and the boxes the board sizes with padding
+ * or a border keep content-box sizing (a 36px chip is 38px tall there).
+ */
+
+/* ── Page ── */
+.nw-site.nwnf {
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-ink);
+  background: var(--nw-white);
+}
+/* No specificity, so any rule below wins; unlayered, so it still beats the
+   base styles' line heights. */
+:where(.nw-site.nwnf) :where(p, h1, h2, button, input, label, code) {
+  line-height: normal;
+}
+
+/* ── Hero ── */
+.nw-site .nwnf-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--nw-ink) 0%, var(--nw-ink-2) 60%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+}
+.nw-site .nwnf-fade {
+  -webkit-mask-image: radial-gradient(ellipse 70% 75% at 50% 45%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 75% at 50% 45%, #000 0%, transparent 75%);
+}
+.nw-site .nwnf-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 760px;
+  height: 760px;
+  margin: -380px 0 0 -380px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 22, 38, 0.156) 0%, rgba(13, 22, 38, 0) 66%);
+  pointer-events: none;
+}
+.nw-site .nwnf-hero-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: clamp(56px, 8vw, 104px);
+  padding-bottom: clamp(64px, 9vw, 112px);
+}
+.nw-site .nwnf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+@keyframes nwnfBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.nw-site .nwnf-blink {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fde68a;
+  animation: nwnfBlink 1.6s ease-in-out infinite;
+}
+.nw-site .nwnf-badge-t {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwnf-digits {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 1.5vw, 18px);
+  margin-top: 28px;
+}
+/* 5.5rem–11rem on the board's 16px root. */
+.nw-site .nwnf-digit {
+  font-size: clamp(88px, 16vw, 176px);
+  line-height: 0.9;
+  color: var(--nw-white);
+}
+.nw-site .nwnf-compass {
+  width: clamp(84px, 13vw, 168px);
+  height: clamp(84px, 13vw, 168px);
+}
+@keyframes nwnfSearch {
+  0% {
+    transform: rotate(-38deg);
+  }
+  18% {
+    transform: rotate(64deg);
+  }
+  34% {
+    transform: rotate(12deg);
+  }
+  52% {
+    transform: rotate(148deg);
+  }
+  70% {
+    transform: rotate(96deg);
+  }
+  86% {
+    transform: rotate(-12deg);
+  }
+  100% {
+    transform: rotate(-38deg);
+  }
+}
+.nw-site .nwnf-needle {
+  transform-origin: 60px 60px;
+  animation: nwnfSearch 7s cubic-bezier(0.45, 0.05, 0.3, 1) infinite;
+}
+.nw-site .nwnf-title {
+  margin: 32px 0 0;
+  font-size: var(--nw-fs-h1s);
+  line-height: 1.08;
+  color: var(--nw-white);
+}
+.nw-site .nwnf-lead {
+  margin: 16px 0 0;
+  max-width: 520px;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwnf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 36px;
+}
+.nw-site .nwnf-actions .nwnf-action {
+  gap: 10px;
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: normal;
+}
+
+/* ── Recover ── */
+.nw-site .nwnf-recover {
+  padding: var(--nw-sec-md) 0;
+  background: var(--nw-paper);
+}
+.nw-site .nwnf-recover-wrap {
+  max-width: 920px;
+}
+.nw-site .nw-sec-head.nwnf-head .nw-kicker {
+  line-height: normal;
+}
+.nw-site .nw-sec-head.nwnf-head .nw-sec-title {
+  margin: 14px 0 0;
+  font-size: var(--nw-fs-h2s);
+  line-height: 1.12;
+  text-align: center;
+  align-self: stretch;
+}
+.nw-site .nwnf-search {
+  position: relative;
+  margin: 28px auto 0;
+  max-width: 620px;
+}
+.nw-site .nwnf-search-ic {
+  position: absolute;
+  left: 18px;
+  top: 17px;
+  pointer-events: none;
+}
+.nw-site .nwnf-search-input {
+  width: 100%;
+  height: 52px;
+  margin: 0;
+  padding: 0 18px 0 48px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site .nwnf-search-input::placeholder {
+  color: var(--nw-on-dark-muted);
+  opacity: 1;
+}
+/* The board's focus state, as its stylesheet writes it: a violet rule and a
+   soft halo instead of the ring. (On the board the input's inline border
+   overrides the violet rule, leaving only the faint halo; kept here so focus
+   stays clearly visible.) */
+.nw-site .nwnf-search-input:focus {
+  outline: none;
+  border-color: var(--nw-violet);
+  box-shadow: 0 0 0 4px rgba(13, 22, 38, 0.084);
+}
+.nw-site .nwnf-popular {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+.nw-site .nwnf-popular-l {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwnf-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-white);
+  color: var(--nw-text-strong);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  box-sizing: content-box;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background-color 0.2s;
+}
+/* The board's hover also recolours the border, but the chip's inline border
+   wins there, so only the text and fill change. */
+.nw-site .nwnf-chip:hover {
+  color: var(--nw-ink);
+  background: var(--nw-paper);
+}
+.nw-site .nwnf-results {
+  margin-top: 20px;
+}
+.nw-site .nwnf-results-label {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--nw-muted);
+}
+.nw-site .nwnf-dests {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwnf-dest {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 44px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  color: inherit;
+  text-decoration: none;
+  box-sizing: content-box;
+  transition: background-color 0.2s;
+}
+/* The board's design system gives every destination row the card shadow. */
+.nw-site .nwnf-dest:hover {
+  background: var(--nw-paper);
+  box-shadow: var(--nw-shadow-2);
+}
+.nw-site .nwnf-dest-copy {
+  flex: 1;
+  min-width: 0;
+}
+.nw-site .nwnf-dest-t {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwnf-dest-d {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--nw-muted);
+}
+.nw-site .nwnf-dest-path {
+  font-size: 11.5px;
+  color: var(--nw-muted);
+}
+.nw-site .nwnf-none {
+  margin: 0;
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwnf-clear {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: var(--nw-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nw-site .nwnf-text-link {
+  color: var(--nw-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+/* Without an inline text-decoration on the board, so the browser's own
+   underline, and the board's finer one on hover. "Contact us" sets none
+   inline, which beats that hover rule. */
+.nw-site .nwnf-text-link--underline {
+  text-decoration: underline;
+}
+.nw-site .nwnf-text-link--underline:hover {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.nw-site .nwnf-cards {
+  margin-top: clamp(36px, 5vw, 56px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.nw-site .nwnf-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s,
+    transform 0.25s;
+}
+/* The card shadow is the design system's, which the board's stylesheet
+   forces over the board's own; the border keeps its colour, since the card's
+   inline border beats the board's hover rule. */
+.nw-site .nwnf-card:hover {
+  box-shadow: var(--nw-shadow-2);
+  transform: translateY(-3px);
+}
+.nw-site .nwnf-card-id {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.nw-site .nwnf-card-ic {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--nw-paper-2);
+  color: var(--nw-text);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwnf-card:hover .nwnf-card-ic {
+  background: rgba(13, 22, 38, 0.06);
+  color: var(--nw-ink);
+}
+.nw-site .nwnf-card-copy {
+  min-width: 0;
+}
+.nw-site .nwnf-card-t {
+  display: block;
+  font-size: 18px;
+  color: var(--nw-ink);
+}
+.nw-site .nwnf-card-d {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--nw-text);
+}
+.nw-site .nwnf-card-go {
+  flex-shrink: 0;
+}
+.nw-site .nwnf-help {
+  margin: 36px 0 0;
+  padding-top: 28px;
+  border-top: 1px solid var(--nw-line);
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--nw-text);
+}
+
+/* ── Phones: the board's design system sets 56px actions to 48px and 15px. ── */
+@media (max-width: 640px) {
+  .nw-site .nwnf-actions .nwnf-action {
+    height: 48px;
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwnf-needle,
+  .nw-site .nwnf-blink {
+    animation: none;
+  }
+}

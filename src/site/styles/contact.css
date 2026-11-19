@@ -508,6 +508,13 @@
   line-height: 1.55;
   color: var(--nw-muted);
 }
+.nw-site .nwct-note a {
+  color: var(--nw-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
 
 /* Confirmation */
 .nw-site .nwct-done {

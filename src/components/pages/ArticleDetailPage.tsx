@@ -17,7 +17,7 @@
  * @module pages/ArticleDetailPage
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { Suspense, lazy, useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -52,8 +52,32 @@ import {
 } from './articleDetail/articleHelpers';
 import { type ArticleDisplay } from './articleDetail/articleTypes';
 import { useArticleBySlug } from './articleDetail/useArticleBySlug';
+import { SITE_DESIGN } from '../../site/design';
 
+const NavigatorArticlePage = lazy(() =>
+  import('../../site/pages/NavigatorArticlePage').then((m) => ({
+    default: m.NavigatorArticlePage,
+  })),
+);
+
+/**
+ * The published article page. The build's design switch picks the layout;
+ * both load the article through useArticleBySlug, count the view, track the
+ * newsletter's email engagement, print the same document and emit the same
+ * SEO tags and JSON-LD.
+ */
 export function ArticleDetailPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorArticlePage />
+      </Suspense>
+    );
+  }
+  return <LegacyArticleDetailPage />;
+}
+
+function LegacyArticleDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [emailTrackingToken, setEmailTrackingToken] = useState<string | null>(null);
 

@@ -174,15 +174,14 @@
 .nw-site .nw-btn.nwfb-hero-btn {
   gap: 10px;
 }
-/*
- * As on the board: the label and arrow are wider than the 260px cap leaves
- * room for at desktop widths, and the board's arrow is the item that gives
- * way (it shrinks to a sliver). It shows again once the button runs full
- * width on phones.
- */
+/* The board's 260px cap squeezed the arrow to a sliver at desktop widths; the
+   booking button sizes to its label and arrow instead, so the arrow shows. */
+.nw-site .nw-btn.nwfb-hero-btn {
+  flex: 0 0 auto;
+  max-width: none;
+}
 .nw-site .nw-btn.nwfb-hero-btn > svg {
-  flex-shrink: 1;
-  min-width: 0;
+  flex-shrink: 0;
 }
 .nw-site .nwfb-hero-checks {
   font-size: 13.5px;

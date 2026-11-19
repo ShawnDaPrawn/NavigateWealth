@@ -169,10 +169,14 @@
   flex: 1 1 auto;
   max-width: 260px;
 }
-/* As on the board, the arrow gives way when the 260px cap leaves it no room
-   (desktop), and shows when the action runs full width (phones). */
-.nw-site.nwfa .nwfa-hero-btn > svg {
-  flex-shrink: 1;
+/* The board's 260px cap squeezed the arrow to a sliver at desktop widths; the
+   button sizes to its label and arrow instead, so the arrow shows. */
+.nw-site.nwfa .nw-btn.nwfa-hero-btn {
+  flex: 0 0 auto;
+  max-width: none;
+}
+.nw-site.nwfa .nw-btn.nwfa-hero-btn > svg {
+  flex-shrink: 0;
 }
 
 /* "Choose your course": the three solutions pages. */

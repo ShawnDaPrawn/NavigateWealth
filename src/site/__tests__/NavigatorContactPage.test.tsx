@@ -124,7 +124,12 @@ describe('Navigator contact page', () => {
         '/get-quote',
         WHATSAPP_HREF,
         '/ask-vasco',
+        '/legal/privacy-notice',
       ]),
+    );
+    // POPIA: the form says how its details are used, and links the notice.
+    expect(screen.getByRole('link', { name: 'Privacy Notice' }).getAttribute('href')).toBe(
+      '/legal/privacy-notice',
     );
     const whatsapp = screen.getByRole('link', { name: /WhatsApp/ });
     expect(whatsapp.getAttribute('target')).toBe('_blank');

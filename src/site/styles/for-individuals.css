@@ -186,9 +186,14 @@
 .nw-site .nw-btn.nwfi-hero-btn {
   gap: 10px;
 }
-/* As on the board, the arrow gives way when the label fills the button. */
+/* The board's 260px cap squeezed the arrow to a sliver at desktop widths; the
+   booking button sizes to its label and arrow instead, so the arrow shows. */
+.nw-site .nw-btn.nwfi-hero-btn {
+  flex: 0 0 auto;
+  max-width: none;
+}
 .nw-site .nw-btn.nwfi-hero-btn svg {
-  flex-shrink: 1;
+  flex-shrink: 0;
 }
 
 /* "Choose your course": the three audience pages. */

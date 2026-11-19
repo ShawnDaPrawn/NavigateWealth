@@ -116,6 +116,14 @@ describe('NavigatorHeader', () => {
     );
   });
 
+  it('marks Resources, without calling it the current page, on an article or issue', () => {
+    renderHeader('/resources/article/the-will-you-signed');
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    const resources = within(nav).getByRole('link', { name: 'Resources' });
+    expect(resources.getAttribute('data-active')).toBe('true');
+    expect(resources.getAttribute('aria-current')).toBeNull();
+  });
+
   it('marks Contact, without calling it the current page, while booking a consultation', () => {
     renderHeader('/schedule-consultation');
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
