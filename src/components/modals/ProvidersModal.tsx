@@ -2,8 +2,8 @@
  * ProvidersModal — Our Trusted Partners
  *
  * Displays all financial product providers grouped by category.
- * Provider-to-category assignments mirror the service page partnerLogos arrays
- * (§5.3 — centralised constants).
+ * The groups live in shared/providerGroups.ts, which the redesigned home page
+ * reads too (§5.3 — centralised constants).
  */
 
 import React from 'react';
@@ -13,84 +13,23 @@ import { Badge } from '../ui/badge';
 import { Shield, CheckCircle, Stethoscope, Users, FileText, TrendingUp } from 'lucide-react';
 
 import {
-  allanGrayLogo,
-  brightRockLogo,
-  capitalLegacyLogo,
-  discoveryLogo,
-  ewSerfonteinLogo,
-  hollardLogo,
-  inn8Logo,
-  justLogo,
-  libertyLogo,
-  momentumLogo,
-  oldMutualLogo,
-  sanlamLogo,
-  stanlibLogo,
-  sygniaLogo,
-} from '../shared/assets/provider-logos';
+  PROVIDER_GROUPS,
+  type ProviderEntry,
+  type ProviderGroupId,
+} from '../shared/providerGroups';
 
 interface ProvidersModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface ProviderEntry {
-  name: string;
-  logo: string | null;
-}
-
-/**
- * Provider lists per category — sourced from each service page's partnerLogos array.
- * Each provider appears only in the categories where they actually operate.
- */
-const riskProviders: ProviderEntry[] = [
-  { name: 'Discovery', logo: discoveryLogo },
-  { name: 'Sanlam', logo: sanlamLogo },
-  { name: 'Momentum', logo: momentumLogo },
-  { name: 'Liberty', logo: libertyLogo },
-  { name: 'Old Mutual', logo: oldMutualLogo },
-  { name: 'BrightRock', logo: brightRockLogo },
-  { name: 'Hollard', logo: hollardLogo },
-];
-
-const medicalAidProviders: ProviderEntry[] = [
-  { name: 'Discovery Health', logo: discoveryLogo },
-  { name: 'Momentum Health', logo: momentumLogo },
-];
-
-const investmentProviders: ProviderEntry[] = [
-  { name: 'Allan Gray', logo: allanGrayLogo },
-  { name: 'Sygnia', logo: sygniaLogo },
-  { name: 'Discovery', logo: discoveryLogo },
-  { name: 'Liberty', logo: libertyLogo },
-  { name: 'Stanlib', logo: stanlibLogo },
-  { name: 'INN8', logo: inn8Logo },
-  { name: 'Old Mutual', logo: oldMutualLogo },
-  { name: 'Sanlam', logo: sanlamLogo },
-  { name: 'Momentum', logo: momentumLogo },
-  { name: 'JUST', logo: justLogo },
-];
-
-const groupBenefitsProviders: ProviderEntry[] = [
-  { name: 'Discovery', logo: discoveryLogo },
-  { name: 'Momentum', logo: momentumLogo },
-  { name: 'Liberty', logo: libertyLogo },
-  { name: 'BrightRock', logo: brightRockLogo },
-  { name: 'Sanlam', logo: sanlamLogo },
-  { name: 'Old Mutual', logo: oldMutualLogo },
-  { name: 'Allan Gray', logo: allanGrayLogo },
-  { name: 'Sygnia', logo: sygniaLogo },
-  { name: 'Hollard', logo: hollardLogo },
-  { name: 'Stanlib', logo: stanlibLogo },
-  { name: 'INN8', logo: inn8Logo },
-  { name: 'JUST', logo: justLogo },
-  { name: 'Capital Legacy', logo: capitalLegacyLogo },
-];
-
-const estatePlanningProviders: ProviderEntry[] = [
-  { name: 'Capital Legacy', logo: capitalLegacyLogo },
-  { name: 'EW Serfontein & Associates', logo: ewSerfonteinLogo },
-];
+const GROUP_ICONS: Record<ProviderGroupId, React.ComponentType<{ className?: string }>> = {
+  risk: Shield,
+  'medical-aid': Stethoscope,
+  investment: TrendingUp,
+  'group-benefits': Users,
+  estate: FileText,
+};
 
 // ── Shared provider card ──────────────────────────────────────────────────────
 
@@ -129,7 +68,7 @@ function CategorySection({
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
-  providers: ProviderEntry[];
+  providers: readonly ProviderEntry[];
 }) {
   return (
     <div className="space-y-4">
@@ -173,23 +112,14 @@ export function ProvidersModal({ isOpen, onClose }: ProvidersModalProps) {
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
-          <CategorySection icon={Shield} title="Risk Management" providers={riskProviders} />
-
-          <CategorySection icon={Stethoscope} title="Medical Aid" providers={medicalAidProviders} />
-
-          <CategorySection
-            icon={TrendingUp}
-            title="Investment Management"
-            providers={investmentProviders}
-          />
-
-          <CategorySection icon={Users} title="Group Benefits" providers={groupBenefitsProviders} />
-
-          <CategorySection
-            icon={FileText}
-            title="Estate Planning"
-            providers={estatePlanningProviders}
-          />
+          {PROVIDER_GROUPS.map((group) => (
+            <CategorySection
+              key={group.id}
+              icon={GROUP_ICONS[group.id]}
+              title={group.title}
+              providers={group.providers}
+            />
+          ))}
         </div>
 
         {/* Footer */}

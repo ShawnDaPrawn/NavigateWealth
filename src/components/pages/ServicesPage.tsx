@@ -11,6 +11,7 @@ import { useImagePrefetch, prefetchImages } from '../../hooks/useImagePrefetch';
 import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
 import { TRUST_FACTS } from '@/config/companyFacts';
+import { ADVICE_PROCESS } from './adviceProcess';
 import {
   TrendingUp,
   Shield,
@@ -169,36 +170,8 @@ const SERVICES: ServiceItem[] = [
   },
 ];
 
-const PROCESS_STEPS = [
-  {
-    step: '01',
-    title: 'Discovery',
-    description:
-      'We learn about your goals, timeline, risk tolerance, and current financial situation through a no-obligation consultation.',
-    icon: Users,
-  },
-  {
-    step: '02',
-    title: 'Analysis',
-    description:
-      'We conduct a comprehensive financial needs analysis and develop a customised strategy tailored to your needs.',
-    icon: Target,
-  },
-  {
-    step: '03',
-    title: 'Implementation',
-    description:
-      'We compare products across the providers we work with and implement your financial plan with complete transparency.',
-    icon: CheckCircle,
-  },
-  {
-    step: '04',
-    title: 'Ongoing Support',
-    description:
-      'Continuous portfolio management, annual reviews, and planning updates to keep you on track as your life evolves.',
-    icon: TrendingUp,
-  },
-];
+const PROCESS_ICONS = [Users, Target, CheckCircle, TrendingUp] as const;
+const PROCESS_STEPS = ADVICE_PROCESS.map((step, i) => ({ ...step, icon: PROCESS_ICONS[i] }));
 
 const WHY_US = [
   {

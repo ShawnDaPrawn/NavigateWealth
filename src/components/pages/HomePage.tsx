@@ -32,8 +32,17 @@ import {
   Zap,
   Loader2,
 } from 'lucide-react';
-import { seoData, homePageStructuredData, heroSlides, providers, services } from './homePageData';
+import {
+  seoData,
+  homePageStructuredData,
+  heroSlides,
+  providers,
+  services,
+  enquiryServiceOptions,
+  ENQUIRY_DEFAULT_SERVICE,
+} from './homePageData';
 import { TRUST_FACTS } from '@/config/companyFacts';
+import { SITE_DESIGN } from '../../site/design';
 import { PublishedReviews } from '../shared/PublishedReviews';
 import {
   ServicesPreviewSection,
@@ -41,7 +50,27 @@ import {
   ProvidersCarouselSection,
 } from './homePageSections';
 
+const NavigatorHomePage = React.lazy(() =>
+  import('../../site/pages/NavigatorHomePage').then((m) => ({ default: m.NavigatorHomePage })),
+);
+
+/**
+ * The home page. The build's design switch picks the layout; both read the
+ * same content from homePageData.tsx, so it lives in one place whichever
+ * design is live.
+ */
 export function HomePage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorHomePage />
+      </Suspense>
+    );
+  }
+  return <LegacyHomePage />;
+}
+
+function LegacyHomePage() {
   const [currentProviderIndex, setCurrentProviderIndex] = useState(0);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [providersModalOpen, setProvidersModalOpen] = useState(false);
@@ -51,7 +80,7 @@ export function HomePage() {
     lastName: '',
     email: '',
     phone: '',
-    services: 'General consultation / All Service',
+    services: ENQUIRY_DEFAULT_SERVICE as string,
   });
 
   // ── Hero auto-advance ──────────────────────────────────────────
@@ -165,7 +194,7 @@ export function HomePage() {
         lastName: '',
         email: '',
         phone: '',
-        services: 'General consultation / All Service',
+        services: ENQUIRY_DEFAULT_SERVICE as string,
       });
     } catch (error) {
       console.error('Home CTA network error:', error);
@@ -546,18 +575,11 @@ export function HomePage() {
                           <SelectValue placeholder="Select a service..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="General consultation / All Service">
-                            General consultation
-                          </SelectItem>
-                          <SelectItem value="Risk Management">Risk Management</SelectItem>
-                          <SelectItem value="Medical Aid">Medical Aid</SelectItem>
-                          <SelectItem value="Investment Management">
-                            Investment Management
-                          </SelectItem>
-                          <SelectItem value="Retirement Planning">Retirement Planning</SelectItem>
-                          <SelectItem value="Group Benefits">Group Benefits</SelectItem>
-                          <SelectItem value="Tax Planning">Tax Planning</SelectItem>
-                          <SelectItem value="Estate Planning">Estate Planning</SelectItem>
+                          {enquiryServiceOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

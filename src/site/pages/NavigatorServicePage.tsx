@@ -252,7 +252,7 @@ export function NavigatorServicePage({ config, seoData, children }: ServicePageT
             config.faqSubtitle ??
             `Clear answers to the questions clients ask us most about ${form.specialistType}.`
           }
-          quoteLink={quotePath}
+          action={{ label: 'Get a Quote', to: quotePath }}
         />
       ) : null}
 

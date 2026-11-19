@@ -18,12 +18,13 @@ import '../styles/sections.css';
 interface FaqRailProps {
   id?: string;
   index: string;
-  faqs: { question: string; answer: string }[];
+  faqs: readonly { question: string; answer: string }[];
   lead?: string;
-  quoteLink: string;
+  /** The help card's main action. A service page sends visitors to its quote. */
+  action: { label: string; to: string };
 }
 
-export function FaqRail({ id = 'faq', index, faqs, lead, quoteLink }: FaqRailProps) {
+export function FaqRail({ id = 'faq', index, faqs, lead, action }: FaqRailProps) {
   const base = useId();
   const [open, setOpen] = useState(0);
   if (faqs.length === 0) return null;
@@ -57,8 +58,8 @@ export function FaqRail({ id = 'faq', index, faqs, lead, quoteLink }: FaqRailPro
               </li>
             </ul>
             <div className="nw-faq-actions">
-              <Link className="nw-btn" to={quoteLink}>
-                Get a Quote
+              <Link className="nw-btn" to={action.to}>
+                {action.label}
                 <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
               </Link>
               <Link className="nw-outline" to="/ask-vasco">

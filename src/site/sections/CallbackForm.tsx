@@ -12,6 +12,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { AlertCircle, Check, ChevronDown, Phone, Scale, Shield } from 'lucide-react';
 import { splitFullName, submitContactEnquiry } from '../../services/contactEnquiry';
+import { emailError, phoneError } from './formRules';
 import '../styles/sections.css';
 
 export interface CallbackOption {
@@ -34,18 +35,13 @@ interface CallbackFormProps {
 type Field = 'name' | 'email' | 'phone';
 type Errors = Partial<Record<Field, string>>;
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_PATTERN = /^[\d\s\-+()]+$/;
-
 function validate(name: string, email: string, phone: string): Errors {
   const errors: Errors = {};
   if (!name.trim()) errors.name = 'Enter your full name';
-  if (!email.trim()) errors.email = 'Enter your email address';
-  else if (!EMAIL_PATTERN.test(email.trim())) errors.email = 'Enter a valid email address';
-  if (!phone.trim()) errors.phone = 'Enter your phone number';
-  // The endpoint accepts digits, spaces, + - and brackets; a real number has 9+ digits.
-  else if (!PHONE_PATTERN.test(phone.trim()) || phone.replace(/\D/g, '').length < 9)
-    errors.phone = 'Enter a valid phone number';
+  const emailProblem = emailError(email);
+  if (emailProblem) errors.email = emailProblem;
+  const phoneProblem = phoneError(phone);
+  if (phoneProblem) errors.phone = phoneProblem;
   return errors;
 }
 
