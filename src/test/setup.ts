@@ -11,7 +11,16 @@
  * `cleanup()` is idempotent.
  */
 import { afterEach } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
+
+// findBy*/waitFor give up after 1s by default. The public pages load their
+// Navigator design lazily, and the first test in each suite pays for that
+// import: under coverage instrumentation, or on a busy machine, it can take
+// just over a second (1109ms observed), which failed "has one H1" tests while
+// the page was rendering correctly. Each test already has 15s
+// (vitest.config.ts), so waiting up to 5s for an element costs nothing when the
+// element arrives and only slows a test that was going to fail anyway.
+configure({ asyncUtilTimeout: 5000 });
 
 class ResizeObserverMock {
   observe() {}
