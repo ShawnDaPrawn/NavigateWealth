@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -27,8 +27,28 @@ import {
   Headset,
 } from 'lucide-react';
 import consultationImage from 'figma:asset/61c60b4a45c33d3564e85aaf184ff3f3b9db37f8.png';
+import { SITE_DESIGN } from '../../site/design';
 
+const NavigatorWhyUsPage = React.lazy(() =>
+  import('../../site/pages/NavigatorWhyUsPage').then((m) => ({ default: m.NavigatorWhyUsPage })),
+);
+
+/**
+ * The "Why Us?" page. The build's design switch picks the layout: the
+ * Navigator redesign (src/site/) or the page as it was before it.
+ */
 export function WhyUsPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorWhyUsPage />
+      </Suspense>
+    );
+  }
+  return <LegacyWhyUsPage />;
+}
+
+function LegacyWhyUsPage() {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
   const [showProvidersModal, setShowProvidersModal] = useState(false);
