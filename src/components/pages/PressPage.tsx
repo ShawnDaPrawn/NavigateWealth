@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -11,6 +11,7 @@ import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
 import { COMPANY, FOUNDER } from '@/config/companyFacts';
+import { SITE_DESIGN } from '../../site/design';
 import {
   Newspaper,
   Calendar,
@@ -91,7 +92,26 @@ async function fetchPressArticles(): Promise<PressArticle[]> {
 // Component
 // ============================================================================
 
+const NavigatorPressPage = React.lazy(() =>
+  import('../../site/pages/NavigatorPressPage').then((m) => ({ default: m.NavigatorPressPage })),
+);
+
+/**
+ * The press page. The build's design switch picks the layout; both read the
+ * same press articles and company facts.
+ */
 export function PressPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorPressPage />
+      </Suspense>
+    );
+  }
+  return <LegacyPressPage />;
+}
+
+function LegacyPressPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isMediaAccessModalOpen, setIsMediaAccessModalOpen] = useState(false);
