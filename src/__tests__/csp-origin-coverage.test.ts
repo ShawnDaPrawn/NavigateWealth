@@ -77,6 +77,8 @@ const NOT_FETCHED: Record<string, string> = {
 
   // <a href> destinations. CSP does not govern navigation; `navigate-to` was
   // never shipped by any browser.
+  'mail.google.com': 'link: "Open Gmail" on the verify-email page (src/site)',
+  'outlook.live.com': 'link: "Open Outlook" on the verify-email page (src/site)',
   'www.linkedin.com': 'social profile link (<a href>)',
   'linkedin.com': 'social profile link (<a href>)',
   'www.instagram.com': 'social profile link (<a href>)',
