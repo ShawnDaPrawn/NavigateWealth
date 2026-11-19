@@ -41,19 +41,6 @@ export const FEATURED_COUNT = 3;
  */
 export const SIGNUP_NOTE = 'Monthly · Unsubscribe any time';
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/**
- * "1 Oct 2026", as the Navigator boards write dates. The same rule as the home
- * page's InsightCards and the press newsroom (each keeps a private copy).
- */
-export function formatCardDate(iso?: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
-
 /** Most recent first: published date, then created date (InsightsTab's rule). */
 export function sortByRecent(a: Article, b: Article): number {
   const dateA = a.published_at || a.created_at || '';

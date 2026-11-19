@@ -10,7 +10,8 @@
  * no-image panel rather than a broken picture.
  */
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { EMPTY_NEWS, formatCardDate, type NewsFeeds, type NewsItem } from './resourcesModel';
+import { formatCardDate } from './format';
+import { EMPTY_NEWS, type NewsFeeds, type NewsItem } from './resourcesModel';
 import { ResourcesIcon } from './ResourcesIcons';
 
 const FEED_TABS: { id: string; label: string; feed: keyof NewsFeeds }[] = [

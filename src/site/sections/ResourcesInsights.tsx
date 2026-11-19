@@ -18,10 +18,10 @@ import {
   articleCategoryName,
   articleHref,
   cardImage,
-  formatCardDate,
   heroImage,
   type TopicFilter,
 } from './resourcesModel';
+import { formatCardDate } from './format';
 import { ResourcesIcon } from './ResourcesIcons';
 import { ResourcesSignup, type NewsletterSignup } from './ResourcesSignup';
 
