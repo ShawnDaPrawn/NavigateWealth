@@ -1,0 +1,531 @@
+/*
+ * Navigator newsletter issue page — ported from the "NewsletterIssue" board of
+ * the Claude Design canvas, its inline styles turned into classes.
+ *
+ * Scoped to `.nw-site.nwni` (the page root), like navigator.css is to
+ * `.nw-site`. Every class is prefixed `nwni-`.
+ *
+ * Box model and line heights. The board is drawn on the browser's defaults:
+ * content-box sizing (buttons and inputs excepted), "normal" line height and a
+ * 16px body. The app's base styles set border-box on everything, 1.5 on the
+ * root, 14px on html and their own sizes on p, headings, buttons and inputs.
+ * So, inside this page only, the first rules put the browser's defaults back,
+ * at zero specificity so any class below still wins.
+ */
+
+/* ── Page ── */
+:where(.nw-site.nwni) *,
+:where(.nw-site.nwni) *::before,
+:where(.nw-site.nwni) *::after {
+  box-sizing: content-box;
+}
+:where(.nw-site.nwni) :where(button, input, select, textarea) {
+  box-sizing: border-box;
+}
+:where(.nw-site.nwni) :where(p, h1, h2, h3, label, button, input) {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+.nw-site.nwni {
+  font-family: var(--nw-font-sans);
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-text);
+  background: var(--nw-paper);
+  padding: clamp(24px, 3vw, 36px) 0 var(--nw-sec-lg);
+}
+.nw-site.nwni .nwni-wrap {
+  max-width: 1180px;
+}
+
+/* Shared pieces */
+.nw-site.nwni .nwni-label {
+  font-family: var(--nw-font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.nw-site.nwni .nwni-accent-l {
+  font-family: var(--nw-font-serif);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--nw-ink);
+}
+.nw-site.nwni .nwni-btn {
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: normal;
+}
+.nw-site.nwni .nwni-only-sm {
+  display: none;
+}
+
+/* ── Back to the archive, and the issue month ── */
+.nw-site.nwni .nwni-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site.nwni .nwni-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+  text-decoration: none;
+}
+.nw-site.nwni .nwni-back:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.nw-site.nwni .nwni-issue {
+  padding: 5px 9px;
+  border: 1px solid var(--nw-ink);
+  border-radius: var(--nw-r-sm);
+  font-size: 10.5px;
+  color: var(--nw-ink);
+}
+
+/* ── Masthead ── */
+.nw-site.nwni .nwni-mast {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px 56px;
+  align-items: flex-end;
+  padding: clamp(24px, 4vw, 44px) 0;
+  border-top: 2px solid var(--nw-ink);
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site.nwni .nwni-mast-main {
+  flex: 3 1 520px;
+  min-width: 0;
+}
+.nw-site.nwni .nwni-mast-side {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.nw-site.nwni .nwni-mast-side .nwni-btn {
+  margin-top: 18px;
+}
+.nw-site.nwni .nwni-eyebrow {
+  margin: 0;
+  color: var(--nw-muted);
+}
+/* The board sets 400 inline; its system forces every h1 to 500. 500 renders. */
+.nw-site.nwni .nwni-h1 {
+  margin: 18px 0 0;
+  font-size: var(--nw-fs-display);
+  line-height: 1.06;
+  font-weight: 500;
+  color: var(--nw-ink);
+}
+.nw-site.nwni .nwni-byline {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  color: var(--nw-muted);
+}
+.nw-site.nwni .nwni-lead {
+  margin: 18px 0 0;
+  max-width: 700px;
+  font-family: var(--nw-font-serif);
+  font-size: clamp(18px, 1.8vw, 20px);
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+
+/* ── Phone: buttons in place of the reader ── */
+.nw-site.nwni .nwni-phone {
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+/* The board draws these 56px tall at 16px; its phone rules (the only width at
+   which they show) bring every 56px button down to 48px at 15px. */
+.nw-site.nwni .nwni-phone-btn {
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: normal;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.nw-site.nwni .nwni-phone-file {
+  margin: 2px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--nw-muted);
+}
+
+/* ── Reader ── */
+.nw-site.nwni .nwni-reader {
+  margin-top: 28px;
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-ink-2);
+  border: 1px solid var(--nw-ink);
+}
+.nw-site.nwni .nwni-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 52px;
+  padding: 0 12px 0 18px;
+  background: var(--nw-ink);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--nw-on-dark);
+}
+.nw-site.nwni .nwni-file {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+.nw-site.nwni .nwni-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.nw-site.nwni .nwni-tool {
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  color: var(--nw-on-dark);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+.nw-site.nwni .nwni-tool:hover {
+  color: var(--nw-paper);
+  background: rgba(246, 244, 239, 0.08);
+}
+.nw-site.nwni .nwni-zoom {
+  min-width: 52px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--nw-paper);
+}
+.nw-site.nwni .nwni-sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.nw-site.nwni .nwni-stage {
+  padding: 44px 24px 36px;
+  display: flex;
+  justify-content: center;
+  min-height: 780px;
+  box-sizing: border-box;
+}
+.nw-site.nwni .nwni-page {
+  position: relative;
+  max-width: 100%;
+  aspect-ratio: 1 / 1.414;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-ink);
+  color: var(--nw-paper);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+  transition: width 0.25s;
+  overflow: hidden;
+}
+.nw-site.nwni .nwni-pdf {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+/* What a browser without a PDF viewer shows inside the embed (the live
+   fallback, on the board's dark page). */
+.nw-site.nwni .nwni-nopdf {
+  height: 100%;
+  padding: 0 32px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwni .nwni-nopdf-p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--nw-on-dark);
+}
+.nw-site.nwni .nwni-nopdf-btn {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14.5px;
+  line-height: normal;
+}
+.nw-site.nwni .nwni-caption {
+  margin: 0;
+  padding: 0 24px 22px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--nw-on-dark-muted);
+}
+
+/* ── Previous issue and the sign-up ── */
+.nw-site.nwni .nwni-more {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+.nw-site.nwni .nwni-prev {
+  flex: 1 1 380px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px;
+  border-radius: var(--nw-r-md);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-white);
+  color: inherit;
+  text-decoration: none;
+}
+.nw-site.nwni .nwni-prev-cover {
+  flex-shrink: 0;
+  position: relative;
+  width: 66px;
+  height: 92px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-ink);
+}
+.nw-site.nwni .nwni-prev-frame {
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(227, 217, 195, 0.35);
+}
+.nw-site.nwni .nwni-prev-body {
+  min-width: 0;
+}
+.nw-site.nwni .nwni-prev-label {
+  display: block;
+  font-size: 10.5px;
+  color: var(--nw-muted);
+}
+.nw-site.nwni .nwni-prev-t {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+  line-height: 1.2;
+  color: var(--nw-ink);
+}
+.nw-site.nwni .nwni-prev:hover .nwni-prev-t {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.nw-site.nwni .nwni-prev-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+
+.nw-site.nwni .nwni-sub {
+  flex: 1 1 420px;
+  padding: 26px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-on-dark);
+}
+/* 400 inline on the board, 500 through its system's .nw-h rule: 500 renders. */
+.nw-site.nwni .nwni-sub-h {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 500;
+  color: var(--nw-paper);
+}
+.nw-site.nwni .nwni-sub-p {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.nw-site.nwni .nwni-sub-form {
+  position: relative;
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nw-site.nwni .nwni-input {
+  flex: 1 1 200px;
+  height: 46px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid rgba(246, 244, 239, 0.3);
+  background: transparent;
+  color: var(--nw-paper);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: normal;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site.nwni .nwni-input::placeholder {
+  color: var(--nw-on-dark-muted);
+  opacity: 1;
+}
+.nw-site.nwni .nwni-input:focus,
+.nw-site.nwni .nwni-input:focus-visible {
+  outline: none;
+  border-color: var(--nw-paper);
+  box-shadow: 0 0 0 2px var(--nw-violet);
+}
+/* Not on the board: a check that failed (the message itself is the live
+   toast). The system's danger hairline, which reads on the dark panel. */
+.nw-site.nwni .nwni-input[aria-invalid='true'] {
+  border-color: var(--nw-danger-line);
+}
+.nw-site.nwni .nwni-sub-btn {
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: normal;
+}
+.nw-site.nwni .nwni-trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.nw-site.nwni .nwni-sub-done {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.nw-site.nwni .nwni-sub-done strong {
+  font-weight: 700;
+  color: var(--nw-paper);
+}
+
+/* ── Closing band ── */
+.nw-site.nwni .nwni-advice {
+  margin-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 0;
+  border-top: 1px solid var(--nw-line);
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site.nwni .nwni-advice-p {
+  margin: 0;
+  flex: 1 1 360px;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site.nwni .nwni-advice-h {
+  font-size: 20px;
+  color: var(--nw-ink);
+}
+.nw-site.nwni .nwni-advice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ── Other states ── */
+.nw-site.nwni .nwni-loading {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 15px;
+  color: var(--nw-muted);
+}
+.nw-site.nwni .nwni-spin {
+  animation: nwni-spin 1s linear infinite;
+}
+@keyframes nwni-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.nw-site.nwni .nwni-missing {
+  margin-top: 0;
+}
+.nw-site.nwni .nwni-missing-btn {
+  margin-top: 28px;
+}
+
+/* ── Phone ── */
+/* The board swaps the reader for buttons below 640px, as the live page does. */
+@media (max-width: 639px) {
+  .nw-site.nwni .nwni-only-sm {
+    display: flex;
+  }
+  .nw-site.nwni .nwni-only-lg {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  /* The board's phone rules: an 18–20px lead drops to 15.5px, and a button
+     row with an outline button beside a solid one stacks, both buttons as
+     wide as the wider one. */
+  .nw-site.nwni .nwni-lead {
+    font-size: 15.5px;
+  }
+  .nw-site.nwni .nwni-advice-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site.nwni .nwni-advice-actions > a {
+    justify-content: center;
+    width: 100%;
+    flex: 0 0 auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nw-site.nwni .nwni-spin {
+    animation: none;
+  }
+  .nw-site.nwni .nwni-page {
+    transition: none;
+  }
+}

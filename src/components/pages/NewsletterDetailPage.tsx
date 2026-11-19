@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Link, useParams } from 'react-router';
 import { ArrowLeft, BookOpen, Download, FileText, Loader2, Mail } from 'lucide-react';
 import { SEO, createWebPageSchema } from '../seo/SEO';
@@ -8,6 +8,13 @@ import { Card, CardContent } from '../ui/card';
 import { siteAbsoluteUrl } from '@/utils/siteOrigin';
 import { formatIssueMonth, formatPdfSize } from './resources/newsletterArchive';
 import { usePublishedNewsletter } from './resources/useNewsletters';
+import { SITE_DESIGN } from '../../site/design';
+
+const NavigatorNewsletterIssuePage = React.lazy(() =>
+  import('../../site/pages/NavigatorNewsletterIssuePage').then((m) => ({
+    default: m.NavigatorNewsletterIssuePage,
+  })),
+);
 
 const ARCHIVE_PATH = '/resources?section=newsletters';
 
@@ -19,8 +26,22 @@ const ARCHIVE_PATH = '/resources?section=newsletters';
  * in the page source, a canonical URL, and a link that shows something
  * meaningful when it is shared. The PDF itself is embedded from the public
  * bucket and is also offered as a download.
+ *
+ * The build's design switch picks the layout; both read the issue through the
+ * same hook and endpoint.
  */
 export function NewsletterDetailPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorNewsletterIssuePage />
+      </Suspense>
+    );
+  }
+  return <LegacyNewsletterDetailPage />;
+}
+
+function LegacyNewsletterDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data: newsletter, isLoading, error } = usePublishedNewsletter(slug);
 
