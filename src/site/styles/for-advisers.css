@@ -1,0 +1,986 @@
+/*
+ * Navigator For Advisers page (/solutions/advisers) — ported from the "For
+ * Advisers" board of the Claude Design canvas, its inline styles turned into
+ * classes. Section labels, section titles, the grid texture, the photo grade
+ * and the FAQ rail come from sections.css; buttons and tokens from
+ * navigator.css.
+ *
+ * Every rule is scoped to the page root, `.nw-site.nwfa`, and every class is
+ * prefixed `nwfa-`. The root's two classes also lift these rules above the
+ * shared files' (`.nw-site .x`), so where this page adjusts a shared piece to
+ * the board — the FAQ rail's white ground, a section head's width — it wins
+ * whatever order the stylesheets load in.
+ */
+
+/* ── Page ── */
+/* The board's page has a 16px base and the browser's normal line height. The
+   site's root is 14px with a line height of 1.5, and its global base
+   typography gives every p, h3 and button a size and line height of its own;
+   reset here at near-zero specificity, so every rule below that sets one
+   still wins. */
+.nw-site.nwfa {
+  font-size: 16px;
+  line-height: normal;
+}
+:where(.nw-site).nwfa :where(p, h3, button) {
+  font-size: inherit;
+  line-height: inherit;
+}
+/* Content-box sizing, as the board's elements have, wherever it shows. */
+.nw-site.nwfa :is(.nwfa-stage-mark, .nwfa-cta-light, .nwfa-cta-ghost) {
+  box-sizing: content-box;
+}
+/* A trailing icon steps forward on hover, as every action on the board does. */
+.nw-site.nwfa :is(.nw-btn, .nw-outline, .nw-ghost-dark) > svg:last-child:not(:first-child) {
+  transition: transform var(--nw-dur-2) var(--nw-ease);
+}
+.nw-site.nwfa :is(.nw-btn, .nw-outline, .nw-ghost-dark):hover > svg:last-child:not(:first-child) {
+  transform: translateX(3px);
+}
+.nw-site.nwfa .nwfa-arr {
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.nw-site.nwfa :is(.nwfa-path, .nwfa-card):hover .nwfa-arr {
+  transform: translateX(3px);
+}
+
+/* Section heads where the board differs from SectionHead's defaults. */
+.nw-site.nwfa .nwfa-head--long {
+  max-width: none;
+}
+.nw-site.nwfa .nwfa-head--long .nw-sec-lead {
+  margin-top: 18px;
+  max-width: none;
+  line-height: 1.7;
+}
+.nw-site.nwfa .nwfa-head--row {
+  max-width: 680px;
+}
+.nw-site.nwfa .nwfa-head--row .nw-sec-lead {
+  max-width: none;
+}
+.nw-site.nwfa .nwfa-head--center .nw-sec-lead {
+  max-width: 620px;
+}
+
+/* Two columns that stack below ~1000px: journey, support. */
+.nw-site.nwfa .nwfa-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 48px 72px;
+  align-items: center;
+}
+
+/* Assurance lines: under the hero actions and the closing actions. */
+.nw-site.nwfa .nwfa-assure {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}
+.nw-site.nwfa .nwfa-assure li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.nw-site.nwfa .nwfa-assure--hero {
+  font-size: 13.5px;
+  color: var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-assure--hero svg {
+  color: var(--nw-success-bright);
+}
+.nw-site.nwfa .nwfa-assure--cta {
+  font-size: 14px;
+  color: var(--nw-line-soft);
+}
+
+/* ── Hero ── */
+.nw-site.nwfa .nwfa-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--nw-ink) 0%, var(--nw-ink-2) 58%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-hero > .nw-grid-bg {
+  -webkit-mask-image: radial-gradient(ellipse 75% 80% at 70% 40%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 75% 80% at 70% 40%, #000 0%, transparent 72%);
+}
+.nw-site.nwfa .nwfa-glow {
+  position: absolute;
+  top: -220px;
+  right: -180px;
+  width: 720px;
+  height: 720px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 22, 38, 0.168) 0%, rgba(13, 22, 38, 0) 68%);
+  pointer-events: none;
+}
+.nw-site.nwfa .nwfa-hero-wrap {
+  position: relative;
+}
+.nw-site.nwfa .nwfa-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+  gap: 48px 64px;
+  align-items: center;
+  padding-top: clamp(48px, 7vw, 88px);
+  padding-bottom: clamp(48px, 6vw, 72px);
+}
+.nw-site.nwfa .nwfa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-h1 {
+  margin: 26px 0 0;
+  font-size: var(--nw-fs-display);
+  line-height: 1.03;
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-lead {
+  margin: 22px 0 0;
+  max-width: 580px;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwfa .nwfa-hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 36px;
+}
+.nw-site.nwfa .nwfa-hero-btn {
+  gap: 10px;
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+  flex: 1 1 auto;
+  max-width: 260px;
+}
+/* As on the board, the arrow gives way when the 260px cap leaves it no room
+   (desktop), and shows when the action runs full width (phones). */
+.nw-site.nwfa .nwfa-hero-btn > svg {
+  flex-shrink: 1;
+}
+
+/* "Choose your course": the three solutions pages. */
+.nw-site.nwfa .nwfa-paths {
+  padding: 10px;
+  border-radius: var(--nw-r-md);
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.7);
+}
+.nw-site.nwfa .nwfa-paths-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px 14px;
+  font-size: 11px;
+}
+.nw-site.nwfa .nwfa-paths-kicker {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwfa .nwfa-paths-label {
+  letter-spacing: 0.12em;
+  color: var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-paths-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site.nwfa .nwfa-path {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid transparent;
+  color: var(--nw-line);
+  text-decoration: none;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+/* The board's hover lifts the ground and the text; the border keeps its
+   resting colour (transparent, or the current page's outline). */
+.nw-site.nwfa .nwfa-path[aria-current='page'] {
+  background: rgba(13, 22, 38, 0.132);
+  border-color: rgba(201, 209, 224, 0.5);
+}
+.nw-site.nwfa .nwfa-path:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-path-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.077);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site.nwfa .nwfa-path[aria-current='page'] .nwfa-path-icon {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-path-text {
+  flex: 1;
+  min-width: 0;
+}
+.nw-site.nwfa .nwfa-path-t {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+}
+.nw-site.nwfa .nwfa-path-d {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwfa .nwfa-path[aria-current='page'] .nwfa-path-t {
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-path[aria-current='page'] .nwfa-path-d {
+  color: var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-path-here {
+  padding: 4px 8px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--nw-cream);
+}
+
+/* The three trust facts under the hero. */
+.nw-site.nwfa .nwfa-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nw-site.nwfa .nwfa-facts li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 20px 28px 0;
+}
+.nw-site.nwfa .nwfa-fact-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.066);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site.nwfa .nwfa-fact-v {
+  display: block;
+  font-size: 19px;
+}
+.nw-site.nwfa .nwfa-fact-l {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--nw-on-dark-muted);
+}
+
+/* ── 01 Practice journey ── */
+.nw-site.nwfa .nwfa-stages {
+  position: relative;
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 24px 8px;
+}
+.nw-site.nwfa .nwfa-stages::before {
+  content: '';
+  position: absolute;
+  top: 23px;
+  left: 10%;
+  right: 10%;
+  border-top: 1.5px dashed var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-stages > li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+.nw-site.nwfa .nwfa-stage-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--nw-white);
+  border: 1.5px solid var(--nw-on-dark);
+  box-shadow: 0 0 0 6px var(--nw-white);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site.nwfa .nwfa-stages > li:last-child .nwfa-stage-mark {
+  background: var(--nw-ink);
+  border: 0;
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-stage-t {
+  font-size: 14px;
+  font-weight: 600;
+}
+.nw-site.nwfa .nwfa-stage-d {
+  margin-top: -4px;
+  font-size: 12.5px;
+  color: var(--nw-muted);
+}
+.nw-site.nwfa .nwfa-figure {
+  margin: 0;
+  position: relative;
+}
+.nw-site.nwfa .nwfa-photo {
+  position: relative;
+  aspect-ratio: 5 / 4;
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-paper-2);
+}
+.nw-site.nwfa .nwfa-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nw-site.nwfa .nwfa-cap {
+  position: absolute;
+  left: -20px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  box-shadow: 0 30px 60px -30px rgba(17, 24, 39, 0.6);
+}
+.nw-site.nwfa .nwfa-cap-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.11);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site.nwfa .nwfa-cap-l {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwfa .nwfa-cap-t {
+  display: block;
+  margin-top: 2px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+/* ── 02 Services ── */
+.nw-site.nwfa .nwfa-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.nw-site.nwfa .nwfa-cards {
+  list-style: none;
+  margin: 48px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+}
+.nw-site.nwfa .nwfa-cards > li {
+  display: flex;
+}
+.nw-site.nwfa .nwfa-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s,
+    border-color 0.3s;
+}
+.nw-site.nwfa .nwfa-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 50px -30px rgba(17, 24, 39, 0.45);
+  border-color: var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.nw-site.nwfa .nwfa-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(13, 22, 38, 0.06);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site.nwfa .nwfa-card-no {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--nw-muted);
+}
+.nw-site.nwfa .nwfa-card-t {
+  margin: 0;
+  font-size: var(--nw-fs-h5);
+  color: var(--nw-ink);
+}
+.nw-site.nwfa .nwfa-card-d {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site.nwfa .nwfa-card-feats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.nw-site.nwfa .nwfa-card-feats li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  color: var(--nw-text-strong);
+}
+.nw-site.nwfa .nwfa-card-feats svg {
+  flex-shrink: 0;
+  color: var(--nw-ink);
+}
+.nw-site.nwfa .nwfa-card-cta {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--nw-line-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+
+/* ── Handled personally: the navy band ── */
+.nw-site.nwfa .nwfa-band {
+  position: relative;
+  overflow: hidden;
+  padding: var(--nw-sec-md) 0;
+  background: var(--nw-ink-2);
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-band > .nw-grid-bg {
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, #000 0%, transparent 75%);
+}
+.nw-site.nwfa .nwfa-band-rose {
+  position: absolute;
+  right: -90px;
+  top: 50%;
+  margin-top: -210px;
+  opacity: 0.55;
+}
+.nw-site.nwfa .nwfa-band-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+.nw-site.nwfa .nwfa-band-copy {
+  flex: 1 1 520px;
+  max-width: 720px;
+}
+.nw-site.nwfa .nwfa-band-kicker {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-band-title {
+  margin: 14px 0 0;
+  font-size: var(--nw-fs-h2);
+  line-height: 1.1;
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-band-lead {
+  margin: 14px 0 0;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-band-btn {
+  position: relative;
+  gap: 10px;
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+}
+
+/* ── 03 End-to-end support ── */
+.nw-site.nwfa .nwfa-route {
+  position: relative;
+  padding: clamp(18px, 2.4vw, 32px);
+  border-radius: var(--nw-r-md);
+  background: linear-gradient(160deg, var(--nw-ink), var(--nw-ink-2));
+  color: var(--nw-white);
+  box-shadow: 0 50px 100px -50px rgba(17, 24, 39, 0.7);
+}
+.nw-site.nwfa .nwfa-route > .nw-grid-bg {
+  border-radius: var(--nw-r-md);
+}
+.nw-site.nwfa .nwfa-route-inner {
+  position: relative;
+}
+.nw-site.nwfa .nwfa-route-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+.nw-site.nwfa .nwfa-route-label {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwfa .nwfa-route-badge {
+  padding: 4px 9px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.099);
+  color: var(--nw-cream);
+}
+.nw-site.nwfa .nwfa-route-steps {
+  position: relative;
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.nw-site.nwfa .nwfa-route-steps::before {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 18px;
+  bottom: 18px;
+  border-left: 1.5px dashed rgba(201, 209, 224, 0.45);
+}
+.nw-site.nwfa .nwfa-route-steps > li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.nw-site.nwfa .nwfa-route-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.nw-site.nwfa [data-state='current'] .nwfa-route-mark {
+  border: 2px solid var(--nw-on-dark);
+}
+.nw-site.nwfa [data-state='next'] .nwfa-route-mark {
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+}
+.nw-site.nwfa .nwfa-route-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-route-box {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site.nwfa [data-state='current'] .nwfa-route-box {
+  background: rgba(13, 22, 38, 0.12);
+  border-color: rgba(201, 209, 224, 0.45);
+}
+.nw-site.nwfa [data-state='next'] .nwfa-route-box {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.nw-site.nwfa .nwfa-route-t {
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site.nwfa [data-state='next'] .nwfa-route-t {
+  color: var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-route-s {
+  font-size: 11px;
+  color: var(--nw-success-bright);
+}
+.nw-site.nwfa [data-state='current'] .nwfa-route-s {
+  color: var(--nw-cream);
+}
+.nw-site.nwfa [data-state='next'] .nwfa-route-s {
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwfa .nwfa-note {
+  margin: 12px 0 0;
+  font-size: var(--nw-fs-body);
+  line-height: 1.7;
+  color: var(--nw-muted);
+}
+.nw-site.nwfa .nwfa-feats {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+.nw-site.nwfa .nwfa-feats li {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+}
+.nw-site.nwfa .nwfa-feat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(13, 22, 38, 0.06);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site.nwfa .nwfa-feat-t {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site.nwfa .nwfa-feat-d {
+  display: block;
+  margin-top: 3px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--nw-text);
+}
+
+/* ── 04 How we work ── */
+.nw-site.nwfa .nwfa-legs-track {
+  position: relative;
+  margin-top: 56px;
+}
+.nw-site.nwfa .nwfa-legs-track::before {
+  content: '';
+  position: absolute;
+  top: 27px;
+  left: 28px;
+  right: 12%;
+  border-top: 1.5px dashed var(--nw-on-dark);
+}
+.nw-site.nwfa .nwfa-legs {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 36px 28px;
+}
+.nw-site.nwfa .nwfa-leg-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  border: 1.5px solid var(--nw-on-dark);
+  box-shadow: 0 0 0 8px var(--nw-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+.nw-site.nwfa .nwfa-legs > li:first-child .nwfa-leg-mark {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-leg-no {
+  display: block;
+  margin-top: 20px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--nw-ink);
+}
+.nw-site.nwfa .nwfa-leg-t {
+  margin: 8px 0 0;
+  font-size: var(--nw-fs-h5);
+  color: var(--nw-ink);
+}
+.nw-site.nwfa .nwfa-leg-d {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+
+/* ── 05 FAQ: the shared rail, on white, with the board's spacing ── */
+.nw-site.nwfa .nwfa-faq > .nw-sec {
+  background: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-faq .nw-faq-list {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.nw-site.nwfa .nwfa-faq .nw-faq-q {
+  min-height: 64px;
+}
+.nw-site.nwfa .nwfa-faq .nw-faq-icon {
+  box-sizing: content-box;
+}
+.nw-site.nwfa .nwfa-faq .nw-faq-a {
+  font-size: 15.5px;
+}
+.nw-site.nwfa .nwfa-faq .nw-faq-help-t {
+  letter-spacing: -0.012em;
+}
+/* The board's questions are plain buttons, so they wrap as plain text does. */
+.nw-site.nwfa .nwfa-faq .nw-faq-item h3 {
+  text-wrap: wrap;
+}
+.nw-site.nwfa .nwfa-faq .nw-faq-contact svg {
+  width: 18px;
+  height: 18px;
+}
+.nw-site.nwfa .nwfa-faq .nw-faq-actions .nw-outline {
+  padding: 0 20px;
+}
+.nw-site.nwfa .nwfa-faq .nw-faq-actions .nw-outline svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ── Closing call to action ── */
+.nw-site.nwfa .nwfa-cta {
+  padding: 0 0 var(--nw-sec-lg);
+  background: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-cta-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--nw-r-md);
+  padding: clamp(32px, 5vw, 72px);
+  background: linear-gradient(135deg, var(--nw-ink) 0%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+  box-shadow: 0 50px 100px -50px rgba(13, 22, 38, 0.42);
+}
+.nw-site.nwfa .nwfa-cta-card > .nw-grid-bg {
+  opacity: 0.9;
+}
+.nw-site.nwfa .nwfa-cta-rose {
+  position: absolute;
+  right: -80px;
+  bottom: -120px;
+  opacity: 0.5;
+}
+.nw-site.nwfa .nwfa-cta-copy {
+  position: relative;
+  max-width: 700px;
+}
+.nw-site.nwfa .nwfa-cta-title {
+  margin: 0;
+  font-size: var(--nw-fs-h2);
+  line-height: 1.1;
+  color: var(--nw-white);
+}
+.nw-site.nwfa .nwfa-cta-lead {
+  margin: 16px 0 0;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-line-soft);
+}
+.nw-site.nwfa .nwfa-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+.nw-site.nwfa .nwfa-cta-light,
+.nw-site.nwfa .nwfa-cta-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 28px;
+  border-radius: var(--nw-r-sm);
+  font-size: 16px;
+  flex: 1 1 auto;
+  text-decoration: none;
+}
+.nw-site.nwfa .nwfa-cta-light {
+  gap: 10px;
+  max-width: 280px;
+  font-weight: 700;
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
+}
+.nw-site.nwfa .nwfa-cta-light:hover {
+  background: var(--nw-paper);
+  color: var(--nw-ink);
+}
+.nw-site.nwfa .nwfa-cta-ghost {
+  max-width: 240px;
+  font-weight: 600;
+  color: var(--nw-white);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: background-color 0.2s;
+}
+.nw-site.nwfa .nwfa-cta-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--nw-white);
+}
+
+/* ── Narrower screens, at the board's breakpoints ── */
+@media (max-width: 860px) {
+  .nw-site.nwfa :is(.nwfa-band-rose, .nwfa-cta-rose),
+  .nw-site.nwfa .nwfa-legs-track::before {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  /* Phones drop the photograph (NwImage's hiddenBelow keeps it from loading). */
+  .nw-site.nwfa .nwfa-figure {
+    display: none;
+  }
+  .nw-site.nwfa :is(h1, h2, h3) {
+    overflow-wrap: break-word;
+  }
+}
+@media (max-width: 640px) {
+  .nw-site.nwfa .nwfa-stages::before,
+  .nw-site.nwfa .nwfa-cap {
+    display: none;
+  }
+  /* Paired actions stack at full width, 48px tall. */
+  .nw-site.nwfa :is(.nwfa-hero-ctas, .nwfa-cta-actions) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site.nwfa :is(.nwfa-hero-btn, .nwfa-cta-light, .nwfa-cta-ghost) {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+    justify-content: center;
+  }
+  .nw-site.nwfa :is(.nwfa-hero-btn, .nwfa-band-btn, .nwfa-cta-light, .nwfa-cta-ghost) {
+    height: 48px;
+    font-size: 15px;
+  }
+  /* The shared FAQ rail's phone layout, kept against the overrides above;
+     its two actions stack at full width, as every pair does on the board. */
+  .nw-site.nwfa .nwfa-faq .nw-faq-list {
+    padding: 0;
+  }
+  .nw-site.nwfa .nwfa-faq .nw-faq-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site.nwfa .nwfa-faq .nw-faq-actions > a {
+    width: 100%;
+    flex: 0 0 auto;
+    justify-content: center;
+  }
+  .nw-site.nwfa .nwfa-faq .nw-faq-q {
+    min-height: 0;
+  }
+  .nw-site.nwfa .nwfa-faq .nw-faq-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+  .nw-site.nwfa .nwfa-faq .nw-faq-a {
+    font-size: 15px;
+  }
+}

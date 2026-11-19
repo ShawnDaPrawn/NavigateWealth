@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -7,137 +7,37 @@ import { Card, CardContent } from '../ui/card';
 import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
-import {
-  Users,
-  Shield,
-  Award,
-  Calculator,
-  Target,
-  Building,
-  ArrowRight,
-  CheckCircle,
-  TrendingUp,
-  Trophy,
-  HandHeart,
-  FileText,
-  Smartphone,
-  HeadphonesIcon,
-  Monitor,
-  Calendar,
-  ChevronRight,
-  Sparkles,
-  Briefcase,
-} from 'lucide-react';
-import { TRUST_FACTS } from '@/config/companyFacts';
+import { ArrowRight, CheckCircle, Calendar, ChevronRight, Sparkles } from 'lucide-react';
+import { SITE_DESIGN } from '../../site/design';
+import { services, practiceStages, stats, digitalFeatures } from './forAdvisersPageData';
 
-// ---------------------------------------------------------------------------
-// Data
-// ---------------------------------------------------------------------------
-
-const services = [
-  {
-    title: 'Succession Planning',
-    description:
-      'Smooth practice transitions that preserve client relationships and unlock ongoing revenue streams.',
-    icon: Users,
-    link: '/contact?type=advisors',
-    features: [
-      'Client relationship preservation',
-      'Revenue stream continuity',
-      'Transition management',
-    ],
-    accent: 'from-blue-500 to-indigo-600',
-    accentLight: 'bg-blue-50 text-blue-600',
-  },
-  {
-    title: 'Legacy Planning',
-    description:
-      'Structure your firm to honor professional standards and ensure multi-generational continuity.',
-    icon: HandHeart,
-    link: '/contact?type=advisors',
-    features: ['Professional standards', 'Multi-generational solutions', 'Service continuity'],
-    accent: 'from-violet-500 to-purple-600',
-    accentLight: 'bg-violet-50 text-violet-600',
-  },
-  {
-    title: 'Practice Valuation',
-    description:
-      'Professional practice appraisals and comprehensive assessments for informed decision-making.',
-    icon: Calculator,
-    link: '/contact?type=advisors',
-    features: ['Professional valuations', 'Market assessments', 'Deal structuring'],
-    accent: 'from-amber-500 to-orange-600',
-    accentLight: 'bg-amber-50 text-amber-600',
-  },
-  {
-    title: 'Practice Sales',
-    description:
-      'Comprehensive guidance on valuations, deal structures, and seamless client handovers.',
-    icon: Building,
-    link: '/contact?type=advisors',
-    features: ['Fair valuations', 'Transparent deals', 'Client handovers'],
-    accent: 'from-emerald-500 to-teal-600',
-    accentLight: 'bg-emerald-50 text-emerald-600',
-  },
-  {
-    title: 'Client Transitions',
-    description: 'Seamless client relationship transfers that maintain service quality and trust.',
-    icon: Target,
-    link: '/contact?type=advisors',
-    features: ['Relationship transfers', 'Service quality', 'Trust preservation'],
-    accent: 'from-rose-500 to-pink-600',
-    accentLight: 'bg-rose-50 text-rose-600',
-  },
-  {
-    title: 'Risk Management',
-    description: 'Protect your practice from unforeseen circumstances with comprehensive coverage.',
-    icon: Shield,
-    link: '/risk-management',
-    features: ['Practice protection', 'Key person cover', 'Business continuity'],
-    accent: 'from-cyan-500 to-blue-600',
-    accentLight: 'bg-cyan-50 text-cyan-600',
-  },
-];
-
-const practiceStages = [
-  { icon: Briefcase, title: 'Early Career', description: 'Building practice' },
-  { icon: TrendingUp, title: 'Growing', description: 'Expanding client base' },
-  { icon: Trophy, title: 'Established', description: 'Mature practice' },
-  { icon: Target, title: 'Planning Exit', description: 'Succession focus' },
-  { icon: Award, title: 'Retirement', description: 'Legacy secured' },
-];
-
-// Checkable facts only — see src/config/companyFacts.ts.
-const stats = TRUST_FACTS.slice(0, 3);
-
-const digitalFeatures = [
-  {
-    icon: Smartphone,
-    title: 'Digital Tools',
-    description: 'Track every step of your transition from any device',
-  },
-  {
-    icon: Monitor,
-    title: 'Client Portal',
-    description: 'Secure access for all parties throughout the handover',
-  },
-  {
-    icon: FileText,
-    title: 'Documentation',
-    description: 'Complete compliance records and audit trails maintained',
-  },
-  {
-    icon: HeadphonesIcon,
-    title: 'Personal Service',
-    description: 'Direct support from planning through completion',
-  },
-];
+const NavigatorForAdvisersPage = React.lazy(() =>
+  import('../../site/pages/NavigatorForAdvisersPage').then((m) => ({
+    default: m.NavigatorForAdvisersPage,
+  })),
+);
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
+/**
+ * The For Advisers page. The build's design switch picks the layout; both read
+ * the same content from forAdvisersPageData.ts, so it lives in one place
+ * whichever design is live.
+ */
 export function ForAdvisersPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorForAdvisersPage />
+      </Suspense>
+    );
+  }
+  return <LegacyForAdvisersPage />;
+}
+
+function LegacyForAdvisersPage() {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
 
