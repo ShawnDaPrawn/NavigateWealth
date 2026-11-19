@@ -9,6 +9,7 @@
  * the heading, so the next Tab continues from there.
  */
 import { useId, type MouseEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { ArticleIcon } from './ArticleIcons';
 import type { TocEntry } from './ArticleModel';
 
@@ -32,6 +33,25 @@ interface TocProps {
 function follow(event: MouseEvent<HTMLAnchorElement>, id: string, onPick: (id: string) => void) {
   if (goToHeading(id)) event.preventDefault();
   onPick(id);
+}
+
+/**
+ * The fold-out sits above the article, so it must close BEFORE the scroll is
+ * measured: scrolling first and collapsing after would shift the heading up
+ * by the list's height and leave the reader past it.
+ */
+function followFromFold(
+  event: MouseEvent<HTMLAnchorElement>,
+  id: string,
+  onPick: (id: string) => void,
+) {
+  if (!document.getElementById(id)) {
+    onPick(id);
+    return;
+  }
+  event.preventDefault();
+  flushSync(() => onPick(id));
+  goToHeading(id);
 }
 
 /** The rail's list. */
@@ -95,7 +115,7 @@ export function ArticleTocFold({ entries, activeId, onPick, open, onToggle }: Fo
                 className={entry.level === 3 ? 'nwar-toc nwar-fold-item--sub' : 'nwar-toc'}
                 href={`#${entry.id}`}
                 aria-current={entry.id === activeId ? 'location' : undefined}
-                onClick={(event) => follow(event, entry.id, onPick)}
+                onClick={(event) => followFromFold(event, entry.id, onPick)}
               >
                 {entry.text}
               </a>

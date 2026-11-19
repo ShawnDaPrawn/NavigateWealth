@@ -338,8 +338,18 @@ describe('Navigator article page', () => {
     fireEvent.click(fold);
     expect(fold.getAttribute('aria-expanded')).toBe('true');
     const list = document.getElementById(fold.getAttribute('aria-controls')!)!;
+    // The scroll must be measured with the list already folded away (review
+    // finding): scrolling first, then collapsing, would leave the reader past
+    // the heading by the list's height.
+    const foldedWhenScrolled: boolean[] = [];
+    const scrollIntoView = vi.fn(function scrolled() {
+      foldedWhenScrolled.push(fold.getAttribute('aria-expanded') === 'false');
+    });
+    Element.prototype.scrollIntoView = scrollIntoView;
     fireEvent.click(within(list).getByRole('link', { name: 'Where it goes wrong' }));
     expect(fold.getAttribute('aria-expanded')).toBe('false');
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(foldedWhenScrolled).toEqual([true]);
   });
 
   it('leaves the table of contents out for an article with fewer than two headings', async () => {

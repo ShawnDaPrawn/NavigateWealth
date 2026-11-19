@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router';
-import { useState, useEffect } from 'react';
+import { Suspense, lazy, useState, useEffect } from 'react';
 import { updatePassword } from '../../utils/auth/authService';
 import { getSupabaseClient } from '../../utils/supabase/client';
 import { Button } from '../ui/button';
@@ -16,8 +16,31 @@ import { getUserErrorMessage } from '../../utils/errorUtils';
 import { Logo } from '../layout/Logo';
 import { copyToClipboard } from '../../utils/clipboard';
 import { useIsStandalone } from '../../hooks/useIsStandalone';
+import { SITE_DESIGN } from '../../site/design';
 
+const NavigatorResetPasswordPage = lazy(() =>
+  import('../../site/pages/NavigatorResetPasswordPage').then((m) => ({
+    default: m.NavigatorResetPasswordPage,
+  })),
+);
+
+/**
+ * The reset-password page. The build's design switch picks the layout; both
+ * read the link and set the password with the same calls (the Navigator page
+ * carries a verbatim copy of the logic below, held to it by its test).
+ */
 export function ResetPasswordPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorResetPasswordPage />
+      </Suspense>
+    );
+  }
+  return <LegacyResetPasswordPage />;
+}
+
+function LegacyResetPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isStandalone = useIsStandalone();

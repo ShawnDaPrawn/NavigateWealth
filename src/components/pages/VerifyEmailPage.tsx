@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
@@ -6,8 +6,31 @@ import { Mail, CheckCircle2, ArrowLeft, RefreshCw } from 'lucide-react';
 import { getCurrentUser, getSupabaseClient, resendVerificationEmail } from '../../utils/auth';
 import { Logo } from '../layout/Logo';
 import { logger } from '../../utils/logger';
+import { SITE_DESIGN } from '../../site/design';
 
+const NavigatorVerifyEmailPage = React.lazy(() =>
+  import('../../site/pages/NavigatorVerifyEmailPage').then((m) => ({
+    default: m.NavigatorVerifyEmailPage,
+  })),
+);
+
+/**
+ * The "check your email" page signup sends a new account to. The build's
+ * design switch picks the layout; both run the same session check and the
+ * same resend.
+ */
 export function VerifyEmailPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorVerifyEmailPage />
+      </Suspense>
+    );
+  }
+  return <LegacyVerifyEmailPage />;
+}
+
+function LegacyVerifyEmailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
