@@ -30,6 +30,7 @@ import { articlePath } from '../../components/shared/useFeaturedArticles';
 import { projectId } from '../../utils/supabase/info';
 import { PressIcon } from './PressIcons';
 import { SectionHead } from './SectionHead';
+import { formatCardDate } from './format';
 import '../styles/sections.css';
 import '../styles/home.css';
 import '../styles/press.css';
@@ -73,16 +74,6 @@ const PRESS_CATEGORY_LABEL_MAP: Record<string, string> = {
 };
 
 const PRESS_CATEGORY_TABS = ['All', 'Company News', 'Product Launch', 'Industry Insights'];
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** "1 Oct 2026", as the Navigator boards write dates. */
-function formatCardDate(iso?: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
 
 /** Any failure resolves to no articles, as on the live page. */
 function usePressArticles(): { articles: PressArticle[]; loading: boolean } {

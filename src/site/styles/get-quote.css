@@ -1,0 +1,444 @@
+/*
+ * Navigator Get a Quote page (/get-quote) — ported from the "GetQuote" board
+ * of the Claude Design canvas, its inline styles turned into classes. The
+ * grid texture and the accent come from sections.css; buttons, tokens and the
+ * focus ring from navigator.css.
+ *
+ * Every class here is prefixed `nwgq-` and every rule is scoped to
+ * `.nw-site`, like navigator.css, so nothing here can reach the portal, the
+ * admin, the legacy public site or another Navigator page.
+ *
+ * What the board inherits that the app does not, restored here so the page
+ * measures as the board does:
+ * - The board's body has a 16px font size and the browser's `line-height:
+ *   normal`. The app's root is 14px and its base layer sets 1.5 on <html> and
+ *   its own line heights on h1, h2 and p. The reset below has no specificity,
+ *   so every class that sets a line height still wins.
+ * - The board's boxes are `content-box` unless they say otherwise; the app's
+ *   preflight makes everything `border-box`. Only the help card's call link (a
+ *   fixed height plus a border) measures differently, so only it opts back in.
+ * - The board's stylesheet forces every h1 and h2 to the serif at weight 500
+ *   with -0.012em tracking, over the weights (800, 600) and tracking its
+ *   inline styles ask for. The page follows the stylesheet, as the board
+ *   renders.
+ */
+
+/* ── Page ── */
+.nw-site.nwgq {
+  font-size: 16px;
+  line-height: normal;
+  background: var(--nw-paper);
+  color: var(--nw-ink);
+}
+:where(.nw-site.nwgq) :where(h1, h2, p) {
+  line-height: inherit;
+}
+
+/* ── Hero ── */
+.nw-site .nwgq-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--nw-ink-2);
+  color: var(--nw-white);
+}
+.nw-site .nwgq-hero > .nw-grid-bg {
+  -webkit-mask-image: radial-gradient(ellipse 60% 80% at 50% 40%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 80% at 50% 40%, #000 0%, transparent 75%);
+}
+.nw-site .nwgq-hero-glow {
+  position: absolute;
+  top: -280px;
+  left: 50%;
+  margin-left: -380px;
+  width: 760px;
+  height: 760px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 22, 38, 0.18) 0%, rgba(13, 22, 38, 0) 68%);
+  pointer-events: none;
+}
+.nw-site .nw-wrap.nwgq-hero-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: clamp(48px, 7vw, 88px);
+  padding-bottom: clamp(48px, 7vw, 80px);
+}
+.nw-site .nwgq-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(13, 22, 38, 0.132);
+  border: 1px solid rgba(246, 244, 239, 0.35);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-cream);
+}
+.nw-site .nwgq-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nw-success-bright);
+}
+.nw-site .nwgq-h1 {
+  margin: 22px 0 0;
+  max-width: 820px;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-display);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.012em;
+  color: var(--nw-white);
+}
+.nw-site .nwgq-lead {
+  margin: 18px 0 0;
+  max-width: 620px;
+  font-size: clamp(15.5px, 1.6vw, 18px);
+  line-height: 1.65;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwgq-highlights {
+  list-style: none;
+  margin: 30px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.nw-site .nwgq-highlights > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 13.5px;
+  color: var(--nw-line);
+}
+
+/* ── Choose a service ── */
+.nw-site .nwgq-choose {
+  padding: clamp(32px, 5vw, 56px) 0 var(--nw-sec-lg);
+}
+
+/* Progress card */
+.nw-site .nwgq-steps {
+  position: relative;
+  padding: 20px clamp(16px, 3vw, 28px);
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  box-shadow: 0 20px 40px -32px rgba(17, 24, 39, 0.35);
+}
+.nw-site .nwgq-steps-list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.nw-site .nwgq-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.nw-site .nwgq-step-rule {
+  flex: 0 0 32px;
+  border-top: 1.5px dashed var(--nw-line);
+}
+.nw-site .nwgq-step-rule[data-next] {
+  border-top-color: var(--nw-on-dark);
+}
+.nw-site .nwgq-step-no {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--nw-line);
+  background: var(--nw-white);
+  color: var(--nw-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+.nw-site .nwgq-step[data-current] .nwgq-step-no {
+  border: 0;
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  box-shadow: 0 0 0 5px rgba(13, 22, 38, 0.09);
+}
+.nw-site .nwgq-step-text {
+  min-width: 0;
+}
+.nw-site .nwgq-step-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-muted);
+}
+.nw-site .nwgq-step-text > .nwgq-step-label {
+  display: block;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwgq-step-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--nw-muted);
+}
+.nw-site .nwgq-steps-notes {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--nw-line-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  font-size: 13px;
+  color: var(--nw-muted);
+}
+.nw-site .nwgq-steps-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The phone-width hint on which card to pick. */
+.nw-site .nwgq-hint {
+  display: none;
+  margin: 18px 4px 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwgq-hint strong {
+  color: var(--nw-ink);
+}
+
+/* Service cards */
+.nw-site .nwgq-grid {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+  gap: 16px;
+}
+.nw-site .nwgq-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 236px;
+  padding: 24px;
+  box-sizing: border-box;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+}
+/* The card lifts and casts a shadow. Its border keeps its colour: the board's
+   stylesheet also asks for a darker border on hover, but the card's inline
+   border overrides it, so the board never shows one. */
+.nw-site .nwgq-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 50px -30px rgba(76, 29, 149, 0.45);
+}
+.nw-site .nwgq-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwgq-card-icon {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 22, 38, 0.06);
+  color: var(--nw-ink);
+  transition:
+    background-color 0.25s,
+    color 0.25s;
+}
+.nw-site .nwgq-card:hover .nwgq-card-icon {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwgq-card-no {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--nw-muted);
+}
+.nw-site .nwgq-card-title,
+.nw-site .nwgq-help-title {
+  margin: 0;
+  font-family: var(--nw-font-serif);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+.nw-site .nwgq-card-title {
+  color: var(--nw-ink);
+}
+.nw-site .nwgq-card-text,
+.nw-site .nwgq-help-text {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.nw-site .nwgq-card-text {
+  color: var(--nw-text);
+}
+.nw-site .nwgq-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nw-site .nwgq-chip {
+  padding: 5px 10px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--nw-ink);
+}
+.nw-site .nwgq-card-go {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+  transition: transform 0.25s;
+}
+.nw-site .nwgq-card:hover .nwgq-card-go {
+  transform: translateX(4px);
+}
+
+/* "Not sure where to start?" */
+.nw-site .nwgq-help {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 236px;
+  padding: 24px;
+  box-sizing: border-box;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwgq-help-icon {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(201, 209, 224, 0.099);
+  color: var(--nw-on-dark);
+}
+.nw-site .nwgq-help-copy {
+  position: relative;
+}
+.nw-site .nwgq-help-title {
+  color: var(--nw-white);
+}
+.nw-site .nwgq-help-text {
+  color: var(--nw-on-dark);
+}
+.nw-site .nwgq-help-actions {
+  position: relative;
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nw-site .nwgq-help-call {
+  box-sizing: content-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--nw-white);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Credentials under the cards */
+.nw-site .nwgq-foot {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--nw-line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.nw-site .nwgq-foot-text {
+  margin: 0;
+  max-width: 440px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwgq-trust {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+}
+.nw-site .nwgq-trust > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nw-text-strong);
+}
+
+/* ── Narrow screens: the board's 860px and 640px breakpoints ── */
+@media (max-width: 860px) {
+  .nw-site .nwgq-steps .nwgq-hide-md {
+    display: none;
+  }
+  .nw-site .nwgq-hint {
+    display: block;
+  }
+}
+@media (max-width: 640px) {
+  .nw-site .nwgq-h1,
+  .nw-site .nwgq-card-title,
+  .nw-site .nwgq-help-title {
+    overflow-wrap: break-word;
+  }
+}

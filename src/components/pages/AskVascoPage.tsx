@@ -4,7 +4,7 @@
  * Logged-out Ask Vasco experience aligned with the client portal AI Advisor UI.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '../ui/button';
 import { SEO, createWebPageSchema } from '../seo/SEO';
@@ -41,52 +41,13 @@ import {
   useVascoStream,
 } from '../shared/vasco-chat';
 import type { VascoChatMessageType as Message, VascoCitation } from '../shared/vasco-chat';
-
-const SUGGESTED_PROMPTS = [
-  'How much life cover do I need?',
-  'Explain retirement annuities',
-  'Am I saving enough for retirement?',
-  'How does estate duty work in SA?',
-];
-
-const VASCO_VISITOR_ID_KEY = 'vasco_visitor_id';
-
-function getOrCreateVascoVisitorId() {
-  try {
-    const existing = localStorage.getItem(VASCO_VISITOR_ID_KEY);
-    if (existing) return existing;
-
-    const generated =
-      typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem(VASCO_VISITOR_ID_KEY, generated);
-    return generated;
-  } catch {
-    return 'anonymous';
-  }
-}
-
-const VASCO_WELCOME: Message = {
-  role: 'assistant',
-  content: `Welcome! I'm **Vasco**, your AI financial navigator at Navigate Wealth.
-
-I can help you explore financial concepts, retirement planning, risk management, tax strategies, and more — all tailored to the South African context.
-
-**Here's what I can help with:**
-- Explaining financial products and concepts
-- General retirement and savings guidance
-- Understanding tax implications
-- Rough financial illustrations and calculations
-- Learning about Navigate Wealth's services
-
-Tap a suggested topic or ask me anything to get started!`,
-  timestamp: new Date(),
-};
-
-function isWelcomeMessage(message: Message) {
-  return message.role === 'assistant' && message.content === VASCO_WELCOME.content;
-}
+import { SITE_DESIGN } from '../../site/design';
+import {
+  SUGGESTED_PROMPTS,
+  VASCO_WELCOME,
+  getOrCreateVascoVisitorId,
+  isWelcomeMessage,
+} from './askVascoData';
 
 /** Visible, focusable elements within a container — used to trap focus in the expanded chat dialog. */
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
@@ -262,7 +223,29 @@ function HandoffModal({
   );
 }
 
+const NavigatorAskVascoPage = React.lazy(() =>
+  import('../../site/pages/NavigatorAskVascoPage').then((m) => ({
+    default: m.NavigatorAskVascoPage,
+  })),
+);
+
+/**
+ * The public Ask Vasco page. The build's design switch picks the layout; both
+ * talk to Vasco through the same stream hook and endpoints, and read the same
+ * prompts and welcome from askVascoData.ts.
+ */
 export function AskVascoPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorAskVascoPage />
+      </Suspense>
+    );
+  }
+  return <LegacyAskVascoPage />;
+}
+
+function LegacyAskVascoPage() {
   const seoData = getSEOData('ask-vasco');
   const [messages, setMessages] = useState<Message[]>([VASCO_WELCOME]);
   const [input, setInput] = useState('');
