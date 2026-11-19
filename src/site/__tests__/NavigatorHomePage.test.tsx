@@ -175,6 +175,21 @@ describe('Navigator home page', () => {
     );
     await renderPage();
     expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('paused');
+    // navigator.css shortens every animation to 0.01ms under reduced motion, so
+    // the bar does end at once; that must not move the slide on.
+    endProgress();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Secure Your Financial Future.',
+    );
+  });
+
+  it('does not advance while paused, even if the bar reports an end', async () => {
+    await renderPage();
+    fireEvent.mouseEnter(screen.getByRole('group', { name: 'Highlights' }));
+    endProgress();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Secure Your Financial Future.',
+    );
   });
 
   it('keeps every FAQ answer in the document, matching the FAQPage data', async () => {

@@ -15,7 +15,7 @@
  * animation ends, so pausing the animation pauses the slide and the two can
  * never drift apart.
  */
-import { useEffect, useId, useState, type CSSProperties } from 'react';
+import { useId, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight } from 'lucide-react';
 import type { TrustFact } from '../../config/companyFacts';
@@ -65,13 +65,12 @@ function prefersReducedMotion(): boolean {
 
 export function HomeHero({ badge, flagSrc, slides, trustFacts, slideMs = 8000 }: HomeHeroProps) {
   const [index, setIndex] = useState(0);
-  const [autoplay, setAutoplay] = useState(true);
+  // Read before the first render: under reduced motion navigator.css shortens
+  // every animation to 0.01ms, so a bar that ran for even one frame would end
+  // at once and skip a slide.
+  const [autoplay] = useState(() => !prefersReducedMotion());
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
-
-  useEffect(() => {
-    if (prefersReducedMotion()) setAutoplay(false);
-  }, []);
 
   if (slides.length === 0) return null;
   const slide = slides[index % slides.length];
@@ -154,7 +153,10 @@ export function HomeHero({ badge, flagSrc, slides, trustFacts, slideMs = 8000 }:
                                   animationPlayState: running ? 'running' : 'paused',
                                 } as CSSProperties
                               }
-                              onAnimationEnd={advance}
+                              // Only a running bar moves the slide on. A paused
+                              // one can still report an end (reduced motion
+                              // shortens it to 0.01ms), which must not advance.
+                              onAnimationEnd={running ? advance : undefined}
                             />
                           ) : null}
                         </span>
