@@ -420,7 +420,9 @@ function MegaPanel({
               </span>
               <span>
                 <span className="nwh-tile-t">{item.label}</span>
-                <span className="nwh-tile-d">{item.description}</span>
+                <span className="nwh-tile-d" data-testid="nav-tile-description">
+                  {item.description}
+                </span>
               </span>
             </Link>
           </li>

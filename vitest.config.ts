@@ -69,6 +69,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // The live site defaults to the Navigator design (src/site/design.ts). The
+    // page tests outside src/site cover the legacy design, which stays the
+    // rollback path, so the suite runs with the switch on 'legacy'. The
+    // Navigator page tests in src/site/__tests__ mock the switch to 'navigator'.
+    env: { VITE_SITE_DESIGN: 'legacy' },
     css: false,
     // v8 coverage instrumentation makes the suite run ~2-3x slower, which pushes
     // a few dialog/interaction tests past the 5s Vitest default and flakes the

@@ -120,8 +120,9 @@ test('/get-quote presents an interactive wizard, not a static page', async ({ pa
   // Target a NAMED service card. `getByRole('button').first()` was the public
   // navigation, which renders before the wizard — so it stayed green even if
   // every ServiceCard were disabled or its selection broken, i.e. it asserted
-  // nothing about the funnel it claimed to cover.
-  const serviceCard = page.getByRole('button', { name: /Risk Management/i });
+  // nothing about the funnel it claimed to cover. In the Navigator design each
+  // card is a link to that service's details step, labelled by its service.
+  const serviceCard = page.getByRole('link', { name: 'Get a Risk Management quote' });
   await expect(serviceCard).toBeVisible();
   await expect(serviceCard).toBeEnabled();
 
@@ -141,8 +142,9 @@ test('desktop nav dropdown descriptions show in full inside their tiles', async 
   // browser can check it; the unit test's character budget is a proxy.
   test.skip(testInfo.project.name.startsWith('mobile'), 'the mega menus are desktop-only');
 
-  // lg (1024px) is where the desktop nav appears, and the tightest width.
-  for (const width of [1024, 1280]) {
+  // 1200px is where the header shows its desktop menus (below it, the phone
+  // menu), and the tightest width.
+  for (const width of [1200, 1280]) {
     await page.setViewportSize({ width, height: 800 });
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
