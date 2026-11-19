@@ -15,24 +15,6 @@
  * portal, the admin or the legacy public site.
  */
 
-/*
- * The board is drawn on a 16px root; the site's root is 14px (globals.css),
- * so navigator.css's rem-based type tokens come out an eighth smaller than
- * the board. This page restates the three it uses in px, at the board's sizes.
- */
-.nw-site.nwab-page {
-  --nw-fs-display: clamp(40px, 4.6vw, 60px);
-  --nw-fs-h2: clamp(31.2px, 3.3vw, 44px);
-  --nw-fs-h3: clamp(24px, 2.3vw, 30px);
-}
-@media (max-width: 640px) {
-  .nw-site.nwab-page {
-    --nw-fs-display: clamp(28.8px, 7.6vw, 33.6px);
-    --nw-fs-h2: clamp(22.4px, 6.2vw, 25.6px);
-    --nw-fs-h3: 21px;
-  }
-}
-
 /* ── Shared ── */
 .nw-site .nwab-kicker {
   line-height: normal;

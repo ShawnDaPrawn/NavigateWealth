@@ -21,29 +21,13 @@
   line-height: normal;
 }
 /*
- * The board's type scale is written in rem against the browser's 16px; the
- * app's root font-size is 14px (globals.css), which shrinks every rem token in
- * navigator.css by an eighth. This page restates those tokens in the board's
- * pixels, and its 16px body size, so its headings measure as drawn.
+ * The board inherits the browser's 16px body size; the app's root is 14px
+ * (globals.css). The heading tokens are px in navigator.css; this restores the
+ * board's 16px body size for text that inherits it.
  */
 .nw-site.nwwu,
 .nw-site.nwwu-portal {
   font-size: 16px;
-  --nw-fs-display: clamp(40px, 4.6vw, 60px);
-  --nw-fs-h1s: clamp(35.2px, 4vw, 52px);
-  --nw-fs-h2: clamp(31.2px, 3.3vw, 44px);
-  --nw-fs-h2s: clamp(25.6px, 2.6vw, 36px);
-  --nw-fs-h3: clamp(24px, 2.3vw, 30px);
-}
-@media (max-width: 640px) {
-  .nw-site.nwwu,
-  .nw-site.nwwu-portal {
-    --nw-fs-display: clamp(28.8px, 7.6vw, 33.6px);
-    --nw-fs-h1s: clamp(28.8px, 7.6vw, 33.6px);
-    --nw-fs-h2: clamp(22.4px, 6.2vw, 25.6px);
-    --nw-fs-h2s: clamp(22.4px, 6.2vw, 25.6px);
-    --nw-fs-h3: 21px;
-  }
 }
 :where(.nw-site.nwwu, .nw-site.nwwu-portal) :where(p, button, h1, h2, h3, h4, dt, dd, li) {
   line-height: normal;

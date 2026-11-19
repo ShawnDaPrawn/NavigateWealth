@@ -20,20 +20,6 @@
   line-height: inherit;
 }
 
-/* navigator.css states these two type tokens in rem, which resolve against the
-   site's 14px root and so draw the headings at 87.5% of the board's size.
-   Restated in px, they are the board's sizes. */
-.nw-site.nwtm {
-  --nw-fs-display: clamp(40px, 4.6vw, 60px);
-  --nw-fs-h2: clamp(31.2px, 3.3vw, 44px);
-}
-@media (max-width: 640px) {
-  .nw-site.nwtm {
-    --nw-fs-display: clamp(28.8px, 7.6vw, 33.6px);
-    --nw-fs-h2: clamp(22.4px, 6.2vw, 25.6px);
-  }
-}
-
 /* ── Actions: the board's 10px gap between label and arrow ── */
 .nw-site .nwtm .nw-btn {
   gap: 10px;

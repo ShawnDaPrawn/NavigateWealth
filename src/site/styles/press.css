@@ -12,28 +12,9 @@
  */
 
 /* ── Page ── */
-/*
- * Type scale in px. navigator.css writes the heading tokens in rem, as the
- * board does, but the board's rem is the browser's 16px and the app's root
- * font-size is 14px (globals.css), so in the app every rem-based heading came
- * out at 87.5% of the board. These are the board's values at 16px.
- */
+/* The board inherits the browser's normal line height, not the app's 1.5. */
 .nw-site.nwpr2 {
-  --nw-fs-display: clamp(40px, 4.6vw, 60px);
-  --nw-fs-h1s: clamp(35.2px, 4vw, 52px);
-  --nw-fs-h2: clamp(31.2px, 3.3vw, 44px);
-  --nw-fs-h2s: clamp(25.6px, 2.6vw, 36px);
-  --nw-fs-h3: clamp(24px, 2.3vw, 30px);
   line-height: normal;
-}
-@media (max-width: 640px) {
-  .nw-site.nwpr2 {
-    --nw-fs-display: clamp(28.8px, 7.6vw, 33.6px);
-    --nw-fs-h1s: clamp(28.8px, 7.6vw, 33.6px);
-    --nw-fs-h2: clamp(22.4px, 6.2vw, 25.6px);
-    --nw-fs-h2s: clamp(22.4px, 6.2vw, 25.6px);
-    --nw-fs-h3: 21px;
-  }
 }
 .nw-site.nwpr2 .nw-kicker,
 .nw-site.nwpr2 button {
