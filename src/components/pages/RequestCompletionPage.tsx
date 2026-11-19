@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useParams } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Button } from '../ui/button';
@@ -18,6 +18,13 @@ import { Badge } from '../ui/badge';
 import { InteractiveFormRenderer } from '../admin/modules/resources';
 import { PageLoader } from '../ui/page-loader';
 import { COMPANY } from '@/config/companyFacts';
+import { SITE_DESIGN } from '../../site/design';
+
+const NavigatorRequestCompletionPage = React.lazy(() =>
+  import('../../site/pages/NavigatorRequestCompletionPage').then((m) => ({
+    default: m.NavigatorRequestCompletionPage,
+  })),
+);
 
 // Minimal type definitions for request completion (module has been deleted)
 interface RequestInstance {
@@ -43,7 +50,23 @@ interface TemplateField {
   options?: string[];
 }
 
+/**
+ * The page a client opens from an emailed request link. The build's design
+ * switch picks the layout; both load and submit the request through the same
+ * routes with the same payload.
+ */
 export function RequestCompletionPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorRequestCompletionPage />
+      </Suspense>
+    );
+  }
+  return <LegacyRequestCompletionPage />;
+}
+
+function LegacyRequestCompletionPage() {
   const { id } = useParams<{ id: string }>();
   const [request, setRequest] = useState<RequestInstance | null>(null);
   const [loading, setLoading] = useState(true);

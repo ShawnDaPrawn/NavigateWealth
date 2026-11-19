@@ -1,0 +1,1010 @@
+/*
+ * Navigator request completion page — /requests/:id — ported from the
+ * "Request Completion" board of the Claude Design canvas, its inline styles
+ * turned into classes. Buttons, the focus ring and tokens come from
+ * navigator.css; .nw-mono and .nw-in from sections.css.
+ *
+ * The route renders outside MainLayout, so the page root carries `.nw-site`
+ * itself. Scoped to `.nw-site`, like navigator.css. Every class is prefixed
+ * `nwrc-`.
+ */
+
+/* The board has a 16px base, the browser's normal line height and no
+   border-box reset. The site's root is 14px, Tailwind's preflight sizes every
+   box by its border and resets form controls, and the global base typography
+   gives p, headings, labels, buttons and inputs sizes and line heights of
+   their own; all restated here at zero specificity, so every rule below (and
+   navigator.css's border-box buttons) still wins. */
+.nw-site.nwrc {
+  --nwrc-fs-title: 28px;
+  width: 100%;
+  min-height: 100vh;
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-ink);
+  background: var(--nw-paper);
+}
+@media (max-width: 640px) {
+  .nw-site.nwrc {
+    --nwrc-fs-title: 24px;
+  }
+}
+:where(.nw-site.nwrc) :where(p, h1, h2, h3, label, button, input, select, legend, li, th, td) {
+  line-height: inherit;
+}
+:where(.nw-site.nwrc) :where(p, label, legend) {
+  font-size: inherit;
+  font-weight: inherit;
+}
+:where(.nw-site.nwrc),
+:where(.nw-site.nwrc) :where(*, ::before, ::after) {
+  box-sizing: content-box;
+}
+/* The browser's own sizing for controls, which the board keeps. */
+:where(.nw-site.nwrc) :where(button, select, input[type='checkbox']) {
+  box-sizing: border-box;
+}
+
+.nw-site .nwrc-main {
+  display: block;
+  padding: clamp(16px, 5vw, 48px) clamp(10px, 3vw, 16px) 64px;
+}
+
+/* ── Loading ── */
+.nw-site .nwrc-skel {
+  max-width: 768px;
+  margin: 0 auto;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  box-shadow: 0 0 0 1px var(--nw-line);
+  padding: clamp(20px, 6vw, 48px);
+}
+.nw-site .nwrc-skel-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.nw-site .nwrc-sk {
+  border-radius: var(--nw-r-sm);
+  background: linear-gradient(
+    90deg,
+    var(--nw-paper-2) 0,
+    var(--nw-paper) 40%,
+    var(--nw-paper-2) 80%
+  );
+  background-size: 800px 100%;
+  animation: nwrc-shimmer 1.4s linear infinite;
+}
+@keyframes nwrc-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+.nw-site .nwrc-sk--logo {
+  width: 160px;
+  height: 22px;
+}
+.nw-site .nwrc-sk--contact {
+  width: 120px;
+  height: 40px;
+}
+.nw-site .nwrc-sk--title {
+  display: block;
+  margin-top: 36px;
+  width: 55%;
+  height: 26px;
+}
+.nw-site .nwrc-sk--meta {
+  display: block;
+  margin-top: 12px;
+  width: 40%;
+  height: 14px;
+}
+.nw-site .nwrc-skel-fields {
+  margin-top: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.nw-site .nwrc-sk--field {
+  display: block;
+  width: 100%;
+  height: 48px;
+}
+.nw-site .nwrc-sk--area {
+  display: block;
+  width: 100%;
+  height: 110px;
+}
+
+/* ── The status cards: not found, and thank you ── */
+.nw-site .nwrc-card {
+  max-width: 460px;
+  margin: 40px auto 0;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  box-shadow: 0 0 0 1px var(--nw-line);
+  padding: clamp(22px, 6vw, 36px);
+  text-align: center;
+}
+/* An inline image on the text line, as the board places it. */
+.nw-site .nwrc-card-logo {
+  display: inline;
+  vertical-align: baseline;
+  height: 20px;
+  width: auto;
+}
+.nw-site .nwrc-card-badge {
+  margin: 24px auto 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwrc-card-badge--danger {
+  background: var(--nw-danger-bg);
+  border: 1px solid var(--nw-danger-line);
+  color: var(--nw-danger);
+}
+.nw-site .nwrc-card-badge--success {
+  margin: 0 auto;
+  width: 72px;
+  height: 72px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: var(--nw-success);
+}
+/* The board's h1 rule forces the serif at 500. */
+.nw-site .nwrc-card-title {
+  margin: 16px 0 0;
+  font-size: var(--nwrc-fs-title);
+}
+.nw-site .nwrc-card-title--danger {
+  color: var(--nw-danger);
+}
+.nw-site .nwrc-card-title--done {
+  margin: 18px 0 0;
+}
+.nw-site .nwrc-card-text {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-card-lead {
+  margin: 8px 0 0;
+  font-size: 15px;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-card-text.nwrc-card-text--next {
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+.nw-site .nwrc-card-help {
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-card-help a {
+  font-weight: 600;
+  color: var(--nw-ink);
+  text-decoration: none;
+}
+.nw-site .nwrc-card-help a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.nw-site .nwrc-card-contact {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--nw-paper-2);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  font-size: 13.5px;
+  color: var(--nw-text);
+}
+
+/* ── The document ── */
+.nw-site .nwrc-doc {
+  display: block;
+  max-width: 768px;
+  margin: 0 auto;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  box-shadow: 0 0 0 1px var(--nw-line);
+}
+.nw-site .nwrc-doc-head {
+  padding: clamp(18px, 5vw, 32px) clamp(18px, 6vw, 48px);
+  border-bottom: 1px solid var(--nw-line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.nw-site .nwrc-doc-logo {
+  display: block;
+  height: 24px;
+  width: auto;
+}
+.nw-site .nwrc-doc-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--nw-text);
+  text-align: right;
+}
+.nw-site .nwrc-doc-contact > span {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.nw-site .nwrc-intro {
+  padding: clamp(18px, 5vw, 32px) clamp(18px, 6vw, 48px) 0;
+}
+/* The board's h1 rule forces the serif at 500. */
+.nw-site .nwrc-title {
+  margin: 0;
+  font-size: var(--nw-fs-h1s);
+}
+.nw-site .nwrc-for {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-for-email {
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwrc-date {
+  margin: 14px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-3);
+  border: 1px solid var(--nw-paper-2);
+  font-size: 11.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-progress {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.nw-site .nwrc-track {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+  overflow: hidden;
+}
+.nw-site .nwrc-bar {
+  height: 100%;
+  background: var(--nw-ink);
+  transition: width 0.3s;
+}
+.nw-site .nwrc-count {
+  font-size: 12px;
+  color: var(--nw-text);
+}
+
+.nw-site .nwrc-alert {
+  margin: 18px clamp(18px, 6vw, 48px) 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-danger-bg);
+  border: 1px solid var(--nw-danger-line);
+  color: var(--nw-danger-dark);
+  font-size: 14px;
+}
+.nw-site .nwrc-alert-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── The form ── */
+.nw-site .nwrc-form {
+  padding: 8px clamp(18px, 6vw, 48px) 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.nw-site .nwrc-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.nw-site .nwrc-block {
+  display: contents;
+}
+.nw-site .nwrc-section {
+  padding-top: 18px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(13, 22, 38, 0.18);
+}
+/* The board's h2 rule forces the serif at 500. */
+.nw-site .nwrc-section-title {
+  margin: 0;
+  font-size: 17px;
+}
+.nw-site .nwrc-section-num {
+  margin-right: 8px;
+  color: var(--nw-muted);
+}
+.nw-site .nwrc-para {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-para.nwrc-para--lead {
+  margin: -8px 0 0;
+}
+.nw-site .nwrc-rich :where(p, ul, ol) {
+  margin: 0;
+}
+.nw-site .nwrc-rich :where(p, ul, ol) + :where(p, ul, ol) {
+  margin-top: 10px;
+}
+.nw-site .nwrc-rich :where(ul) {
+  padding-left: 18px;
+  list-style: disc;
+}
+.nw-site .nwrc-rich :where(ol) {
+  padding-left: 18px;
+  list-style: decimal;
+}
+.nw-site .nwrc-rich :where(strong, b) {
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwrc-rich a {
+  color: var(--nw-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.nw-site .nwrc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site .nwrc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 22px 18px;
+}
+.nw-site .nwrc-grid--3 {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+}
+.nw-site .nwrc-grid--4 {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+}
+.nw-site .nwrc-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nw-site .nwrc-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-star {
+  color: var(--nw-danger);
+  margin-left: 3px;
+}
+.nw-site .nwrc-star.nwrc-star--row {
+  margin-left: 0;
+}
+.nw-site .nwrc-tag {
+  padding: 1px 6px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+  font-size: 10px;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--nw-muted);
+}
+
+/* Inputs: the board's 48px fields on the paper tint. Unlayered, so these also
+   restyle the number field the live page uses (NumberInputField). */
+.nw-site .nwrc-input {
+  display: block;
+  width: auto;
+  min-width: 0;
+  height: 48px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-paper-3);
+  box-shadow: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: normal;
+  color: #000000;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwrc-input::placeholder {
+  color: var(--nw-on-dark-muted);
+  opacity: 1;
+}
+.nw-site .nwrc-input:hover {
+  border-color: var(--nw-line);
+}
+/* Focus is the violet ring alone: the board's focus rule also asks for an ink
+   border and a white field, but the fields' inline border and tint win over
+   it there, so the board never shows them. */
+.nw-site .nwrc-input:focus,
+.nw-site .nwrc-input:focus-visible {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 1px;
+  box-shadow: none;
+}
+/* An empty required field after sending: the board's own invalid rule and the
+   design system's, which both apply on the board. */
+.nw-site .nwrc-input.nwrc-invalid,
+.nw-site .nwrc-input.nwrc-invalid:hover {
+  border-color: var(--nw-danger);
+  background: var(--nw-danger-bg);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+.nw-site .nwrc-input.nwrc-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+.nw-site .nwrc-textarea {
+  height: auto;
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.nw-site .nwrc-select-wrap {
+  position: relative;
+}
+.nw-site .nwrc-select {
+  width: 100%;
+  padding: 0 40px 0 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: default;
+}
+.nw-site .nwrc-select-chev {
+  position: absolute;
+  right: 14px;
+  top: 16px;
+  pointer-events: none;
+}
+
+/* Option groups. */
+.nw-site .nwrc-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.nw-site .nwrc-legend {
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-group > .nwrc-note {
+  margin-top: 6px;
+}
+.nw-site .nwrc-options {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+.nw-site .nwrc-options--column {
+  grid-template-columns: minmax(0, 1fr);
+}
+.nw-site .nwrc-options--pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.nw-site .nwrc-opt {
+  height: 48px;
+  margin: 0;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 400;
+  text-align: left;
+  color: var(--nw-ink);
+  border: 1.5px solid var(--nw-line);
+  background: var(--nw-white);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwrc-opt:hover {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwrc-opt.nwrc-opt--on {
+  border-color: var(--nw-ink);
+  background: var(--nw-paper);
+}
+.nw-site .nwrc-options--invalid .nwrc-opt:not(.nwrc-opt--on) {
+  border-color: var(--nw-danger-line);
+  background: var(--nw-danger-bg);
+}
+.nw-site .nwrc-ring {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #9aa3b2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.nw-site .nwrc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+}
+.nw-site .nwrc-opt--on .nwrc-ring {
+  border-color: #0d1626;
+}
+.nw-site .nwrc-opt--on .nwrc-dot {
+  background: #0d1626;
+}
+
+.nw-site .nwrc-checks {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nw-site .nwrc-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid #e2ddd3;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-check.nwrc-check--invalid {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+.nw-site .nwrc-check-box {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--nw-ink);
+  flex-shrink: 0;
+  appearance: auto;
+  -webkit-appearance: checkbox;
+}
+
+.nw-site .nwrc-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwrc-switch-row.nwrc-switch-row--invalid {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+.nw-site .nwrc-switch-label {
+  font-size: 14px;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-switch {
+  width: 48px;
+  height: 28px;
+  margin: 0;
+  border: 0;
+  border-radius: var(--nw-r-sm);
+  padding: 2px;
+  background: #d3ccbf;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.nw-site .nwrc-switch.nwrc-switch--on {
+  background: #0d1626;
+  justify-content: flex-end;
+}
+.nw-site .nwrc-knob {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--nw-white);
+  box-shadow: 0 1px 3px rgba(13, 22, 38, 0.3);
+}
+
+/* Blocks the board does not draw, in its language: tables, a compliance
+   question, signature pads, callouts and a page break. */
+.nw-site .nwrc-table-wrap {
+  border: 1px solid var(--nw-line);
+  border-radius: var(--nw-r-sm);
+  overflow-x: auto;
+}
+.nw-site .nwrc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-th {
+  padding: 10px 14px;
+  background: var(--nw-paper-3);
+  border-bottom: 1px solid var(--nw-line);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-th--item {
+  width: 40%;
+}
+
+.nw-site .nwrc-th--num {
+  width: 32px;
+}
+.nw-site .nwrc-th--act {
+  width: 44px;
+}
+.nw-site .nwrc-td {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--nw-line-soft);
+  font-weight: 400;
+  text-align: left;
+  vertical-align: middle;
+}
+.nw-site .nwrc-th.nwrc-th--center,
+.nw-site .nwrc-td.nwrc-td--center,
+.nw-site .nwrc-th.nwrc-th--num,
+.nw-site .nwrc-td.nwrc-td--num {
+  text-align: center;
+}
+.nw-site tr:last-child > .nwrc-td {
+  border-bottom: 0;
+}
+.nw-site .nwrc-td--item {
+  font-weight: 500;
+  color: var(--nw-ink);
+}
+.nw-site .nwrc-td--num {
+  font-size: 12px;
+  color: var(--nw-muted);
+}
+.nw-site .nwrc-td--center .nwrc-check-box {
+  display: inline-block;
+  vertical-align: middle;
+}
+.nw-site .nwrc-td--empty {
+  padding: 22px 14px;
+  text-align: center;
+  color: var(--nw-muted);
+}
+.nw-site .nwrc-input.nwrc-cell-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+.nw-site .nwrc-remove {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nw-r-sm);
+  background: transparent;
+  color: var(--nw-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwrc-remove:hover {
+  color: var(--nw-danger);
+  background: var(--nw-danger-bg);
+}
+.nw-site .nwrc-empty {
+  margin: 0;
+  padding: 18px 14px;
+  border: 1px dashed var(--nw-line-strong);
+  border-radius: var(--nw-r-sm);
+  font-size: 14px;
+  text-align: center;
+  color: var(--nw-muted);
+}
+.nw-site .nwrc-repeater {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nw-site .nwrc-repeater-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nw-outline.nwrc-add {
+  align-self: flex-start;
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.nw-site .nwrc-question {
+  padding: 16px 18px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-3);
+  border: 1px solid var(--nw-paper-2);
+}
+.nw-site .nwrc-question-details {
+  margin-top: 14px;
+}
+
+.nw-site .nwrc-signatures {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.nw-site .nwrc-sign {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nw-site .nwrc-sign-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-sign-pad {
+  width: 100%;
+  height: 128px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: var(--nw-r-sm);
+  border: 2px dashed var(--nw-line-strong);
+  background: var(--nw-white);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-muted);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site button.nwrc-sign-pad:hover {
+  border-color: var(--nw-ink);
+  background: var(--nw-paper-3);
+  color: var(--nw-ink);
+}
+.nw-site .nwrc-sign-pad--done {
+  box-sizing: border-box;
+  border-style: solid;
+  border-color: var(--nw-line);
+  background: var(--nw-paper-3);
+  cursor: default;
+}
+.nw-site .nwrc-sign-name {
+  margin: 0;
+  font-family: var(--nw-font-serif);
+  font-style: italic;
+  font-size: 26px;
+  color: var(--nw-ink);
+}
+.nw-site .nwrc-sign-when,
+.nw-site .nwrc-sign-date {
+  margin: 0;
+  font-size: 12px;
+  color: var(--nw-muted);
+}
+.nw-site .nwrc-sign-date {
+  text-align: right;
+}
+
+.nw-site .nwrc-callout {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  font-size: 14px;
+}
+.nw-site .nwrc-callout--info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+}
+.nw-site .nwrc-callout--warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+.nw-site .nwrc-callout--stop {
+  background: var(--nw-danger-bg);
+  border: 1px solid var(--nw-danger-line);
+  color: var(--nw-danger-dark);
+}
+.nw-site .nwrc-callout-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.nw-site .nwrc-callout-text {
+  margin: 0;
+  line-height: 1.55;
+}
+.nw-site .nwrc-break {
+  margin: 10px 0;
+  border: 0;
+  border-top: 2px dashed var(--nw-line);
+}
+
+/* ── Footer ── */
+.nw-site .nwrc-foot {
+  border-top: 1px solid var(--nw-line);
+  background: var(--nw-paper-3);
+  padding: 24px clamp(18px, 6vw, 48px);
+  border-radius: 0 0 6px 6px;
+}
+.nw-site .nw-btn.nwrc-submit {
+  width: 100%;
+  max-width: 280px;
+  height: 56px;
+  padding: 0;
+  border-radius: var(--nw-r-sm);
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+@media (max-width: 640px) {
+  .nw-site .nw-btn.nwrc-submit {
+    height: 48px;
+    font-size: 15px;
+  }
+}
+.nw-site .nwrc-spin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--nw-white);
+  border-top-color: transparent;
+  box-sizing: border-box;
+  animation: nwrc-spin 0.8s linear infinite;
+}
+@keyframes nwrc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.nw-site .nwrc-info {
+  margin-top: 20px;
+  font-size: 12.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-info-title {
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: var(--nw-text);
+}
+.nw-site .nwrc-info-list {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+  line-height: 1.7;
+}
+.nw-site .nwrc-info-note {
+  margin: 12px 0 0;
+  color: var(--nw-muted);
+}
+.nw-site .nwrc-info-fsp {
+  margin: 4px 0 0;
+  color: var(--nw-muted);
+}
+
+/* ── The failure toast ── */
+.nw-site .nwrc-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 60;
+  width: calc(100% - 32px);
+  max-width: 380px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  font-size: 14px;
+  box-shadow: 0 20px 40px -16px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  animation: nwrc-toast 0.3s ease-out both;
+}
+.nw-site .nwrc-toast-icon {
+  flex-shrink: 0;
+}
+@keyframes nwrc-toast {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwrc-sk,
+  .nw-site .nwrc-spin,
+  .nw-site .nwrc-toast {
+    animation: none;
+  }
+}
