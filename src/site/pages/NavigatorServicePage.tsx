@@ -10,6 +10,7 @@ import type { ComponentType } from 'react';
 import { Link } from 'react-router';
 import { ArrowRight, Check, CircleCheck, ShieldCheck } from 'lucide-react';
 import { SEO } from '../../components/seo/SEO';
+import { serviceShareImage } from '../../components/seo/shareImages';
 import { COMPANY } from '../../config/companyFacts';
 import type {
   CoverContent,
@@ -87,7 +88,7 @@ export function NavigatorServicePage({ config, seoData, children }: ServicePageT
         keywords={seoData.keywords}
         canonicalUrl={seoData.canonicalUrl}
         ogType={seoData.ogType}
-        ogImage={hero.heroImage}
+        ogImage={serviceShareImage(config.seoKey) ?? hero.heroImage}
         structuredData={buildServiceStructuredData(config, seoData)}
       />
 

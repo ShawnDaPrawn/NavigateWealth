@@ -1,0 +1,280 @@
+/*
+ * Navigator install prompt — the banner, toast and sheet of the "Install
+ * prompt" board, its inline styles turned into classes.
+ *
+ * Scoped to `.nw-site`, like navigator.css. Every class is prefixed `nwip-`.
+ *
+ * The board has no border-box reset, so its boxes are content-box: the card's
+ * max-width of 768px is 800px with its padding and border, the sheet's 560px
+ * content column is 608px with its padding. The app sets border-box on
+ * everything, so those boxes state their outer sizes here.
+ *
+ * Line heights: the board inherits the browser's "normal"; the app's base
+ * styles set 1.5 (1.6 on p). Each element the board leaves alone goes back to
+ * "normal" here.
+ */
+
+/* The wrapper only scopes the tokens and fonts; it draws nothing itself. */
+.nw-site.nwip {
+  display: contents;
+}
+
+/* ── Banner ── */
+@keyframes nwipUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.nw-site .nwip-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  padding: 0 16px 16px;
+  animation: nwipUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.nw-site .nwip-card {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 14px 14px 16px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.55);
+  font-family: var(--nw-font-sans);
+  font-size: 16px;
+  color: var(--nw-ink);
+  line-height: normal;
+}
+.nw-site .nwip-mark {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-ink);
+  color: var(--nw-cream);
+}
+.nw-site .nwip-copy {
+  flex: 1;
+  min-width: 0;
+}
+.nw-site .nwip-title {
+  margin: 0;
+  font-size: var(--nw-fs-body);
+  line-height: normal;
+  color: var(--nw-ink);
+}
+.nw-site .nwip-desc {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: normal;
+  color: var(--nw-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nw-site .nwip-install {
+  flex-shrink: 0;
+  line-height: normal;
+}
+.nw-site .nwip-x {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--nw-r-sm);
+  background: transparent;
+  color: var(--nw-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwip-x:hover {
+  background: var(--nw-paper-2);
+  color: var(--nw-ink);
+}
+
+/* ── Toast ── */
+@keyframes nwipFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes nwipSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.nw-site .nwip-spin {
+  flex-shrink: 0;
+  animation: nwipSpin 1s linear infinite;
+}
+.nw-site .nwip-live {
+  position: fixed;
+  right: 24px;
+  bottom: 118px;
+  z-index: 55;
+}
+.nw-site .nwip-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  box-shadow: 0 20px 40px -16px rgba(0, 0, 0, 0.5);
+  font-family: var(--nw-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: normal;
+  color: var(--nw-ink);
+  animation: nwipFade 0.25s ease-out;
+}
+.nw-site .nwip-toast > svg {
+  flex-shrink: 0;
+}
+
+/* ── "Add to Home Screen" sheet ── */
+@keyframes nwipSheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.nw-site .nwip-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(17, 24, 39, 0.55);
+  animation: nwipFade 0.25s ease-out;
+}
+/* The board's radius is 8px top-left, 24px top-right — kept as drawn. */
+.nw-site .nwip-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--nw-white);
+  border-radius: 8px 24px 0 0;
+  box-shadow: 0 -20px 60px -20px rgba(0, 0, 0, 0.5);
+  font-family: var(--nw-font-sans);
+  font-size: 16px;
+  color: var(--nw-ink);
+  line-height: normal;
+  animation: nwipSheet 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.nw-site .nwip-sheet:focus {
+  outline: none;
+}
+.nw-site .nwip-sheet-inner {
+  max-width: 608px;
+  margin: 0 auto;
+  padding: 14px 24px 32px;
+}
+.nw-site .nwip-handle {
+  width: 44px;
+  height: 5px;
+  margin: 0 auto 18px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line);
+}
+.nw-site .nwip-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.nw-site .nwip-sheet-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 21px;
+  line-height: normal;
+  color: var(--nw-ink);
+}
+.nw-site .nwip-sheet-desc {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwip-steps {
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.nw-site .nwip-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwip-step-n {
+  flex-shrink: 0;
+  width: 22px;
+  padding-top: 6px;
+  font-size: 11px;
+  line-height: normal;
+  color: var(--nw-ink);
+}
+.nw-site .nwip-step-ic {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.12);
+  color: var(--nw-ink);
+}
+.nw-site .nwip-step-t {
+  margin: 6px 0 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--nw-ink-3);
+}
+.nw-site .nwip-step-t strong {
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwip-bar,
+  .nw-site .nwip-sheet,
+  .nw-site .nwip-overlay,
+  .nw-site .nwip-toast {
+    animation: none;
+  }
+}

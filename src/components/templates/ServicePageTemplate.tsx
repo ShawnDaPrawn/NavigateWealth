@@ -44,6 +44,7 @@ import { ConsultationModal } from '../modals/ConsultationModal';
 import { toast } from 'sonner';
 import { splitFullName, submitContactEnquiry } from '../../services/contactEnquiry';
 import { SITE_DESIGN } from '../../site/design';
+import { serviceShareImage } from '../seo/shareImages';
 import { buildServiceStructuredData } from './serviceStructuredData';
 
 // The redesigned page loads only when the build selects it, so the live
@@ -320,7 +321,7 @@ function LegacyServicePageTemplate({ config, seoData, children }: ServicePageTem
         keywords={seoData.keywords}
         canonicalUrl={seoData.canonicalUrl}
         ogType={seoData.ogType}
-        ogImage={config.hero.heroImage}
+        ogImage={serviceShareImage(config.seoKey) ?? config.hero.heroImage}
         structuredData={structuredData}
       />
 

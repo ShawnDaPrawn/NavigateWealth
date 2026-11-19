@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import {
@@ -22,6 +22,9 @@ import { ColorsTab } from './design-system/ColorsTab';
 import { ComponentsLibraryTab } from './design-system/ComponentsLibraryTab';
 import { SectionsTab } from './design-system/SectionsTab';
 import { PartnershipSection } from './design-system/PartnershipSection';
+import { SITE_DESIGN } from '../../site/design';
+
+const NavigatorDesignSystemPage = lazy(() => import('../../site/pages/NavigatorDesignSystemPage'));
 
 // ─── Tab configuration ───────────────────────────────────────────────
 const TABS = [
@@ -35,7 +38,23 @@ const TABS = [
   { value: 'download', label: 'Download', icon: Download },
 ] as const;
 
+/**
+ * The /design-system page. The build's design switch picks the layout; the
+ * Navigator one shows the same tabs, copy commands and back-to-top button in
+ * the redesign, and, like this one, sets no SEO tags (the route is noindex).
+ */
 export default function DesignSystemPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorDesignSystemPage />
+      </Suspense>
+    );
+  }
+  return <LegacyDesignSystemPage />;
+}
+
+function LegacyDesignSystemPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [showScrollTop, setShowScrollTop] = useState(false);
 

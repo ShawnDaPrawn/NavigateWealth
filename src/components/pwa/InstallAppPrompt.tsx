@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router';
 import { Download, Plus, Share, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,6 +8,13 @@ import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { logger } from '../../utils/logger';
 import { isStandaloneDisplay } from '../../utils/pwa/displayMode';
 import { isArticleEscapeHost } from '../../utils/pwa/escapeHost';
+import { SITE_DESIGN } from '../../site/design';
+import type { InstallNotice } from '../../site/components/NavigatorInstallPrompt';
+
+// The Navigator design's banner, toast and sheet: a lazy chunk, fetched only
+// when the prompt is about to show in that design, so the legacy site's
+// bundle and every page that never shows the prompt stay as they were.
+const NavigatorInstallPrompt = lazy(() => import('../../site/components/NavigatorInstallPrompt'));
 
 // Dismissal is scoped to the browser session (sessionStorage) so the prompt
 // re-appears at most once per session — never again after install.
@@ -84,6 +91,28 @@ function isDismissedThisSession(): boolean {
 }
 
 /**
+ * How the prompt reports an install in progress. The legacy design uses the
+ * site's sonner toasts; the Navigator design draws its own toast beside the
+ * banner, as the "Install prompt" board does. The messages and when they are
+ * shown and cleared are the same in both.
+ */
+interface InstallNotifier {
+  loading: (message: string) => string | number;
+  success: (message: string) => void;
+  dismiss: (id: string | number) => void;
+}
+
+const sonnerNotifier: InstallNotifier = {
+  loading: (message) => toast.loading(message),
+  success: (message) => {
+    toast.success(message);
+  },
+  dismiss: (id) => {
+    toast.dismiss(id);
+  },
+};
+
+/**
  * "Download our app" install prompt for the Navigate Wealth client portal.
  *
  * Shows a dismissible banner on the homepage and auth pages inviting users to
@@ -94,8 +123,16 @@ function isDismissedThisSession(): boolean {
  * "Add to Home Screen" instructions. Once the app is installed it never asks
  * again — a persistent `nw-pwa-installed` flag suppresses the prompt across
  * future browser visits (the only reliable safeguard on iOS).
+ *
+ * The build's design switch picks the presentation; both run the same logic
+ * (useInstallAppPrompt below), so the triggers, the storage keys and the
+ * timing are identical whichever design is live.
  */
 export function InstallAppPrompt() {
+  return SITE_DESIGN === 'navigator' ? <NavigatorInstallAppPrompt /> : <LegacyInstallAppPrompt />;
+}
+
+function useInstallAppPrompt(notifier: InstallNotifier) {
   const location = useLocation();
   const { showInstallOption, isAppInstalled, installApp } = usePWAInstall();
 
@@ -171,13 +208,13 @@ export function InstallAppPrompt() {
       return;
     }
 
-    const loadingToast = toast.loading('Preparing installation…');
+    const loadingToast = notifier.loading('Preparing installation…');
     try {
       const outcome = await installApp();
-      toast.dismiss(loadingToast);
+      notifier.dismiss(loadingToast);
 
       if (outcome === 'accepted') {
-        toast.success('Installing Navigate Wealth…');
+        notifier.success('Installing Navigate Wealth…');
         writeInstalledFlag();
         setInstalledFlag(true);
       } else if (outcome === null) {
@@ -185,10 +222,10 @@ export function InstallAppPrompt() {
         setShowIosSheet(true);
       }
     } catch (error) {
-      toast.dismiss(loadingToast);
+      notifier.dismiss(loadingToast);
       logger.info('PWA: client install failed', { error });
     }
-  }, [iosSafari, installApp]);
+  }, [iosSafari, installApp, notifier]);
 
   const onPromptRoute = PROMPT_ROUTES.includes(location.pathname);
   // On Android/desktop the live signals (standalone + beforeinstallprompt) are
@@ -207,6 +244,13 @@ export function InstallAppPrompt() {
     canPrompt &&
     !isMobileDevice() &&
     !isArticleEscapeHost();
+
+  return { visible, iosSafari, showIosSheet, setShowIosSheet, handleInstall, handleDismiss };
+}
+
+function LegacyInstallAppPrompt() {
+  const { visible, iosSafari, showIosSheet, setShowIosSheet, handleInstall, handleDismiss } =
+    useInstallAppPrompt(sonnerNotifier);
 
   if (!visible) {
     return null;
@@ -284,5 +328,68 @@ export function InstallAppPrompt() {
         </SheetContent>
       </Sheet>
     </>
+  );
+}
+
+/**
+ * How long the success toast stays up: sonner's default lifetime, which the
+ * public site's Toaster (AppProviders.tsx) does not override, so the
+ * Navigator toast lasts exactly as long as the legacy one.
+ */
+const SUCCESS_NOTICE_MS = 4000;
+
+function NavigatorInstallAppPrompt() {
+  const [notice, setNotice] = useState<InstallNotice | null>(null);
+  const lastId = useRef(0);
+  const successTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(successTimer.current), []);
+
+  // The sonner calls, mirrored: a loading toast stays until it is dismissed by
+  // its id; a success toast replaces it and clears itself after its lifetime.
+  const notifier = useMemo<InstallNotifier>(
+    () => ({
+      loading: (text) => {
+        clearTimeout(successTimer.current);
+        const id = ++lastId.current;
+        setNotice({ id, kind: 'loading', text });
+        return id;
+      },
+      success: (text) => {
+        clearTimeout(successTimer.current);
+        const id = ++lastId.current;
+        setNotice({ id, kind: 'success', text });
+        successTimer.current = setTimeout(
+          () => setNotice((current) => (current?.id === id ? null : current)),
+          SUCCESS_NOTICE_MS,
+        );
+      },
+      dismiss: (id) => setNotice((current) => (current?.id === id ? null : current)),
+    }),
+    [],
+  );
+
+  const { visible, iosSafari, showIosSheet, setShowIosSheet, handleInstall, handleDismiss } =
+    useInstallAppPrompt(notifier);
+
+  // As in the legacy design, the banner and its sheet exist only while the
+  // prompt is eligible; a toast outlives the banner (it reports an install the
+  // banner has just disappeared for).
+  if (!visible && !notice) {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={null}>
+      <NavigatorInstallPrompt
+        bannerVisible={visible}
+        iosSafari={iosSafari}
+        notice={notice}
+        sheetOpen={visible && showIosSheet}
+        onSheetOpenChange={setShowIosSheet}
+        onInstall={handleInstall}
+        onDismiss={handleDismiss}
+      />
+    </Suspense>
   );
 }
