@@ -304,7 +304,7 @@ export function ContactForm({
       </button>
       <p className="nwct-note">
         We respond within 24 hours on business days. Your details are used only to respond to you,
-        in line with POPIA.
+        in line with POPIA and our <Link to="/legal/privacy-notice">Privacy Notice</Link>.
       </p>
     </form>
   );
