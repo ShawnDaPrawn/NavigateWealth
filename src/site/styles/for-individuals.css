@@ -1,0 +1,1060 @@
+/*
+ * Navigator "For Individuals" page (/solutions/individuals) — ported from the
+ * "ForIndividuals" board of the Claude Design canvas, its inline styles turned
+ * into classes. Every class here is prefixed `nwfi-` and every rule is scoped
+ * to `.nw-site`, like navigator.css, so nothing here can reach the portal, the
+ * admin, the legacy public site or another Navigator page.
+ *
+ * Three things the board inherits that the app does not, restored here so the
+ * page measures as the board does:
+ * - The board's body has the browser's `line-height: normal`; the app's
+ *   preflight sets 1.5 on <html> and its base layer sets 1.3–1.6 on p, button
+ *   and headings (and black on h3). The `:where()` reset below has no
+ *   specificity, so any class that sets a line-height still wins.
+ * - The board's body text is the browser's 16px; the app's root is 14px.
+ * - The board's boxes are `content-box` unless they say otherwise; the app's
+ *   preflight makes everything `border-box`. Only the boxes whose size the
+ *   difference changes opt back in (marked "content-box, as on the board").
+ *
+ * Where the board's design-system stylesheet overrides its own inline styles
+ * (`!important` on headings and on `.nw-btn`'s shadow), these rules follow
+ * what the board renders, not what its inline style says.
+ */
+
+:where(.nw-site.nwfi) {
+  line-height: normal;
+}
+.nw-site.nwfi {
+  font-size: 16px;
+  overflow-x: clip;
+}
+:where(.nw-site.nwfi) :where(p, button, h1, h2, h3, h4) {
+  line-height: normal;
+}
+:where(.nw-site.nwfi) :where(h3) {
+  color: inherit;
+}
+
+.nw-site .nwfi-rel {
+  position: relative;
+}
+.nw-site .nwfi-white {
+  background: var(--nw-white);
+}
+.nw-site .nwfi-paper {
+  background: var(--nw-paper);
+}
+.nw-site .nwfi-h2 {
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h2);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+/* The board's trailing arrows that nudge forward on hover. */
+.nw-site .nwfi-arr {
+  transition: transform 0.2s;
+}
+
+/* Section heads: the board's variants of the shared label, heading and lead. */
+.nw-site .nw-sec-head.nwfi-head--long {
+  max-width: none;
+}
+.nw-site .nwfi-head--long .nw-sec-lead {
+  margin-top: 18px;
+  max-width: none;
+  line-height: 1.7;
+}
+.nw-site .nw-sec-head.nwfi-head--640 {
+  max-width: 640px;
+}
+.nw-site .nwfi-head--640 .nw-sec-lead {
+  max-width: none;
+}
+.nw-site .nwfi-head--620 .nw-sec-lead {
+  max-width: 620px;
+}
+
+/* Two columns that stack when there is no room for both. */
+.nw-site .nw-wrap.nwfi-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 48px 72px;
+  align-items: center;
+}
+
+/* Reassurance ticks under a pair of actions. */
+.nw-site .nwfi-checks {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+}
+.nw-site .nwfi-checks li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.nw-site .nwfi-checks--hero {
+  font-size: 13.5px;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfi-checks--cta {
+  font-size: 14px;
+  color: var(--nw-line-soft);
+}
+
+/* ── Hero ── */
+.nw-site .nwfi-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--nw-ink) 0%, var(--nw-ink-2) 58%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+}
+.nw-site .nwfi-hero-gridbg {
+  -webkit-mask-image: radial-gradient(ellipse 75% 80% at 70% 40%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 75% 80% at 70% 40%, #000 0%, transparent 72%);
+}
+.nw-site .nwfi-hero-glow {
+  position: absolute;
+  top: -220px;
+  right: -180px;
+  width: 720px;
+  height: 720px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 22, 38, 0.168) 0%, rgba(13, 22, 38, 0) 68%);
+  pointer-events: none;
+}
+.nw-site .nwfi-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+  gap: 48px 64px;
+  align-items: center;
+  padding-top: clamp(48px, 7vw, 88px);
+  padding-bottom: clamp(48px, 6vw, 72px);
+}
+.nw-site .nwfi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.nw-site .nwfi-pill-rule {
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.55;
+}
+.nw-site .nwfi-pill-text {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfi-h1 {
+  margin: 26px 0 0;
+  font-size: var(--nw-fs-display);
+  line-height: 1.03;
+  color: var(--nw-white);
+}
+.nw-site .nwfi-hero-lead {
+  margin: 22px 0 0;
+  max-width: 560px;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwfi-hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 36px;
+}
+.nw-site :is(.nw-btn, .nw-ghost-dark).nwfi-hero-btn {
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+  font-weight: 600;
+  flex: 1 1 auto;
+  max-width: 260px;
+}
+.nw-site .nw-btn.nwfi-hero-btn {
+  gap: 10px;
+}
+/* As on the board, the arrow gives way when the label fills the button. */
+.nw-site .nw-btn.nwfi-hero-btn svg {
+  flex-shrink: 1;
+}
+
+/* "Choose your course": the three audience pages. */
+.nw-site .nwfi-course {
+  padding: 10px;
+  border-radius: var(--nw-r-md);
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.7);
+}
+.nw-site .nwfi-course-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px 14px;
+}
+.nw-site .nwfi-course-k {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwfi-course-s {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfi-course-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site .nwfi-route {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid transparent;
+  color: var(--nw-line);
+  text-decoration: none;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+.nw-site .nwfi-route--current {
+  background: rgba(13, 22, 38, 0.132);
+  border-color: rgba(201, 209, 224, 0.5);
+}
+.nw-site .nwfi-route:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--nw-white);
+}
+.nw-site .nwfi-route:hover .nwfi-arr {
+  transform: translateX(3px);
+}
+.nw-site .nwfi-route-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.077);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwfi-route--current .nwfi-route-icon {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwfi-route-text {
+  flex: 1;
+  min-width: 0;
+}
+.nw-site .nwfi-route-t {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+}
+.nw-site .nwfi-route--current .nwfi-route-t {
+  color: var(--nw-white);
+}
+.nw-site .nwfi-route-d {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwfi-route--current .nwfi-route-d {
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfi-route-here {
+  padding: 4px 8px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--nw-cream);
+}
+
+/* The three checkable facts along the hero's foot. */
+.nw-site .nwfi-facts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nw-site .nwfi-fact {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 20px 28px 0;
+}
+.nw-site .nwfi-fact-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.066);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwfi-fact-v {
+  display: block;
+  font-family: var(--nw-font-serif);
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+.nw-site .nwfi-fact-l {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--nw-on-dark-muted);
+}
+
+/* ── 01 Every season ── */
+.nw-site .nwfi-stops {
+  position: relative;
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 24px 8px;
+}
+.nw-site .nwfi-stops::before {
+  content: '';
+  position: absolute;
+  top: 23px;
+  left: 10%;
+  right: 10%;
+  border-top: 1.5px dashed var(--nw-on-dark);
+}
+.nw-site .nwfi-stop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+.nw-site .nwfi-stop-mark {
+  /* content-box, as on the board: the ring sits outside the 48px. */
+  box-sizing: content-box;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--nw-white);
+  border: 1.5px solid var(--nw-on-dark);
+  box-shadow: 0 0 0 6px var(--nw-white);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwfi-stop--last .nwfi-stop-mark {
+  background: var(--nw-ink);
+  border: 0;
+  color: var(--nw-white);
+}
+.nw-site .nwfi-stop-t {
+  font-size: 14px;
+  font-weight: 600;
+}
+.nw-site .nwfi-stop-d {
+  margin-top: -4px;
+  font-size: 12.5px;
+  color: var(--nw-muted);
+}
+.nw-site .nwfi-figure {
+  margin: 0;
+  position: relative;
+}
+.nw-site .nwfi-figure-frame {
+  position: relative;
+  aspect-ratio: 5 / 4;
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-paper-2);
+}
+.nw-site .nwfi-figure-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+.nw-site .nwfi-caption {
+  position: absolute;
+  left: -20px;
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  box-shadow: 0 30px 60px -30px rgba(17, 24, 39, 0.6);
+}
+.nw-site .nwfi-caption-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.11);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwfi-caption-k {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwfi-caption-t {
+  display: block;
+  margin-top: 2px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+/* ── 02 Services ── */
+.nw-site .nwfi-svc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+.nw-site .nwfi-svc-grid {
+  list-style: none;
+  margin: 48px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+}
+.nw-site .nwfi-svc-grid > li {
+  display: flex;
+}
+.nw-site .nwfi-svc {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s,
+    border-color 0.3s;
+}
+.nw-site .nwfi-svc:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 50px -30px rgba(17, 24, 39, 0.45);
+}
+.nw-site .nwfi-svc:hover .nwfi-arr {
+  transform: translateX(3px);
+}
+.nw-site .nwfi-svc-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.nw-site .nwfi-svc-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(13, 22, 38, 0.06);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwfi-svc-no {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--nw-muted);
+}
+.nw-site .nwfi-svc-t {
+  margin: 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h5);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+.nw-site .nwfi-svc-d {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwfi-svc-feats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.nw-site .nwfi-svc-feats li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwfi-svc-feats svg {
+  flex-shrink: 0;
+}
+.nw-site .nwfi-svc-more {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--nw-line-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+
+/* ── Independent advice ── */
+.nw-site .nwfi-indep {
+  position: relative;
+  overflow: hidden;
+  padding: var(--nw-sec-md) 0;
+  background: var(--nw-ink-2);
+  color: var(--nw-white);
+}
+.nw-site .nwfi-indep-gridbg {
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, #000 0%, transparent 75%);
+}
+.nw-site .nwfi-indep-art {
+  position: absolute;
+  right: -90px;
+  top: 50%;
+  margin-top: -210px;
+  opacity: 0.55;
+}
+.nw-site .nw-wrap.nwfi-indep-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+.nw-site .nwfi-indep-copy {
+  flex: 1 1 520px;
+  max-width: 720px;
+}
+.nw-site .nwfi-indep-k {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwfi-indep-t {
+  margin: 14px 0 0;
+  line-height: 1.1;
+}
+.nw-site .nwfi-indep-p {
+  margin: 14px 0 0;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-on-dark);
+}
+.nw-site .nw-btn.nwfi-indep-btn {
+  position: relative;
+  gap: 10px;
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ── 03 Digital & human ── */
+.nw-site .nwfi-portal {
+  position: relative;
+  padding: clamp(14px, 2vw, 24px);
+  border-radius: var(--nw-r-md);
+  background: linear-gradient(160deg, var(--nw-ink), var(--nw-ink-2));
+  box-shadow: 0 50px 100px -50px rgba(17, 24, 39, 0.7);
+}
+.nw-site .nw-grid-bg.nwfi-portal-gridbg {
+  border-radius: var(--nw-r-md);
+}
+.nw-site .nwfi-portal-win {
+  position: relative;
+  display: flex;
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-white);
+  min-height: 340px;
+}
+.nw-site .nwfi-portal-side {
+  /* content-box, as on the board: 150px plus its padding and rule. */
+  box-sizing: content-box;
+  width: 150px;
+  flex-shrink: 0;
+  padding: 18px 14px;
+  background: var(--nw-paper);
+  border-right: 1px solid var(--nw-line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site .nwfi-portal-brand {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--nw-muted);
+  padding: 0 8px 10px;
+}
+.nw-site .nwfi-portal-nav {
+  padding: 9px 10px;
+  border-radius: var(--nw-r-sm);
+  color: var(--nw-text);
+  font-size: 12.5px;
+}
+.nw-site .nwfi-portal-nav--on {
+  background: var(--nw-line-soft);
+  color: var(--nw-ink);
+  font-weight: 600;
+}
+.nw-site .nwfi-portal-main {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.nw-site .nwfi-portal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nw-site .nwfi-bar {
+  height: 8px;
+  border-radius: var(--nw-r-sm);
+}
+.nw-site .nwfi-bar--title {
+  width: 120px;
+  height: 12px;
+  background: var(--nw-line);
+}
+.nw-site .nwfi-bar--strong {
+  background: var(--nw-line);
+}
+.nw-site .nwfi-bar--soft {
+  background: var(--nw-line-soft);
+}
+.nw-site .nwfi-portal-tile .nwfi-bar--strong {
+  margin-top: 12px;
+}
+.nw-site .nwfi-portal-tile .nwfi-bar--soft {
+  margin-top: 7px;
+}
+.nw-site .nwfi-bar--tight {
+  margin-top: 6px;
+}
+.nw-site .nwfi-portal-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--nw-line-soft);
+}
+.nw-site .nwfi-portal-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+.nw-site .nwfi-portal-tile {
+  padding: 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwfi-portal-sq {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(13, 22, 38, 0.072);
+}
+.nw-site .nwfi-portal-sq--ok {
+  background: rgba(22, 163, 74, 0.12);
+}
+.nw-site .nwfi-portal-row {
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-soft);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.nw-site .nwfi-portal-doc {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+}
+.nw-site .nwfi-portal-lines {
+  flex: 1;
+}
+.nw-site .nwfi-portal-tag {
+  padding: 4px 9px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line-soft);
+  color: var(--nw-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+.nw-site .nwfi-portal-tag--ok {
+  /* The design system's success tint and ink. */
+  background: #f0fdf4;
+  color: var(--nw-success);
+}
+.nw-site .nwfi-portal-input {
+  margin-top: auto;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nw-site .nwfi-portal-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--nw-ink);
+}
+.nw-site .nwfi-portal-field {
+  flex: 1;
+  height: 8px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.2);
+}
+.nw-site .nwfi-digital-body {
+  margin: 12px 0 0;
+  font-size: var(--nw-fs-body);
+  line-height: 1.7;
+  color: var(--nw-muted);
+}
+.nw-site .nwfi-feats {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+.nw-site .nwfi-feat {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwfi-feat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(13, 22, 38, 0.06);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwfi-feat-t {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwfi-feat-d {
+  display: block;
+  margin-top: 3px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--nw-text);
+}
+
+/* ── 04 Process ── */
+.nw-site .nwfi-legs-track {
+  position: relative;
+  margin-top: 56px;
+}
+.nw-site .nwfi-legs-track::before {
+  content: '';
+  position: absolute;
+  top: 27px;
+  left: 28px;
+  right: 12%;
+  border-top: 1.5px dashed var(--nw-on-dark);
+}
+.nw-site .nwfi-legs {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 36px 28px;
+}
+.nw-site .nwfi-leg-mark {
+  box-sizing: border-box;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  border: 1.5px solid var(--nw-on-dark);
+  box-shadow: 0 0 0 8px var(--nw-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+.nw-site .nwfi-leg-mark--first {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwfi-leg-k {
+  display: block;
+  margin-top: 20px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--nw-ink);
+}
+.nw-site .nwfi-leg-t {
+  margin: 8px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h5);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+.nw-site .nwfi-leg-d {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+
+/* ── 05 FAQ: the shared rail, drawn as this board draws it ── */
+.nw-site .nwfi-faq > .nw-sec {
+  background: var(--nw-white);
+}
+.nw-site .nwfi-faq .nw-faq-list {
+  padding: 6px clamp(18px, 3vw, 32px);
+}
+.nw-site .nwfi-faq .nw-faq-q {
+  min-height: 64px;
+}
+.nw-site .nwfi-faq .nw-faq-icon {
+  /* content-box, as on the board: the ring sits outside the 34px. */
+  box-sizing: content-box;
+}
+.nw-site .nwfi-faq .nw-faq-a {
+  font-size: 15.5px;
+}
+.nw-site .nwfi-faq .nw-faq-contact svg {
+  width: 18px;
+  height: 18px;
+}
+.nw-site .nwfi-faq .nw-faq-help-t {
+  letter-spacing: -0.012em;
+}
+.nw-site .nwfi-faq .nw-faq-actions .nw-outline {
+  padding: 0 20px;
+}
+.nw-site .nwfi-faq .nw-faq-actions .nw-outline svg {
+  width: 15px;
+  height: 15px;
+}
+/* The board's questions are plain buttons, so they wrap as plain text does. */
+.nw-site .nwfi-faq .nw-faq-item h3 {
+  text-wrap: wrap;
+}
+
+/* ── Closing call to action ── */
+.nw-site .nwfi-cta {
+  padding: 0 0 var(--nw-sec-lg);
+  background: var(--nw-white);
+}
+.nw-site .nwfi-cta-box {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--nw-r-md);
+  padding: clamp(32px, 5vw, 72px);
+  background: linear-gradient(135deg, var(--nw-ink) 0%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+  box-shadow: 0 50px 100px -50px rgba(13, 22, 38, 0.42);
+}
+.nw-site .nwfi-cta-gridbg {
+  opacity: 0.9;
+}
+.nw-site .nwfi-cta-art {
+  position: absolute;
+  right: -80px;
+  bottom: -120px;
+  opacity: 0.5;
+}
+.nw-site .nwfi-cta-copy {
+  position: relative;
+  max-width: 680px;
+}
+.nw-site .nwfi-cta-t {
+  margin: 0;
+  line-height: 1.1;
+}
+.nw-site .nwfi-cta-p {
+  margin: 16px 0 0;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-line-soft);
+}
+.nw-site .nwfi-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 32px;
+}
+.nw-site .nwfi-cta-light,
+.nw-site .nwfi-cta-ghost {
+  /* content-box, as on the board: the 240px cap leaves out the padding. */
+  box-sizing: content-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 28px;
+  border-radius: var(--nw-r-sm);
+  font-size: 16px;
+  white-space: nowrap;
+  text-decoration: none;
+  flex: 1 1 auto;
+  max-width: 240px;
+}
+.nw-site .nwfi-cta-light {
+  gap: 10px;
+  font-weight: 700;
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
+}
+.nw-site .nwfi-cta-light:hover {
+  background: var(--nw-paper);
+  color: var(--nw-ink);
+}
+.nw-site .nwfi-cta-ghost {
+  font-weight: 600;
+  color: var(--nw-white);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: background-color 0.2s;
+}
+.nw-site .nwfi-cta-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--nw-white);
+}
+
+/* ── Narrower screens, as the board's media queries draw them ── */
+@media (max-width: 860px) {
+  .nw-site .nwfi-indep-art,
+  .nw-site .nwfi-legs-track::before,
+  .nw-site .nwfi-cta-art {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .nw-site .nwfi-figure {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .nw-site .nwfi-stops::before,
+  .nw-site .nwfi-caption,
+  .nw-site .nwfi-portal-side {
+    display: none;
+  }
+  .nw-site .nwfi-hero-ctas,
+  .nw-site .nwfi-cta-actions,
+  .nw-site .nwfi-faq .nw-faq-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site .nwfi-hero-ctas > a,
+  .nw-site .nwfi-cta-actions > a,
+  .nw-site .nwfi-faq .nw-faq-actions > a {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+    justify-content: center;
+  }
+  .nw-site :is(.nw-btn, .nw-ghost-dark).nwfi-hero-btn {
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+  .nw-site :is(.nw-btn, .nw-ghost-dark).nwfi-hero-btn,
+  .nw-site .nw-btn.nwfi-indep-btn,
+  .nw-site .nwfi-cta-light,
+  .nw-site .nwfi-cta-ghost {
+    height: 48px;
+    font-size: 15px;
+  }
+  .nw-site .nwfi-faq .nw-faq-list {
+    padding: 0;
+  }
+  .nw-site .nwfi-faq .nw-faq-q {
+    min-height: 0;
+  }
+  .nw-site .nwfi-faq .nw-faq-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+  .nw-site .nwfi-faq .nw-faq-a {
+    font-size: 15px;
+  }
+  .nw-site.nwfi :is(h1, h2, h3) {
+    overflow-wrap: break-word;
+  }
+}

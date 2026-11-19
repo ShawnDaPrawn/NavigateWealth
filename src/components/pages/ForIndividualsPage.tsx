@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -7,133 +7,47 @@ import { Card, CardContent } from '../ui/card';
 import { ImageWithFallback } from '../shared/ImageWithFallback';
 import { GetQuoteModal } from '../modals/GetQuoteModal';
 import { ConsultationModal } from '../modals/ConsultationModal';
-import {
-  Heart,
-  Shield,
-  DollarSign,
-  TrendingUp,
-  ArrowRight,
-  CheckCircle,
-  Trophy,
-  FileText,
-  Briefcase,
-  Home,
-  Baby,
-  GraduationCap,
-  Smartphone,
-  HeadphonesIcon,
-  Monitor,
-  Calendar,
-  ChevronRight,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowRight, CheckCircle, Calendar, ChevronRight, Sparkles } from 'lucide-react';
 import { TRUST_FACTS } from '@/config/companyFacts';
+import { SITE_DESIGN } from '../../site/design';
+import { services, lifeMilestones, digitalFeatures } from './forIndividualsPageData';
+
+const NavigatorForIndividualsPage = React.lazy(() =>
+  import('../../site/pages/NavigatorForIndividualsPage').then((m) => ({
+    default: m.NavigatorForIndividualsPage,
+  })),
+);
 
 // ---------------------------------------------------------------------------
-// Data — identical content to legacy, restructured for the new layout
+// Data — the services, milestones and digital features live in
+// forIndividualsPageData.ts, shared with the Navigator design.
 // ---------------------------------------------------------------------------
-
-const services = [
-  {
-    title: 'Medical Aid & Gap Cover',
-    description:
-      "Access South Africa's leading medical schemes and products with comprehensive gap cover protection.",
-    icon: Heart,
-    link: '/medical-aid',
-    features: ['Medical scheme comparison', 'Gap cover options', 'Specialist networks'],
-    accent: 'from-rose-500 to-pink-600',
-    accentLight: 'bg-rose-50 text-rose-600',
-  },
-  {
-    title: 'Life, Disability & Severe Illness Cover',
-    description:
-      'Protecting your income and your loved ones with comprehensive risk management solutions.',
-    icon: Shield,
-    link: '/risk-management',
-    features: ['Income protection', 'Family security', 'Critical illness cover'],
-    accent: 'from-blue-500 to-indigo-600',
-    accentLight: 'bg-blue-50 text-blue-600',
-  },
-  {
-    title: 'Retirement Planning',
-    description:
-      'Build a future you can count on with proven investment platforms and retirement strategies.',
-    icon: Trophy,
-    link: '/retirement-planning',
-    features: ['Investment platforms', 'Retirement annuities', 'Pension funds'],
-    accent: 'from-amber-500 to-orange-600',
-    accentLight: 'bg-amber-50 text-amber-600',
-  },
-  {
-    title: 'Investments (Local & Offshore)',
-    description:
-      'Diversify your wealth and hedge against rand depreciation with local and international investments.',
-    icon: TrendingUp,
-    link: '/investment-management',
-    features: ['Local investments', 'Offshore diversification', 'Currency hedging'],
-    accent: 'from-emerald-500 to-teal-600',
-    accentLight: 'bg-emerald-50 text-emerald-600',
-  },
-  {
-    title: 'Estate Planning',
-    description: 'Wills, trusts, and tax-efficient transfer of your legacy to the next generation.',
-    icon: FileText,
-    link: '/estate-planning',
-    features: ['Will drafting', 'Trust structures', 'Tax efficiency'],
-    accent: 'from-violet-500 to-purple-600',
-    accentLight: 'bg-violet-50 text-violet-600',
-  },
-  {
-    title: 'Tax Planning',
-    description:
-      'Optimize your tax strategy and minimize liability through expert planning and compliance.',
-    icon: DollarSign,
-    link: '/tax-planning',
-    features: ['Tax optimization', 'SARS compliance', 'Strategic planning'],
-    accent: 'from-cyan-500 to-blue-600',
-    accentLight: 'bg-cyan-50 text-cyan-600',
-  },
-];
-
-const lifeMilestones = [
-  { icon: Briefcase, title: 'First Job', description: 'Starting your career' },
-  { icon: Home, title: 'First Home', description: 'Purchasing property' },
-  { icon: Heart, title: 'Marriage', description: 'Building together' },
-  { icon: Baby, title: 'Children', description: 'Growing family' },
-  { icon: GraduationCap, title: 'Retirement', description: 'Enjoying freedom' },
-];
 
 // Checkable facts only — see src/config/companyFacts.ts.
 const stats = TRUST_FACTS.slice(0, 3);
-
-const digitalFeatures = [
-  {
-    icon: Smartphone,
-    title: 'Mobile Access',
-    description: 'Manage your finances on the go from any device',
-  },
-  {
-    icon: Monitor,
-    title: 'Client Portal',
-    description: 'View all policies, statements and documents in one place',
-  },
-  {
-    icon: FileText,
-    title: 'Document Access',
-    description: 'Download and sign documents instantly — no paperwork',
-  },
-  {
-    icon: HeadphonesIcon,
-    title: 'Personal Support',
-    description: 'Real human advice from a dedicated financial adviser',
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
+/**
+ * The For Individuals page. The build's design switch picks the layout; both
+ * read the services, milestones and digital features from
+ * forIndividualsPageData.ts, so the copy lives in one place whichever design
+ * is live.
+ */
 export function ForIndividualsPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorForIndividualsPage />
+      </Suspense>
+    );
+  }
+  return <LegacyForIndividualsPage />;
+}
+
+function LegacyForIndividualsPage() {
   const [showQuoteModal, setShowQuoteModal] = useState(false);
   const [showConsultationModal, setShowConsultationModal] = useState(false);
 
