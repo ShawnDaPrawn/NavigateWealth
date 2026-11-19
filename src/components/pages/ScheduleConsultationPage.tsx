@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { SEO } from '../seo/SEO';
 import { ConsultationModal } from '../modals/ConsultationModal';
@@ -7,6 +7,13 @@ import { Button } from '../ui/button';
 import { Calendar, Mail, Phone } from 'lucide-react';
 
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
+import { SITE_DESIGN } from '../../site/design';
+
+const NavigatorScheduleConsultationPage = React.lazy(() =>
+  import('../../site/pages/NavigatorScheduleConsultationPage').then((m) => ({
+    default: m.NavigatorScheduleConsultationPage,
+  })),
+);
 
 const CANONICAL = `${SITE_ORIGIN}/schedule-consultation`;
 
@@ -15,10 +22,27 @@ const SITE_PAGE_WRAP = 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 xl:px-12';
 
 /**
  * Dedicated entry for “schedule a consultation” (email invites, campaigns).
+ * The build's design switch (src/site/design.ts) picks the layout: the legacy
+ * page below, or the Navigator redesign in
+ * src/site/pages/NavigatorScheduleConsultationPage. Both book through the same
+ * endpoint with the same options (see ../modals/consultationBooking.ts).
+ */
+export function ScheduleConsultationPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorScheduleConsultationPage />
+      </Suspense>
+    );
+  }
+  return <LegacyScheduleConsultationPage />;
+}
+
+/**
  * Reuses ConsultationModal; indexable to match the prerendered head + sitemap.
  * UTMs stay on the URL for attribution.
  */
-export function ScheduleConsultationPage() {
+function LegacyScheduleConsultationPage() {
   const location = useLocation();
   const [modalOpen, setModalOpen] = useState(true);
   const [dismissed, setDismissed] = useState(false);

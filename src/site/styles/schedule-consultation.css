@@ -1,0 +1,1190 @@
+/*
+ * Navigator booking page (/schedule-consultation) — ported from the
+ * "Schedule Consultation" board of the Claude Design canvas, its inline
+ * styles turned into classes. The grid texture, entrance animation, mono and
+ * accent type come from sections.css; buttons and tokens from navigator.css.
+ *
+ * Scoped to `.nw-site`, like navigator.css. Every class is prefixed `nwbk-`.
+ */
+
+/* The board's page has a 16px base, the browser's normal line height and the
+   browser's box model (content-box, except buttons). The site's root is 14px,
+   its base typography gives p, headings, labels, buttons and inputs line
+   heights of their own, and its reset makes everything border-box; all three
+   are restated here at zero specificity, so every rule below still wins. */
+.nw-site.nwbk {
+  color: var(--nw-ink);
+  --nwbk-info: #1d4ed8;
+  --nwbk-info-dark: #1e3a8a;
+  --nwbk-info-bg: #eff6ff;
+  --nwbk-success-bg: #f0fdf4;
+  /* The sticky header's bar, which stays in view once the top bar folds away. */
+  --nwbk-header: 73px;
+  font-size: 16px;
+  line-height: normal;
+}
+:where(.nw-site.nwbk) :where(p, h1, h2, h3, label, button, input, textarea, dt, dd, li) {
+  line-height: inherit;
+}
+:where(.nw-site.nwbk) :where(dt, dd) {
+  font-variant-numeric: tabular-nums;
+}
+:where(.nw-site.nwbk) *,
+:where(.nw-site.nwbk) *::before,
+:where(.nw-site.nwbk) *::after {
+  box-sizing: content-box;
+}
+:where(.nw-site.nwbk) :where(button) {
+  box-sizing: border-box;
+}
+
+/* ── Hero ── */
+.nw-site .nwbk-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--nw-ink) 0%, var(--nw-ink-2) 60%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+}
+.nw-site .nwbk-hero > .nwbk-hero-grid {
+  -webkit-mask-image: radial-gradient(ellipse 75% 80% at 30% 40%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 75% 80% at 30% 40%, #000 0%, transparent 72%);
+}
+.nw-site .nwbk-hero-glow {
+  position: absolute;
+  top: -240px;
+  right: -160px;
+  width: 680px;
+  height: 680px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 22, 38, 0.168) 0%, rgba(13, 22, 38, 0) 68%);
+  pointer-events: none;
+}
+.nw-site .nw-wrap.nwbk-hero-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  padding-top: clamp(48px, 7vw, 80px);
+  padding-bottom: clamp(48px, 6vw, 72px);
+}
+.nw-site .nwbk-hero-copy {
+  flex: 1 1 520px;
+  max-width: 720px;
+}
+.nw-site .nwbk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.nw-site .nwbk-pill span {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwbk-title {
+  margin: 24px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-display);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  color: var(--nw-white);
+}
+.nw-site .nwbk-lead {
+  margin: 18px 0 0;
+  max-width: 560px;
+  font-size: var(--nw-fs-lead);
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwbk-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.nw-site .nwbk-marks li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-line);
+}
+.nw-site .nwbk-hours {
+  flex: 0 1 360px;
+  padding: 18px 20px;
+  border-radius: var(--nw-r-md);
+  background: rgba(17, 24, 39, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.nw-site .nwbk-hours-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwbk-hours-label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwbk-hours-zone {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwbk-hours-time {
+  margin: 8px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nw-white);
+}
+.nw-site .nwbk-hours-note {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--nw-on-dark-muted);
+}
+
+/* ── Booking ── */
+.nw-site .nwbk-booking {
+  padding: var(--nw-sec-sm) 0 var(--nw-sec-lg);
+  background: var(--nw-paper);
+  /* The board's 12px, below the sticky header. */
+  scroll-margin-top: calc(var(--nwbk-header) + 12px);
+}
+.nw-site .nw-wrap.nwbk-booking-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 24px;
+}
+.nw-site .nwbk-card {
+  flex: 999 1 560px;
+  min-width: 0;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  box-shadow: 0 40px 80px -60px rgba(17, 24, 39, 0.5);
+  overflow: hidden;
+}
+
+/* Legs: the step title, the count and five progress bars. */
+.nw-site .nwbk-legs {
+  padding: 22px clamp(18px, 3vw, 32px) 18px;
+  border-bottom: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwbk-legs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.nw-site .nwbk-legs-title {
+  font-family: var(--nw-font-serif);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+.nw-site .nwbk-legs-count {
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  color: var(--nw-ink);
+}
+.nw-site .nwbk-legs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.nw-site .nwbk-leg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nw-site .nwbk-leg-bar {
+  height: 4px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line);
+  transition: background-color 0.3s;
+}
+.nw-site .nwbk-leg-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwbk-leg--done .nwbk-leg-bar {
+  background: var(--nw-ink);
+}
+.nw-site .nwbk-leg--done .nwbk-leg-label {
+  color: var(--nw-ink);
+}
+
+.nw-site .nwbk-body {
+  padding: clamp(20px, 3vw, 32px);
+  min-height: 420px;
+  box-sizing: border-box;
+}
+.nw-site .nwbk-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.nw-site .nwbk-step--type {
+  gap: 14px;
+}
+.nw-site .nwbk-step-title {
+  margin: 0;
+  font-family: var(--nw-font-serif);
+  font-size: clamp(20px, 2.4vw, 24px);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+/* Focus lands on a leg's title so it is announced; it needs no ring. */
+.nw-site .nwbk-step-title:focus,
+.nw-site .nwbk-done-title:focus {
+  outline: none;
+}
+.nw-site .nwbk-step-sub {
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--nw-muted);
+}
+
+/* Leg 1: meeting formats */
+.nw-site .nwbk-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nw-site .nwbk-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 0;
+  padding: 18px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 2px solid var(--nw-line);
+  cursor: pointer;
+  font-family: inherit;
+  /* A button's own type, as the browser gives it on the board. */
+  font-size: 13.3333px;
+  font-weight: 400;
+  text-align: left;
+  color: inherit;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site .nwbk-opt:hover {
+  border-color: var(--nw-line-strong);
+  background: var(--nw-paper-3);
+}
+.nw-site .nwbk-opt--on,
+.nw-site .nwbk-opt--on:hover {
+  border-color: var(--nw-ink);
+  background: var(--nw-paper);
+  box-shadow: 0 0 0 4px rgba(13, 22, 38, 0.048);
+}
+.nw-site .nwbk-opt-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--nw-paper-2);
+  color: var(--nw-muted);
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwbk-opt--on .nwbk-opt-icon {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwbk-opt-text {
+  flex: 1;
+  min-width: 0;
+}
+.nw-site .nwbk-opt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwbk-opt-title {
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwbk-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--nw-line-strong);
+  background: var(--nw-white);
+}
+.nw-site .nwbk-opt--on .nwbk-radio {
+  border-color: var(--nw-ink);
+  background: var(--nw-ink);
+}
+.nw-site .nwbk-opt-sub {
+  display: block;
+  margin-top: 3px;
+  font-size: 14px;
+  color: var(--nw-text);
+}
+.nw-site .nwbk-opt-detail {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--nw-muted);
+}
+.nw-site .nwbk-info {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwbk-info-bg);
+  border: 1px solid var(--nwbk-info-bg);
+}
+.nw-site .nwbk-info > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.nw-site .nwbk-info-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--nwbk-info-dark);
+}
+.nw-site .nwbk-info-text {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--nwbk-info);
+}
+
+/* Leg 2: the month grid */
+.nw-site .nwbk-cal {
+  border-radius: var(--nw-r-md);
+  border: 1px solid var(--nw-line);
+  padding: clamp(10px, 2vw, 18px);
+}
+.nw-site .nwbk-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.nw-site .nwbk-navbtn {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  cursor: pointer;
+  color: var(--nw-text-strong);
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+.nw-site .nwbk-navbtn:hover {
+  background: var(--nw-paper-3);
+  border-color: var(--nw-line-strong);
+}
+.nw-site .nwbk-navbtn--off,
+.nw-site .nwbk-navbtn--off:hover {
+  color: var(--nw-on-dark);
+  cursor: not-allowed;
+  background: var(--nw-white);
+}
+.nw-site .nwbk-cal-month {
+  font-family: var(--nw-font-serif);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+.nw-site .nwbk-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.nw-site .nwbk-cal-wd {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwbk-cal-cell {
+  display: flex;
+  justify-content: center;
+}
+.nw-site .nwbk-day {
+  width: 100%;
+  max-width: 52px;
+  height: 46px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--nw-r-sm);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--nw-ink);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.nw-site .nwbk-day:hover {
+  background: var(--nw-paper-2);
+}
+.nw-site .nwbk-day--today {
+  box-shadow: inset 0 0 0 1.5px rgba(13, 22, 38, 0.27);
+  font-weight: 700;
+}
+.nw-site .nwbk-day--off,
+.nw-site .nwbk-day--off:hover {
+  background: var(--nw-paper-2);
+  color: var(--nw-muted);
+  cursor: not-allowed;
+  font-weight: 400;
+}
+.nw-site .nwbk-day--past,
+.nw-site .nwbk-day--past:hover {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--nw-text);
+}
+.nw-site .nwbk-day--sel,
+.nw-site .nwbk-day--sel:hover {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  font-weight: 600;
+}
+.nw-site .nwbk-cal-note {
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--nw-muted);
+}
+.nw-site .nwbk-cal-picked {
+  padding: 12px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwbk-cal-picked strong {
+  font-weight: 700;
+  color: var(--nw-ink);
+}
+
+/* Leg 3: time slots */
+.nw-site .nwbk-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+.nw-site .nwbk-slot {
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--nw-text-strong);
+  transition:
+    border-color 0.15s,
+    background-color 0.15s,
+    color 0.15s;
+}
+.nw-site .nwbk-slot:hover {
+  border-color: var(--nw-on-dark);
+  background: var(--nw-paper);
+}
+.nw-site .nwbk-slot--on,
+.nw-site .nwbk-slot--on:hover {
+  background: var(--nw-ink);
+  border-color: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwbk-slots-note {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--nw-muted);
+}
+
+/* Leg 4: details */
+.nw-site .nwbk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site .nwbk-field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 16px;
+}
+.nw-site .nwbk-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwbk-req {
+  color: var(--nw-danger);
+}
+.nw-site .nwbk-optional {
+  font-family: var(--nw-font-sans);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--nw-muted);
+}
+.nw-site .nwbk-control {
+  position: relative;
+}
+.nw-site .nwbk-control-icon {
+  position: absolute;
+  left: 14px;
+  top: 16px;
+}
+.nw-site .nwbk-control-icon--top {
+  top: 15px;
+}
+.nw-site .nwbk-input {
+  width: 100%;
+  height: 48px;
+  margin: 0;
+  padding: 0 14px 0 42px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-paper-3);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--nw-ink);
+  box-sizing: border-box;
+  /* A field focused after a failed Continue clears the sticky header, label too. */
+  scroll-margin-top: calc(var(--nwbk-header) + 32px);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwbk-textarea {
+  height: auto;
+  padding: 12px 14px 12px 42px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.nw-site .nwbk-input::placeholder {
+  color: var(--nw-on-dark-muted);
+  opacity: 1;
+}
+.nw-site .nwbk-input:focus {
+  outline: none;
+  border-color: var(--nw-violet);
+  background: var(--nw-white);
+  box-shadow: 0 0 0 3px rgba(13, 22, 38, 0.09);
+}
+/* The design system's invalid field and field error (the board draws neither). */
+.nw-site .nwbk-input--invalid,
+.nw-site .nwbk-input--invalid:focus {
+  border-color: var(--nw-danger);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+.nw-site .nwbk-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--nw-danger);
+}
+.nw-site .nwbk-field-error > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.nw-site .nwbk-field-error--center {
+  justify-content: center;
+}
+.nw-site .nwbk-blocked {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-danger-bg);
+  border: 1px solid var(--nw-danger-line);
+  font-size: 13.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--nw-danger-dark);
+}
+
+/* Leg 5: review */
+.nw-site .nwbk-review {
+  margin: 0;
+  border-radius: var(--nw-r-md);
+  border: 1px solid var(--nw-line-soft);
+  background: var(--nw-paper-3);
+  overflow: hidden;
+}
+/* The board lays each row out as icon + text; here the icon rides inside the
+   term (a <dl> row may hold only its dt and dd), placed where the board puts it. */
+.nw-site .nwbk-review-row {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 36px;
+  padding: 14px 18px 14px 68px;
+  border-bottom: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwbk-review-row--top {
+  justify-content: flex-start;
+  border-bottom: 0;
+}
+.nw-site .nwbk-review-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  margin-top: -18px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line-soft);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwbk-review-row--top .nwbk-review-icon {
+  top: 14px;
+  margin-top: 0;
+}
+.nw-site .nwbk-review-dt {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwbk-review-dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwbk-review-dd--sub {
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--nw-text);
+  overflow-wrap: anywhere;
+}
+.nw-site .nwbk-review-dd--notes {
+  font-size: 14.5px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwbk-trust {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.nw-site .nwbk-trust li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nw-text-strong);
+  text-align: center;
+}
+/* A failed send, in the design system's form alert. */
+.nw-site .nwbk-alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-danger-line);
+  background: var(--nw-danger-bg);
+  color: var(--nw-danger-dark);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.nw-site .nwbk-alert > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Back and Continue */
+.nw-site .nwbk-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px clamp(18px, 3vw, 32px);
+  border-top: 1px solid var(--nw-line-soft);
+  background: var(--nw-white);
+}
+/* The board's Back keeps its outline look even at the first leg, where it is
+   disabled; only the cursor says so. */
+.nw-site .nw-outline.nwbk-back--off {
+  cursor: not-allowed;
+}
+/* Continue looks disabled until the leg is complete (the board's disabled
+   button), but stays focusable and explains what is missing when used. */
+.nw-site .nw-btn.nwbk-next--off,
+.nw-site .nw-btn.nwbk-next--off:hover,
+.nw-site .nw-btn.nwbk-next--off:focus-visible {
+  background: var(--nw-paper-2);
+  color: var(--nw-muted);
+  box-shadow: inset 0 0 0 1px var(--nw-line);
+  cursor: not-allowed;
+}
+.nw-site .nwbk-next > svg {
+  transition: transform var(--nw-dur-2) var(--nw-ease);
+}
+.nw-site .nwbk-next:hover > svg {
+  transform: translateX(3px);
+}
+
+/* The confirmation */
+@keyframes nwbkPopIn {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.nw-site .nwbk-done {
+  padding: clamp(40px, 6vw, 72px) clamp(20px, 4vw, 48px);
+  text-align: center;
+}
+.nw-site .nwbk-done-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--nwbk-success-bg);
+  color: var(--nw-success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: nwbkPopIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.nw-site .nwbk-done-title {
+  margin: 22px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h2s);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+.nw-site .nwbk-done-text {
+  margin: 10px auto 0;
+  max-width: 440px;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwbk-done-text--tight {
+  margin-top: 6px;
+}
+.nw-site .nwbk-done-text strong {
+  font-weight: 700;
+  color: var(--nw-ink);
+}
+.nw-site .nwbk-done-box {
+  max-width: 380px;
+  margin: 26px auto 0;
+  padding: 16px 18px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-paper-3);
+  border: 1px solid var(--nw-line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  font-size: 14.5px;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwbk-done-box > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nw-site .nw-btn.nwbk-done-btn {
+  margin-top: 26px;
+}
+
+/* ── The rail ── */
+.nw-site .nwbk-rail {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@media (min-width: 1000px) {
+  .nw-site .nwbk-rail {
+    position: sticky;
+    /* The board's 24px, below the sticky header. */
+    top: calc(var(--nwbk-header) + 24px);
+  }
+}
+.nw-site .nwbk-sum {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwbk-sum-head {
+  position: relative;
+  padding: 22px 22px 8px;
+}
+.nw-site .nwbk-sum-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwbk-sum-list {
+  position: relative;
+  margin: 0;
+  padding: 0 22px 18px;
+}
+.nw-site .nwbk-sum-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nw-site .nwbk-sum-row:last-child {
+  border-bottom: 0;
+}
+.nw-site .nwbk-sum-row dt {
+  font-size: 13.5px;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwbk-sum-row dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--nw-white);
+}
+.nw-site .nwbk-sum-row dd.nwbk-sum-empty {
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwbk-sum-foot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 22px;
+  background: rgba(13, 22, 38, 0.132);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nw-cream);
+}
+.nw-site .nwbk-panel {
+  padding: 22px;
+  border-radius: var(--nw-r-md);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-white);
+}
+.nw-site .nwbk-panel-title {
+  margin: 0;
+  color: var(--nw-ink);
+  font-family: var(--nw-font-serif);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+.nw-site .nwbk-after {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+.nw-site .nwbk-after li {
+  display: flex;
+  gap: 12px;
+}
+.nw-site .nwbk-after-no {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--nw-on-dark);
+  color: var(--nw-ink);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.nw-site .nwbk-after-no--on {
+  border: 0;
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwbk-after-text {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwbk-quick-row {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.nw-site .nwbk-quick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwbk-quick:hover {
+  border-color: var(--nw-on-dark);
+  background: var(--nw-paper);
+  color: var(--nw-ink);
+}
+
+/* ── Other ways to reach us ── */
+.nw-site .nwbk-routes {
+  padding: var(--nw-sec-lg) 0;
+  background: var(--nw-white);
+}
+.nw-site .nwbk-routes-card {
+  border-radius: var(--nw-r-md);
+  border: 1px solid var(--nw-line);
+  overflow: hidden;
+}
+.nw-site .nwbk-routes-head {
+  padding: clamp(24px, 4vw, 40px);
+  background: linear-gradient(
+    90deg,
+    rgba(13, 22, 38, 0.06),
+    rgba(13, 22, 38, 0.024),
+    rgba(13, 22, 38, 0.06)
+  );
+  border-bottom: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwbk-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwbk-kicker-rule {
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.55;
+}
+.nw-site .nwbk-routes-title {
+  margin: 14px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h2);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.012em;
+}
+.nw-site .nwbk-routes-lead {
+  margin: 10px 0 0;
+  max-width: 720px;
+  font-size: var(--nw-fs-body);
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+.nw-site .nwbk-routes-body {
+  padding: clamp(24px, 4vw, 40px);
+}
+.nw-site .nwbk-routes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+}
+.nw-site .nwbk-route {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwbk-route-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwbk-route-text {
+  min-width: 0;
+}
+.nw-site .nwbk-route-label {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwbk-route-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--nw-ink);
+  text-decoration: none;
+}
+.nw-site .nwbk-route-link:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.nw-site .nwbk-route-link--wrap {
+  overflow-wrap: anywhere;
+}
+.nw-site .nwbk-routes-actions {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--nw-line-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.nw-site :is(.nw-btn, .nw-outline).nwbk-route-btn {
+  height: 56px;
+  padding: 0 28px;
+  font-size: 16px;
+}
+
+/* ── Phones (the board's phone rules) ── */
+@media (max-width: 640px) {
+  .nw-site .nwbk-step-title {
+    font-size: clamp(22.4px, 6.2vw, 25.6px);
+    line-height: 1.15;
+  }
+  .nw-site
+    :is(.nwbk-title, .nwbk-step-title, .nwbk-done-title, .nwbk-routes-title, .nwbk-panel-title) {
+    overflow-wrap: break-word;
+  }
+  .nw-site .nwbk-routes-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site :is(.nw-btn, .nw-outline).nwbk-route-btn {
+    width: 100%;
+    height: 48px;
+    font-size: 15px;
+    justify-content: center;
+    text-align: center;
+  }
+}
+@media (max-width: 520px) {
+  .nw-site .nwbk-leg-label {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwbk-done-icon {
+    animation: none;
+  }
+}
