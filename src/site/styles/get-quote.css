@@ -442,3 +442,9 @@
     overflow-wrap: break-word;
   }
 }
+
+/* Keyboard focus shows the ring only: the board's buttons keep their colour
+   (navigator.css darkens them on focus as on hover). */
+.nw-site.nwgq .nw-btn:focus-visible:not(:hover, :disabled) {
+  background: var(--nw-violet);
+}
