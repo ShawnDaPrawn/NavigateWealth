@@ -20,6 +20,8 @@ vi.mock('../../utils/supabase/info', async (importOriginal) => ({
 Element.prototype.scrollTo = () => {};
 
 const { MedicalAidPage } = await import('../../components/pages/MedicalAidPage');
+const { TaxPlanningPage } = await import('../../components/pages/TaxPlanningPage');
+const { RiskManagementPage } = await import('../../components/pages/RiskManagementPage');
 
 async function renderPage() {
   render(
@@ -168,6 +170,41 @@ describe('Navigator service page', () => {
           b.getAttribute('aria-haspopup') === 'dialog' && /Medical Savings/.test(b.textContent!),
       );
     await waitFor(() => expect(document.activeElement).toBe(savingsRow));
+  });
+});
+
+describe('Navigator service page layouts', () => {
+  it('draws the jump layout on Tax Planning', async () => {
+    render(
+      <MemoryRouter initialEntries={['/tax-planning']}>
+        <TaxPlanningPage />
+      </MemoryRouter>,
+    );
+    const h1 = await screen.findByRole('heading', { level: 1 });
+    expect(h1.textContent).toBe('Maximize YourTax Efficiency');
+    const jump = screen.getByRole('navigation', { name: 'On this page' });
+    expect(within(jump).getByRole('link', { name: 'Individuals' }).getAttribute('href')).toBe(
+      '#individuals',
+    );
+    expect(
+      screen.getAllByRole('link', { name: 'Call Me Back' }).map((a) => a.getAttribute('href')),
+    ).toEqual(['#callback', '#callback']);
+    expect(screen.getByText('STEP 01')).toBeDefined();
+    expect(screen.getByText(/in line with POPIA and our Privacy Notice/)).toBeDefined();
+  });
+
+  it('draws the risk layout: no breadcrumb or approach, a logo strip', async () => {
+    render(
+      <MemoryRouter initialEntries={['/risk-management']}>
+        <RiskManagementPage />
+      </MemoryRouter>,
+    );
+    const h1 = await screen.findByRole('heading', { level: 1 });
+    expect(h1.textContent).toBe('Protecting WhatMatters Most');
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'On this page' })).toBeNull();
+    expect(document.getElementById('approach')).toBeNull();
+    expect(screen.getByRole('heading', { name: '7 Insurers Compared' })).toBeDefined();
   });
 });
 
