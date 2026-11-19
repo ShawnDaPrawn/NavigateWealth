@@ -1,0 +1,1273 @@
+/*
+ * Navigator article page — ported from the "Article" board of the Claude
+ * Design canvas, its inline styles turned into classes.
+ *
+ * Scoped to `.nw-site.nwar` (the page root), like navigator.css is to
+ * `.nw-site`. Every class is prefixed `nwar-`.
+ *
+ * Box model and line heights. The board is drawn on the browser's defaults:
+ * content-box sizing (buttons and inputs excepted), "normal" line height and a
+ * 16px body. The app's base styles set border-box on everything, 1.5 on the
+ * root, 14px on html and their own sizes on p, headings, buttons and inputs.
+ * So, inside this page only, the first rules put the browser's defaults back,
+ * at zero specificity so any class below still wins.
+ *
+ * Sizes the board writes in rem (on its 16px root) are written here in px.
+ */
+
+/* ── Page ── */
+:where(.nw-site.nwar) *,
+:where(.nw-site.nwar) *::before,
+:where(.nw-site.nwar) *::after {
+  box-sizing: content-box;
+}
+:where(.nw-site.nwar) :where(button, input, select, textarea) {
+  box-sizing: border-box;
+}
+:where(.nw-site.nwar) :where(p, h1, h2, h3, h4, h5, h6, label, button, input, select) {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+}
+.nw-site.nwar {
+  --nwar-header: 73px;
+  /* The design system's status tints (nw-system.css), for the CMS callouts. */
+  --nwar-success-bg: #f0fdf4;
+  --nwar-success-line: #bbf7d0;
+  --nwar-warn: #b45309;
+  --nwar-warn-dark: #92400e;
+  --nwar-warn-bg: #fffbeb;
+  --nwar-warn-line: #fde68a;
+  --nwar-info: #1d4ed8;
+  --nwar-info-dark: #1e3a8a;
+  --nwar-info-bg: #eff6ff;
+  --nwar-info-line: #bfdbfe;
+  font-family: var(--nw-font-sans);
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-text);
+  background: var(--nw-paper);
+}
+/* The board's `a { color: ink }`, at a type selector's weight so every
+   class below (buttons included) still decides its own colour. */
+:where(.nw-site.nwar) a {
+  color: var(--nw-ink);
+}
+
+/* Shared pieces */
+.nw-site.nwar .nwar-label {
+  font-family: var(--nw-font-sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.nw-site.nwar .nwar-accent-l {
+  font-family: var(--nw-font-serif);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-clamp3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+/* The board's one grade for every photograph. */
+.nw-site.nwar :is(.nwar-banner-fig, .nwar-relimg) img {
+  filter: saturate(0.88) contrast(1.03) sepia(0.06);
+}
+.nw-site.nwar .nwar-quiet {
+  color: var(--nw-ink);
+  text-decoration: none;
+  border: 1px solid var(--nw-line);
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.nw-site.nwar .nwar-quiet:hover {
+  border-color: var(--nw-ink);
+  color: var(--nw-ink);
+}
+
+/* ── Reading progress ── */
+.nw-site.nwar .nwar-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 80;
+  pointer-events: none;
+}
+.nw-site.nwar .nwar-progress-bar {
+  height: 100%;
+  background: var(--nw-violet);
+  transition: width 0.1s linear;
+}
+
+/* ── Masthead ── */
+.nw-site.nwar .nwar-mast {
+  background: var(--nw-paper);
+}
+.nw-site.nwar .nwar-mast-wrap {
+  padding-top: clamp(20px, 3vw, 32px);
+}
+.nw-site.nwar .nwar-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+}
+.nw-site.nwar .nwar-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-weight: 500;
+  color: var(--nw-text);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nw-site.nwar .nwar-back:hover {
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-crumb-sep {
+  color: var(--nw-line);
+}
+.nw-site.nwar .nwar-crumb-here {
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-mast-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px 64px;
+  align-items: flex-end;
+  padding: clamp(24px, 4vw, 48px) 0 clamp(28px, 4vw, 44px);
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site.nwar .nwar-mast-copy {
+  flex: 3 1 560px;
+  min-width: 0;
+}
+.nw-site.nwar .nwar-eyebrow {
+  margin: 0;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-chip {
+  margin-left: 6px;
+  padding: 3px 7px;
+  border: 1px solid var(--nw-ink);
+  border-radius: var(--nw-r-sm);
+  font-size: 10px;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-h1 {
+  margin: 20px 0 0;
+  max-width: 900px;
+  font-size: var(--nw-fs-display);
+  line-height: 1.04;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-standfirst {
+  margin: 22px 0 0;
+  max-width: 720px;
+  font-family: var(--nw-font-serif);
+  font-size: clamp(19px, 2vw, 23px);
+  line-height: 1.5;
+  color: var(--nw-text);
+}
+.nw-site.nwar .nwar-standfirst + .nwar-standfirst {
+  margin-top: 12px;
+}
+.nw-site.nwar .nwar-meta {
+  flex: 1 1 260px;
+  margin: 0;
+  border-top: 1px solid var(--nw-ink);
+}
+.nw-site.nwar .nwar-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--nw-line);
+  font-size: 14px;
+}
+.nw-site.nwar .nwar-meta dt {
+  color: var(--nw-muted);
+  font-variant-numeric: tabular-nums;
+}
+.nw-site.nwar .nwar-meta dd {
+  margin: 0;
+  color: var(--nw-ink);
+  font-variant-numeric: tabular-nums;
+}
+.nw-site.nwar .nwar-meta .nwar-meta-by {
+  font-weight: 600;
+}
+.nw-site.nwar .nwar-meta--skel {
+  border-top-color: var(--nw-line);
+}
+
+/* ── Banner ── */
+.nw-site.nwar .nwar-banner {
+  background: linear-gradient(
+    var(--nw-paper) 0,
+    var(--nw-paper) 50%,
+    var(--nw-white) 50%,
+    var(--nw-white) 100%
+  );
+}
+.nw-site.nwar .nwar-banner-fig {
+  margin: 0;
+  aspect-ratio: 21 / 9;
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-ink-2);
+  box-shadow: 0 30px 60px -36px rgba(13, 22, 38, 0.55);
+}
+.nw-site.nwar .nwar-banner-fig img {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Body: rail and article ── */
+.nw-site.nwar .nwar-body {
+  background: var(--nw-white);
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site.nwar .nwar-body-wrap {
+  padding-top: clamp(36px, 5vw, 64px);
+  padding-bottom: clamp(56px, 7vw, 96px);
+}
+.nw-site.nwar .nwar-body-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 64px;
+  align-items: flex-start;
+}
+/* The board pins the rail 28px from the top of the window; here the site
+   header is pinned there, so the rail pins that far below it. */
+.nw-site.nwar .nwar-rail {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  position: sticky;
+  top: calc(var(--nwar-header) + 28px);
+}
+.nw-site.nwar .nwar-article {
+  flex: 999 1 560px;
+  min-width: 0;
+  max-width: 740px;
+}
+.nw-site.nwar .nwar-tocm {
+  display: none;
+  margin-bottom: 32px;
+}
+@media (max-width: 1023px) {
+  .nw-site.nwar .nwar-rail {
+    display: none;
+  }
+  .nw-site.nwar .nwar-tocm {
+    display: block;
+  }
+}
+
+/* Table of contents — rail */
+.nw-site.nwar .nwar-toc-label {
+  margin: 0 0 12px;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-toc-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--nw-line);
+}
+.nw-site.nwar .nwar-toc {
+  color: var(--nw-text);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+.nw-site.nwar .nwar-toc:hover {
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-toc-list .nwar-toc {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  margin-left: -1px;
+  padding: 6px 0 6px 14px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.nw-site.nwar .nwar-toc-list .nwar-toc--sub {
+  padding-left: 28px;
+}
+.nw-site.nwar .nwar-toc-list .nwar-toc-on {
+  color: var(--nw-ink);
+  font-weight: 600;
+  border-left-color: var(--nw-violet);
+}
+
+/* Table of contents — fold-out */
+.nw-site.nwar .nwar-fold {
+  border-top: 1px solid var(--nw-ink);
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site.nwar .nwar-fold-btn {
+  width: 100%;
+  min-height: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-chev {
+  transition: transform 0.2s;
+}
+.nw-site.nwar .nwar-chev--open {
+  transform: rotate(180deg);
+}
+.nw-site.nwar .nwar-fold-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 0 8px;
+  list-style: none;
+}
+.nw-site.nwar .nwar-fold-list .nwar-toc {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-left: 12px;
+  font-size: 15px;
+}
+.nw-site.nwar .nwar-fold-list .nwar-fold-item--sub {
+  padding-left: 26px;
+}
+
+/* Sharing — rail */
+.nw-site.nwar .nwar-share {
+  position: relative;
+}
+.nw-site.nwar .nwar-rail-label {
+  margin: 0 0 10px;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-share-row {
+  display: flex;
+  gap: 8px;
+}
+.nw-site.nwar .nwar-share-btn {
+  flex: 1;
+  height: 44px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.nw-site.nwar .nwar-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  padding: 4px;
+  border-radius: var(--nw-r-md);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-white);
+  box-shadow: 0 18px 40px -20px rgba(13, 22, 38, 0.35);
+}
+.nw-site.nwar .nwar-menuitem {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--nw-r-sm);
+  font-size: 14px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--nw-text);
+  text-align: left;
+  text-decoration: none;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.nw-site.nwar button.nwar-menuitem {
+  width: 100%;
+}
+.nw-site.nwar .nwar-menuitem:hover,
+.nw-site.nwar .nwar-menuitem:focus-visible {
+  background: var(--nw-paper);
+  color: var(--nw-ink);
+}
+
+/* Sharing — narrow screens */
+.nw-site.nwar .nwar-sharebar {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.nw-site.nwar .nwar-sharebar-btn {
+  flex: 1;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site.nwar .nwar-copied {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--nw-success);
+}
+.nw-site.nwar .nwar-copied:empty {
+  margin: 0;
+}
+
+/* Rail call to action */
+.nw-site.nwar .nwar-railcta {
+  padding: 22px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-on-dark);
+}
+.nw-site.nwar .nwar-railcta-label {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwar .nwar-railcta-t {
+  margin: 10px 0 0;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.25;
+  color: var(--nw-paper);
+}
+.nw-site.nwar .nwar-railcta-btn {
+  display: flex;
+  margin-top: 16px;
+  height: 48px;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ── Article prose ── */
+.nw-site.nwar .nwar-prose {
+  color: var(--nw-text);
+  overflow-wrap: break-word;
+}
+.nw-site.nwar .nwar-prose > :first-child {
+  margin-top: 0;
+}
+.nw-site.nwar .nwar-prose p {
+  margin: 0 0 22px;
+  font-size: 17.5px;
+  line-height: 1.8;
+  color: var(--nw-text);
+}
+/* The live page marks the first full paragraph (enhanceArticleHtml); the
+   board sets it as the lead. */
+.nw-site.nwar .nwar-prose p.article-drop-cap {
+  font-family: var(--nw-font-serif);
+  font-size: 21px;
+  line-height: 1.6;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-prose h2 {
+  margin: 52px 0 18px;
+  font-family: var(--nw-font-serif);
+  font-size: clamp(25.6px, 2.6vw, 32.8px);
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+  scroll-margin-top: 90px;
+}
+.nw-site.nwar .nwar-prose h3 {
+  margin: 36px 0 12px;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h4);
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: -0.008em;
+  color: var(--nw-ink);
+  scroll-margin-top: 90px;
+}
+.nw-site.nwar .nwar-prose :is(h4, h5, h6) {
+  margin: 28px 0 10px;
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-prose :is(h2, h3)[tabindex='-1']:focus {
+  outline: none;
+}
+.nw-site.nwar .nwar-prose :is(ul, ol) {
+  margin: 0 0 26px;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--nw-line);
+}
+.nw-site.nwar .nwar-prose li {
+  position: relative;
+  padding: 16px 0 16px 28px;
+  border-bottom: 1px solid var(--nw-line);
+  font-size: 16.5px;
+  line-height: 1.7;
+  color: var(--nw-text);
+}
+.nw-site.nwar .nwar-prose ul > li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 27px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--nw-ink);
+  transform: rotate(45deg);
+}
+.nw-site.nwar .nwar-prose ol {
+  counter-reset: nwar-item;
+}
+.nw-site.nwar .nwar-prose ol > li {
+  counter-increment: nwar-item;
+}
+.nw-site.nwar .nwar-prose ol > li::before {
+  content: counter(nwar-item, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 28px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-prose li > p {
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+.nw-site.nwar .nwar-prose li > p + p {
+  margin-top: 10px;
+}
+.nw-site.nwar .nwar-prose li :is(ul, ol) {
+  margin: 12px 0 0;
+  border-top: 0;
+}
+.nw-site.nwar .nwar-prose li li {
+  padding: 8px 0 8px 22px;
+  border-bottom: 0;
+  font-size: 15.5px;
+}
+.nw-site.nwar .nwar-prose ul li li::before {
+  top: 19px;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+}
+.nw-site.nwar .nwar-prose ol li li::before {
+  top: 8px;
+  line-height: 26px;
+}
+.nw-site.nwar .nwar-prose :is(strong, b) {
+  color: var(--nw-ink);
+  font-weight: 600;
+}
+.nw-site.nwar .nwar-prose a {
+  color: var(--nw-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.nw-site.nwar .nwar-prose a:hover {
+  color: var(--nw-violet);
+}
+.nw-site.nwar .nwar-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 32px 0;
+  border-radius: var(--nw-r-md);
+}
+.nw-site.nwar .nwar-prose figure {
+  margin: 32px 0;
+}
+.nw-site.nwar .nwar-prose figure img {
+  margin: 0;
+}
+.nw-site.nwar .nwar-prose figcaption {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-prose hr {
+  margin: 40px 0;
+  border: 0;
+  border-top: 1px solid var(--nw-line);
+}
+.nw-site.nwar .nwar-prose :is(code, kbd) {
+  padding: 1px 5px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  font-size: 0.9em;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-prose pre {
+  margin: 0 0 26px;
+  padding: 18px 20px;
+  overflow-x: auto;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-paper);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.nw-site.nwar .nwar-prose pre code {
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+/* Pull quotes (the live page marks every blockquote). */
+.nw-site.nwar .nwar-prose blockquote {
+  margin: 36px 0;
+  padding: 4px 0 4px 24px;
+  border-left: 2px solid var(--nw-ink);
+  font-family: var(--nw-font-serif);
+  font-style: italic;
+  font-size: 23px;
+  line-height: 1.5;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-prose blockquote p {
+  margin: 0 0 12px;
+  font: inherit;
+  color: inherit;
+}
+.nw-site.nwar .nwar-prose blockquote > :last-child {
+  margin-bottom: 0;
+}
+/* Callouts (paragraphs the live page recognises by their first words). */
+.nw-site.nwar .nwar-prose .article-callout {
+  margin: 0 0 26px;
+  padding: 18px 20px;
+  border-radius: var(--nw-r-md);
+  border: 1px solid var(--nw-line);
+  border-left-width: 3px;
+  background: var(--nw-paper);
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--nw-text-strong);
+}
+.nw-site.nwar .nwar-prose .article-callout::before {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.nw-site.nwar .nwar-prose .article-callout-takeaway {
+  background: var(--nwar-success-bg);
+  border-color: var(--nwar-success-line);
+  border-left-color: var(--nw-success);
+}
+.nw-site.nwar .nwar-prose .article-callout-takeaway::before {
+  content: 'Key Takeaway';
+  color: var(--nw-success);
+}
+.nw-site.nwar .nwar-prose :is(.article-callout-important, .article-callout-warning) {
+  background: var(--nwar-warn-bg);
+  border-color: var(--nwar-warn-line);
+  border-left-color: var(--nwar-warn);
+}
+.nw-site.nwar .nwar-prose :is(.article-callout-important, .article-callout-warning)::before {
+  color: var(--nwar-warn-dark);
+}
+.nw-site.nwar .nwar-prose .article-callout-important::before {
+  content: 'Important';
+}
+.nw-site.nwar .nwar-prose .article-callout-warning::before {
+  content: 'Risk Warning';
+}
+.nw-site.nwar .nwar-prose .article-callout-note {
+  background: var(--nwar-info-bg);
+  border-color: var(--nwar-info-line);
+  border-left-color: var(--nwar-info);
+}
+.nw-site.nwar .nwar-prose .article-callout-note::before {
+  content: 'Note';
+  color: var(--nwar-info-dark);
+}
+.nw-site.nwar .nwar-prose .article-callout-tip {
+  background: var(--nw-violet-tint);
+  border-color: var(--nw-line);
+  border-left-color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-prose .article-callout-tip::before {
+  content: 'Tip';
+  color: var(--nw-ink);
+}
+/* Tables scroll inside the column rather than widening the page. */
+.nw-site.nwar .nwar-prose .nwar-table {
+  margin: 0 0 26px;
+  overflow-x: auto;
+  border-top: 1px solid var(--nw-ink);
+}
+.nw-site.nwar .nwar-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.nw-site.nwar .nwar-prose th {
+  padding: 12px 14px 12px 0;
+  border-bottom: 1px solid var(--nw-line-strong);
+  text-align: left;
+  vertical-align: bottom;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-prose td {
+  padding: 12px 14px 12px 0;
+  border-bottom: 1px solid var(--nw-line);
+  vertical-align: top;
+  color: var(--nw-text);
+}
+.nw-site.nwar .nwar-prose :is(th, td) p {
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Topics (only when the article has tags) */
+.nw-site.nwar .nwar-topics {
+  margin-top: 32px;
+}
+.nw-site.nwar .nwar-topics-label {
+  margin: 0 0 10px;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-topics-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nw-site.nwar .nwar-topic {
+  padding: 5px 10px;
+  border: 1px solid var(--nw-line);
+  border-radius: var(--nw-r-sm);
+  font-size: 13px;
+  color: var(--nw-text);
+}
+
+/* ── Call to action band ── */
+.nw-site.nwar .nwar-convert {
+  margin-top: 44px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  color: var(--nw-on-dark);
+  padding: clamp(26px, 4vw, 40px);
+}
+.nw-site.nwar .nwar-convert-rose {
+  position: absolute;
+  right: -40px;
+  bottom: -40px;
+  width: 200px;
+  height: 200px;
+  opacity: 0.18;
+}
+.nw-site.nwar .nwar-convert-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.nw-site.nwar .nwar-convert-copy {
+  flex: 1 1 320px;
+}
+.nw-site.nwar .nwar-convert-eyebrow {
+  margin: 0;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwar .nwar-convert-t {
+  margin: 14px 0 0;
+  font-size: clamp(24px, 2.6vw, 30.4px);
+  line-height: 1.2;
+  color: var(--nw-paper);
+}
+.nw-site.nwar .nwar-convert-line {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwar .nwar-convert-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.nw-site.nwar .nwar-convert-btn {
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ── Disclaimer and author ── */
+.nw-site.nwar .nwar-disclaimer {
+  margin-top: 32px;
+  padding: 20px 22px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--nw-text);
+}
+.nw-site.nwar .nwar-disclaimer strong {
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-author {
+  margin-top: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 24px 0;
+  border-top: 1px solid var(--nw-ink);
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site.nwar .nwar-author-mark {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-author-copy {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.nw-site.nwar .nwar-author-label {
+  font-size: 10.5px;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-author-name {
+  margin: 4px 0 0;
+  font-size: 22px;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-author-bio {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+
+/* ── Newsletter sign-up ── */
+.nw-site.nwar .nwar-signup {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+}
+.nw-site.nwar .nwar-signup-copy {
+  flex: 1 1 240px;
+}
+.nw-site.nwar .nwar-signup-t {
+  margin: 0;
+  font-size: 22px;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-signup-p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-signup-form {
+  flex: 1 1 320px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nw-site.nwar .nwar-input {
+  flex: 1 1 200px;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-white);
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--nw-ink);
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site.nwar .nwar-input::placeholder {
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-input:focus,
+.nw-site.nwar .nwar-input:focus-visible {
+  outline: none;
+  border-color: var(--nw-ink);
+  box-shadow: 0 0 0 2px var(--nw-violet);
+}
+.nw-site.nwar .nwar-input--invalid {
+  border-color: var(--nw-danger);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+.nw-site.nwar .nwar-signup-btn {
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site.nwar .nwar-trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.nw-site.nwar .nwar-signup-done {
+  flex: 1 1 320px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--nw-text);
+}
+.nw-site.nwar .nwar-signup-done strong {
+  color: var(--nw-ink);
+}
+
+/* ── Continue reading ── */
+.nw-site.nwar .nwar-related {
+  padding: var(--nw-sec-md) 0;
+}
+.nw-site.nwar .nwar-related-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--nw-ink);
+}
+.nw-site.nwar .nwar-related-h {
+  margin: 0;
+  font-size: var(--nw-fs-h2);
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-textlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.nw-site.nwar .nwar-textlink:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.nw-site.nwar .nwar-related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 0 40px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nw-site.nwar .nwar-related-grid > li {
+  display: flex;
+  min-width: 0;
+}
+.nw-site.nwar .nwar-story {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0 28px;
+  border-bottom: 1px solid var(--nw-line);
+  color: inherit;
+  text-decoration: none;
+}
+.nw-site.nwar .nwar-relimg {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 18px;
+  border-radius: var(--nw-r-sm);
+  overflow: hidden;
+  background: var(--nw-ink-2);
+}
+.nw-site.nwar .nwar-relimg img {
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  object-fit: cover;
+}
+.nw-site.nwar .nwar-noimg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site.nwar .nwar-story-cat {
+  font-size: 10.5px;
+  color: var(--nw-muted);
+}
+/* An h3 here, a span on the board: so no balanced wrapping, as the board. */
+.nw-site.nwar .nwar-st {
+  text-wrap: wrap;
+  margin: 10px 0 0;
+  font-size: 23px;
+  line-height: 1.2;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-story:hover .nwar-st {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+.nw-site.nwar .nwar-story-ex {
+  margin-top: 10px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site.nwar .nwar-story-meta {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--nw-muted);
+}
+.nw-site.nwar .nwar-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+.nw-site.nwar .nwar-more--alone {
+  margin-top: 0;
+}
+.nw-site.nwar .nwar-more-btn {
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+  gap: 8px;
+}
+
+/* ── Back to top ── */
+.nw-site.nwar .nwar-totop {
+  position: fixed;
+  right: 20px;
+  bottom: 96px;
+  z-index: 70;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background: var(--nw-ink);
+  color: var(--nw-paper);
+  box-shadow: 0 12px 28px -14px rgba(13, 22, 38, 0.6);
+  transition: background-color 0.2s;
+}
+.nw-site.nwar .nwar-totop:hover {
+  background: var(--nw-ink-2);
+}
+
+/* ── States the board does not draw ── */
+.nw-site.nwar .nwar-loading .nwar-mast-row {
+  align-items: flex-start;
+}
+.nw-site.nwar .nwar-skel-prose {
+  max-width: 740px;
+}
+.nw-site.nwar .nwar-missing {
+  background: var(--nw-paper);
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site.nwar .nwar-missing-body {
+  max-width: 720px;
+  padding: clamp(56px, 8vw, 104px) 0 clamp(64px, 9vw, 112px);
+}
+.nw-site.nwar .nwar-missing-h {
+  margin: 20px 0 0;
+  font-size: var(--nw-fs-h1s);
+  line-height: 1.08;
+  color: var(--nw-ink);
+}
+.nw-site.nwar .nwar-missing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 32px;
+}
+.nw-site.nwar .nwar-missing-btn {
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Loading placeholders — last, so they replace the dark fill of the picture
+   boxes they stand in for. */
+@keyframes nwarShimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+.nw-site.nwar .nwar-skel {
+  display: block;
+  border-radius: var(--nw-r-sm);
+  background: linear-gradient(
+    90deg,
+    var(--nw-paper-2) 0px,
+    var(--nw-paper-3) 160px,
+    var(--nw-paper-2) 320px
+  );
+  background-size: 800px 100%;
+  animation: nwarShimmer 1.6s linear infinite;
+}
+.nw-site.nwar .nwar-banner-fig.nwar-skel {
+  border-radius: var(--nw-r-md);
+  box-shadow: none;
+}
+.nw-site.nwar .nwar-skel-line {
+  height: 10px;
+  margin-top: 12px;
+}
+.nw-site.nwar .nwar-skel-title {
+  height: 18px;
+  margin-top: 12px;
+}
+.nw-site.nwar .nwar-skel-h1 {
+  height: 44px;
+  margin-top: 16px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nw-site.nwar :is(.nwar-skel, .nw-in) {
+    animation: none;
+  }
+}
+
+/* ── Phones (the board's own phone rules) ── */
+@media (max-width: 640px) {
+  .nw-site.nwar :is(h1, h2, h3) {
+    overflow-wrap: break-word;
+  }
+  /* Two actions side by side stack, full width. */
+  .nw-site.nwar :is(.nwar-convert-actions, .nwar-missing-actions) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site.nwar :is(.nwar-convert-actions, .nwar-missing-actions) > * {
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+  }
+  /* Related stories become a thumbnail beside the text. */
+  .nw-site.nwar .nwar-story {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    column-gap: 14px;
+    align-items: start;
+    padding: 16px 0;
+  }
+  .nw-site.nwar .nwar-story > .nwar-relimg {
+    grid-row: 1 / span 4;
+    margin-bottom: 0;
+  }
+  .nw-site.nwar .nwar-story > :not(.nwar-relimg) {
+    grid-column: 2;
+    margin-top: 0;
+  }
+  .nw-site.nwar .nwar-story > .nwar-clamp3 {
+    display: none;
+  }
+  .nw-site.nwar .nwar-story .nwar-st {
+    margin-top: 4px;
+    font-size: 17px;
+    line-height: 1.28;
+  }
+  .nw-site.nwar .nwar-story > .nw-mono {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+  .nw-site.nwar .nwar-noimg svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media print {
+  .nw-site.nwar .nwar-noprint {
+    display: none !important;
+  }
+}
