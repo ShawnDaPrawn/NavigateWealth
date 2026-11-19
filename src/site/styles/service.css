@@ -486,6 +486,9 @@
 .nw-site.nws .nwp-next {
   line-height: normal;
 }
+.nw-site.nws .nw-sec--white .nwp-next:not(:hover) {
+  background: transparent;
+}
 .nw-site.nws .nwp-sec--risk .nwp-title {
   margin-top: 16px;
 }
@@ -523,6 +526,41 @@
   letter-spacing: -0.008em;
 }
 .nw-site.nws .nwp-chev {
+  box-sizing: content-box;
+}
+
+/* The phone sheet renders in a portal, outside the page root, so it carries
+   its own class; measured against the boards' product pop-up. */
+.nw-site.nws-sheet {
+  font-size: 16px;
+  line-height: normal;
+}
+:where(.nw-site.nws-sheet) :where(h1, h2, h3, h4, p, label, button, input) {
+  line-height: inherit;
+}
+.nw-site.nws-sheet .nwp-sheet-content .nwp-feat-t {
+  font-size: 14.5px;
+}
+.nw-site.nws-sheet .nwp-sheet-content .nwp-feat-t::before {
+  width: 5px;
+  height: 5px;
+}
+.nw-site.nws-sheet .nwp-sheet-content .nwp-feat-d {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.nw-site.nws-sheet .nwp-sheet-content .nwp-tick {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+.nw-site.nws-sheet .nwp-sheet-foot .nw-btn {
+  padding: 0 16px;
+}
+.nw-site.nws-sheet .nwp-sheet-foot .nw-outline {
+  height: 48px;
   box-sizing: content-box;
 }
 
@@ -686,6 +724,10 @@
 .nw-site.nws .nwl-tile {
   max-width: var(--nwl-tile-w, 240px);
   height: var(--nwl-tile-h, 136px);
+}
+/* The tiles' own border colour holds on hover, as drawn. */
+.nw-site.nws .nwl-tile:hover {
+  border-color: var(--nw-line);
 }
 .nw-site.nws .nwl-tile img {
   max-width: var(--nwl-logo-w, 140px);
@@ -874,6 +916,10 @@
 }
 
 /* ── FAQ ── */
+/* The boards' questions are plain buttons, so they wrap as plain text does. */
+.nw-site.nws .nw-faq-item h3 {
+  text-wrap: wrap;
+}
 .nw-site.nws .nw-faq-help-t {
   line-height: 1.25;
   letter-spacing: -0.012em;

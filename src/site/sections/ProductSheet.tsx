@@ -51,7 +51,7 @@ export function ProductSheet({
     <Dialog.Root open={product !== null} onOpenChange={(open) => !open && onIndexChange(null)}>
       <Dialog.Portal>
         {product && index !== null ? (
-          <div className="nw-site nwp-sheet">
+          <div className="nw-site nwp-sheet nws-sheet">
             <Dialog.Overlay className="nwp-scrim" />
             <Dialog.Content
               className="nwp-sheet-panel"

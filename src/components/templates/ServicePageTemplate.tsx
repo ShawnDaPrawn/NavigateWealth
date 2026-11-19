@@ -106,9 +106,10 @@ export interface ServicePageConfig {
     /** Get quote link */
     quoteLink?: string;
     /**
-     * The H1 in the redesign: the phrase people search for, e.g. "Independent
-     * Medical Aid Advice" + "in South Africa". titleLine1/titleLine2 then
-     * become the slogan beneath it. The live design ignores this.
+     * The phrase people search for, e.g. "Independent Medical Aid Advice" +
+     * "in South Africa". Neither design shows it: both lead with
+     * titleLine1/titleLine2, as the service boards draw the H1. Kept for SEO
+     * copy (titles, descriptions) to draw on.
      */
     searchHeading?: { lead: string; accent?: string };
     /**
