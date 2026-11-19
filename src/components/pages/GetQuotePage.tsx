@@ -7,7 +7,7 @@
  * §7 — Presentation layer: layout, interaction, local UI state only.
  */
 
-import { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -16,8 +16,31 @@ import { Shield, Clock, Users, Sparkles, CheckCircle } from 'lucide-react';
 import { QUOTE_SERVICES, isValidServiceId } from './quote/constants';
 import { ServiceCard } from './quote/components/ServiceCard';
 import type { QuoteServiceId } from './quote/types';
+import { SITE_DESIGN } from '../../site/design';
 
+const NavigatorGetQuotePage = React.lazy(() =>
+  import('../../site/pages/NavigatorGetQuotePage').then((m) => ({
+    default: m.NavigatorGetQuotePage,
+  })),
+);
+
+/**
+ * The quote gateway. The build's design switch picks the layout; both read
+ * the services from quote/constants.ts and send each one to the same
+ * /get-quote/<service>/contact step.
+ */
 export function GetQuotePage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorGetQuotePage />
+      </Suspense>
+    );
+  }
+  return <LegacyGetQuotePage />;
+}
+
+function LegacyGetQuotePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
