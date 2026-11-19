@@ -15,6 +15,15 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { BookingIcon, type BookingIconName } from '../sections/BookingIcons';
+
+/** The inner markup of a booking icon, to tell which one a row draws. */
+function iconMarkup(name: BookingIconName): string {
+  const holder = document.createElement('div');
+  holder.innerHTML = renderToStaticMarkup(<BookingIcon name={name} size={16} />);
+  return holder.querySelector('svg')!.innerHTML;
+}
 
 vi.mock('../design', () => ({ SITE_DESIGN: 'navigator', resolveSiteDesign: () => 'navigator' }));
 vi.mock('../../utils/api/client', () => ({ api: { post: vi.fn() } }));
@@ -383,6 +392,8 @@ describe('Navigator booking details and sending', () => {
       'thandi@example.com · 082 000 0000',
       'I would like to review my retirement savings.',
     ]);
+    // The meeting row carries the chosen format's icon: a phone, not the video camera.
+    expect(list.querySelector('svg')!.innerHTML).toBe(iconMarkup('phone'));
     await act(async () => {
       fireEvent.click(within(card()).getByRole('button', { name: /Confirm Booking/ }));
     });
@@ -419,6 +430,7 @@ describe('Navigator booking details and sending', () => {
       "We've received your request and sent a confirmation to thandi@example.com.",
     );
     expect(card().textContent).toContain('10:30 AM (SAST)');
+    expect(card().querySelector('.nwbk-done-box svg')!.innerHTML).toBe(iconMarkup('phone'));
 
     fireEvent.click(within(card()).getByRole('button', { name: 'Done' }));
     const first = await screen.findByRole('heading', { name: 'How would you like to meet?' });

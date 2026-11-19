@@ -258,9 +258,9 @@ export function BookingWizard({
                 We will contact you within 24 hours on business days to confirm your appointment.
               </p>
               <div className="nwbk-done-box">
-                {/* The board draws the video icon here whatever the meeting format. */}
+                {/* The meeting format's own icon (the board always drew the video one). */}
                 <span>
-                  <BookingIcon name="video" size={16} stroke="#0D1626" />
+                  <BookingIcon name={TYPE_ICONS[meeting.id]} size={16} stroke="#0D1626" />
                   {meeting.title}
                 </span>
                 <span>
@@ -396,10 +396,10 @@ export function BookingWizard({
                   <div className="nw-in nwbk-step">
                     {stepHead('Review your booking', 'Please confirm the details below')}
                     <dl className="nwbk-review">
-                      {/* The board draws the video icon here whatever the meeting format. */}
+                      {/* The format's own icon (the board always drew the video one). */}
                       {reviewRow(
                         'Meeting Type',
-                        'video',
+                        TYPE_ICONS[meeting.id],
                         <dd className="nwbk-review-dd">{meeting.title}</dd>,
                       )}
                       {reviewRow(
