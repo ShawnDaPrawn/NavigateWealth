@@ -75,6 +75,9 @@ const MENUS: MenuDef[] = [
   },
 ];
 
+/** Booking a consultation sits under Contact, so the boards mark Contact there. */
+const CONSULTATION_PATHS = ['/schedule-consultation', '/contact/consultation'];
+
 interface NavigatorHeaderProps {
   /** Collapses the top bar and adds a shadow once the page has scrolled. */
   isScrolled?: boolean;
@@ -221,7 +224,12 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
             <Link className="nwh-link" to="/resources" aria-current={current('/resources')}>
               Resources
             </Link>
-            <Link className="nwh-link" to="/contact" aria-current={current('/contact')}>
+            <Link
+              className="nwh-link"
+              to="/contact"
+              aria-current={current('/contact')}
+              data-active={CONSULTATION_PATHS.includes(pathname) ? 'true' : undefined}
+            >
               Contact
             </Link>
           </div>

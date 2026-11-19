@@ -116,6 +116,14 @@ describe('NavigatorHeader', () => {
     );
   });
 
+  it('marks Contact, without calling it the current page, while booking a consultation', () => {
+    renderHeader('/schedule-consultation');
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    const contact = within(nav).getByRole('link', { name: 'Contact' });
+    expect(contact.getAttribute('data-active')).toBe('true');
+    expect(contact.getAttribute('aria-current')).toBeNull();
+  });
+
   it('gives phones a labelled menu that expands each section', () => {
     renderHeader();
     const burger = screen.getByRole('button', { name: 'Open menu' });
