@@ -3,7 +3,7 @@
  * with the design switch on lazy-loads NavigatorHomePage. Covers what the
  * redesign must not lose (the links, the FAQ text behind the JSON-LD, the
  * featured articles, the partner list, leads reaching the endpoint with the
- * same payload) and what it adds (a stable H1, a carousel that can be paused,
+ * same payload) and what it adds (a carousel that pauses on hover and focus,
  * field validation, the confirmation in place).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -94,12 +94,15 @@ afterEach(() => {
 });
 
 describe('Navigator home page', () => {
-  it('has one stable H1 led by the searched-for phrase', async () => {
+  it("has one H1: the current slide's headline, as on the board", async () => {
     const h1 = await renderPage();
-    expect(h1.textContent).toBe('Independent Financial Advisors in South Africa');
+    expect(h1.textContent).toBe('Secure Your Financial Future.');
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    // The rotating headline is display text, not a second heading.
-    expect(screen.getByText(/Secure Your Financial/).tagName).toBe('P');
+    endProgress();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Secure Your Retirement With Confidence.',
+    );
   });
 
   it('links only to routes the site already serves', async () => {
@@ -134,7 +137,7 @@ describe('Navigator home page', () => {
     );
   });
 
-  it('rotates the highlights when each progress bar fills, and can be paused', async () => {
+  it('rotates the highlights when each progress bar fills', async () => {
     await renderPage();
     const carousel = screen.getByRole('group', { name: 'Highlights' });
     expect(carousel.getAttribute('aria-live')).toBe('off');
@@ -150,11 +153,8 @@ describe('Navigator home page', () => {
       screen.getByRole('button', { name: 'Show highlight 4 of 4' }).getAttribute('aria-current'),
     ).toBe('true');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Pause highlights' }));
-    expect(screen.getByRole('button', { name: 'Play highlights' })).toBeDefined();
-    expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('paused');
-    // Stopped, a change of slide is announced.
-    expect(carousel.getAttribute('aria-live')).toBe('polite');
+    // The board has no pause button; it has no control beyond the dots.
+    expect(screen.queryByRole('button', { name: /Pause|Play/ })).toBeNull();
   });
 
   it('pauses while the pointer is over the highlights', async () => {
@@ -162,17 +162,19 @@ describe('Navigator home page', () => {
     const carousel = screen.getByRole('group', { name: 'Highlights' });
     fireEvent.mouseEnter(carousel);
     expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('paused');
+    // Paused, a change of slide is announced.
+    expect(carousel.getAttribute('aria-live')).toBe('polite');
     fireEvent.mouseLeave(carousel);
     expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('running');
   });
 
-  it('starts paused when the visitor asks for reduced motion', async () => {
+  it('does not rotate on its own when the visitor asks for reduced motion', async () => {
     vi.stubGlobal(
       'matchMedia',
       vi.fn((query: string) => ({ matches: query.includes('reduce'), media: query })),
     );
     await renderPage();
-    expect(screen.getByRole('button', { name: 'Play highlights' })).toBeDefined();
+    expect(screen.getByTestId('hero-progress').style.animationPlayState).toBe('paused');
   });
 
   it('keeps every FAQ answer in the document, matching the FAQPage data', async () => {
@@ -199,6 +201,9 @@ describe('Navigator home page', () => {
       '/resources/article/third',
     ]);
     expect(cards[0].className).toContain('nwin-card--lead');
+    // Dates as the board writes them, not the locale's "12 Oct" / "10 Sept".
+    expect(cards[0].textContent).toContain('12 Oct 2026');
+    expect(cards[1].textContent).toContain('10 Sep 2026');
     expect(screen.getByText('05 — Insights')).toBeDefined();
     expect(screen.getByText('06 — FAQ')).toBeDefined();
   });
@@ -235,36 +240,36 @@ describe('Navigator home enquiry form', () => {
 
   it('says which fields need fixing and sends nothing', async () => {
     await renderPage();
-    fireEvent.change(within(form()).getByLabelText('Phone number'), {
+    fireEvent.change(within(form()).getByLabelText('Phone Number *'), {
       target: { value: '123' },
     });
-    fireEvent.click(within(form()).getByRole('button', { name: /Request a Free Consultation/ }));
+    fireEvent.click(within(form()).getByRole('button', { name: /Book a Free Consultation/ }));
     expect(await screen.findByText('Enter your first name')).toBeDefined();
     expect(screen.getByText('Enter your last name')).toBeDefined();
     expect(screen.getByText('Enter your email address')).toBeDefined();
     expect(screen.getByText('Enter a valid phone number')).toBeDefined();
-    expect(document.activeElement).toBe(within(form()).getByLabelText('First name'));
+    expect(document.activeElement).toBe(within(form()).getByLabelText('First Name *'));
     expect(submitCalls()).toHaveLength(0);
   });
 
   it('sends what the live form sends, honeypot included, and confirms in place', async () => {
     await renderPage();
     const f = form();
-    fireEvent.change(within(f).getByLabelText('First name'), { target: { value: ' Thandi ' } });
-    fireEvent.change(within(f).getByLabelText('Last name'), {
+    fireEvent.change(within(f).getByLabelText('First Name *'), { target: { value: ' Thandi ' } });
+    fireEvent.change(within(f).getByLabelText('Last Name *'), {
       target: { value: 'van der Merwe' },
     });
-    fireEvent.change(within(f).getByLabelText('Email address'), {
+    fireEvent.change(within(f).getByLabelText('Email Address *'), {
       target: { value: 'thandi@example.com' },
     });
-    fireEvent.change(within(f).getByLabelText('Phone number'), {
+    fireEvent.change(within(f).getByLabelText('Phone Number *'), {
       target: { value: '082 000 0000' },
     });
-    fireEvent.change(within(f).getByLabelText('Service of interest'), {
+    fireEvent.change(within(f).getByLabelText('Service of Interest'), {
       target: { value: 'Medical Aid' },
     });
     await act(async () => {
-      fireEvent.click(within(f).getByRole('button', { name: /Request a Free Consultation/ }));
+      fireEvent.click(within(f).getByRole('button', { name: /Book a Free Consultation/ }));
     });
 
     expect(await screen.findByText('Thank you, Thandi.')).toBeDefined();
@@ -281,7 +286,7 @@ describe('Navigator home enquiry form', () => {
 
   it('defaults to a general consultation, as the live form does', async () => {
     await renderPage();
-    const select = within(form()).getByLabelText('Service of interest') as HTMLSelectElement;
+    const select = within(form()).getByLabelText('Service of Interest') as HTMLSelectElement;
     expect(select.value).toBe('General consultation / All Service');
     expect(select.selectedOptions[0].textContent).toBe('General consultation');
   });
@@ -291,15 +296,15 @@ describe('Navigator home enquiry form', () => {
     stubFetch(ARTICLES, { ok: false, body: { error: 'Validation failed' } });
     await renderPage();
     const f = form();
-    fireEvent.change(within(f).getByLabelText('First name'), { target: { value: 'Sipho' } });
-    fireEvent.change(within(f).getByLabelText('Last name'), { target: { value: 'Dlamini' } });
-    fireEvent.change(within(f).getByLabelText('Email address'), {
+    fireEvent.change(within(f).getByLabelText('First Name *'), { target: { value: 'Sipho' } });
+    fireEvent.change(within(f).getByLabelText('Last Name *'), { target: { value: 'Dlamini' } });
+    fireEvent.change(within(f).getByLabelText('Email Address *'), {
       target: { value: 'sipho@example.com' },
     });
-    fireEvent.change(within(f).getByLabelText('Phone number'), {
+    fireEvent.change(within(f).getByLabelText('Phone Number *'), {
       target: { value: '0821234567' },
     });
-    fireEvent.click(within(f).getByRole('button', { name: /Request a Free Consultation/ }));
+    fireEvent.click(within(f).getByRole('button', { name: /Book a Free Consultation/ }));
     expect((await screen.findByRole('alert')).textContent).toContain('Validation failed');
     expect(screen.queryByText(/Thank you/)).toBeNull();
   });

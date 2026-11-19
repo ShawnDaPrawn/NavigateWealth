@@ -113,20 +113,9 @@
   object-fit: cover;
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
-/* The page's H1: what people search for, set as the label above the slides. */
-.nw-site .nwhh-h1 {
-  margin: 28px 0 0;
-  font-family: var(--nw-font-sans);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.5;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--nw-on-dark);
-}
 .nw-site .nwhh-slides {
-  margin-top: 16px;
-  min-height: 372px;
+  margin-top: 32px;
+  min-height: 400px;
 }
 .nw-site .nwhh-title {
   margin: 0;
@@ -213,26 +202,6 @@
   border-radius: var(--nw-r-sm);
   background: var(--nw-on-dark);
   animation: nwFill var(--nwhh-slide-ms, 8000ms) linear forwards;
-}
-.nw-site .nwhh-pause {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: transparent;
-  color: var(--nw-on-dark);
-  cursor: pointer;
-  transition:
-    border-color 0.2s,
-    color 0.2s;
-}
-.nw-site .nwhh-pause:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  color: var(--nw-white);
 }
 /* Phones and narrow tablets: a compact heading chip instead of the dial. */
 .nw-site .nwhh-chip {
@@ -358,7 +327,7 @@
     gap: 24px;
   }
   .nw-site .nwhh-slides {
-    min-height: 330px;
+    min-height: 350px;
   }
   .nw-site .nwhh-ctas a {
     flex: 1 1 100%;
@@ -799,31 +768,28 @@
   position: fixed;
   inset: 0;
   z-index: 100;
+  overflow-y: auto;
+  padding: clamp(12px, 4vw, 48px);
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   background: rgba(10, 12, 24, 0.64);
   animation: nwFadeIn 0.2s ease-out;
 }
 .nw-site .nwpd {
-  position: fixed;
-  z-index: 101;
-  top: clamp(12px, 4vw, 48px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 2 * clamp(12px, 4vw, 48px));
+  position: relative;
+  width: 100%;
   max-width: 920px;
-  max-height: calc(100dvh - 2 * clamp(12px, 4vw, 48px));
-  display: flex;
-  flex-direction: column;
+  margin: auto 0;
   overflow: hidden;
   border-radius: var(--nw-r-md);
   background: var(--nw-white);
   box-shadow: 0 50px 100px -30px rgba(0, 0, 0, 0.55);
+  animation: nwRise 0.3s var(--nw-ease);
 }
 .nw-site .nwpd:focus {
   outline: none;
-}
-.nw-site .nwpd-head,
-.nw-site .nwpd-foot {
-  flex-shrink: 0;
 }
 .nw-site .nwpd-head {
   display: flex;
@@ -866,9 +832,6 @@
   border-color: var(--nw-on-dark);
 }
 .nw-site .nwpd-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
   padding: 12px clamp(20px, 3vw, 32px) 28px;
   display: flex;
   flex-direction: column;
@@ -972,26 +935,22 @@
 .nw-site .nwpd-foot .nw-btn {
   position: relative;
 }
-/* Phones: the footer stays pinned, so keep it to its line and its action. */
-@media (max-width: 640px) {
-  .nw-site .nwpd-foot {
-    gap: 12px;
-    padding: 16px 20px 20px;
-  }
-  .nw-site .nwpd-foot-p,
-  .nw-site .nwpd-tags {
-    display: none;
-  }
-  .nw-site .nwpd-foot .nw-btn {
-    flex: 1 1 100%;
-  }
-}
 @keyframes nwFadeIn {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
+  }
+}
+@keyframes nwRise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
 
@@ -1224,7 +1183,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--nw-r-sm);
-  background: var(--nw-violet);
+  background: var(--nw-ink);
   color: var(--nw-white);
 }
 
@@ -1343,7 +1302,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--nw-r-sm);
-  background: rgba(13, 22, 38, 0.08);
+  background: rgba(13, 22, 38, 0.132);
   color: var(--nw-text);
 }
 .nw-site .nwen-contact {
@@ -1413,8 +1372,91 @@
   font-size: 14px;
   color: var(--nw-muted);
 }
-.nw-site .nwen-form .nwc-note {
+/* The board's form fields: sentence-case labels, 46px fields on paper. */
+.nw-site .nwen-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+.nw-site .nwen-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.nw-site .nwen-label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwen-input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-paper-3);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--nw-ink);
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwen-input::placeholder {
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwen-input:focus {
+  outline: none;
+  border-color: var(--nw-violet);
+  background: var(--nw-white);
+  box-shadow: 0 0 0 3px rgba(13, 22, 38, 0.09);
+}
+.nw-site .nwen-input[aria-invalid='true'] {
+  border-color: var(--nw-danger);
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+.nw-site .nwen-select {
+  position: relative;
+}
+.nw-site .nwen-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 38px;
+}
+.nw-site .nwen-select svg {
+  position: absolute;
+  right: 13px;
+  top: 15px;
+  pointer-events: none;
+  color: var(--nw-muted);
+}
+.nw-site .nwen-submit {
+  width: 100%;
+  margin-top: 6px;
+}
+.nw-site .nwen-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
   text-align: center;
+  color: var(--nw-muted);
+}
+.nw-site .nwen-note a {
+  color: inherit;
+  text-decoration: none;
+}
+.nw-site .nwen-note a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+/* Phones: 16px text so iOS does not zoom the page when a field is focused. */
+@media (max-width: 640px) {
+  .nw-site .nwen-input {
+    font-size: 16px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1422,7 +1464,8 @@
   .nw-site .nwhh-up2,
   .nw-site .nwhh-up3,
   .nw-site .nwen-dot,
-  .nw-site .nwpd-overlay {
+  .nw-site .nwpd-overlay,
+  .nw-site .nwpd {
     animation: none;
   }
   .nw-site .nwhh-needle {

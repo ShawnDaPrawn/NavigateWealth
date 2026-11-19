@@ -10,7 +10,6 @@ import { ArrowRight, Compass } from 'lucide-react';
 import {
   articleImage,
   articlePath,
-  formatArticleDate,
   type FeaturedArticle,
 } from '../../components/shared/useFeaturedArticles';
 import { SectionHead } from './SectionHead';
@@ -19,6 +18,15 @@ import '../styles/home.css';
 
 /** The design has room for three cards; the lead card is the most read. */
 const MAX_CARDS = 3;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "1 Oct 2026", as the board writes dates (the en-ZA locale would say "01 Sept"). */
+function formatCardDate(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 interface InsightCardsProps {
   index?: string;
@@ -88,7 +96,7 @@ export function InsightCards({ index, articles, allLink, vascoLink }: InsightCar
 
 function ArticleCard({ article, lead }: { article: FeaturedArticle; lead: boolean }) {
   const image = articleImage(article);
-  const date = formatArticleDate(article.published_at);
+  const date = formatCardDate(article.published_at);
   return (
     <Link
       className={lead ? 'nwin-card nwin-card--lead' : 'nwin-card'}

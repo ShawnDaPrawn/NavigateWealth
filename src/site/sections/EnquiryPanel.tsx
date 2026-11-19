@@ -110,13 +110,13 @@ export function EnquiryPanel({ options, defaultService }: EnquiryPanelProps) {
   };
 
   const input = (field: Field, label: string, props: InputHTMLAttributes<HTMLInputElement>) => (
-    <div className="nwc-field">
-      <label className="nwc-label" htmlFor={fid(field)}>
+    <div className="nwen-field">
+      <label className="nwen-label" htmlFor={fid(field)}>
         {label}
       </label>
       <input
         id={fid(field)}
-        className="nwc-input"
+        className="nwen-input"
         required
         aria-invalid={errors[field] ? true : undefined}
         aria-describedby={errors[field] ? `${fid(field)}-error` : undefined}
@@ -223,39 +223,39 @@ export function EnquiryPanel({ options, defaultService }: EnquiryPanelProps) {
                 {failure}
               </p>
             ) : null}
-            <div className="nwc-row">
-              {input('firstName', 'First name', {
+            <div className="nwen-row">
+              {input('firstName', 'First Name *', {
                 type: 'text',
                 autoComplete: 'given-name',
-                placeholder: 'First name',
+                placeholder: 'First Name',
               })}
-              {input('lastName', 'Last name', {
+              {input('lastName', 'Last Name *', {
                 type: 'text',
                 autoComplete: 'family-name',
-                placeholder: 'Last name',
+                placeholder: 'Last Name',
               })}
             </div>
-            {input('email', 'Email address', {
+            {input('email', 'Email Address *', {
               type: 'email',
               autoComplete: 'email',
               inputMode: 'email',
               placeholder: 'your.email@example.com',
             })}
-            <div className="nwc-row">
-              {input('phone', 'Phone number', {
+            <div className="nwen-row">
+              {input('phone', 'Phone Number *', {
                 type: 'tel',
                 autoComplete: 'tel',
                 inputMode: 'tel',
                 placeholder: '+27 12 345 6789',
               })}
-              <div className="nwc-field">
-                <label className="nwc-label" htmlFor={fid('service')}>
-                  Service of interest
+              <div className="nwen-field">
+                <label className="nwen-label" htmlFor={fid('service')}>
+                  Service of Interest
                 </label>
-                <div className="nwc-select">
+                <div className="nwen-select">
                   <select
                     id={fid('service')}
-                    className="nwc-input"
+                    className="nwen-input"
                     value={service}
                     onChange={(e) => setService(e.target.value)}
                   >
@@ -281,11 +281,11 @@ export function EnquiryPanel({ options, defaultService }: EnquiryPanelProps) {
                 onChange={(e) => setWebsite(e.target.value)}
               />
             </div>
-            <button type="submit" className="nw-btn nw-btn--lg nwc-submit" disabled={sending}>
-              {sending ? 'Sending…' : 'Request a Free Consultation'}
+            <button type="submit" className="nw-btn nwen-submit" disabled={sending}>
+              {sending ? 'Sending…' : 'Book a Free Consultation'}
               {sending ? null : <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />}
             </button>
-            <p className="nwc-note">
+            <p className="nwen-note">
               By submitting, you agree to be contacted by Navigate Wealth. We use your details only
               to respond to your enquiry, in line with POPIA and our{' '}
               <Link to="/legal/privacy-notice">Privacy Notice</Link>.

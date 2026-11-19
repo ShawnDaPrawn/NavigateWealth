@@ -1,17 +1,15 @@
 /**
- * HomeHero — the home page's opening: badge, H1, four rotating highlights,
- * the compass "instrument" and the trust strip.
+ * HomeHero — the home page's opening, as the "Main" board draws it: badge,
+ * four rotating slides (each slide's headline is the page's H1, so the first
+ * one is what search engines read), the compass "instrument" and the trust
+ * strip.
  *
- * The H1 is fixed and leads with what people search for; the rotating
- * headlines are styled as the display line but are not headings, so the page
- * has one stable H1 rather than four that change every eight seconds.
- *
- * Rotation follows the WAI-ARIA carousel pattern and WCAG 2.2.2:
- * - a Pause / Play button stops it for good;
+ * Rotation follows the WAI-ARIA carousel pattern without adding anything the
+ * board does not show:
  * - hovering or focusing the slides pauses it while you are there;
- * - with reduced motion requested, it starts paused;
+ * - with reduced motion requested, it does not rotate on its own;
  * - while it runs the slides are not a live region, so a screen reader is not
- *   interrupted; once stopped, changing slide is announced.
+ *   interrupted; while paused, changing slide is announced.
  *
  * The timer is the progress bar itself: a slide advances when its bar's fill
  * animation ends, so pausing the animation pauses the slide and the two can
@@ -19,7 +17,7 @@
  */
 import { useEffect, useId, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, Pause, Play } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { TrustFact } from '../../config/companyFacts';
 import { pad2 } from './format';
 import '../styles/navigator.css';
@@ -41,7 +39,6 @@ export interface HeroSlide {
 }
 
 interface HomeHeroProps {
-  heading: string;
   badge: string;
   flagSrc: string;
   slides: readonly HeroSlide[];
@@ -66,31 +63,24 @@ function prefersReducedMotion(): boolean {
   );
 }
 
-export function HomeHero({
-  heading,
-  badge,
-  flagSrc,
-  slides,
-  trustFacts,
-  slideMs = 8000,
-}: HomeHeroProps) {
+export function HomeHero({ badge, flagSrc, slides, trustFacts, slideMs = 8000 }: HomeHeroProps) {
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [autoplay, setAutoplay] = useState(true);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
 
   useEffect(() => {
-    if (prefersReducedMotion()) setPlaying(false);
+    if (prefersReducedMotion()) setAutoplay(false);
   }, []);
 
   if (slides.length === 0) return null;
   const slide = slides[index % slides.length];
-  const running = playing && !hovered && !focused && slides.length > 1;
+  const running = autoplay && !hovered && !focused && slides.length > 1;
   const compass = HEADINGS[index % HEADINGS.length];
   const advance = () => setIndex((i) => (i + 1) % slides.length);
 
   return (
-    <section className="nwhh" aria-labelledby="nwhh-h1">
+    <section className="nwhh" aria-label="Hero">
       <div className="nw-grid-bg" aria-hidden="true" />
       <div className="nw-wrap nwhh-inner">
         <div className="nwhh-grid">
@@ -99,9 +89,6 @@ export function HomeHero({
               <img src={flagSrc} alt="" width={24} height={17} />
               {badge}
             </p>
-            <h1 id="nwhh-h1" className="nwhh-h1">
-              {heading}
-            </h1>
 
             <div
               className="nwhh-slides"
@@ -122,9 +109,9 @@ export function HomeHero({
                 aria-roledescription="slide"
                 aria-label={`${index + 1} of ${slides.length}`}
               >
-                <p className="nwhh-title nwhh-up">
+                <h1 className="nwhh-title nwhh-up">
                   {slide.title} <span className="nw-accent">{slide.accent}</span>
-                </p>
+                </h1>
                 <p className="nwhh-lead nwhh-up2">{slide.description}</p>
                 <div className="nwhh-ctas nwhh-up3">
                   <Link className="nw-btn nw-btn--lg" to={slide.primary.link}>
@@ -175,18 +162,6 @@ export function HomeHero({
                     );
                   })}
                 </div>
-                <button
-                  type="button"
-                  className="nwhh-pause"
-                  aria-label={playing ? 'Pause highlights' : 'Play highlights'}
-                  onClick={() => setPlaying((p) => !p)}
-                >
-                  {playing ? (
-                    <Pause size={14} strokeWidth={2} aria-hidden="true" />
-                  ) : (
-                    <Play size={14} strokeWidth={2} aria-hidden="true" />
-                  )}
-                </button>
               </div>
             ) : null}
 

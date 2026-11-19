@@ -21,7 +21,7 @@ interface FaqRailProps {
   faqs: readonly { question: string; answer: string }[];
   lead?: string;
   /** The help card's main action. A service page sends visitors to its quote. */
-  action: { label: string; to: string };
+  action: { label: string; to: string; arrow?: boolean };
 }
 
 export function FaqRail({ id = 'faq', index, faqs, lead, action }: FaqRailProps) {
@@ -60,7 +60,9 @@ export function FaqRail({ id = 'faq', index, faqs, lead, action }: FaqRailProps)
             <div className="nw-faq-actions">
               <Link className="nw-btn" to={action.to}>
                 {action.label}
-                <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
+                {action.arrow === false ? null : (
+                  <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
+                )}
               </Link>
               <Link className="nw-outline" to="/ask-vasco">
                 <Compass size={16} strokeWidth={1.75} aria-hidden="true" />

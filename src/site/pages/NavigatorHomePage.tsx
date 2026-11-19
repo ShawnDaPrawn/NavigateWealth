@@ -4,11 +4,10 @@
  * Reads the same content as the live home page (homePageData.tsx, the shared
  * FAQs, company facts, provider groups and featured articles), emits the same
  * SEO tags and JSON-LD, and links only to routes the site already serves.
- * What changes is the layout, plus:
- * - one stable, search-led H1 instead of a headline that rotates;
- * - a hero carousel that can be paused (WCAG 2.2.2) and respects reduced motion;
- * - the FAQ answers in the document while collapsed, matching the FAQPage data;
- * - the lead form's errors beside each field, and its confirmation in place.
+ * The layout is the "Main" board of the Website Redesign canvas. Beyond it:
+ * - the hero pauses on hover and focus, and does not rotate under reduced motion;
+ * - the FAQ answers stay in the document while collapsed, matching the FAQPage data;
+ * - the lead form's errors show beside each field, and its confirmation in place.
  */
 import { Globe, Heart, Zap } from 'lucide-react';
 import saFlag from 'figma:asset/543ae964645db88228743731ee3eebbbc2e3686e.png';
@@ -46,7 +45,6 @@ import '../styles/sections.css';
 import '../styles/home.css';
 
 const CONSULTATION_PATH = '/schedule-consultation';
-const H1 = 'Independent Financial Advisors in South Africa';
 const ALL_SERVICES = { label: 'View all services', to: '/services' };
 
 /**
@@ -97,7 +95,6 @@ export function NavigatorHomePage() {
       />
 
       <HomeHero
-        heading={H1}
         badge={`Proudly South African · Independent · FSP ${COMPANY.fspNumber}`}
         flagSrc={saFlag}
         slides={SLIDES}
@@ -150,7 +147,7 @@ export function NavigatorHomePage() {
         index={indexOf('faq') ?? ''}
         faqs={commonFAQs}
         lead="Answers to the questions South Africans ask us most about independent financial advice."
-        action={{ label: 'Contact Us', to: '/contact' }}
+        action={{ label: 'Contact Us', to: '/contact', arrow: false }}
       />
 
       <EnquiryPanel options={enquiryServiceOptions} defaultService={ENQUIRY_DEFAULT_SERVICE} />
