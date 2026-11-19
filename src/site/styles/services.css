@@ -1,0 +1,534 @@
+/*
+ * Navigator Services overview page (/services) — ported from the "Services"
+ * board of the Claude Design canvas, its inline styles turned into classes.
+ * Section labels, section titles, the trust line, the grid texture and the
+ * photo grade come from sections.css; buttons and tokens from navigator.css.
+ *
+ * Every class here is prefixed `nwsv-` and every rule is scoped to
+ * `.nw-site`, like navigator.css, so nothing here can reach the portal, the
+ * admin, the legacy public site or another Navigator page.
+ *
+ * Two things the board inherits that the app does not, restored here so the
+ * page measures as the board does:
+ * - The board's body has a 16px font size and the browser's `line-height:
+ *   normal`. The app's root is 14px and its base layer sets 1.5 on <html> and
+ *   1.3–1.6 on h1–h3 and p. The reset below has no specificity, so any class
+ *   that sets a line height still wins; being outside the base layer, it
+ *   still beats the base layer's element rules.
+ * - The board's boxes are `content-box` unless they say otherwise; the app's
+ *   preflight makes everything `border-box`. Only the rows' arrow circle (a
+ *   fixed size plus a border) measures differently, so only it opts back in.
+ */
+
+/* ── Page ── */
+.nw-site.nwsv {
+  font-size: 16px;
+  line-height: normal;
+}
+:where(.nw-site.nwsv) :where(h1, h2, h3, p) {
+  line-height: normal;
+}
+
+/* Section heads the board sets narrower or wider than SectionHead's default. */
+.nw-site .nw-sec-head.nwsv-head .nw-sec-lead {
+  margin-top: 16px;
+}
+.nw-site .nw-sec-head.nwsv-head--list {
+  max-width: 680px;
+}
+.nw-site .nw-sec-head.nwsv-head--list .nw-sec-lead {
+  max-width: none;
+}
+.nw-site .nw-sec-head.nwsv-head--why .nw-sec-title {
+  color: var(--nw-white);
+}
+.nw-site .nw-sec-head.nwsv-head--why .nw-sec-lead {
+  color: var(--nw-on-dark);
+}
+.nw-site .nw-sec-head.nwsv-head--proc .nw-sec-lead {
+  max-width: 620px;
+}
+
+/* Actions: the board's 56px buttons, with a 10px gap before the arrow. */
+.nw-site .nwsv-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 40px;
+}
+.nw-site .nwsv-ctas > .nw-btn {
+  gap: 10px;
+}
+
+/* ── Hero ── */
+.nw-site .nwsv-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--nw-ink) 0%, var(--nw-ink-2) 60%, var(--nw-ink) 100%);
+  color: var(--nw-white);
+}
+.nw-site .nwsv-hero > .nw-grid-bg {
+  -webkit-mask-image: radial-gradient(ellipse 75% 80% at 72% 40%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse 75% 80% at 72% 40%, #000 0%, transparent 72%);
+}
+.nw-site .nwsv-hero-glow {
+  position: absolute;
+  top: -240px;
+  right: -200px;
+  width: 720px;
+  height: 720px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(13, 22, 38, 0.156) 0%, rgba(13, 22, 38, 0) 68%);
+  pointer-events: none;
+}
+.nw-site .nw-wrap.nwsv-hero-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+  gap: 48px;
+  align-items: center;
+  padding-top: clamp(48px, 7vw, 88px);
+  padding-bottom: clamp(56px, 8vw, 96px);
+}
+.nw-site .nwsv-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.nw-site .nwsv-pill > span {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwsv-h1 {
+  margin: 28px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-display);
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  color: var(--nw-white);
+}
+.nw-site .nwsv-hero-lead {
+  margin: 24px 0 0;
+  max-width: 560px;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-on-dark-muted);
+}
+
+/* The service index: every service, jumping to its row below. */
+.nw-site .nwsv-index {
+  padding: 12px;
+  border-radius: var(--nw-r-md);
+  background: rgba(17, 24, 39, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.7);
+}
+.nw-site .nwsv-index-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nw-site .nwsv-index-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwsv-index-count {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwsv-index-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 2px;
+}
+/* On the board the links are the grid's items, so a link beside a two-line
+   title stretches to its height and centres its label; the list item passes
+   that stretch on. */
+.nw-site .nwsv-index-list > li {
+  display: grid;
+}
+.nw-site .nwsv-index-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  color: var(--nw-line);
+  text-decoration: none;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwsv-index-link:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--nw-white);
+}
+.nw-site .nwsv-index-link svg {
+  opacity: 0.4;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.nw-site .nwsv-index-link:hover svg {
+  opacity: 1;
+  transform: translateX(3px);
+}
+.nw-site .nwsv-index-no {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--nw-on-dark);
+}
+.nw-site .nwsv-index-t {
+  flex: 1;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+/* ── Our services: one row per service ── */
+.nw-site .nwsv-list {
+  padding: var(--nw-sec-lg) 0 var(--nw-sec-sm);
+  background: var(--nw-white);
+}
+.nw-site .nwsv-rows {
+  list-style: none;
+  margin: 56px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--nw-line);
+}
+.nw-site .nwsv-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px 48px;
+  padding: 32px 24px;
+  border-bottom: 1px solid var(--nw-line);
+  /* The board's 24px, below the site's sticky 72px header (the board's
+     header scrolls away with the page). */
+  scroll-margin-top: calc(72px + 24px);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+.nw-site .nwsv-row:hover {
+  background: var(--nw-paper);
+}
+.nw-site .nwsv-row-text {
+  flex: 1 1 380px;
+  min-width: 0;
+}
+.nw-site .nwsv-row-no {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--nw-ink);
+}
+.nw-site .nwsv-row-t {
+  margin: 8px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+.nw-site .nwsv-row-d {
+  margin: 10px 0 0;
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+.nw-site .nwsv-row-hl {
+  flex: 1 1 280px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 20px;
+}
+.nw-site .nwsv-row-hl li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  color: var(--nw-text-strong);
+}
+.nw-site .nwsv-row-hl svg {
+  flex-shrink: 0;
+}
+.nw-site .nwsv-row-end {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.nw-site .nwsv-row-media {
+  position: relative;
+  width: 200px;
+  height: 136px;
+  border-radius: var(--nw-r-sm);
+  overflow: hidden;
+  background: var(--nw-paper-2);
+}
+.nw-site .nwsv-row-media img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.nw-site .nwsv-row:hover .nwsv-row-media img {
+  transform: scale(1.06);
+}
+.nw-site .nwsv-row-go {
+  box-sizing: content-box;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  border: 1px solid var(--nw-line);
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
+}
+.nw-site .nwsv-row:hover .nwsv-row-go {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  border-color: var(--nw-ink);
+}
+
+/* ── Why choose us: tiles on a dark band ── */
+.nw-site .nwsv-why {
+  position: relative;
+  overflow: hidden;
+  padding: var(--nw-sec-lg) 0;
+  background: var(--nw-ink-2);
+  color: var(--nw-white);
+}
+.nw-site .nwsv-why > .nw-grid-bg {
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 70% at 50% 40%, #000 0%, transparent 75%);
+}
+.nw-site .nwsv-why-inner {
+  position: relative;
+}
+.nw-site .nwsv-tiles {
+  list-style: none;
+  margin: 56px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 20px;
+}
+/* The board's hover lifts the tile and lightens it. Its border colour stays:
+   the board's hover rule also names a lighter border, but the tile's own
+   border (set inline on the board) wins over it, so the border never changes
+   on the board either. */
+.nw-site .nwsv-tile {
+  padding: 28px;
+  border-radius: var(--nw-r-md);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition:
+    background-color 0.3s,
+    border-color 0.3s,
+    transform 0.3s;
+}
+.nw-site .nwsv-tile:hover {
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-3px);
+}
+.nw-site .nwsv-tile-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--nw-r-sm);
+  background: rgba(201, 209, 224, 0.088);
+  color: var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwsv-tile-t {
+  margin: 22px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h5);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-white);
+}
+.nw-site .nwsv-tile-d {
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--nw-on-dark);
+}
+
+/* ── How we work: legs of a course on a dashed line ── */
+.nw-site .nwsv-proc {
+  padding: var(--nw-sec-lg) 0;
+  background: var(--nw-paper);
+}
+.nw-site .nwsv-proc-track {
+  position: relative;
+  margin-top: 64px;
+}
+.nw-site .nwsv-proc-line {
+  position: absolute;
+  top: 27px;
+  left: 28px;
+  right: 12%;
+  border-top: 1.5px dashed var(--nw-on-dark);
+}
+.nw-site .nwsv-steps {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 40px 32px;
+}
+.nw-site .nwsv-step-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  border: 1.5px solid var(--nw-on-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 8px var(--nw-paper);
+}
+.nw-site .nwsv-step-mark--first {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  border: 0;
+}
+.nw-site .nwsv-step-leg {
+  display: block;
+  margin-top: 22px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--nw-ink);
+}
+.nw-site .nwsv-step-t {
+  margin: 8px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h5);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+.nw-site .nwsv-step-d {
+  margin: 10px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+
+/* ── Call to action ── */
+.nw-site .nwsv-cta {
+  position: relative;
+  overflow: hidden;
+  padding: var(--nw-sec-lg) 0;
+  background: var(--nw-paper-2);
+  color: var(--nw-ink);
+  border-top: 1px solid var(--nw-line);
+}
+.nw-site .nw-wrap.nwsv-cta-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwsv-cta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwsv-cta-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nw-success-bright);
+}
+.nw-site .nwsv-cta-pill > span:last-child {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-ink);
+}
+.nw-site .nwsv-cta-title {
+  margin: 22px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: var(--nw-fs-h2);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.012em;
+  color: var(--nw-ink);
+}
+.nw-site .nwsv-cta-lead {
+  margin: 16px 0 0;
+  max-width: 600px;
+  font-size: var(--nw-fs-lead);
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+.nw-site .nwsv-ctas.nwsv-ctas--center {
+  justify-content: center;
+  margin-top: 36px;
+  width: 100%;
+}
+
+/* ── Tablets and phones ── */
+@media (max-width: 860px) {
+  .nw-site .nwsv-row-media,
+  .nw-site .nwsv-proc-line {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .nw-site .nwsv-row {
+    padding: 24px 4px;
+  }
+  /* The actions stack, full width, at the board's 48px phone height. */
+  .nw-site .nwsv-ctas {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site .nwsv-ctas > a {
+    flex: 0 0 auto;
+    justify-content: center;
+    width: 100%;
+    max-width: none;
+    height: 48px;
+    font-size: 15px;
+    text-align: center;
+  }
+}
