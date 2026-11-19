@@ -1493,4 +1493,11 @@
   .nw-site .nwhh-needle {
     transition: none;
   }
+  /* The progress bar is the slide timer (HomeHero advances on its animationend).
+     navigator.css shortens every animation to 0.01ms under reduced motion, which
+     would flick through the slides once a visitor presses Play. A slow, linear
+     fill the visitor chose to start keeps its real length. */
+  .nw-site .nwhh-dot-fill {
+    animation-duration: var(--nwhh-slide-ms, 8000ms) !important;
+  }
 }

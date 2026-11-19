@@ -9,6 +9,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 vi.mock('../design', () => ({ SITE_DESIGN: 'navigator', resolveSiteDesign: () => 'navigator' }));
 vi.mock('../../utils/supabase/info', async (importOriginal) => ({
@@ -192,6 +194,17 @@ describe('Navigator home page', () => {
     endProgress();
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
       'Secure Your Financial Future.',
+    );
+  });
+
+  it('keeps the slide timer at its real length under reduced motion', () => {
+    // jsdom applies no stylesheets, so this pins the rule itself: navigator.css
+    // shortens every animation to 0.01ms under reduced motion, and without this
+    // exemption pressing Play would flick through the slides.
+    const css = readFileSync(resolve(__dirname, '../styles/home.css'), 'utf8');
+    const reduced = css.slice(css.lastIndexOf('@media (prefers-reduced-motion: reduce)'));
+    expect(reduced).toMatch(
+      /\.nwhh-dot-fill\s*\{\s*animation-duration:\s*var\(--nwhh-slide-ms, 8000ms\) !important;/,
     );
   });
 
