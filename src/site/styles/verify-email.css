@@ -1,0 +1,392 @@
+/*
+ * Navigator verify-email page (/verify-email) — ported from the "VerifyEmail"
+ * board of the Claude Design canvas, its inline styles turned into classes.
+ * Buttons, tokens and the focus ring come from navigator.css; .nw-mono and
+ * .nw-in from sections.css.
+ *
+ * Every class here is prefixed `nwve-` and every rule is scoped to
+ * `.nw-site`, like navigator.css, so nothing here can reach the portal, the
+ * admin, the legacy public site or another Navigator page. The route renders
+ * without the site chrome, so the page itself carries `.nw-site`.
+ *
+ * What the board inherits that the app does not, restored here so the page
+ * measures as the board does:
+ * - The board's body has a 16px font size and the browser's `line-height:
+ *   normal`. The app's root is 14px and its base layer sets 1.5 on <html> and
+ *   its own line heights on h1, p and button. The reset below has no
+ *   specificity, so every class that sets a line height still wins.
+ * - The board's boxes are `content-box` unless they say otherwise; the app's
+ *   preflight makes everything `border-box`. Only the verified badge and the
+ *   two inbox shortcuts (a fixed size plus a border) measure differently, so
+ *   only they opt back in: 74px and 46px, as the board renders them.
+ * - The board's stylesheet forces the H1 to -0.012em tracking over the
+ *   -0.01em its inline style asks for; navigator.css already does the same.
+ * - The board's title size token (--nw-fs-title: 28px, 24px on phones) is
+ *   not one navigator.css defines, nor are the green status tints; they are
+ *   set on the page below.
+ */
+
+/* ── Page ── */
+.nw-site.nwve {
+  --nwve-fs-title: 28px;
+  --nwve-success-bg: #f0fdf4;
+  --nwve-success-line: #bbf7d0;
+
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px 48px;
+  box-sizing: border-box;
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-ink);
+  background-color: var(--nw-paper);
+  background-image:
+    linear-gradient(rgba(13, 22, 38, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 22, 38, 0.035) 1px, transparent 1px);
+  background-size: 96px 96px;
+}
+:where(.nw-site.nwve) :where(h1, p, button) {
+  line-height: inherit;
+}
+@media (max-width: 640px) {
+  .nw-site.nwve {
+    --nwve-fs-title: 24px;
+  }
+  .nw-site.nwve h1 {
+    overflow-wrap: break-word;
+  }
+}
+
+.nw-site .nwve-home {
+  margin-top: 40px;
+  display: inline-flex;
+}
+.nw-site .nwve-logo {
+  display: block;
+  width: auto;
+  height: 26px;
+}
+
+/* ── Account-setup progress ── */
+.nw-site .nwve-steps {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nw-site .nwve-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nw-muted);
+}
+.nw-site .nwve-step-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--nw-paper-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwve-step-num {
+  font-size: 11px;
+}
+.nw-site .nwve-step--done {
+  color: var(--nw-success);
+}
+.nw-site .nwve-step--done .nwve-step-mark {
+  background: var(--nwve-success-bg);
+}
+.nw-site .nwve-step--current {
+  color: var(--nw-ink);
+}
+.nw-site .nwve-step--current .nwve-step-mark {
+  background: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwve-step--verified {
+  color: var(--nw-success);
+}
+.nw-site .nwve-step--verified .nwve-step-mark {
+  background: var(--nwve-success-bg);
+  color: var(--nw-success);
+}
+.nw-site .nwve-step-rule {
+  width: 24px;
+  border-top: 1.5px dashed var(--nw-line-strong);
+}
+
+/* ── Card ── */
+.nw-site .nwve-card {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 24px;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  box-shadow: 0 0 0 1px var(--nw-line);
+  overflow: hidden;
+}
+.nw-site .nwve-card-bar {
+  height: 4px;
+  background: var(--nw-ink);
+}
+.nw-site .nwve-card-body {
+  padding: clamp(24px, 6vw, 40px);
+}
+
+/* ── Verified ── */
+.nw-site .nwve-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+.nw-site .nwve-done-badge {
+  box-sizing: content-box;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--nwve-success-bg);
+  border: 1px solid var(--nwve-success-line);
+  color: var(--nw-success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwve-done-status {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwve-success-bg);
+  border: 1px solid var(--nwve-success-line);
+  color: var(--nw-success);
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.nw-site .nwve-spinner {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--nw-success);
+  border-top-color: transparent;
+}
+
+/* ── Waiting for the link ── */
+.nw-site .nwve-pending {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.nw-site .nwve-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwve-ring {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+.nw-site .nwve-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--nw-line-strong);
+  animation: nwveRipple 2.4s ease-out infinite;
+}
+.nw-site .nwve-ripple--late {
+  border-color: var(--nw-line);
+  animation-delay: 1.2s;
+}
+.nw-site .nwve-ring-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwve-title {
+  margin: 22px 0 0;
+  font-size: var(--nwve-fs-title);
+  font-weight: 500;
+}
+.nw-site .nwve-lead {
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: var(--nw-text);
+}
+.nw-site .nwve-address {
+  margin: 4px 0 0;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+  word-break: break-all;
+}
+.nw-site .nwve-note {
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-3);
+  border: 1px solid var(--nw-paper-2);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+
+.nw-site .nwve-inboxes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.nw-site .nwve-chip {
+  box-sizing: content-box;
+  height: 44px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--nw-text);
+  text-decoration: none;
+  background: var(--nw-paper-3);
+  border: 1px solid var(--nw-line);
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwve-chip:hover {
+  border-color: var(--nw-ink);
+  color: var(--nw-ink);
+  background: var(--nw-white);
+}
+
+.nw-site .nwve-sent,
+.nw-site .nwve-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.nw-site .nwve-sent {
+  background: var(--nwve-success-bg);
+  border: 1px solid var(--nwve-success-line);
+  color: var(--nw-success);
+}
+.nw-site .nwve-error {
+  background: var(--nw-danger-bg);
+  border: 1px solid var(--nw-danger-line);
+  color: var(--nw-danger-dark);
+}
+.nw-site .nwve-msg-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.nw-site .nw-btn.nwve-resend {
+  height: 48px;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+/* Disabled while a send is in flight, as on the live page, but drawn as the
+   board draws its "Resending" state: the violet button with a turning icon. */
+.nw-site.nwve .nw-btn.nwve-resend:disabled {
+  background: var(--nw-violet);
+  color: #ffffff;
+  box-shadow: none;
+  cursor: default;
+}
+.nw-site .nw-outline.nwve-back {
+  height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.nw-site .nwve-help {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--nw-muted);
+}
+.nw-site .nwve-link {
+  color: var(--nw-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--nw-line-strong);
+  text-underline-offset: 3px;
+}
+.nw-site .nwve-link:hover {
+  color: var(--nw-ink);
+  text-decoration-color: var(--nw-ink);
+}
+
+/* ── Under the card ── */
+.nw-site .nwve-expiry {
+  margin: 20px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--nw-muted);
+}
+.nw-site .nwve-fsp {
+  margin: 24px 0 0;
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--nw-muted);
+  text-align: center;
+}
+
+/* ── Motion ── */
+@keyframes nwveRipple {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+@keyframes nwveSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.nw-site .nwve-spin {
+  animation: nwveSpin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwve-ripple,
+  .nw-site .nwve-spin {
+    animation: none;
+  }
+}

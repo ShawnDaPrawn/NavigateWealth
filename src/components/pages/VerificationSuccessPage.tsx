@@ -1,12 +1,35 @@
-import { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Button } from '../ui/button';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { Logo } from '../layout/Logo';
 import { useAuth } from '../auth/AuthContext';
 import { logger } from '../../utils/logger';
+import { SITE_DESIGN } from '../../site/design';
 
+const NavigatorVerificationSuccessPage = React.lazy(() =>
+  import('../../site/pages/NavigatorVerificationSuccessPage').then((m) => ({
+    default: m.NavigatorVerificationSuccessPage,
+  })),
+);
+
+/**
+ * Where a confirmed email lands (/auth/callback sends signed-in people here).
+ * The build's design switch picks the layout; both count down from five and
+ * send the person on to the same place.
+ */
 export default function VerificationSuccessPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorVerificationSuccessPage />
+      </Suspense>
+    );
+  }
+  return <LegacyVerificationSuccessPage />;
+}
+
+function LegacyVerificationSuccessPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
   const [countdown, setCountdown] = useState(5);

@@ -1,0 +1,254 @@
+/*
+ * Navigator verification-success page (/verification-success) — ported from
+ * the "VerificationSuccess" board of the Claude Design canvas, its inline
+ * styles turned into classes. Buttons, tokens and the focus ring come from
+ * navigator.css; .nw-mono from sections.css.
+ *
+ * Every class here is prefixed `nwvs-` and every rule is scoped to
+ * `.nw-site`, like navigator.css, so nothing here can reach the portal, the
+ * admin, the legacy public site or another Navigator page. The route renders
+ * without the site chrome, so the page itself carries `.nw-site`.
+ *
+ * What the board inherits that the app does not, restored here so the page
+ * measures as the board does:
+ * - The board's body has a 16px font size and the browser's `line-height:
+ *   normal`. The app's root is 14px and its base layer sets 1.5 on <html> and
+ *   its own line heights on h1 and p. The reset below has no specificity, so
+ *   every class that sets a line height still wins.
+ * - The board's stylesheet forces the H1 to -0.012em tracking over the
+ *   -0.01em its inline style asks for; navigator.css already does the same.
+ * - On phones the board's stylesheet takes every 56px-tall link down to 48px
+ *   and 15px type, so "Continue" does too.
+ * - The design system nudges a trailing arrow on hover only when it follows
+ *   another element; "Continue"'s arrow follows bare text, so on the board it
+ *   stays put, and it does here.
+ * - The board's title size token (--nw-fs-title: 28px, 24px on phones) is
+ *   not one navigator.css defines; it is set on the page below.
+ */
+
+/* ── Page ── */
+.nw-site.nwvs {
+  --nwvs-fs-title: 28px;
+
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px 48px;
+  box-sizing: border-box;
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-ink);
+  background-color: var(--nw-paper);
+  background-image:
+    linear-gradient(rgba(13, 22, 38, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 22, 38, 0.035) 1px, transparent 1px);
+  background-size: 96px 96px;
+}
+:where(.nw-site.nwvs) :where(h1, p) {
+  line-height: inherit;
+}
+
+.nw-site .nwvs-home {
+  margin-top: 40px;
+  display: inline-flex;
+}
+.nw-site .nwvs-logo {
+  display: block;
+  width: auto;
+  height: 26px;
+}
+
+/* ── Card ── */
+.nw-site .nwvs-card {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 28px;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  box-shadow: 0 0 0 1px var(--nw-line);
+  overflow: hidden;
+}
+.nw-site .nwvs-card-bar {
+  height: 4px;
+  background: var(--nw-success);
+}
+.nw-site .nwvs-card-body {
+  padding: clamp(24px, 6vw, 40px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwvs-badge {
+  position: relative;
+  width: 84px;
+  height: 84px;
+}
+.nw-site .nwvs-title {
+  margin: 22px 0 0;
+  font-size: var(--nwvs-fs-title);
+  font-weight: 500;
+}
+.nw-site .nwvs-lead {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+.nw-site .nwvs-rule {
+  width: 100%;
+  height: 1px;
+  margin: 26px 0;
+  background: var(--nw-paper-2);
+}
+
+.nw-site .nw-btn.nwvs-cta {
+  width: 100%;
+  box-sizing: border-box;
+  height: 56px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.nw-site .nwvs-countdown {
+  width: 100%;
+  margin-top: 16px;
+}
+.nw-site .nwvs-track {
+  height: 4px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+  overflow: hidden;
+}
+.nw-site .nwvs-fill {
+  height: 100%;
+  background: var(--nw-ink);
+  transition: width 1s linear;
+}
+.nw-site .nwvs-count {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  color: var(--nw-muted);
+}
+
+.nw-site .nwvs-help {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  font-size: 14px;
+}
+.nw-site .nwvs-help-label {
+  color: var(--nw-text);
+}
+.nw-site .nwvs-link {
+  color: var(--nw-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--nw-line-strong);
+  text-underline-offset: 3px;
+}
+.nw-site .nwvs-link:hover {
+  color: var(--nw-ink);
+  text-decoration-color: var(--nw-ink);
+}
+.nw-site .nwvs-dot {
+  color: var(--nw-line-strong);
+}
+
+.nw-site .nwvs-note {
+  margin-top: 22px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-paper-2);
+  text-align: left;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--nw-text);
+}
+.nw-site .nwvs-note-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Under the card ── */
+.nw-site .nwvs-quiet {
+  margin-top: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-size: 14px;
+  color: var(--nw-text);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.nw-site .nwvs-quiet:hover {
+  color: var(--nw-ink);
+}
+.nw-site .nwvs-fsp {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: var(--nw-muted);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .nw-site.nwvs {
+    --nwvs-fs-title: 24px;
+  }
+  .nw-site.nwvs h1 {
+    overflow-wrap: break-word;
+  }
+  .nw-site .nw-btn.nwvs-cta {
+    height: 48px;
+    font-size: 15px;
+  }
+}
+
+/* ── Motion ── */
+@keyframes nwvsPop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes nwvsDraw {
+  from {
+    stroke-dashoffset: 40;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.nw-site .nwvs-pop {
+  animation: nwvsPop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.nw-site .nwvs-draw {
+  stroke-dasharray: 40;
+  animation: nwvsDraw 0.6s 0.25s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwvs-pop,
+  .nw-site .nwvs-draw {
+    animation: none;
+  }
+}
