@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams, Link } from 'react-router';
 import { SEO, createWebPageSchema } from '../seo/SEO';
 import { getSEOData } from '../seo/seo-config';
@@ -37,6 +37,7 @@ import {
 } from '../admin/modules/publications';
 import type { Article } from '../admin/modules/publications';
 import { readResourcesSearchQuery, writeResourcesSearchQuery } from './resourcesSearch';
+import { SITE_DESIGN } from '../../site/design';
 
 // ---------------------------------------------------------------------------
 // Treat CATEGORY_ICON_MAP as a flexible Record for runtime lookups.
@@ -79,7 +80,29 @@ interface SearchResult {
   author?: string;
 }
 
+const NavigatorResourcesPage = React.lazy(() =>
+  import('../../site/pages/NavigatorResourcesPage').then((m) => ({
+    default: m.NavigatorResourcesPage,
+  })),
+);
+
+/**
+ * The Resources page. The build's design switch picks the layout; both read
+ * the same articles, categories, market news and newsletters, and honour the
+ * same `?section=` and `?q=` addresses.
+ */
 export function ResourcesPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorResourcesPage />
+      </Suspense>
+    );
+  }
+  return <LegacyResourcesPage />;
+}
+
+function LegacyResourcesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const seoData = getSEOData('resources');
 
