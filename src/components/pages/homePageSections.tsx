@@ -16,7 +16,9 @@ import { ResponsiveImage } from '../shared/ResponsiveImage';
 import { prefetchImages } from '../../hooks/useImagePrefetch';
 import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import { ArrowRight, ChevronLeft, ChevronRight, Zap, Heart, Globe } from 'lucide-react';
-import { services, providers } from './homePageData';
+import { services, providers, whyUs } from './homePageData';
+
+const WHY_US_ICONS = [Globe, Heart, Zap] as const;
 
 export function ServicesPreviewSection() {
   return (
@@ -122,35 +124,18 @@ export function WhyNavigateSection() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 lg:gap-12 xl:gap-16">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-primary/20 rounded-lg flex items-center justify-center mx-auto">
-              <Globe className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="text-white">We're Independent</h3>
-            <p className="text-gray-300">
-              Unbiased advice and access to top-tier products from multiple providers.
-            </p>
-          </div>
-
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-primary/20 rounded-lg flex items-center justify-center mx-auto">
-              <Heart className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="text-white">We're Customer-Centric</h3>
-            <p className="text-gray-300">
-              We tailor all planning around each client's goals, values, and timeline.
-            </p>
-          </div>
-
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-primary/20 rounded-lg flex items-center justify-center mx-auto">
-              <Zap className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="text-white">We're Technology-Enabled</h3>
-            <p className="text-gray-300">
-              We integrate tech to streamline onboarding, analysis, and portfolio monitoring.
-            </p>
-          </div>
+          {whyUs.map((item, i) => {
+            const Icon = WHY_US_ICONS[i];
+            return (
+              <div key={item.title} className="text-center space-y-4">
+                <div className="w-16 h-16 bg-primary/20 rounded-lg flex items-center justify-center mx-auto">
+                  <Icon className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-white">{item.title}</h3>
+                <p className="text-gray-300">{item.description}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

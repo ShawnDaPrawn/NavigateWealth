@@ -130,6 +130,39 @@ export const services = [
   },
 ];
 
+/** The three reasons on the home page's "Why us?" panel, in both designs. */
+export const whyUs = [
+  {
+    title: "We're Independent",
+    description: 'Unbiased advice and access to top-tier products from multiple providers.',
+  },
+  {
+    title: "We're Customer-Centric",
+    description: "We tailor all planning around each client's goals, values, and timeline.",
+  },
+  {
+    title: "We're Technology-Enabled",
+    description: 'We integrate tech to streamline onboarding, analysis, and portfolio monitoring.',
+  },
+] as const;
+
+/**
+ * The home page enquiry form's "Service of interest" choices, in both designs.
+ * `value` is what the enquiry records, so it stays exactly as leads have
+ * always arrived.
+ */
+export const ENQUIRY_DEFAULT_SERVICE = 'General consultation / All Service';
+export const enquiryServiceOptions = [
+  { value: ENQUIRY_DEFAULT_SERVICE, label: 'General consultation' },
+  { value: 'Risk Management', label: 'Risk Management' },
+  { value: 'Medical Aid', label: 'Medical Aid' },
+  { value: 'Investment Management', label: 'Investment Management' },
+  { value: 'Retirement Planning', label: 'Retirement Planning' },
+  { value: 'Group Benefits', label: 'Group Benefits' },
+  { value: 'Tax Planning', label: 'Tax Planning' },
+  { value: 'Estate Planning', label: 'Estate Planning' },
+] as const;
+
 export const providers = [
   { name: 'Discovery', logo: discoveryLogo },
   { name: 'Old Mutual', logo: oldMutualLogo },
