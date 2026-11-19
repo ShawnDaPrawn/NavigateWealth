@@ -70,7 +70,8 @@ const MENUS: MenuDef[] = [
     items: companyItems,
     panel: companyPanel,
     wide: false,
-    isActive: (p) => companyItems.some((i) => i.path === p),
+    // /team is reached from About, not the menu, but it is a company page.
+    isActive: (p) => p === '/team' || companyItems.some((i) => i.path === p),
   },
 ];
 
