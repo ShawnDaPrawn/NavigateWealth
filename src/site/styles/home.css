@@ -20,7 +20,14 @@
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px 24px;
+  gap: 24px;
+}
+.nw-site .nwdp .nw-sec-row {
+  gap: 12px 32px;
+}
+/* The Main board opens its sections' leads 16px under the title. */
+.nw-site.nwhome .nw-sec-lead {
+  margin-top: 16px;
 }
 .nw-site .nw-textlink {
   display: inline-flex;
@@ -43,6 +50,11 @@
 }
 .nw-site .nw-textlink:hover svg {
   transform: translateX(3px);
+}
+/* The "View all" links beside a section title are padded, not 44px tall. */
+.nw-site .nw-sec .nw-sec-row .nw-textlink {
+  min-height: 0;
+  padding: 10px 0;
 }
 @keyframes nwUp {
   from {
@@ -105,13 +117,18 @@
   font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--nw-on-dark);
+  /* A div on the board: plain wrapping, not the paragraph's pretty wrap. */
+  text-wrap: wrap;
 }
 .nw-site .nwhh-pill img {
+  /* content-box, as on the board: the hairline sits outside the 24×17 flag. */
+  box-sizing: content-box;
   width: 24px;
   height: 17px;
   border-radius: var(--nw-r-sm);
   object-fit: cover;
   border: 1px solid rgba(255, 255, 255, 0.18);
+  filter: saturate(0.88) contrast(1.03) sepia(0.06);
 }
 .nw-site .nwhh-slides {
   margin-top: 32px;
@@ -139,9 +156,6 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 40px;
-}
-.nw-site .nwhh-ctas .nw-btn {
-  box-shadow: 0 12px 30px -14px rgba(13, 22, 38, 0.48);
 }
 .nw-site .nwhh-up {
   animation: nwUp 0.7s var(--nw-ease) both;
@@ -353,6 +367,7 @@
   }
   .nw-site .nwhh-ctas a {
     flex: 1 1 100%;
+    text-align: center;
   }
 }
 
@@ -416,6 +431,7 @@
   font-family: var(--nw-font-serif);
   font-size: 18px;
   font-weight: 500;
+  letter-spacing: -0.012em;
   color: var(--nw-ink);
 }
 .nw-site .nwdp-s {
@@ -523,6 +539,7 @@
   font-family: var(--nw-font-serif);
   font-size: var(--nw-fs-h5);
   font-weight: 500;
+  letter-spacing: -0.012em;
   color: var(--nw-ink);
 }
 .nw-site .nwsc-desc {
@@ -558,15 +575,19 @@
     flex-direction: row;
     align-items: stretch;
     min-height: 112px;
+    /* The board's 112px is inside the hairline. */
+    box-sizing: content-box;
   }
   .nw-site .nwsc-media {
     flex: 0 0 104px;
     aspect-ratio: auto;
   }
+  /* The board's phone rule pads every span in the photo, the number's inner
+     text span too, so the chip is 6px wider each side than its own padding. */
   .nw-site .nwsc-no {
     top: 8px;
     left: 8px;
-    padding: 3px 6px;
+    padding: 3px 12px;
     font-size: 10px;
   }
   .nw-site .nwsc-body {
@@ -631,6 +652,8 @@
   text-align: center;
 }
 .nw-site .nwwp-marker {
+  /* content-box, as drawn: the 1.5px ring sits outside the 64px. */
+  box-sizing: content-box;
   width: 64px;
   height: 64px;
   display: flex;
@@ -653,6 +676,7 @@
   font-family: var(--nw-font-serif);
   font-size: var(--nw-fs-h4);
   font-weight: 500;
+  letter-spacing: -0.012em;
   color: var(--nw-white);
 }
 .nw-site .nwwp-desc {
@@ -719,6 +743,7 @@
   font-family: var(--nw-font-serif);
   font-size: var(--nw-fs-h5);
   font-weight: 500;
+  letter-spacing: -0.012em;
   color: var(--nw-ink);
 }
 .nw-site .nwpr-desc {
@@ -1029,6 +1054,7 @@
   height: 100%;
   object-fit: cover;
   object-position: center top;
+  filter: saturate(0.88) contrast(1.03) sepia(0.06);
   transition: transform 0.6s var(--nw-ease);
 }
 .nw-site .nwin-card:hover .nwin-img img {
@@ -1060,6 +1086,7 @@
   font-family: var(--nw-font-serif);
   font-size: var(--nw-fs-h4);
   font-weight: 500;
+  letter-spacing: -0.012em;
   line-height: 1.25;
   color: var(--nw-ink);
 }
@@ -1171,7 +1198,7 @@
   font-family: var(--nw-font-serif);
   font-size: 19px;
   font-weight: 500;
-  line-height: 1.3;
+  letter-spacing: -0.012em;
 }
 .nw-site .nwvp-in {
   position: relative;
@@ -1182,6 +1209,8 @@
   gap: 12px;
   min-height: 54px;
   padding: 0 7px 0 18px;
+  /* content-box, as drawn: 54px inside the hairline, and the flex basis too. */
+  box-sizing: content-box;
   border-radius: var(--nw-r-sm);
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.05);
@@ -1387,6 +1416,7 @@
   font-family: var(--nw-font-serif);
   font-size: var(--nw-fs-h4);
   font-weight: 500;
+  letter-spacing: -0.012em;
   color: var(--nw-ink);
 }
 .nw-site .nwen-form-sub {
@@ -1499,5 +1529,24 @@
      fill the visitor chose to start keeps its real length. */
   .nw-site .nwhh-dot-fill {
     animation-duration: var(--nwhh-slide-ms, 8000ms) !important;
+  }
+}
+
+/* ── FAQ: the Main board draws its list a little larger than the service
+   pages do. Phones keep the shared phone layout. ── */
+@media (min-width: 641px) {
+  .nw-site.nwhome .nw-faq-list {
+    padding: 8px 32px;
+  }
+  .nw-site.nwhome .nw-faq-q {
+    min-height: 0;
+    gap: 24px;
+    padding: 24px 0;
+    font-size: 17px;
+  }
+  .nw-site.nwhome .nw-faq-a {
+    margin: -6px 0 24px;
+    padding-right: 58px;
+    font-size: 15.5px;
   }
 }

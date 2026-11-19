@@ -107,10 +107,6 @@
   font-family: var(--nw-font-sans);
   color: var(--nw-ink);
   background: var(--nw-white);
-  /* The boards set no line-height on the page, so text that does not set its
-     own uses the font's normal line box. Tailwind's preflight puts 1.5 on
-     <html>; without this every such line here was taller than the board's. */
-  line-height: normal;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -145,16 +141,33 @@
 .nw-site p {
   text-wrap: pretty;
 }
-/* globals.css gives bare headings, paragraphs and form controls the legacy
-   site's sizes and line-heights (p at 1.125rem/1.6, h3 at 600 in black, …).
-   The boards have none of that: those elements inherit from their parent.
-   Zero specificity, so any class rule in a page stylesheet still wins. */
-:where(.nw-site) :where(p, label, button, input, select, textarea) {
+/*
+ * The board page: what a .dc.html artboard's <body> gives the text in it.
+ *
+ * The boards draw on a bare page: 16px text in the font's normal line box, and
+ * headings, paragraphs and form controls that inherit from their parent. This
+ * site's root is 14px, Tailwind's preflight puts 1.5 on <html>, and globals.css
+ * gives bare p, h3, label and button the legacy site's sizes (p at
+ * 1.125rem/1.6, h3 at 600 in black). Anything that does not set its own size or
+ * line-height therefore came out smaller or taller than the board.
+ *
+ * Opt-in per page with `nw-base` on the page root (the header and footer always
+ * use it), so pages built against the old base keep their measurements. The
+ * element rules have zero specificity: any class rule in a page stylesheet
+ * still wins.
+ */
+.nw-site .nwh,
+.nw-site .nwf,
+.nw-site.nw-base {
+  font-size: 16px;
+  line-height: normal;
+}
+:where(.nwh, .nwf, .nw-base) :where(p, label, button, input, select, textarea) {
   font-size: inherit;
   font-weight: inherit;
   line-height: inherit;
 }
-:where(.nw-site) :where(h1, h2, h3, h4, h5, h6) {
+:where(.nwh, .nwf, .nw-base) :where(h1, h2, h3, h4, h5, h6) {
   line-height: inherit;
   color: inherit;
 }
@@ -234,6 +247,13 @@
   height: 56px;
   padding: 0 28px;
   font-size: 16px;
+}
+/* Phones: the boards bring every 56px action down to 48px and 15px. */
+@media (max-width: 640px) {
+  .nw-site .nw-btn--lg {
+    height: 48px;
+    font-size: 15px;
+  }
 }
 .nw-site .nw-btn {
   background: var(--nw-violet);
@@ -383,6 +403,10 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
+}
+/* Logo.tsx's high-quality-image class lifts contrast; the board's logo is plain. */
+.nw-site .nwh-logo-link img {
+  filter: none;
 }
 .nw-site .nwh-links {
   display: flex;
@@ -1134,6 +1158,8 @@
   gap: 10px;
 }
 .nw-site .nwf-social {
+  /* content-box, as drawn: 40px inside the hairline. */
+  box-sizing: content-box;
   width: 40px;
   height: 40px;
   border-radius: var(--nw-r-sm);
