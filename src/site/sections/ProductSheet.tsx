@@ -112,18 +112,18 @@ export function ProductSheet({
                         <span className="nwp-sheet-nl">Next</span>
                         <span className="nwp-sheet-nt">{products[(index + 1) % count].label}</span>
                       </span>
-                      <ChevronRight size={18} strokeWidth={1.75} aria-hidden="true" />
+                      <ChevronRight size={15} strokeWidth={1.75} aria-hidden="true" />
                     </button>
                   ) : null}
                 </div>
               </div>
               <div className="nwp-sheet-foot">
                 <Link className="nw-btn" to={quoteLink}>
-                  Get a Quote
+                  Get a quote
                   <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
                 </Link>
                 <Link className="nw-outline" to={consultationLink}>
-                  Book a Consultation
+                  Book a Free Consultation
                 </Link>
               </div>
             </Dialog.Content>

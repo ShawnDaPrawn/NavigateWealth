@@ -3,7 +3,7 @@
  * service page renders ServicePageTemplate, and the design switch hands it to
  * NavigatorServicePage. Covers what the redesign must not lose (every product's
  * copy, the FAQ answers, the JSON-LD, the lead form reaching the endpoint) and
- * what it adds (search-led H1, field validation, honeypot, focus handling).
+ * what it adds (field validation, honeypot, focus handling).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -45,11 +45,12 @@ afterEach(() => {
 });
 
 describe('Navigator service page', () => {
-  it('leads with the searched-for phrase as the only H1, the slogan beneath it', async () => {
+  it("leads with the board's two-line headline as the only H1", async () => {
     const h1 = await renderPage();
-    expect(h1.textContent).toBe('Independent Medical Aid Advice in South Africa');
+    expect(h1.textContent).toBe('Your Health,Our Priority');
+    expect(h1.querySelector('br')).not.toBeNull();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByText('Your Health, Our Priority')).toBeDefined();
+    expect(screen.getByText('Medical Aid Solutions')).toBeDefined();
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(crumbs).getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
     expect(within(crumbs).getByRole('link', { name: 'Services' }).getAttribute('href')).toBe(
@@ -75,7 +76,6 @@ describe('Navigator service page', () => {
         'tel:+27126672505',
         'mailto:info@navigatewealth.co',
         '/ask-vasco',
-        '/legal/privacy-notice',
       ]),
     );
   });
@@ -207,7 +207,7 @@ describe('Navigator call-back form', () => {
     });
     fireEvent.click(within(f).getByRole('button', { name: /Call Me Back/ }));
 
-    expect(await screen.findByText('Thank you, Thandi.')).toBeDefined();
+    expect(await screen.findByText('Request Submitted Successfully')).toBeDefined();
     const call = vi
       .mocked(fetch)
       .mock.calls.find(([url]) => String(url).includes('/contact-form/submit'));
@@ -241,6 +241,6 @@ describe('Navigator call-back form', () => {
     });
     fireEvent.click(within(f).getByRole('button', { name: /Call Me Back/ }));
     expect((await screen.findByRole('alert')).textContent).toContain('Validation failed');
-    expect(screen.queryByText(/Thank you/)).toBeNull();
+    expect(screen.queryByText('Request Submitted Successfully')).toBeNull();
   });
 });
