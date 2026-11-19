@@ -34,7 +34,8 @@ describe('NavigatorHeader', () => {
   it('offers the same top-bar contacts as the live site', () => {
     renderHeader();
     expect(screen.getByText('Mon – Fri, 08:30 – 16:30')).toBeTruthy();
-    expect(hrefOf('012 667 2505')).toBe('tel:+27126672505');
+    // The header board writes the top-bar number with hyphens.
+    expect(hrefOf('012-667-2505')).toBe('tel:+27126672505');
     expect(hrefOf('info@navigatewealth.co')).toBe('mailto:info@navigatewealth.co');
     const whatsapp = screen.getByRole('link', { name: 'WhatsApp' });
     expect(whatsapp.getAttribute('href')).toBe('https://wa.me/message/BOLRR5DSCWNAG1');
@@ -81,9 +82,9 @@ describe('NavigatorHeader', () => {
       });
       expect(tile.getAttribute('href')).toBe(item.path);
     }
-    // Every panel image has a description for screen readers.
-    for (const img of within(panel as HTMLElement).getAllByRole('img')) {
-      expect(img.getAttribute('alt')).toBeTruthy();
+    // The "Next step" card's photo is decorative: its link is named by its text.
+    for (const img of (panel as HTMLElement).querySelectorAll('img')) {
+      expect(img.getAttribute('alt')).toBe('');
     }
   });
 
@@ -141,11 +142,15 @@ describe('NavigatorHeader', () => {
     const sheet = document.getElementById(burger.getAttribute('aria-controls') ?? '');
     expect(sheet).toBeTruthy();
     const scope = within(sheet as HTMLElement);
-    fireEvent.click(scope.getByRole('button', { name: 'Services' }));
-    expect(scope.getByRole('link', { name: 'All services' }).getAttribute('href')).toBe(
-      '/services',
-    );
+    // The board opens the sheet with Services expanded.
+    const services = scope.getByRole('button', { name: 'Services' });
+    expect(services.getAttribute('aria-expanded')).toBe('true');
     for (const item of serviceItems) {
+      expect(scope.getByRole('link', { name: item.label }).getAttribute('href')).toBe(item.path);
+    }
+    fireEvent.click(scope.getByRole('button', { name: 'Company' }));
+    expect(services.getAttribute('aria-expanded')).toBe('false');
+    for (const item of companyItems) {
       expect(scope.getByRole('link', { name: item.label }).getAttribute('href')).toBe(item.path);
     }
     fireEvent.keyDown(document, { key: 'Escape' });
