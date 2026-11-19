@@ -439,7 +439,7 @@ function LegacyQuoteServiceContactPage() {
                 <p className="text-xs text-gray-400 leading-relaxed text-center">
                   By submitting, you agree to our{' '}
                   <a
-                    href="/legal?tab=privacy"
+                    href="/legal/privacy-notice"
                     className="text-primary/70 hover:text-primary underline"
                   >
                     Privacy Policy

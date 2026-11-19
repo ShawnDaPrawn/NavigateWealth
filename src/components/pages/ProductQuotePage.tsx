@@ -636,7 +636,7 @@ export function ProductQuotePage() {
                   <p className="text-xs text-gray-400 leading-relaxed text-center mt-4">
                     By submitting, you agree to our{' '}
                     <a
-                      href="/legal?tab=privacy"
+                      href="/legal/privacy-notice"
                       className="text-primary/70 hover:text-primary underline"
                     >
                       Privacy Policy
