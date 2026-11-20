@@ -391,10 +391,16 @@ jobs:
         # "Enforce quality gates") fails the job. Local `npm test` stays
         # coverage-free for speed. Floors are intentionally set just below the
         # current (low) coverage and ratchet up as characterization tests grow.
+        #
+        # Two reporters: json writes quality-vitest-report.json for the issue
+        # snapshot, and default prints failures and unhandled errors to this log.
+        # With json alone the log showed neither. A run that exited 1 because of
+        # an unhandled error looked clean apart from the exit code (PR #536), and
+        # a failing test on main could only be found in the snapshot.
         shell: bash
         run: |
           set +e
-          npm test -- --coverage --reporter=json --outputFile=quality-vitest-report.json 2>&1 | tee quality-test.log
+          npm test -- --coverage --reporter=default --reporter=json --outputFile=quality-vitest-report.json 2>&1 | tee quality-test.log
           echo "${PIPESTATUS[0]}" > quality-test.exit
           exit 0
 
