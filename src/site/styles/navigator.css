@@ -765,6 +765,11 @@
   .nw-site .nwh-row {
     gap: 10px;
   }
+  /* The board's phone header draws the logo 21px tall (25.5px wider up).
+     Logo.tsx sets its height inline, hence !important. */
+  .nw-site .nwh-home img {
+    height: 21px !important;
+  }
   .nw-site .nwh-mobile .nwh-primary {
     padding: 0 12px;
   }
