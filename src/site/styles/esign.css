@@ -1,0 +1,2133 @@
+/*
+ * Navigator signing page — /sign — ported from the "Sign document" (ESign)
+ * board of the Claude Design canvas, its inline styles turned into classes.
+ * Buttons, the focus ring and tokens come from navigator.css.
+ *
+ * The route renders outside MainLayout, so the page root (and each dialog's
+ * portal) carries `.nw-site` itself. Scoped to `.nw-site`, like
+ * navigator.css. Every class is prefixed `nwes-`.
+ */
+
+/* Tokens the board uses that navigator.css does not define. */
+.nw-site.nwes,
+.nw-site.nwes-portal {
+  --nwes-fs-title: 28px;
+  --nwes-warn: #b45309;
+  --nwes-warn-bg: #fffbeb;
+  --nwes-warn-line: #fde68a;
+  --nwes-warn-dark: #92400e;
+  --nwes-success-bg: #f0fdf4;
+  --nwes-success-line: #bbf7d0;
+  --nwes-info: #1d4ed8;
+  --nwes-info-bg: #eff6ff;
+  --nwes-info-line: #bfdbfe;
+  --nwes-info-dark: #1e3a8a;
+  --nwes-dur-3: 0.45s;
+  font-family: var(--nw-font-sans);
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-ink);
+}
+@media (max-width: 640px) {
+  .nw-site.nwes,
+  .nw-site.nwes-portal {
+    --nwes-fs-title: 24px;
+  }
+}
+
+/* The board has a 16px base and the browser's normal line height; the site's
+   base typography (a lower layer) gives p, headings, labels, buttons and
+   inputs sizes and line heights of their own. Restated here at zero
+   specificity, so every rule below still wins. */
+:where(.nw-site.nwes, .nw-site.nwes-portal)
+  :where(p, h1, h2, h3, label, button, input, textarea, li, dt, dd) {
+  line-height: inherit;
+}
+:where(.nw-site.nwes, .nw-site.nwes-portal) :where(p, label, h3) {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+.nw-site.nwes {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--nw-paper);
+}
+
+/* ── Shared bits ── */
+.nw-site .nwes-kicker {
+  display: block;
+  font-family: var(--nw-font-sans);
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwes-ghost {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--nw-text);
+  font-family: inherit;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwes-ghost:hover:not(:disabled) {
+  background: var(--nw-paper-2);
+  color: var(--nw-ink);
+}
+.nw-site .nwes-ghost:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.nw-site .nwes-small {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--nw-r-sm);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+/* Red at rest; the ghost hover turns it ink, as on the board. */
+.nw-site .nwes-danger-text {
+  color: var(--nw-danger);
+}
+.nw-site .nwes-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-paper-3);
+  font-size: 15px;
+  font-family: inherit;
+  /* The board leaves its fields' text the browser's black. */
+  color: #000;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwes-input::placeholder {
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwes-input:focus,
+.nw-site .nwes-input:focus-visible {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 1px;
+  border-color: var(--nw-ink);
+  background: var(--nw-white);
+}
+.nw-site .nwes-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.nw-site .nwes-input[aria-invalid='true'] {
+  border-color: var(--nw-danger);
+}
+.nw-site .nwes-spin {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  animation: nwes-spin 0.8s linear infinite;
+}
+.nw-site .nwes-spin--light {
+  border-color: var(--nw-white);
+  border-top-color: transparent;
+}
+@keyframes nwes-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.nw-site .nwes-sweep {
+  animation: nwes-spin 2.4s linear infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes nwes-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes nwes-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes nwes-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(13, 22, 38, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(13, 22, 38, 0);
+  }
+}
+.nw-site .nwes-hide-sm {
+  display: inline-flex;
+}
+.nw-site .nwes-only-sm {
+  display: none;
+}
+
+/* ═══════════ Card states ═══════════ */
+.nw-site .nwes-cardpage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(24px, 6vw, 56px) 16px 40px;
+  box-sizing: border-box;
+  background-color: var(--nw-paper);
+  background-image:
+    linear-gradient(rgba(13, 22, 38, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 22, 38, 0.035) 1px, transparent 1px);
+  background-size: 96px 96px;
+}
+.nw-site .nwes-cardpage--center {
+  justify-content: center;
+}
+/* The site's logo file has a white matte; multiplied onto the paper it drops
+   out, as the board's transparent logo does. */
+.nw-site .nwes-logo {
+  display: block;
+  height: 24px;
+  width: auto;
+  max-width: none;
+  mix-blend-mode: multiply;
+}
+.nw-site .nwes-card {
+  width: 100%;
+  max-width: 460px;
+  margin-top: 24px;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  box-shadow: 0 0 0 1px var(--nw-line);
+  overflow: hidden;
+  animation: nwes-in var(--nwes-dur-3) var(--nw-ease) both;
+}
+.nw-site .nwes-card--sm {
+  max-width: 420px;
+}
+.nw-site .nwes-band {
+  height: 4px;
+  background: var(--nw-ink);
+}
+.nw-site .nwes-band--warn {
+  background: var(--nwes-warn);
+}
+.nw-site .nwes-band--danger {
+  background: var(--nw-danger);
+}
+.nw-site .nwes-band--muted {
+  background: var(--nw-muted);
+}
+.nw-site .nwes-card-body {
+  padding: clamp(22px, 6vw, 36px);
+}
+.nw-site .nwes-help {
+  margin: 22px 0 0;
+  font-size: 13px;
+  color: var(--nw-text);
+  text-align: center;
+}
+.nw-site .nwes-powered {
+  margin: 8px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--nw-muted);
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Loading */
+.nw-site .nwes-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 0;
+}
+.nw-site .nwes-loading svg {
+  display: block;
+}
+.nw-site .nwes-title {
+  margin: 0;
+  font-size: var(--nwes-fs-title);
+  font-weight: 500;
+  color: var(--nw-ink);
+}
+.nw-site .nwes-loading-title {
+  margin-top: 20px;
+}
+.nw-site .nwes-loading-sub {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwes-secure {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwes-success-bg);
+  color: var(--nw-success);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* The identity checks and the waiting card share one column. */
+.nw-site .nwes-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.nw-site .nwes-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwes-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: content-box;
+}
+.nw-site .nwes-badge--warn {
+  background: var(--nwes-warn-bg);
+  border-color: var(--nwes-warn-line);
+  color: var(--nwes-warn);
+}
+.nw-site .nwes-head-title {
+  margin: 16px 0 0;
+  font-size: var(--nwes-fs-title);
+  color: var(--nw-ink);
+}
+.nw-site .nwes-head-title--sm {
+  font-size: 22px;
+}
+.nw-site .nwes-head-text {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwes-head-text--tight {
+  line-height: normal;
+}
+.nw-site .nwes-masked {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwes-doc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-3);
+  border: 1px solid var(--nw-paper-2);
+}
+.nw-site .nwes-doc-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: content-box;
+}
+.nw-site .nwes-doc-text {
+  min-width: 0;
+}
+.nw-site .nwes-doc-title {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The six code boxes, with one real input over them. */
+.nw-site .nwes-otp-label {
+  display: block;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-text);
+}
+.nw-site .nwes-otp {
+  position: relative;
+  margin-top: 12px;
+}
+.nw-site .nwes-otp-boxes {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 336px;
+  margin: 0 auto;
+}
+.nw-site .nwes-otp-box {
+  height: 56px;
+  box-sizing: content-box;
+  border-radius: var(--nw-r-sm);
+  border: 2px solid var(--nw-line);
+  background: var(--nw-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--nw-font-sans);
+  font-feature-settings: 'tnum' 1;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwes-otp-box--filled {
+  border-color: var(--nw-ink);
+  background: var(--nw-paper);
+}
+.nw-site .nwes-otp-box--current {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwes-caret {
+  width: 2px;
+  height: 24px;
+  background: var(--nw-ink);
+  animation: nwes-blink 1s step-end infinite;
+}
+.nw-site .nwes-otp-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.01;
+  border: 0;
+  font-size: 16px;
+  cursor: text;
+}
+/* The input is all but invisible; the ring goes round the boxes instead. */
+.nw-site .nwes-otp:has(.nwes-otp-input:focus-visible) .nwes-otp-boxes {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 4px;
+  border-radius: var(--nw-r-sm);
+}
+.nw-site .nwes-formfield {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site .nwes-formfield-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-text);
+}
+.nw-site .nwes-alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-danger-bg);
+  border: 1px solid var(--nw-danger-line);
+  color: var(--nw-danger-dark);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.nw-site .nwes-alert-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.nw-site .nwes-sent {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwes-success-bg);
+  border: 1px solid var(--nwes-success-line);
+  color: var(--nw-success);
+  font-size: 14px;
+}
+.nw-site .nwes-sent svg {
+  flex-shrink: 0;
+}
+.nw-site .nwes-primary {
+  height: 48px;
+  padding: 1px 6px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.nw-site .nwes-resend {
+  display: flex;
+  justify-content: center;
+}
+.nw-site .nwes-cooldown {
+  margin: 0;
+  padding: 12px 0;
+  font-size: 13px;
+  color: var(--nw-muted);
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwes-resend-btn {
+  height: 44px;
+  padding: 0 16px;
+  border-radius: var(--nw-r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwes-note {
+  margin: 0;
+  display: flex;
+  gap: 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--nw-muted);
+}
+.nw-site .nwes-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.nw-site .nwes-note--rule {
+  padding-top: 14px;
+  border-top: 1px solid var(--nw-paper-2);
+}
+
+/* Waiting */
+.nw-site .nwes-order-title {
+  margin: 0 0 10px;
+  font-family: var(--nw-font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwes-order {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nw-site .nwes-signer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-paper-2);
+  background: var(--nw-paper-3);
+}
+.nw-site .nwes-signer-no {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--nw-line);
+  color: var(--nw-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.nw-site .nwes-signer-who {
+  flex: 1;
+  min-width: 0;
+}
+.nw-site .nwes-signer-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-text);
+}
+.nw-site .nwes-signer-role {
+  display: block;
+  font-size: 12px;
+  color: var(--nw-text);
+}
+.nw-site .nwes-signer-state {
+  padding: 3px 9px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+  border: 1px solid var(--nw-line);
+  color: var(--nw-text);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.nw-site .nwes-signer--signed {
+  border-color: var(--nwes-success-line);
+  background: var(--nwes-success-bg);
+}
+.nw-site .nwes-signer--signed .nwes-signer-no {
+  background: var(--nwes-success-bg);
+  color: var(--nw-success);
+}
+.nw-site .nwes-signer--signed .nwes-signer-name {
+  color: var(--nw-success);
+}
+.nw-site .nwes-signer--signed .nwes-signer-state {
+  background: var(--nwes-success-bg);
+  border-color: var(--nwes-success-line);
+  color: var(--nw-success);
+}
+.nw-site .nwes-signer--current {
+  border-color: var(--nwes-warn-line);
+  background: var(--nwes-warn-bg);
+}
+.nw-site .nwes-signer--current .nwes-signer-no {
+  background: var(--nwes-warn-bg);
+  color: var(--nwes-warn);
+}
+.nw-site .nwes-signer--current .nwes-signer-name {
+  color: var(--nwes-warn-dark);
+}
+.nw-site .nwes-signer--current .nwes-signer-state {
+  background: var(--nwes-warn-bg);
+  border-color: var(--nwes-warn-line);
+  color: var(--nwes-warn-dark);
+}
+.nw-site .nwes-info {
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwes-info-bg);
+  border: 1px solid var(--nwes-info-line);
+  color: var(--nwes-info);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.nw-site .nwes-wide {
+  height: 48px;
+  padding: 0;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Link unavailable, declined */
+.nw-site .nwes-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+}
+.nw-site .nwes-end-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: content-box;
+}
+.nw-site .nwes-end-badge--danger {
+  background: var(--nw-danger-bg);
+  border: 1px solid var(--nw-danger-line);
+  color: var(--nw-danger);
+}
+.nw-site .nwes-end-badge--muted {
+  background: var(--nw-paper-2);
+  border: 1px solid var(--nw-line);
+  color: var(--nw-text);
+}
+.nw-site .nwes-end-title {
+  margin-top: 4px;
+}
+.nw-site .nwes-end-text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwes-end-action {
+  margin-top: 8px;
+  width: 100%;
+  height: 48px;
+  padding: 0;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ═══════════ Completed ═══════════ */
+.nw-site .nwes-donepage {
+  flex: 1;
+  padding: clamp(24px, 6vw, 56px) 16px 48px;
+  box-sizing: border-box;
+  background-color: var(--nw-paper);
+  background-image:
+    linear-gradient(rgba(13, 22, 38, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 22, 38, 0.035) 1px, transparent 1px);
+  background-size: 96px 96px;
+}
+.nw-site .nwes-done {
+  max-width: 560px;
+  margin: 0 auto;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--nw-line);
+  animation: nwes-in var(--nwes-dur-3) var(--nw-ease) both;
+}
+.nw-site .nwes-done-head {
+  position: relative;
+  overflow: hidden;
+  padding: 32px clamp(20px, 6vw, 36px);
+  background: var(--nw-ink);
+  color: var(--nw-white);
+  text-align: center;
+}
+.nw-site .nwes-done-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.nw-site .nwes-done-headin {
+  position: relative;
+}
+.nw-site .nwes-done-logo {
+  display: inline;
+  vertical-align: baseline;
+  height: 22px;
+  width: auto;
+  max-width: none;
+}
+.nw-site .nwes-done-tick {
+  margin: 24px auto 0;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(74, 222, 128, 0.14);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  color: var(--nw-success-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: content-box;
+}
+.nw-site .nwes-done-title {
+  margin: 18px 0 0;
+  font-size: var(--nw-fs-h1s);
+  color: var(--nw-white);
+}
+.nw-site .nwes-done-body {
+  padding: clamp(20px, 6vw, 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.nw-site .nwes-done-doc {
+  border: 1px solid var(--nw-line);
+  border-radius: var(--nw-r-sm);
+  overflow: hidden;
+}
+.nw-site .nwes-done-dochead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--nw-paper-3);
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site .nwes-done-doctitle {
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwes-done-facts {
+  margin: 0;
+  padding: 6px 16px;
+}
+.nw-site .nwes-done-fact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.nw-site .nwes-done-fact--rule {
+  align-items: normal;
+  border-bottom: 1px solid var(--nw-paper-2);
+}
+.nw-site .nwes-done-fact dt {
+  font-size: 13.5px;
+  color: var(--nw-muted);
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwes-done-fact dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwes-done-who {
+  font-size: 14px;
+  font-weight: 600;
+}
+.nw-site .nwes-done-chip {
+  padding: 3px 10px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwes-success-bg);
+  color: var(--nw-success);
+  font-size: 12px;
+  font-weight: 600;
+}
+.nw-site .nwes-done-mail {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwes-info-bg);
+  border: 1px solid var(--nwes-info-line);
+}
+.nw-site .nwes-done-mailicon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.nw-site .nwes-done-mailtitle {
+  margin: 0;
+  font-family: var(--nw-font-sans);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: normal;
+  color: var(--nwes-info-dark);
+}
+.nw-site .nwes-done-mailtext {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--nwes-info);
+}
+.nw-site .nwes-done-legal {
+  margin: 0;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--nw-text);
+}
+.nw-site .nwes-done-legal svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.nw-site .nwes-done-nexttitle {
+  margin: 0 0 10px;
+  font-family: var(--nw-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: normal;
+  color: var(--nw-text);
+}
+.nw-site .nwes-done-next {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nw-site .nwes-done-next li {
+  display: flex;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--nw-text);
+}
+.nw-site .nwes-done-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  box-sizing: content-box;
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwes-done-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.nw-site .nwes-done-action {
+  height: 48px;
+  padding: 1px 6px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.nw-site a.nwes-done-action {
+  padding: 0;
+}
+.nw-site .nwes-done-foot {
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--nw-paper-2);
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--nw-muted);
+}
+
+/* ═══════════ Signing workspace ═══════════ */
+.nw-site .nwes-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.97);
+  border-bottom: 1px solid var(--nw-line);
+}
+/* Content-box, as on the board: the 1100px is inside the side padding. */
+.nw-site .nwes-bar-in {
+  box-sizing: content-box;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px clamp(12px, 3vw, 24px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.nw-site .nwes-bar-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: content-box;
+}
+.nw-site .nwes-bar-text {
+  flex: 1;
+  min-width: 0;
+}
+/* The board's h1 rule (serif, 500) outweighs the header's own 600 here. */
+.nw-site .nwes-bar-title {
+  margin: 0;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--nw-ink);
+}
+.nw-site .nwes-bar-who {
+  margin: 1px 0 0;
+  font-size: 12.5px;
+  color: var(--nw-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nw-site .nwes-progress {
+  align-items: center;
+  gap: 10px;
+}
+.nw-site .nwes-progress-track {
+  width: 120px;
+  height: 6px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+  overflow: hidden;
+}
+.nw-site .nwes-progress-fill {
+  height: 100%;
+  background: var(--nw-ink);
+  transition: width 0.4s;
+}
+.nw-site .nwes-progress-fill--done {
+  background: var(--nw-success);
+}
+.nw-site .nwes-progress-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nw-text);
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwes-bar-download {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+}
+.nw-site .nwes-readhint {
+  background: var(--nw-paper);
+  border-top: 1px solid var(--nw-paper-2);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--nw-ink);
+  text-align: center;
+}
+.nw-site .nwes-readhint svg {
+  flex-shrink: 0;
+}
+.nw-site .nwes-docmain {
+  position: relative;
+  flex: 1;
+  overflow-x: auto;
+  padding: clamp(12px, 3vw, 32px) clamp(10px, 3vw, 32px) 120px;
+}
+.nw-site .nwes-docnote {
+  max-width: 760px;
+  margin: 0 auto 16px;
+  box-sizing: border-box;
+}
+.nw-site .nwes-locknote {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwes-warn-bg);
+  border: 1px solid var(--nwes-warn-line);
+  color: var(--nwes-warn-dark);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.nw-site .nwes-locknote strong {
+  font-weight: 600;
+}
+.nw-site .nwes-docloading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 80px 0;
+  font-size: 14.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwes-docfail {
+  margin: 40px auto 0;
+}
+.nw-site .nwes-docfail-title {
+  margin: 4px 0 0;
+  font-family: var(--nw-font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--nw-ink);
+}
+
+/* One sheet of the PDF: the board's paper card, the page drawn inside. */
+.nw-site .nwes-pagewrap + .nwes-pagewrap {
+  margin-top: 24px;
+}
+.nw-site .nwes-page {
+  position: relative;
+  max-width: 100%;
+  margin: 0 auto;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  box-shadow: 0 0 0 1px var(--nw-line);
+  transition: width 0.3s;
+}
+.nw-site .nwes-page-paper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  z-index: 0;
+}
+.nw-site .nwes-page-paper canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.nw-site .nwes-page-paper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.nw-site .nwes-page-skel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(246, 244, 239, 0.6);
+  color: var(--nw-line-strong);
+  pointer-events: none;
+  animation: nwes-skel 1.6s ease-in-out infinite;
+}
+@keyframes nwes-skel {
+  50% {
+    opacity: 0.55;
+  }
+}
+.nw-site .nwes-page-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--nw-line);
+  pointer-events: none;
+}
+.nw-site .nwes-page-empty-title {
+  margin: 16px 0 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--nw-line-strong);
+}
+.nw-site .nwes-page-empty-text {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--nw-line-strong);
+}
+.nw-site .nwes-page-fields {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+.nw-site .nwes-page-no {
+  margin: 10px 0 0;
+  font-size: 10.5px;
+  color: var(--nw-muted);
+  text-align: center;
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A field to fill, drawn at its true size over the page. */
+.nw-site .nwes-field {
+  position: absolute;
+  z-index: 10;
+  pointer-events: auto;
+  container-type: size;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--nw-r-sm);
+  border: 1.5px dashed var(--nw-ink);
+  background: rgba(13, 22, 38, 0.035);
+  color: var(--nw-ink);
+  cursor: pointer;
+  font-family: inherit;
+  overflow: hidden;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+/* A larger target for a finger; the drawing keeps its true size. */
+.nw-site .nwes-field::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+@media (min-width: 768px) {
+  .nw-site .nwes-field::before {
+    inset: 0;
+  }
+}
+.nw-site .nwes-field--todo:hover,
+.nw-site .nwes-field--next:hover,
+.nw-site .nwes-field--optional:hover {
+  background: rgba(13, 22, 38, 0.07);
+}
+.nw-site .nwes-field--optional {
+  border-color: var(--nw-line-heavy);
+}
+.nw-site .nwes-field--optional .nwes-field-label {
+  color: var(--nw-muted);
+}
+.nw-site .nwes-field--next {
+  border-style: solid;
+  border-color: var(--nw-ink);
+  animation: nwes-pulse 1.6s ease-in-out infinite;
+}
+.nw-site .nwes-field--done {
+  border: 1.5px solid var(--nwes-success-line);
+  background: var(--nwes-success-bg);
+  color: var(--nw-ink);
+}
+.nw-site .nwes-field--reading {
+  cursor: default;
+}
+.nw-site .nwes-field--locked {
+  border: 1px solid var(--nw-line);
+  background: var(--nw-paper-3);
+  color: var(--nw-muted);
+  cursor: not-allowed;
+}
+.nw-site .nwes-field-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: min(14px, 48cqh);
+  font-weight: 600;
+}
+.nw-site .nwes-field-label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nw-site .nwes-field-mark {
+  flex-shrink: 0;
+  width: 1.1em;
+  height: 1.1em;
+}
+.nw-site .nwes-field-img {
+  position: absolute;
+  inset: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  object-fit: contain;
+}
+.nw-site .nwes-field-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--nw-ink);
+  text-align: left;
+}
+.nw-site .nwes-field-tick {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwes-field-tick > span {
+  height: 85%;
+  aspect-ratio: 1;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-success);
+  color: var(--nw-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwes-field-tick svg {
+  width: 80%;
+  height: 80%;
+}
+.nw-site .nwes-field-lock {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 1px;
+  display: flex;
+  background: var(--nw-muted);
+  color: var(--nw-white);
+}
+/* The in-place editor for plain text and dates. */
+.nw-site .nwes-inline {
+  position: absolute;
+  z-index: 20;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  border-radius: var(--nw-r-sm);
+  border: 1.5px solid var(--nw-line-heavy);
+  background: var(--nw-white);
+  box-shadow: 0 1px 2px rgba(13, 22, 38, 0.08);
+}
+.nw-site .nwes-inline--required {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwes-inline input {
+  width: 100%;
+  height: 100%;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--nw-ink);
+  outline: none;
+}
+.nw-site .nwes-inline:focus-within {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 1px;
+}
+@media (min-width: 768px) {
+  .nw-site .nwes-inline input {
+    font-size: 14px;
+  }
+}
+/* The sender's note, as the board's "Note from the sender". */
+.nw-site .nwes-note-field {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  overflow: hidden;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwes-warn-bg);
+  border: 1px solid var(--nwes-warn-line);
+  color: var(--nwes-warn-dark);
+  font-size: 12px;
+  line-height: 1.375;
+}
+/* What an earlier signer completed. */
+.nw-site .nwes-prior {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  box-sizing: border-box;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  background: var(--nw-paper-3);
+  color: var(--nw-text);
+}
+.nw-site .nwes-prior img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.nw-site .nwes-prior--text {
+  justify-content: flex-start;
+  white-space: nowrap;
+  container-type: size;
+}
+.nw-site .nwes-prior-chip {
+  position: absolute;
+  right: 4px;
+  top: 3px;
+  padding: 2px 7px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line);
+  color: var(--nw-text);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: normal;
+}
+
+/* Zoom */
+.nw-site .nwes-zoom {
+  position: sticky;
+  bottom: 96px;
+  margin: 16px auto 0;
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  box-shadow:
+    0 10px 30px -12px rgba(13, 22, 38, 0.4),
+    0 0 0 1px var(--nw-line);
+  z-index: 20;
+}
+.nw-site .nwes-zoom-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.nw-site .nwes-zoom-value {
+  min-width: 52px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--nw-text);
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bottom action bar */
+.nw-site .nwes-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid var(--nw-line);
+  box-shadow: 0 -14px 32px -22px rgba(13, 22, 38, 0.45);
+}
+.nw-site .nwes-actions-in {
+  box-sizing: content-box;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px clamp(10px, 3vw, 24px) calc(10px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nw-site .nwes-act {
+  height: 48px;
+  padding: 0 12px;
+  border-radius: var(--nw-r-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.nw-site .nwes-act svg {
+  flex-shrink: 0;
+}
+/* Red at rest; the board's ghost hover (ink, !important) wins on hover. */
+.nw-site .nwes-act--decline {
+  color: var(--nw-danger);
+}
+.nw-site .nwes-act-count {
+  flex-shrink: 0;
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nw-text);
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwes-act-spacer {
+  flex: 1;
+}
+.nw-site .nwes-cta {
+  color: var(--nw-white);
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    filter 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site .nwes-cta:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+.nw-site .nwes-cta--read {
+  background: var(--nw-ink);
+}
+.nw-site .nwes-cta--todo {
+  background: var(--nwes-warn);
+}
+.nw-site .nwes-cta--done {
+  background: var(--nw-success);
+}
+.nw-site .nwes-cta--locked,
+.nw-site .nwes-cta:disabled:not(.nwes-submit) {
+  background: var(--nw-paper-2);
+  color: var(--nw-muted);
+  box-shadow: inset 0 0 0 1px var(--nw-line);
+  cursor: not-allowed;
+}
+.nw-site .nwes-act-main {
+  flex: 1;
+  max-width: 340px;
+  margin-left: auto;
+  height: 48px;
+  padding: 0 18px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: none;
+}
+/* On a phone the label wraps to two lines, as on the board. */
+.nw-site .nwes-act-label {
+  text-align: center;
+}
+.nw-site .nwes-act-main svg {
+  flex-shrink: 0;
+}
+
+/* ═══════════ Dialogs ═══════════ */
+.nw-site .nwes-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(13, 22, 38, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.nw-site .nwes-sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  box-shadow: 0 30px 70px -30px rgba(13, 22, 38, 0.45);
+  box-sizing: border-box;
+  animation: nwes-in var(--nwes-dur-3) var(--nw-ease) both;
+}
+.nw-site .nwes-sheet:focus {
+  outline: none;
+}
+.nw-site .nwes-sheet--padded {
+  padding: 22px;
+}
+.nw-site .nwes-dlg-title {
+  margin: 0;
+  font-size: 20px;
+  color: var(--nw-ink);
+}
+.nw-site .nwes-dlg-desc {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwes-dlg-desc--loose {
+  line-height: 1.55;
+}
+.nw-site .nwes-dlg-field {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site .nwes-dlg-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nw-text);
+}
+.nw-site .nwes-input--id {
+  font-size: 16px;
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: 0.06em;
+}
+.nw-site .nwes-dlg-error {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--nw-danger);
+}
+.nw-site .nwes-dlg-actions {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.nw-site .nwes-dlg-actions--text {
+  margin-top: 20px;
+}
+.nw-site .nwes-dlg-actions--date {
+  margin-top: 14px;
+}
+.nw-site .nwes-dlg-btn {
+  height: 48px;
+  padding: 0 22px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+}
+.nw-site .nwes-dlg-btn--wide {
+  flex: 1;
+  min-width: 160px;
+}
+.nw-site .nwes-dlg-btn--main {
+  flex: 1;
+  min-width: 180px;
+}
+.nw-site .nwes-today {
+  margin-top: 10px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: var(--nw-r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwes-danger {
+  padding: 0 20px;
+  background: var(--nw-danger);
+  color: var(--nw-white);
+  border: 0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.nw-site .nwes-danger:hover:not(:disabled) {
+  background: var(--nw-danger-dark);
+}
+.nw-site .nwes-danger:disabled {
+  background: var(--nw-line);
+  color: var(--nw-muted);
+  cursor: not-allowed;
+}
+.nw-site .nwes-reason-label {
+  display: block;
+  margin-top: 16px;
+}
+/* Inline-block, as on the board, so it keeps the line's descender gap below. */
+.nw-site .nwes-reason {
+  display: inline-block;
+  vertical-align: baseline;
+  margin-top: 6px;
+  height: auto;
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.nw-site .nwes-expires {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nwes-warn-bg);
+  border: 1px solid var(--nwes-warn-line);
+  font-size: 13.5px;
+  color: var(--nwes-warn-dark);
+}
+.nw-site .nwes-expires strong {
+  font-weight: 700;
+}
+
+/* Consent */
+.nw-site .nwes-consent-facts {
+  margin: 16px 0 0;
+  padding: 4px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-3);
+  border: 1px solid var(--nw-paper-2);
+}
+.nw-site .nwes-consent-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--nw-paper-2);
+}
+.nw-site .nwes-consent-facts > div:last-child {
+  border-bottom: 0;
+}
+.nw-site .nwes-consent-facts dt {
+  font-size: 13px;
+  color: var(--nw-muted);
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwes-consent-facts dd {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.nw-site .nwes-consent-facts .nwes-consent-count {
+  font-size: 13px;
+  font-feature-settings: 'tnum' 1;
+}
+.nw-site .nwes-consent {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-paper-2);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwes-consent-title {
+  margin: 0 0 6px;
+  font-family: var(--nw-font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: normal;
+  color: var(--nw-ink);
+}
+.nw-site .nwes-consent p {
+  margin: 0;
+}
+.nw-site .nwes-consent ol {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  list-style: decimal;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nw-site .nwes-consent-check {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 13.5px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--nw-ink);
+  cursor: pointer;
+}
+.nw-site .nwes-consent-check input {
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--nw-ink);
+  flex-shrink: 0;
+}
+.nw-site .nwes-submit {
+  padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.nw-site .nwes-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Option picker (dropdown and radio fields) */
+.nw-site .nwes-options {
+  margin-top: 16px;
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nw-site .nwes-option {
+  min-height: 48px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border-radius: var(--nw-r-sm);
+  border: 1.5px solid var(--nw-line);
+  background: var(--nw-white);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--nw-ink);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwes-option:hover {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwes-option--on {
+  border-color: var(--nw-ink);
+  background: var(--nw-paper);
+  font-weight: 600;
+}
+.nw-site .nwes-option-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--nw-line-strong);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwes-option--on .nwes-option-dot {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwes-option--on .nwes-option-dot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nw-ink);
+}
+.nw-site .nwes-options-empty {
+  margin: 0;
+  padding: 16px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--nw-muted);
+}
+
+/* Adopt a signature */
+.nw-site .nwes-adopt-top {
+  padding: 22px 22px 0;
+}
+.nw-site .nwes-tabs {
+  margin-top: 16px;
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+}
+.nw-site .nwes-tab {
+  height: 44px;
+  padding: 1px 6px;
+  border-radius: var(--nw-r-sm);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--nw-text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site .nwes-tab:hover {
+  color: var(--nw-ink);
+}
+.nw-site .nwes-tab--on {
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  box-shadow:
+    inset 0 -2px 0 var(--nw-violet),
+    0 0 0 1px var(--nw-line);
+}
+.nw-site .nwes-adopt-body {
+  padding: 16px 22px;
+}
+.nw-site .nwes-adopt-actions {
+  margin-top: 0;
+  padding: 0 22px 22px;
+}
+.nw-site .nwes-pad {
+  position: relative;
+  border-radius: var(--nw-r-sm);
+  border: 1.5px dashed var(--nw-line-strong);
+  background: var(--nw-paper-3);
+  overflow: hidden;
+}
+.nw-site .nwes-pad canvas {
+  display: block;
+  width: 100%;
+  height: 170px;
+  touch-action: none;
+  cursor: crosshair;
+}
+.nw-site .nwes-pad-line {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 40px;
+  border-top: 1.5px solid var(--nw-line-strong);
+  pointer-events: none;
+}
+.nw-site .nwes-pad-cap {
+  position: absolute;
+  left: 24px;
+  bottom: 16px;
+  font-size: 11.5px;
+  color: var(--nw-muted);
+  pointer-events: none;
+}
+.nw-site .nwes-pad-hint {
+  position: absolute;
+  inset: 0 0 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--nw-on-dark-muted);
+  pointer-events: none;
+}
+.nw-site .nwes-pad-tools {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwes-inks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.nw-site .nwes-inks-label {
+  font-size: 13px;
+  color: var(--nw-text);
+}
+.nw-site .nwes-swatch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: border-color 0.2s;
+}
+.nw-site .nwes-swatch > span {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+.nw-site .nwes-swatch--on {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwes-typed {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.nw-site .nwes-typed-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nw-text);
+}
+.nw-site .nwes-typed-label--strong {
+  font-weight: 600;
+}
+.nw-site .nwes-styles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.nw-site .nwes-style {
+  min-height: 64px;
+  border-radius: var(--nw-r-sm);
+  padding: 8px 10px;
+  font-weight: 400;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  font-family: inherit;
+  background: var(--nw-white);
+  border: 1.5px solid var(--nw-line);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwes-style:hover {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwes-style--on {
+  border-color: var(--nw-ink);
+  background: var(--nw-paper);
+}
+.nw-site .nwes-style-sample {
+  font-size: 24px;
+  line-height: 1.2;
+  color: var(--nw-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.nw-site .nwes-style-name {
+  font-size: 10.5px;
+  color: var(--nw-muted);
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+}
+/* The typed signature is drawn, as live, on a canvas the size of the live
+   dialog's (its width, 128px tall); the board shows the style tiles instead,
+   so the canvas is clipped out of sight. */
+.nw-site .nwes-typecanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.nw-site .nwes-typecanvas canvas {
+  display: block;
+  width: min(528px, calc(100vw - 80px));
+  height: 128px;
+}
+.nw-site .nwes-drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 170px;
+  border-radius: var(--nw-r-sm);
+  border: 1.5px dashed var(--nw-line-strong);
+  background: var(--nw-paper-3);
+  cursor: pointer;
+  text-align: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.nw-site .nwes-drop:focus-within {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 2px;
+}
+.nw-site .nwes-drop input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.nw-site .nwes-drop-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwes-drop-text {
+  font-size: 12.5px;
+  color: var(--nw-muted);
+}
+.nw-site .nwes-uploaded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwes-uploaded img {
+  max-height: 110px;
+  max-width: 100%;
+  object-fit: contain;
+}
+.nw-site .nwes-upload-error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--nw-danger);
+}
+.nw-site .nwes-saved {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwes-saved-head {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--nw-text);
+}
+.nw-site .nwes-saved img {
+  max-height: 110px;
+  max-width: 100%;
+  object-fit: contain;
+}
+.nw-site .nwes-saved-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--nw-muted);
+  text-align: center;
+}
+
+/* ── Phones ── */
+@media (max-width: 640px) {
+  .nw-site .nwes-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .nw-site .nwes-sheet {
+    border-radius: 4px 6px 0 0;
+    max-height: 92vh;
+  }
+  .nw-site .nwes-hide-sm {
+    display: none;
+  }
+  .nw-site .nwes-only-sm {
+    display: inline-flex;
+  }
+  .nw-site .nwes-tab {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwes-spin,
+  .nw-site .nwes-sweep,
+  .nw-site .nwes-card,
+  .nw-site .nwes-done,
+  .nw-site .nwes-sheet,
+  .nw-site .nwes-field--next,
+  .nw-site .nwes-caret,
+  .nw-site .nwes-page-skel {
+    animation: none;
+  }
+  .nw-site .nwes-page,
+  .nw-site .nwes-progress-fill {
+    transition: none;
+  }
+}
