@@ -260,9 +260,12 @@
   color: #ffffff;
   border: 0;
 }
-.nw-site .nw-btn:hover,
-.nw-site .nw-btn:focus-visible {
+.nw-site .nw-btn:hover {
   background: var(--nw-violet-hover);
+  color: #ffffff;
+}
+/* Focus shows the ring only; the board does not darken a focused button. */
+.nw-site .nw-btn:focus-visible {
   color: #ffffff;
 }
 .nw-site .nw-btn:disabled {
@@ -295,6 +298,15 @@
 }
 .nw-site :is(.nw-btn, .nw-outline, .nw-ghost-dark):active {
   transform: translateY(1px);
+}
+/* The board's arrow nudge. It needs an element before the arrow: an action
+   whose label is bare text has the arrow as its first element child, and on
+   the board that arrow stays put. */
+.nw-site :is(.nw-btn, .nw-outline, .nw-ghost-dark) > svg:last-child:not(:first-child) {
+  transition: transform var(--nw-dur-2) var(--nw-ease);
+}
+.nw-site :is(.nw-btn, .nw-outline, .nw-ghost-dark):hover > svg:last-child:not(:first-child) {
+  transform: translateX(3px);
 }
 /* Icons inside actions always take the action's text colour. */
 .nw-site :is(.nw-btn, .nw-outline, .nw-ghost-dark) svg {
@@ -399,14 +411,17 @@
   gap: 24px;
   position: relative;
 }
-.nw-site .nwh-logo-link {
+.nw-site .nwh-home {
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
-/* Logo.tsx's high-quality-image class lifts contrast; the board's logo is plain. */
-.nw-site .nwh-logo-link img {
+/* Logo.tsx's high-quality-image class lifts contrast and puts the logo on its
+   own layer, which resamples it differently; the board's logo is a plain img. */
+.nw-site .nwh-home img {
   filter: none;
+  transform: none;
+  backface-visibility: visible;
 }
 .nw-site .nwh-links {
   display: flex;
@@ -931,7 +946,7 @@
   .nw-site .nwh-links {
     gap: 18px;
   }
-  .nw-site .nwh-home,
+  .nw-site .nwh-link-home,
   .nw-site .nwh-login-ic {
     display: none;
   }
@@ -957,7 +972,7 @@
   }
 }
 @media (max-width: 420px) {
-  .nw-site .nwh-logo-link img {
+  .nw-site .nwh-home img {
     height: 21px !important;
   }
   .nw-site .nwh-row {

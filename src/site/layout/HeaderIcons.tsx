@@ -63,14 +63,21 @@ export const ChatIcon = (p: IconProps) => (
     <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
   </Svg>
 );
-/** The top bar's quote icon; `short` drops the first rule, as the icon row and sheet do. */
-export const QuoteIcon = ({ short, ...p }: IconProps & { short?: boolean }) => (
+/**
+ * The quote icon. The board draws it three ways: all three rules in the top
+ * bar, without the bottom rule in the phone icon row (`rules="top"`), and
+ * without the short top rule in the phone sheet (`rules="lower"`).
+ */
+export const QuoteIcon = ({
+  rules = 'all',
+  ...p
+}: IconProps & { rules?: 'all' | 'top' | 'lower' }) => (
   <Svg {...p}>
     <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
     <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-    {short ? null : <path d="M10 9H8" />}
+    {rules === 'lower' ? null : <path d="M10 9H8" />}
     <path d="M16 13H8" />
-    <path d="M16 17H8" />
+    {rules === 'top' ? null : <path d="M16 17H8" />}
   </Svg>
 );
 export const ChevronIcon = (p: IconProps) => (

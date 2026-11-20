@@ -221,7 +221,7 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
               <ChatIcon size={15} stroke={WHATSAPP_GREEN} />
             </a>
             <Link className="nwh-toplink" to="/get-quote" aria-label="Get a quote">
-              <QuoteIcon size={15} stroke={QUOTE_BLUE} short />
+              <QuoteIcon size={15} stroke={QUOTE_BLUE} rules="top" />
             </Link>
           </div>
         </div>
@@ -234,12 +234,12 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
         data-scrolled={isScrolled ? 'true' : 'false'}
       >
         <div className="nwh-wrap nwh-row">
-          <Link to="/" className="nwh-logo-link" aria-label="Navigate Wealth home">
+          <Link to="/" className="nwh-home" aria-label="Navigate Wealth home">
             <Logo />
           </Link>
 
           <div className="nwh-links nwh-desktop" data-menu-open={openMenu ? 'true' : undefined}>
-            <Link className="nwh-link nwh-home" to="/" aria-current={current('/')}>
+            <Link className="nwh-link nwh-link-home" to="/" aria-current={current('/')}>
               Home
             </Link>
             {MENUS.map((menu) => {
@@ -386,7 +386,7 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
                   WhatsApp
                 </a>
                 <Link className="nwh-quick" to="/get-quote">
-                  <QuoteIcon size={17} stroke={QUOTE_BLUE} short />
+                  <QuoteIcon size={17} stroke={QUOTE_BLUE} rules="lower" />
                   Get Quote
                 </Link>
               </div>
