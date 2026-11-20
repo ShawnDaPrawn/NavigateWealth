@@ -12,12 +12,12 @@
  * and checks each state's heading, words and links, and axe on the card
  * states.
  *
- * One harness note. The live flow's initial-validation effect lists
- * `validateToken` as a dependency, and useSignerSession recreates that
- * function on every render, so against an instant fake server the effect
- * re-runs after every response, without end. The harness below pins the
- * function's identity (it still calls the real one) so each path validates
- * once — identically for both designs, which share the flow hook.
+ * It also pins two fixes to the shared flow, which both designs run: the link
+ * is validated once per visit (useSignerSession's validateToken used to be a
+ * new function on every render, so the first-load effect re-validated after
+ * every response until the server's rate limit refused the link), and a
+ * correct code is verified once (the auto-submit used to fire again when the
+ * refreshed session arrived).
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -29,21 +29,6 @@ vi.mock('../../utils/supabase/info', async (importOriginal) => ({
   projectId: 'proj',
   publicAnonKey: 'anon',
 }));
-
-vi.mock('../../components/esign-signer/hooks/useSignerSession', async (importOriginal) => {
-  const real =
-    await importOriginal<typeof import('../../components/esign-signer/hooks/useSignerSession')>();
-  const { useCallback, useRef } = await import('react');
-  return {
-    useSignerSession: () => {
-      const session = real.useSignerSession();
-      const latest = useRef(session);
-      latest.current = session;
-      const validateToken = useCallback((token: string) => latest.current.validateToken(token), []);
-      return { ...session, validateToken };
-    },
-  };
-});
 
 // The worker is never started (pdf.js itself is stubbed below); stubbing its
 // URL import also keeps the file loadable where node_modules is a symlink.
@@ -367,6 +352,20 @@ describe('the Navigator signing page sends exactly what the live page sends', ()
     ]);
   });
 
+  it('validates the link once, however long the page stays open', async () => {
+    const path = async () => {
+      await screen.findByRole('button', { name: /i'm ready to sign/i }, { timeout: 4000 });
+      // Give a runaway effect every chance to show itself.
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 300));
+      });
+    };
+    for (const design of ['legacy', 'navigator'] as const) {
+      const made = await run(design, { validate: ok(session()) }, path);
+      expect(made.filter((c) => c.url.endsWith('/signer/validate'))).toHaveLength(1);
+    }
+  });
+
   it('signs: the saved signature and initials, then the same signature data', async () => {
     const path = async (d: Design) => {
       await signEverything(d);
@@ -485,9 +484,9 @@ describe('the Navigator signing page sends exactly what the live page sends', ()
     const live = await run('legacy', server, path);
     const nav = await run('navigator', server, path);
     expect(nav).toEqual(live);
-    // The live step's auto-submit runs again when the re-validated session
-    // lands, so a second verify (and validate) follows; both designs do it.
-    expect(nav.map((c) => c.url.split('/signer/')[1]).slice(0, 3)).toEqual([
+    // One verify for one code, then the refreshed session: the auto-submit
+    // no longer fires again when that session lands.
+    expect(nav.map((c) => c.url.split('/signer/')[1])).toEqual([
       'validate',
       'verify-otp',
       'validate',

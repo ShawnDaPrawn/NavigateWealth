@@ -73,13 +73,24 @@ export function useOtpVerification({
     setIsVerifying(false);
   }, [accessCode, otp, token, verifyOtp, onVerified, sessionData]);
 
-  // Auto-submit when all digits are entered
+  // Auto-submit when all digits are entered, once per code. After a correct
+  // code the page refreshes the session, which rebuilds handleVerify while the
+  // six digits are still filled in; without this guard that re-ran the effect
+  // and sent verify-otp a second time. A wrong code clears the boxes, so the
+  // next code typed is submitted as usual.
+  const autoSubmittedCode = useRef<string | null>(null);
   useEffect(() => {
     const isComplete =
       !sessionData?.access_code_required &&
       (!sessionData?.otp_required || otp.every((digit) => digit !== '')) &&
       Boolean(sessionData?.otp_required);
-    if (isComplete && !isVerifying) {
+    const code = otp.join('');
+    if (!isComplete) {
+      autoSubmittedCode.current = null;
+      return;
+    }
+    if (!isVerifying && autoSubmittedCode.current !== code) {
+      autoSubmittedCode.current = code;
       handleVerify();
     }
   }, [accessCode, otp, isVerifying, handleVerify, sessionData]);
