@@ -62,7 +62,9 @@ export function ESignOtpCard(props: OtpVerificationOptions) {
 
   const code = otp.join('');
   // The live boxes take one digit each and ignore anything else; a paste
-  // keeps the first six digits. One field does both.
+  // keeps the first six digits. One field does both. It has no maxLength: the
+  // browser would cut a pasted "123 456" to "123 4" before the spaces are
+  // stripped here, leaving five digits.
   const onCodeChange = (event: ChangeEvent<HTMLInputElement>) => {
     const digits = event.target.value.replace(/\D/g, '').slice(0, 6);
     setOtp(digits.split('').concat(Array(6).fill('')).slice(0, 6));
@@ -120,7 +122,6 @@ export function ESignOtpCard(props: OtpVerificationOptions) {
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={6}
               value={code}
               onChange={onCodeChange}
               onFocus={() => setFocused(true)}

@@ -494,6 +494,27 @@ describe('the Navigator signing page sends exactly what the live page sends', ()
     expect(nav[1].body).toEqual({ access_token: TOKEN, otp: '482913' });
   });
 
+  it('takes a pasted code with a space in it as all six digits (review finding)', async () => {
+    const server: Server = {
+      validate: ok(
+        session({ otp_required: true, signer_status: 'pending', missing_factors: ['otp'] }),
+      ),
+      revalidate: ok(session()),
+    };
+    const made = await run('navigator', server, async () => {
+      await heading('Verify Your Identity');
+      const input = screen.getByLabelText('Enter Verification Code');
+      // A maxLength would let the browser cut "482 913" to "482 9" before the
+      // handler strips the space.
+      expect(input.hasAttribute('maxlength')).toBe(false);
+      fireEvent.change(input, { target: { value: '482 913' } });
+      await screen.findByRole('button', { name: /i'm ready to sign/i }, { timeout: 4000 });
+    });
+    const verify = made.filter((c) => c.url.endsWith('/signer/verify-otp'));
+    expect(verify).toHaveLength(1);
+    expect(verify[0].body).toEqual({ access_token: TOKEN, otp: '482913' });
+  });
+
   it('shows a refused code with the live words and sends a resend', async () => {
     const server: Server = {
       validate: ok(

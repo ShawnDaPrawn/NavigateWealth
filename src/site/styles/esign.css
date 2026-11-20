@@ -1376,11 +1376,17 @@
   line-height: normal;
 }
 
-/* Zoom */
+/* Zoom. The board pins it with position: sticky inside the document area,
+   but that area scrolls sideways (overflow-x: auto), which makes it the
+   sticky element's scroll container; it never scrolls vertically, so the
+   control sat below the last page of a long PDF. Fixed to the viewport, as
+   the live page has it, it stays above the action bar while reading. */
 .nw-site .nwes-zoom {
-  position: sticky;
+  position: fixed;
   bottom: 96px;
-  margin: 16px auto 0;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
   width: fit-content;
   display: flex;
   align-items: center;
