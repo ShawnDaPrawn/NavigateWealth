@@ -4,6 +4,7 @@ import { MainLayout as AppLayout } from '../components/layout/MainLayout';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { BrandPageLoader } from '../components/ui/brand-loader';
 import { isStandaloneDisplay } from '../utils/pwa/displayMode';
+import { SITE_DESIGN } from '../site/design';
 
 // Shared loading fallback for lazy-loaded routes
 function RouteFallback() {
@@ -12,11 +13,16 @@ function RouteFallback() {
   // screen produces a jarring third "flash". Instead, show a seamless screen
   // that matches the auth background so the login form simply appears in place —
   // splash → login, with no loader in between. (Normal browser tabs keep the
-  // branded loader.)
+  // branded loader.) The Navigator Log in page sits on paper (--nw-paper); the
+  // legacy one on a pale purple wash.
   if (isStandaloneDisplay()) {
     return (
       <div
-        className="min-h-[100dvh] bg-gradient-to-b from-purple-50 via-white to-white"
+        className={
+          SITE_DESIGN === 'navigator'
+            ? 'min-h-[100dvh] bg-[#f6f4ef]'
+            : 'min-h-[100dvh] bg-gradient-to-b from-purple-50 via-white to-white'
+        }
         aria-hidden="true"
       />
     );
@@ -24,10 +30,7 @@ function RouteFallback() {
 
   return (
     <>
-      <BrandPageLoader
-        title="Plotting your course"
-        message="Setting your bearing and carrying your session to the next screen."
-      />
+      <BrandPageLoader />
       <span className="sr-only">Loading, please wait…</span>
     </>
   );

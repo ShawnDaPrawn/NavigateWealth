@@ -1,0 +1,521 @@
+/*
+ * Brand loader: the site-wide loading screen, in the Navigator design.
+ *
+ * It renders on the public site, in the client portal and in the admin, and on
+ * first load before any page CSS has arrived, so it cannot lean on the `.nw-site`
+ * tokens in src/site/styles/navigator.css. The values it needs are copied here
+ * under an `--nwl-` prefix instead. Keep them in step with navigator.css.
+ *
+ * Fonts: the stacks name Newsreader and Inter first, which navigator.css
+ * registers. This file deliberately declares no @font-face of its own, so a
+ * portal visit does not download a 132 KB display face only to set a loader
+ * title. Until navigator.css is loaded the title falls back to Georgia.
+ *
+ * Motion: every animation is a CSS transform or opacity change. The browser runs
+ * those off the main thread, so the loader keeps moving while the next page's
+ * JavaScript is still being parsed. Do not move any of it into JavaScript.
+ */
+
+.nwl-page,
+.nwl-panel,
+.nwl-inline {
+  --nwl-ink: #0d1626;
+  --nwl-paper: #f6f4ef;
+  --nwl-muted: #5e6676;
+  --nwl-grid: rgba(13, 22, 38, 0.042);
+  --nwl-grid-fine: rgba(13, 22, 38, 0.021);
+  --nwl-tick: rgba(13, 22, 38, 0.34);
+  --nwl-tick-strong: rgba(13, 22, 38, 0.72);
+  --nwl-violet: #6d28d9;
+
+  /* Mark colours, sampled from brand-source/approved-source/Navigate_Wealth_Icon_Only@2x.png */
+  --nwl-m-dark-a: #9853dc;
+  --nwl-m-dark-b: #5f1fb4;
+  --nwl-m-light-a: #9a5adc;
+  --nwl-m-light-b: #c47cf5;
+  --nwl-m-rear-a: #a457ee;
+  --nwl-m-rear-b: #621ebf;
+  --nwl-m-hull-a: #ba72f2;
+  --nwl-m-hull-b: #7530ca;
+  --nwl-m-hull-c: #5c1cb4;
+
+  --nwl-serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+  --nwl-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --nwl-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ── Full page ── */
+.nwl-page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 64px 24px 104px;
+  overflow: hidden;
+  background: var(--nwl-paper);
+  color: var(--nwl-ink);
+  font-family: var(--nwl-sans);
+}
+/* Chart paper: the 80 / 16 grid the Log in page sits on, faded towards the edges. */
+.nwl-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--nwl-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--nwl-grid) 1px, transparent 1px),
+    linear-gradient(var(--nwl-grid-fine) 1px, transparent 1px),
+    linear-gradient(90deg, var(--nwl-grid-fine) 1px, transparent 1px);
+  background-size:
+    80px 80px,
+    80px 80px,
+    16px 16px,
+    16px 16px;
+  background-position: center;
+  -webkit-mask-image: radial-gradient(
+    ellipse 70% 62% at 50% 46%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 55%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 70% 62% at 50% 46%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 55%,
+    transparent 100%
+  );
+}
+.nwl-sig {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 26px;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px 12px;
+  font-family: var(--nwl-sans);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nwl-muted);
+}
+.nwl-sig-name {
+  color: var(--nwl-ink);
+}
+.nwl-sig-dot {
+  opacity: 0.5;
+}
+
+/* ── Panel: the mark, the tape and the words. Used on its own, in a section, or in a page. ── */
+.nwl-panel {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  color: var(--nwl-ink);
+  font-family: var(--nwl-sans);
+}
+.nwl-mark {
+  display: block;
+  overflow: visible;
+}
+.nwl-boat {
+  transform-box: fill-box;
+  transform-origin: 50% 92%;
+  animation: nwl-swell 4.8s ease-in-out infinite;
+}
+.nwl-sails {
+  transform-box: fill-box;
+  transform-origin: 40% 100%;
+  animation: nwl-lean 4.8s ease-in-out infinite;
+}
+.nwl-title {
+  margin: 22px 0 0;
+  font-family: var(--nwl-serif);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.012em;
+  color: var(--nwl-ink);
+  text-wrap: balance;
+}
+.nwl-msg {
+  display: grid;
+  max-width: 36ch;
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--nwl-muted);
+}
+.nwl-msg > span {
+  grid-area: 1 / 1;
+  text-wrap: balance;
+  transition:
+    opacity 0.5s var(--nwl-ease),
+    transform 0.5s var(--nwl-ease);
+}
+.nwl-msg-slow {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.nwl-msg.is-slow .nwl-msg-first {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.nwl-msg.is-slow .nwl-msg-slow {
+  opacity: 1;
+  transform: none;
+}
+
+.nwl-compact .nwl-title {
+  margin-top: 14px;
+  font-size: 18px;
+}
+.nwl-compact .nwl-msg {
+  margin-top: 4px;
+  font-size: 13px;
+}
+.nwl-compact .nwl-tape-full {
+  width: 184px;
+  margin-top: 20px;
+}
+
+/* ── Heading tape: degree ticks sliding past a fixed lubber line ── */
+.nwl-tape {
+  position: relative;
+  display: block;
+  flex: none;
+}
+.nwl-tape-full {
+  width: 264px;
+  max-width: 100%;
+  height: 36px;
+  margin-top: 30px;
+}
+.nwl-tape-mini {
+  display: inline-block;
+  width: 44px;
+  height: 14px;
+}
+.nwl-tape-window {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 24%, #000 76%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 24%, #000 76%, transparent 100%);
+}
+.nwl-tape-mini .nwl-tape-window {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 30%, #000 70%, transparent 100%);
+}
+.nwl-strip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: block;
+  max-width: none;
+  will-change: transform;
+}
+.nwl-tape-full .nwl-strip {
+  animation: nwl-seek-full 15.4s infinite;
+}
+.nwl-tape-mini .nwl-strip {
+  animation: nwl-seek-mini 15.4s infinite;
+}
+.nwl-strip line {
+  stroke: var(--nwl-tick);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.nwl-strip line.nwl-major {
+  stroke: var(--nwl-tick-strong);
+}
+.nwl-strip text {
+  font-family: var(--nwl-sans);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  fill: var(--nwl-muted);
+}
+.nwl-strip text.nwl-cardinal {
+  font-family: var(--nwl-serif);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  fill: var(--nwl-ink);
+}
+.nwl-lubber {
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  transform: translateX(-50%);
+  fill: var(--nwl-violet);
+}
+.nwl-tape-mini .nwl-lubber {
+  top: -2px;
+}
+
+/* ── Inline: rows and status lines. Takes its colour from the text around it. ── */
+.nwl-inline {
+  --nwl-tick: currentColor;
+  --nwl-tick-strong: currentColor;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  animation: nwl-fade 0.2s linear 150ms both;
+}
+.nwl-inline .nwl-strip line {
+  stroke-opacity: 0.45;
+}
+.nwl-inline .nwl-strip line.nwl-major {
+  stroke-opacity: 0.9;
+}
+
+/*
+ * Entrance: nothing for 250 ms, so a fast route change never flashes a loader,
+ * then one quiet rise, staggered top to bottom.
+ */
+.nwl-rv {
+  animation: nwl-rise 0.6s var(--nwl-ease) both;
+  animation-delay: 250ms;
+}
+.nwl-d1 {
+  animation-delay: 360ms;
+}
+.nwl-d2 {
+  animation-delay: 450ms;
+}
+.nwl-d3 {
+  animation-delay: 510ms;
+}
+.nwl-d4 {
+  animation-delay: 630ms;
+}
+
+@keyframes nwl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes nwl-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes nwl-swell {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-0.8deg);
+  }
+  50% {
+    transform: translateY(-1.6%) rotate(0.8deg);
+  }
+}
+@keyframes nwl-lean {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-1.2deg);
+  }
+}
+@keyframes nwl-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/*
+ * The tape seeks through headings 042, 118, 096, 210, 186, 312, 290 and 402
+ * (that is, 042 again), easing into each and holding briefly. Heading h sits under
+ * the lubber line at translateX(-(h + 180) * k), k = 2 px per degree on the full
+ * tape and 1 on the mini. 402 is exactly one turn past 042, so the jump back to
+ * 0% is invisible. The strip in brand-loader.tsx covers -180 to 600 degrees.
+ */
+@keyframes nwl-seek-full {
+  0% {
+    transform: translateX(-444px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  9.714% {
+    transform: translateX(-596px);
+    animation-timing-function: linear;
+  }
+  14.286% {
+    transform: translateX(-596px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  24% {
+    transform: translateX(-552px);
+    animation-timing-function: linear;
+  }
+  28.571% {
+    transform: translateX(-552px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  38.286% {
+    transform: translateX(-780px);
+    animation-timing-function: linear;
+  }
+  42.857% {
+    transform: translateX(-780px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  52.571% {
+    transform: translateX(-732px);
+    animation-timing-function: linear;
+  }
+  57.143% {
+    transform: translateX(-732px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  66.857% {
+    transform: translateX(-984px);
+    animation-timing-function: linear;
+  }
+  71.429% {
+    transform: translateX(-984px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  81.143% {
+    transform: translateX(-940px);
+    animation-timing-function: linear;
+  }
+  85.714% {
+    transform: translateX(-940px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  95.429%,
+  100% {
+    transform: translateX(-1164px);
+  }
+}
+@keyframes nwl-seek-mini {
+  0% {
+    transform: translateX(-222px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  9.714% {
+    transform: translateX(-298px);
+    animation-timing-function: linear;
+  }
+  14.286% {
+    transform: translateX(-298px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  24% {
+    transform: translateX(-276px);
+    animation-timing-function: linear;
+  }
+  28.571% {
+    transform: translateX(-276px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  38.286% {
+    transform: translateX(-390px);
+    animation-timing-function: linear;
+  }
+  42.857% {
+    transform: translateX(-390px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  52.571% {
+    transform: translateX(-366px);
+    animation-timing-function: linear;
+  }
+  57.143% {
+    transform: translateX(-366px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  66.857% {
+    transform: translateX(-492px);
+    animation-timing-function: linear;
+  }
+  71.429% {
+    transform: translateX(-492px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  81.143% {
+    transform: translateX(-470px);
+    animation-timing-function: linear;
+  }
+  85.714% {
+    transform: translateX(-470px);
+    animation-timing-function: cubic-bezier(0.62, 0, 0.32, 1);
+  }
+  95.429%,
+  100% {
+    transform: translateX(-582px);
+  }
+}
+
+/* Reduced motion: the tape holds its heading and the lubber line pulses. Nothing rocks or slides. */
+@media (prefers-reduced-motion: reduce) {
+  .nwl-rv {
+    animation: nwl-fade 0.3s linear 250ms both;
+  }
+  .nwl-boat,
+  .nwl-sails,
+  .nwl-tape-full .nwl-strip,
+  .nwl-tape-mini .nwl-strip {
+    animation: none;
+  }
+  .nwl-tape-full .nwl-strip {
+    transform: translateX(-444px);
+  }
+  .nwl-tape-mini .nwl-strip {
+    transform: translateX(-222px);
+  }
+  .nwl-lubber {
+    animation: nwl-pulse 1.8s ease-in-out infinite;
+  }
+  .nwl-msg > span {
+    transition: opacity 0.3s linear;
+    transform: none !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .nwl-page {
+    padding: 48px 16px 112px;
+  }
+  .nwl-title {
+    font-size: 23px;
+  }
+  .nwl-compact .nwl-title {
+    font-size: 17px;
+  }
+  .nwl-sig {
+    left: 16px;
+    right: 16px;
+    flex-direction: column;
+    font-size: 10px;
+  }
+  /* The line stacks here, so a separator would dangle at the end of a row. */
+  .nwl-sig-dot {
+    display: none;
+  }
+}
