@@ -11,6 +11,14 @@
  * restricted themselves. The admin check runs only when a request could
  * return unpublished content, so the public site's `status=published` reads
  * pay nothing for it.
+ *
+ * PUBLIC FIELDS ONLY, unless the caller is an admin. Everyone else gets
+ * `toPublicArticle`, an allow-list: the records also hold the research
+ * pipeline's `internal_*` notes and source attributions, which these reads
+ * used to hand to anyone. Because a `status=published` list read is never
+ * auth-checked (above), it gets the public view even from an admin. The admin
+ * publications module lists without a status filter, so it is identified and
+ * still gets full records.
  */
 import { Hono } from 'npm:hono';
 import type { Context } from 'npm:hono';
@@ -22,6 +30,7 @@ import {
   type Article,
   type ArticleCategory,
   type ArticleType,
+  toPublicArticle,
 } from './publications-route-helpers.ts';
 
 const log = createModuleLogger('publications-articles-read-routes');
@@ -41,8 +50,8 @@ async function callerIsAdmin(c: Context): Promise<boolean> {
 articlesReadRoutes.get('/articles', async (c) => {
   try {
     const requestedStatus = c.req.query('status');
-    const status =
-      requestedStatus === 'published' || !(await callerIsAdmin(c)) ? 'published' : requestedStatus;
+    const isAdmin = requestedStatus !== 'published' && (await callerIsAdmin(c));
+    const status = isAdmin ? requestedStatus : 'published';
     const type_id = c.req.query('type_id');
     const category_id = c.req.query('category_id');
     const search = c.req.query('search');
@@ -122,7 +131,7 @@ articlesReadRoutes.get('/articles', async (c) => {
 
     return c.json({
       success: true,
-      data: paginatedArticles,
+      data: isAdmin ? paginatedArticles : paginatedArticles.map(toPublicArticle),
       pagination: {
         page,
         limit,
@@ -140,13 +149,21 @@ articlesReadRoutes.get('/articles/:id', async (c) => {
   try {
     const id = c.req.param('id')!;
     const article = await kv.get(`article:${id}`);
-
-    // An unpublished article does not exist as far as the public is concerned.
-    if (!article || (article.status !== 'published' && !(await callerIsAdmin(c)))) {
+    if (!article) {
       return c.json({ success: false, error: 'Article not found' }, 404);
     }
 
-    return c.json({ success: true, data: article });
+    // Unlike the list, this always asks: the admin editor reads published
+    // articles here too, and needs the full record. The public site reads by
+    // slug, so the check costs it nothing.
+    const isAdmin = await callerIsAdmin(c);
+
+    // An unpublished article does not exist as far as the public is concerned.
+    if (article.status !== 'published' && !isAdmin) {
+      return c.json({ success: false, error: 'Article not found' }, 404);
+    }
+
+    return c.json({ success: true, data: isAdmin ? article : toPublicArticle(article) });
   } catch (error) {
     log.error('Error fetching article', error);
     return c.json({ success: false, error: 'Failed to fetch article' }, 500);
@@ -189,7 +206,7 @@ articlesReadRoutes.get('/articles/by-slug/:slug', async (c) => {
       type_slug: type?.slug || 'article',
     };
 
-    return c.json({ success: true, data: enrichedArticle });
+    return c.json({ success: true, data: toPublicArticle(enrichedArticle) });
   } catch (error) {
     log.error('Error fetching article by slug', error);
     return c.json({ success: false, error: 'Failed to fetch article' }, 500);
@@ -232,7 +249,7 @@ articlesReadRoutes.get('/articles/slug/:slug', async (c) => {
       type_slug: type?.slug || 'article',
     };
 
-    return c.json({ success: true, data: enrichedArticle });
+    return c.json({ success: true, data: toPublicArticle(enrichedArticle) });
   } catch (error) {
     log.error('Error fetching article by slug', error);
     return c.json({ success: false, error: 'Failed to fetch article' }, 500);
