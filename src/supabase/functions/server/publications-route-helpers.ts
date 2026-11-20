@@ -124,6 +124,56 @@ export function calculateReadingTime(text: string): number {
   return Math.ceil(wordCount / wordsPerMinute);
 }
 
+/**
+ * The article fields anyone may read. Public reads return exactly these; an
+ * admin session gets the whole record.
+ *
+ * An allow-list on purpose. Article records also carry editorial working
+ * fields no public page shows: the research pipeline's `internal_*` notes,
+ * source URLs, relevance scores and image briefs, plus `last_edited_by` and
+ * `author_id`. Until 2026-11 the public reads returned all of them to anyone.
+ * Naming what is public, rather than what is not, keeps the next such field
+ * private by default. A field a public page needs must be added here.
+ */
+export const PUBLIC_ARTICLE_FIELDS = [
+  'id',
+  'slug',
+  'title',
+  'subtitle',
+  'excerpt',
+  'body',
+  'status',
+  'author_name',
+  'hero_image_url',
+  'thumbnail_image_url',
+  'reading_time_minutes',
+  'is_featured',
+  'press_category',
+  'view_count',
+  'published_at',
+  'created_at',
+  'updated_at',
+  'seo_title',
+  'seo_description',
+  'seo_canonical_url',
+  'category_id',
+  'category_name',
+  'category_slug',
+  'type_id',
+  'type_name',
+  'type_slug',
+] as const;
+
+/** The public view of an article record (see PUBLIC_ARTICLE_FIELDS). */
+export function toPublicArticle(article: object): Record<string, unknown> {
+  const source = article as Record<string, unknown>;
+  const publicView: Record<string, unknown> = {};
+  for (const field of PUBLIC_ARTICLE_FIELDS) {
+    if (source[field] !== undefined) publicView[field] = source[field];
+  }
+  return publicView;
+}
+
 export function articleTrackingDetails(article: Article | null) {
   if (!article) return null;
 
