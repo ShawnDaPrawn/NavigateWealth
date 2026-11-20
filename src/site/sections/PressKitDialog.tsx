@@ -36,7 +36,7 @@ export function PressKitDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <div className="nw-site nwpr2">
+        <div className="nw-site nw-base nwpr2">
           <Dialog.Overlay className="nwpr2-overlay">
             <Dialog.Content
               className="nwpr2-dialog"

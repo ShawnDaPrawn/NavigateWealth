@@ -53,6 +53,8 @@
 
 /* Numbered section label: "01 — For Individuals". */
 .nw-site .nw-kicker {
+  /* A div on every board: plain wrapping, not the paragraph's pretty wrap. */
+  text-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -943,6 +945,7 @@
   padding: 24px 26px;
 }
 .nw-site .nw-faq-help-t {
+  text-wrap: wrap;
   margin: 0;
   font-family: var(--nw-font-serif);
   font-size: var(--nw-fs-h5);
@@ -1011,6 +1014,8 @@
   text-wrap: pretty;
 }
 .nw-site .nw-faq-q {
+  /* The boards' questions are a button's span, not a heading: plain wrapping. */
+  text-wrap: wrap;
   width: 100%;
   min-height: 56px;
   display: flex;

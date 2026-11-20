@@ -75,7 +75,7 @@ export function PartnerWall({
           </ul>
 
           <Dialog.Portal>
-            <div className="nw-site">
+            <div className="nw-site nw-base">
               <Dialog.Overlay className="nwpd-overlay">
                 <Dialog.Content className="nwpd">
                   <div className="nwpd-head">

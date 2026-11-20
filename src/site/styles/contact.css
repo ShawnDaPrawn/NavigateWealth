@@ -307,6 +307,7 @@
   height: 100%;
 }
 .nw-site .nwct-card-code {
+  text-wrap: wrap;
   margin: 0;
   font-size: 11px;
   letter-spacing: 0.18em;

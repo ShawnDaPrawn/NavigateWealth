@@ -91,6 +91,7 @@
   padding-bottom: clamp(56px, 8vw, 96px);
 }
 .nw-site .nwsv-pill {
+  text-wrap: wrap;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -464,6 +465,7 @@
   text-align: center;
 }
 .nw-site .nwsv-cta-pill {
+  text-wrap: wrap;
   display: inline-flex;
   align-items: center;
   gap: 8px;

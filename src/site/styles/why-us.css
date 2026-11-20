@@ -80,6 +80,7 @@
   padding-bottom: clamp(56px, 8vw, 96px);
 }
 .nw-site .nwwu-pill {
+  text-wrap: wrap;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -432,6 +433,7 @@
   min-width: 0;
 }
 .nw-site .nwwu-badge {
+  text-wrap: wrap;
   display: inline-flex;
   align-items: center;
   gap: 8px;

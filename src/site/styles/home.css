@@ -552,6 +552,7 @@
   color: var(--nw-ink);
 }
 .nw-site .nwsc-desc {
+  text-wrap: pretty;
   margin: 0;
   font-size: 14px;
   line-height: 1.6;
@@ -854,10 +855,13 @@
   gap: 16px;
   padding: clamp(22px, 3vw, 32px) clamp(20px, 3vw, 32px) 8px;
 }
+.nw-site .nwpd-head .nw-kicker {
+  font-size: 11.5px;
+}
 .nw-site .nwpd-title {
   margin: 12px 0 0;
   font-size: var(--nw-fs-h2s);
-  line-height: 1.15;
+  line-height: normal;
   color: var(--nw-ink);
 }
 .nw-site .nwpd-desc {
@@ -906,6 +910,7 @@
   font-family: var(--nw-font-serif);
   font-size: 16px;
   font-weight: 500;
+  letter-spacing: -0.012em;
   color: var(--nw-ink);
 }
 .nw-site .nwpd-count {
@@ -1104,6 +1109,7 @@
   color: var(--nw-white);
 }
 .nw-site .nwin-excerpt {
+  text-wrap: pretty;
   position: relative;
   margin: 0;
   font-size: 15px;
@@ -1206,6 +1212,7 @@
   color: var(--nw-on-dark);
 }
 .nw-site .nwvp-l {
+  text-wrap: wrap;
   margin: 0;
   font-size: 11px;
   letter-spacing: 0.16em;
@@ -1218,6 +1225,8 @@
   font-size: 19px;
   font-weight: 500;
   letter-spacing: -0.012em;
+  /* A div on the board, so plain wrapping rather than a heading's balance. */
+  text-wrap: wrap;
 }
 .nw-site .nwvp-in {
   position: relative;
@@ -1318,6 +1327,7 @@
   align-items: center;
 }
 .nw-site .nwen-badge {
+  text-wrap: wrap;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1517,12 +1527,6 @@
 .nw-site .nwen-note a:hover {
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-/* Phones: 16px text so iOS does not zoom the page when a field is focused. */
-@media (max-width: 640px) {
-  .nw-site .nwen-input {
-    font-size: 16px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

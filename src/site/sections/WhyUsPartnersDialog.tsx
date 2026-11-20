@@ -36,7 +36,7 @@ export function WhyUsPartnersDialog({ groups, quoteLink, children }: WhyUsPartne
     <Dialog.Root>
       <Dialog.Trigger asChild>{children}</Dialog.Trigger>
       <Dialog.Portal>
-        <div className="nw-site nwwu-portal">
+        <div className="nw-site nw-base nwwu-portal">
           <Dialog.Overlay className="nwwu-dlg-overlay">
             <Dialog.Content className="nwwu-dlg">
               <div className="nwwu-dlg-head">

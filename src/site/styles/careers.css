@@ -981,10 +981,6 @@
   .nw-site.nwcr-portal :is(h1, h2, h3) {
     overflow-wrap: break-word;
   }
-  /* 16px text so iOS does not zoom the page when a field is focused. */
-  .nw-site .nwcr-input {
-    font-size: 16px;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .nw-site .nwcr-dlg {

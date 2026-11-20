@@ -146,7 +146,7 @@ export function CareersCvDialog({ open, onOpenChange, returnFocusTo }: CareersCv
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <div className="nw-site nwcr-portal">
+        <div className="nw-site nw-base nwcr-portal">
           <Dialog.Overlay className="nwcr-overlay">
             <Dialog.Content
               className="nwcr-dlg"
