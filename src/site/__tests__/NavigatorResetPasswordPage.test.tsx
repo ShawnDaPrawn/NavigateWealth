@@ -235,6 +235,11 @@ describe('Navigator reset-password page', () => {
     const verifying = await screen.findByRole('heading', { level: 1 }, { timeout: 5000 });
     expect(verifying.textContent).toBe('Verifying reset link...');
     expect(screen.getByRole('status', { name: 'Verifying reset link' })).toBeDefined();
+    // The heading paints before the page's effect calls exchangeCodeForSession,
+    // and `release` only exists once it has. Releasing earlier calls the no-op,
+    // the exchange never settles, and the page stays on "Verifying" (failed CI
+    // on main, 6fd6471, and 1 run in 12 locally under load).
+    await waitFor(() => expect(client.auth.exchangeCodeForSession).toHaveBeenCalled());
     release(ok());
     await screen.findByRole('heading', { level: 1, name: 'Set new password' });
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
