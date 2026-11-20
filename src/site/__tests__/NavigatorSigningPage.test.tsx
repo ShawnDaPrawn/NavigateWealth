@@ -45,6 +45,9 @@ vi.mock('../../components/esign-signer/hooks/useSignerSession', async (importOri
   };
 });
 
+// The worker is never started (pdf.js itself is stubbed below); stubbing its
+// URL import also keeps the file loadable where node_modules is a symlink.
+vi.mock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({ default: '' }));
 vi.mock('pdfjs-dist', () => {
   const page = {
     getViewport: () => ({ width: 595, height: 842, scale: 1 }),

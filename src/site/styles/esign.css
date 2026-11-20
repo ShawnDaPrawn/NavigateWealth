@@ -1994,8 +1994,10 @@
   font-variant-numeric: tabular-nums;
 }
 /* The typed signature is drawn, as live, on a canvas the size of the live
-   dialog's (its width, 128px tall); the board shows the style tiles instead,
-   so the canvas is clipped out of sight. */
+   pad's — measured in the live dialog: 456 × 112 on a desktop, the dialog's
+   width less 76px on a phone (314 × 112 at 390px) — so the image it makes is
+   the same size. The board shows the style tiles instead, so the canvas is
+   clipped out of sight. */
 .nw-site .nwes-typecanvas {
   position: absolute;
   top: 0;
@@ -2007,8 +2009,8 @@
 }
 .nw-site .nwes-typecanvas canvas {
   display: block;
-  width: min(528px, calc(100vw - 80px));
-  height: 128px;
+  width: min(456px, calc(100vw - 76px));
+  height: 112px;
 }
 .nw-site .nwes-drop {
   position: relative;

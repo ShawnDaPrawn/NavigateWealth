@@ -7,8 +7,9 @@
  * and ink colours, the same typed rendering, the same upload checks and PNG
  * conversion, and the same image handed back — a PNG cropped to the ink, or
  * the uploaded or saved image. The typed signature is rendered, as live, on a
- * canvas the size of the live dialog's (128px tall, the dialog's width); the
- * board shows the choice as style tiles, so that canvas is kept out of sight.
+ * canvas the size of the live pad's (see esign.css), so the typed image comes
+ * out the same size; the board shows the choice as style tiles, so that canvas
+ * is kept out of sight.
  */
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
