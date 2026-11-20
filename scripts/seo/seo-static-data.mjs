@@ -945,6 +945,230 @@ export function createArticleRoute(article, siteUrl) {
   };
 }
 
+// ── llms.txt (https://llmstxt.org) ──────────────────────────────────────────
+
+export const ARTICLE_PATH_PREFIX = '/resources/article/';
+
+/**
+ * Cap on an article's excerpt in llms.txt. Wider than the 160-char SERP budget
+ * meta descriptions use: that one exists for Google's snippet, and at 160 most
+ * excerpts (median ~190 chars) were cut mid-sentence. 320 keeps nearly all of
+ * them whole.
+ */
+export const LLMS_DESCRIPTION_MAX = 320;
+
+/**
+ * The opening sentence and the closing line of the "Important Disclosure" in
+ * the site footer (src/site/layout/NavigatorFooter.tsx), quoted word for word
+ * so a model summarising the site knows the status of what it read. A test
+ * fails if the footer wording changes and this copy does not.
+ */
+export const LLMS_DISCLOSURE =
+  'The information on this website is for general informational purposes only and does not constitute financial, investment, tax, legal, or other professional advice. For tailored advice, please contact us directly.';
+
+/**
+ * llms.txt sections, in output order. Each claims the sitemap routes its
+ * predicate matches, first match wins. A route no section claims is listed
+ * under "More pages", so a public route added later is never silently left
+ * out of llms.txt.
+ */
+const LLMS_SECTIONS = [
+  {
+    heading: 'Services',
+    includes: (route) => route.path === '/services' || route.schema === 'service',
+  },
+  { heading: 'Who we help', includes: (route) => route.path.startsWith('/solutions/') },
+  {
+    heading: 'Get advice or a quote',
+    includes: (route) =>
+      ['/contact', '/schedule-consultation', '/get-quote'].includes(route.path) ||
+      route.path.startsWith('/get-quote/'),
+  },
+  {
+    heading: 'About Navigate Wealth',
+    includes: (route) =>
+      ['/', '/about', '/team', '/why-us', '/careers', '/press', '/legal'].includes(route.path),
+  },
+  { heading: 'Resources', includes: (route) => ['/resources', '/ask-vasco'].includes(route.path) },
+];
+
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+/**
+ * Render llms.txt: the business name, a one-line summary, the business facts,
+ * then the site's indexable pages grouped by topic. Published articles go under
+ * "Optional", the spec's marker for links a model may skip when its context is
+ * short, newest first.
+ *
+ * Built from the same inputs as the sitemap (the sitemap-eligible
+ * `publicSeoRoutes` plus the published articles), so the two list the same
+ * pages; verify-seo-build.mjs fails the build if they drift.
+ *
+ * @param {string} siteUrl
+ * @param {{
+ *   routes?: Array<{ path: string, title: string, description: string, schema?: string, sitemap?: boolean }>,
+ *   articles?: Array<{ path: string, title: string, description?: string, published?: string }>,
+ * }} [options]
+ */
+export function createLlmsTxt(siteUrl, { routes = publicSeoRoutes, articles = [] } = {}) {
+  const lines = [
+    `# ${DEFAULT_BUSINESS_NAME}`,
+    '',
+    `> ${collapseWhitespace(organizationData.description)}`,
+    '',
+    ...llmsFactLines(siteUrl),
+    '',
+    LLMS_DISCLOSURE,
+    '',
+    `Every indexable page is also listed in the [sitemap](${siteUrl}/sitemap.xml). Articles from the Resources library are listed under Optional, newest first.`,
+  ];
+
+  const unclaimed = routes.filter((route) => route.sitemap !== false);
+  const routeLink = (route) =>
+    llmsLink(
+      absoluteUrl(siteUrl, route.path),
+      route.path === '/' ? 'Home' : routePageName(route),
+      route.description,
+    );
+
+  const sections = LLMS_SECTIONS.map(({ heading, includes }) => {
+    const claimed = unclaimed.filter(includes);
+    for (const route of claimed) unclaimed.splice(unclaimed.indexOf(route), 1);
+    return [heading, claimed.map(routeLink)];
+  });
+  sections.push(['More pages', unclaimed.map(routeLink)]);
+  sections.push([
+    'Optional',
+    newestFirst(articles).map((article) =>
+      llmsLink(
+        absoluteUrl(siteUrl, article.path),
+        article.title,
+        [article.published ? `Published ${article.published}.` : '', article.description]
+          .filter(Boolean)
+          .join(' '),
+      ),
+    ),
+  ]);
+
+  for (const [heading, items] of sections) {
+    if (items.length) lines.push('', `## ${heading}`, '', ...items);
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+/**
+ * Read the article entries back out of a previously generated llms.txt — the
+ * inverse of the "Optional" section createLlmsTxt writes. The generator falls
+ * back on it when the build-time article fetch fails, the way it falls back on
+ * the article URLs already in sitemap.xml, so an offline build keeps each
+ * article's title and excerpt instead of losing them.
+ */
+export function parseLlmsTxtArticles(text, siteUrl) {
+  const optional = String(text ?? '').split(/^## Optional[ \t]*$/m)[1];
+  if (!optional) return [];
+
+  const entries = [];
+  const section = optional.split(/^## /m)[0];
+  for (const match of section.matchAll(
+    /^- \[((?:\\.|[^\\\]])*)\]\(([^)\s]+)\)(?::[ \t]*(.*))?$/gm,
+  )) {
+    const [, rawTitle, href, notes = ''] = match;
+    if (!href.startsWith(`${siteUrl}${ARTICLE_PATH_PREFIX}`)) continue;
+
+    const dated = notes.match(/^Published (\d{4}-\d{2}-\d{2})\.[ \t]*(.*)$/);
+    entries.push({
+      path: decodeLlmsHref(href.slice(siteUrl.length)),
+      title: rawTitle.replace(/\\(.)/g, '$1'),
+      published: dated ? dated[1] : '',
+      description: dated ? dated[2] : notes,
+    });
+  }
+  return entries;
+}
+
+/** "Published" dates are YYYY-MM-DD, so they sort as strings; undated last. */
+function newestFirst(articles) {
+  return [...articles].sort((a, b) =>
+    String(b.published || '').localeCompare(String(a.published || '')),
+  );
+}
+
+/**
+ * One llms.txt list item: `- [name](url): notes`. Square brackets in the name
+ * are escaped and parentheses in the URL percent-encoded, so neither can end
+ * the Markdown link early. encodeURIComponent leaves parentheses literal,
+ * which is why a slug can carry them.
+ */
+function llmsLink(url, name, notes) {
+  const text = collapseWhitespace(name).replace(/[\\[\]]/g, '\\$&');
+  const href = url.replace(/\(/g, '%28').replace(/\)/g, '%29');
+  const detail = collapseWhitespace(notes);
+  return `- [${text}](${href})${detail ? `: ${detail}` : ''}`;
+}
+
+function decodeLlmsHref(href) {
+  return href.replace(/%28/gi, '(').replace(/%29/gi, ')');
+}
+
+/** The business facts block, every value read from organization.json. */
+function llmsFactLines(siteUrl) {
+  const org = organizationData;
+  const address = org.address || {};
+  const facts = [
+    ['Legal name', org.legalName],
+    ['Website', siteUrl],
+    ['Founder', org.founder?.name],
+    ['Founded', org.foundingDate],
+    [
+      'Office',
+      [
+        address.streetAddress,
+        address.addressLocality,
+        address.addressRegion,
+        address.postalCode,
+        countryName(address.addressCountry),
+      ]
+        .filter(Boolean)
+        .join(', '),
+    ],
+    ['Telephone', org.telephone],
+    ['Email', org.email],
+    ['Office hours', formatOpeningHours(org.openingHoursSpecification)],
+    ['Languages', [].concat(org.availableLanguage || []).join(', ')],
+    ['Area served', org.areaServed?.name],
+    ['Advice areas', [].concat(org.knowsAbout || []).join(', ')],
+    ['Social profiles', [].concat(org.sameAs || []).join(', ')],
+  ];
+  return facts.filter(([, value]) => value).map(([label, value]) => `- ${label}: ${value}`);
+}
+
+function countryName(code) {
+  if (!code) return '';
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
+/** "Monday to Friday, 08:30 to 16:30 (South African Standard Time)". */
+function formatOpeningHours(specs) {
+  const parts = [].concat(specs || []).map((spec) => {
+    const days = [].concat(spec.dayOfWeek || []);
+    return `${formatDays(days)}, ${spec.opens} to ${spec.closes}`;
+  });
+  return parts.length ? `${parts.join('; ')} (South African Standard Time)` : '';
+}
+
+/** A run of three or more consecutive weekdays reads as a range. */
+function formatDays(days) {
+  const index = days.map((day) => WEEKDAYS.indexOf(day));
+  const isRun =
+    days.length > 2 &&
+    index.every((value, i) => value >= 0 && (i === 0 || value === index[i - 1] + 1));
+  return isRun ? `${days[0]} to ${days[days.length - 1]}` : days.join(', ');
+}
+
 export function createArticleSchema(route, siteUrl) {
   const article = route.article || {};
   const canonical = routeCanonicalUrl(route, siteUrl);

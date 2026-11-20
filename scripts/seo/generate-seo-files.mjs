@@ -1,12 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  ARTICLE_PATH_PREFIX,
   DEFAULT_SITE_URL,
   DEFAULT_TIMEZONE,
+  LLMS_DESCRIPTION_MAX,
   absoluteUrl,
+  clampSeoDescription,
+  createLlmsTxt,
   disallowPaths,
   escapeXml,
   normalizeSiteUrl,
+  parseLlmsTxtArticles,
   publicSeoRoutes,
   requireArticles,
   resolveArticleCanonicalOverride,
@@ -109,8 +114,14 @@ function main() {
 
       writeGeneratedFile(path.join(publicDir, 'sitemap.xml'), generateSitemapXml());
       writeGeneratedFile(path.join(publicDir, 'robots.txt'), generateRobotsTxt());
+      writeGeneratedFile(
+        path.join(publicDir, 'llms.txt'),
+        createLlmsTxt(siteUrl, { articles: articleEntriesForLlms(sitemapEntries) }),
+      );
 
-      console.log(`Generated sitemap and robots for ${siteUrl} (${sitemapEntries.length} URLs)`);
+      console.log(
+        `Generated sitemap, robots and llms.txt for ${siteUrl} (${sitemapEntries.length} URLs)`,
+      );
     })
     .catch((err) => {
       console.error('Failed to generate SEO files:', err);
@@ -226,12 +237,54 @@ function rowsToArticleEntries(rows) {
       buildDate;
 
     entries.push({
-      path: `/resources/article/${encodeURIComponent(slug)}`,
+      path: `${ARTICLE_PATH_PREFIX}${encodeURIComponent(slug)}`,
       lastmod,
       image: articleImageUrl(a),
+      // Read by llms.txt only; the sitemap ignores them.
+      title: typeof a.title === 'string' ? a.title.trim() : '',
+      description: clampSeoDescription(a.excerpt || a.subtitle || '', LLMS_DESCRIPTION_MAX),
+      published: toDateOnly(a.published_at) || '',
     });
   }
   return entries;
+}
+
+/**
+ * The articles llms.txt lists: exactly the article URLs in the sitemap. A fresh
+ * fetch carries each one's title. When the fetch failed and the URLs came from
+ * the cached sitemap instead, the title, date and excerpt are recovered from
+ * the previous llms.txt, or failing that the title is spelled out from the slug.
+ */
+function articleEntriesForLlms(entries) {
+  const articles = entries.filter((entry) => entry.path.startsWith(ARTICLE_PATH_PREFIX));
+  if (articles.every((entry) => entry.title)) return articles;
+
+  const cached = new Map(readCachedLlmsArticles().map((entry) => [entry.path, entry]));
+  return articles.map(
+    (entry) =>
+      (entry.title && entry) ||
+      cached.get(entry.path) || { path: entry.path, title: titleFromArticlePath(entry.path) },
+  );
+}
+
+function readCachedLlmsArticles() {
+  try {
+    return parseLlmsTxtArticles(fs.readFileSync(path.join(publicDir, 'llms.txt'), 'utf8'), siteUrl);
+  } catch {
+    return [];
+  }
+}
+
+/** "/resources/article/why-tfsa-matters" → "Why tfsa matters". */
+function titleFromArticlePath(articlePath) {
+  const slug = articlePath.slice(ARTICLE_PATH_PREFIX.length);
+  let words;
+  try {
+    words = decodeURIComponent(slug).replace(/-+/g, ' ').trim();
+  } catch {
+    words = slug;
+  }
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 function articleImageUrl(article) {

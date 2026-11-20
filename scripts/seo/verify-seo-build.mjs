@@ -21,6 +21,7 @@ const failures = [];
 
 verifyRobots();
 verifySitemap();
+verifyLlmsTxt();
 verifyStaticHtml();
 verifyArticlesPrerendered();
 verifySiteVerification();
@@ -88,6 +89,53 @@ function verifySitemap() {
     if (isDisallowed) {
       failures.push(`sitemap URL is disallowed by robots.txt: ${url}`);
     }
+  }
+}
+
+/**
+ * llms.txt must open with the spec's H1 and blockquote summary and must list
+ * exactly the URLs the sitemap lists. Both are written from the same data by
+ * generate-seo-files.mjs; this catches a filter later added to one and not
+ * the other.
+ */
+function verifyLlmsTxt() {
+  const llmsPath = path.resolve('public/llms.txt');
+  if (!fs.existsSync(llmsPath)) {
+    failures.push('public/llms.txt is missing');
+    return;
+  }
+
+  const llms = fs.readFileSync(llmsPath, 'utf8');
+  if (!/^# \S/.test(llms)) {
+    failures.push('llms.txt does not open with an H1 title');
+  }
+  if (!/^> \S/m.test(llms)) {
+    failures.push('llms.txt is missing its blockquote summary');
+  }
+
+  const sitemapPath = path.resolve('public/sitemap.xml');
+  if (!fs.existsSync(sitemapPath)) return; // verifySitemap already reports this.
+
+  // llms.txt percent-encodes parentheses so they cannot end a Markdown link.
+  const normalise = (url) => url.replace(/%28/gi, '(').replace(/%29/gi, ')');
+  const listed = new Set(
+    [...llms.matchAll(/^- \[(?:\\.|[^\\\]])*\]\(([^)\s]+)\)/gm)].map((match) =>
+      normalise(match[1]),
+    ),
+  );
+  const sitemapUrls = new Set(
+    [...fs.readFileSync(sitemapPath, 'utf8').matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) =>
+      normalise(decodeXml(match[1])),
+    ),
+  );
+
+  const missing = [...sitemapUrls].filter((url) => !listed.has(url));
+  const extra = [...listed].filter((url) => !sitemapUrls.has(url));
+  if (missing.length) {
+    failures.push(`llms.txt is missing ${missing.length} sitemap URL(s), e.g. ${missing[0]}`);
+  }
+  if (extra.length) {
+    failures.push(`llms.txt lists ${extra.length} URL(s) the sitemap does not, e.g. ${extra[0]}`);
   }
 }
 
