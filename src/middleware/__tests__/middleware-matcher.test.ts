@@ -19,6 +19,7 @@ describe('middleware matcher', () => {
   it('skips static assets and files with extensions', () => {
     expect(runsOn('/assets/index-abc.js')).toBe(false);
     expect(runsOn('/robots.txt')).toBe(false);
+    expect(runsOn('/llms.txt')).toBe(false);
     expect(runsOn('/_vercel/insights/script.js')).toBe(false);
   });
 

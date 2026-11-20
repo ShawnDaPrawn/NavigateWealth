@@ -365,7 +365,9 @@ IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
   and let any adviser reach every client); the resource library, brand kit
   reads, cron and KV-cleanup status are admin-only; `GET /publications/articles`
   and `/articles/:id` serve only published articles unless the caller is an
-  admin; a generic FNA update can no longer set `status` (publishing is its own
+  admin, and (since 2026-11) every public article read returns only the fields
+  in `PUBLIC_ARTICLE_FIELDS` — before that it also served the research
+  pipeline's `internal_*` notes and source URLs; a generic FNA update can no longer set `status` (publishing is its own
   admin route).
 - **Assigned adviser.** A client's own profile save could set `adviserId` /
   `applicationId`, which decide who their assigned adviser is — the thing
