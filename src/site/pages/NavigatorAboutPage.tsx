@@ -148,7 +148,7 @@ export function NavigatorAboutPage() {
   }, [hash]);
 
   return (
-    <div className="nw-site nwab-page">
+    <div className="nw-site nw-base nwab-page">
       <SEO
         title={seoData.title}
         description={seoData.description}

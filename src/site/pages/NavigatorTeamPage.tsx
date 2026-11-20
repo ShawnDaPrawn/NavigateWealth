@@ -117,7 +117,7 @@ export function NavigatorTeamPage() {
   const seo = getSEOData('team');
 
   return (
-    <div className="nw-site nwtm">
+    <div className="nw-site nw-base nwtm">
       <SEO
         {...seo}
         structuredData={createWebPageSchema(seo.title, seo.description, seo.canonicalUrl)}

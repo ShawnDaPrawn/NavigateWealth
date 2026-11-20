@@ -192,7 +192,7 @@ export function NavigatorWhyUsPage() {
   const seo = getSEOData('why-us');
 
   return (
-    <div className="nw-site nwwu">
+    <div className="nw-site nw-base nwwu">
       <SEO
         {...seo}
         structuredData={createWebPageSchema(seo.title, seo.description, seo.canonicalUrl)}

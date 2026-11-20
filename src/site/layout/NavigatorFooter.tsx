@@ -15,7 +15,10 @@ import wealthFooterLogo from 'figma:asset/8dc2892f50ecc4c5f692fd5ad52639699e2e46
 import { COMPANY } from '../../config/companyFacts';
 import { XIcon, NAVIGATE_WEALTH_X_URL } from '../../components/shared/XIcon';
 import { api } from '../../utils/api/client';
-import { FOOTER_LINKS, PHONE_DISPLAY, PHONE_HREF, type FooterLink } from '../siteLinks';
+import { FOOTER_LINKS, PHONE_HREF, type FooterLink } from '../siteLinks';
+
+/** The footer board writes the number in international form. */
+const FOOTER_PHONE = '(+27) 12-667-2505';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -141,6 +144,29 @@ export function NavigatorFooter() {
 
   return (
     <footer className="nwf">
+      <svg
+        className="nwf-rose"
+        aria-hidden="true"
+        width="520"
+        height="520"
+        viewBox="0 0 480 480"
+        fill="none"
+      >
+        <circle cx="240" cy="240" r="220" stroke="rgba(255,255,255,0.07)" />
+        <circle
+          cx="240"
+          cy="240"
+          r="206"
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth="10"
+          strokeDasharray="1 16.97"
+        />
+        <circle cx="240" cy="240" r="140" stroke="rgba(255,255,255,0.05)" strokeDasharray="2 6" />
+        <polygon
+          points="240,110 258.4,221.6 370,240 258.4,258.4 240,370 221.6,258.4 110,240 221.6,221.6"
+          stroke="rgba(246, 244, 239, 0.12)"
+        />
+      </svg>
       <div className="nwf-inner">
         <div className="nwf-news">
           <div className="nwf-news-copy">
@@ -169,7 +195,7 @@ export function NavigatorFooter() {
                 <li>
                   <Phone size={16} strokeWidth={1.75} aria-hidden="true" />
                   <a className="nwf-contact" href={PHONE_HREF}>
-                    {PHONE_DISPLAY}
+                    {FOOTER_PHONE}
                   </a>
                 </li>
                 <li>
@@ -225,7 +251,7 @@ export function NavigatorFooter() {
               rel="noopener noreferrer"
               aria-label="Navigate Wealth on LinkedIn"
             >
-              <Linkedin size={18} strokeWidth={1.75} aria-hidden="true" />
+              <Linkedin size={16} strokeWidth={1.75} aria-hidden="true" />
             </a>
             <a
               className="nwf-social"
@@ -234,7 +260,7 @@ export function NavigatorFooter() {
               rel="noopener noreferrer"
               aria-label="Navigate Wealth on Instagram"
             >
-              <Instagram size={18} strokeWidth={1.75} aria-hidden="true" />
+              <Instagram size={16} strokeWidth={1.75} aria-hidden="true" />
             </a>
             <a
               className="nwf-social"

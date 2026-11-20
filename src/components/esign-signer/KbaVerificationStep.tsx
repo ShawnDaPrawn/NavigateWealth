@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { AlertCircle, FileText, Loader2, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
 import type { KbaVerificationResult, SignerSessionData } from './types';
+import { useKbaVerification } from './hooks/useKbaVerification';
 
 interface KbaVerificationStepProps {
   token: string;
@@ -19,47 +19,11 @@ export function KbaVerificationStep({
   onVerified,
   verifyKba,
 }: KbaVerificationStepProps) {
-  const [idNumber, setIdNumber] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleVerify = async () => {
-    setIsVerifying(true);
-    setError('');
-
-    try {
-      const result = await verifyKba(token, idNumber.trim() || undefined);
-      if (result.status === 'passed') {
-        onVerified();
-        return;
-      }
-
-      if (result.actionUrl) {
-        let providerUrl: URL;
-        try {
-          providerUrl = new URL(result.actionUrl);
-        } catch {
-          setError('The identity provider returned an invalid verification link.');
-          return;
-        }
-        if (providerUrl.protocol !== 'https:') {
-          setError('The identity provider returned an insecure verification link.');
-          return;
-        }
-        window.location.assign(providerUrl.href);
-        return;
-      }
-
-      setError(
-        result.error ||
-          (result.status === 'skipped'
-            ? 'Identity verification is not currently available. Please contact the sender.'
-            : 'We could not verify your identity. Please check your details and try again.'),
-      );
-    } finally {
-      setIsVerifying(false);
-    }
-  };
+  const { idNumber, setIdNumber, isVerifying, error, handleVerify } = useKbaVerification({
+    token,
+    onVerified,
+    verifyKba,
+  });
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4" aria-label="Identity check">

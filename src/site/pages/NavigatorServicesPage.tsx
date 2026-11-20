@@ -100,7 +100,7 @@ export function NavigatorServicesPage() {
   }, [hash]);
 
   return (
-    <div className="nw-site nwsv">
+    <div className="nw-site nw-base nwsv">
       <SEO
         title={SEO_DATA.title}
         description={SEO_DATA.description}

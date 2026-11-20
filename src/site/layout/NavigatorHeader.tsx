@@ -1,49 +1,61 @@
 /**
- * Public site header for the Navigator design: the contact top bar, the main
- * navigation with its three mega menus, and the phone menu sheet.
+ * Public site header for the Navigator design, as the "Header" board draws it:
+ * the contact top bar, the main navigation with its full-width mega menu, and
+ * the phone menu sheet ("MobileMenu" board).
  *
- * Menu content comes from the same navigationData.ts the legacy header reads,
- * so both designs always offer the same pages under the same names. The logo is
- * the current one (Logo.tsx); the new logo pack is deliberately not used yet.
+ * Menu pages come from the same navigationData.ts the legacy header reads, so
+ * both designs always offer the same pages under the same names. The panel copy
+ * (taglines, the "Next step" card) is the board's. The logo is the current one
+ * (Logo.tsx); the new logo pack is deliberately not used yet.
  */
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
-import {
-  ArrowRight,
-  ChevronDown,
-  Clock,
-  Compass,
-  FileText,
-  LogIn,
-  Mail,
-  Menu,
-  MessageCircle,
-  Phone,
-  X,
-} from 'lucide-react';
 import { COMPANY } from '../../config/companyFacts';
 import { Logo } from '../../components/layout/Logo';
 import {
   companyItems,
-  companyPanel,
   serviceItems,
-  servicesPanel,
   solutionItems,
-  solutionsPanel,
-  type MegaPanelConfig,
   type NavMenuItem,
 } from '../../components/layout/navigationData';
 import { getOptimizedImageUrl } from '../../utils/optimizedImages';
 import { BUSINESS_HOURS, PHONE_DISPLAY, PHONE_HREF, WHATSAPP_HREF } from '../siteLinks';
+import {
+  ArrowIcon,
+  BurgerIcon,
+  ChatIcon,
+  ChevronIcon,
+  ClockIcon,
+  CloseIcon,
+  CompassIcon,
+  INK,
+  LogInIcon,
+  MailIcon,
+  MenuIcon,
+  PhoneIcon,
+  QUOTE_BLUE,
+  QuoteIcon,
+  WHATSAPP_GREEN,
+} from './HeaderIcons';
 
 type MenuKey = 'services' | 'solutions' | 'company';
+
+/** The top bar writes the number with hyphens on the board. */
+const TOP_BAR_PHONE = '012-667-2505';
+
+interface PanelCopy {
+  tagline: string;
+  body: string;
+  cta: { label: string; to: string };
+  listLabel: string;
+  feature: { label: string; title: string; cta: string; to: string; imageKey: string };
+}
 
 interface MenuDef {
   key: MenuKey;
   label: string;
   items: NavMenuItem[];
-  panel: MegaPanelConfig;
-  wide: boolean;
+  copy: PanelCopy;
   isActive: (pathname: string) => boolean;
 }
 
@@ -52,24 +64,57 @@ const MENUS: MenuDef[] = [
     key: 'services',
     label: 'Services',
     items: serviceItems,
-    panel: servicesPanel,
-    wide: true,
+    copy: {
+      tagline: 'Advice for every part of your financial life.',
+      body: 'Independent advice across protection, investment, retirement, tax and estate planning.',
+      cta: { label: 'View all services', to: '/services' },
+      listLabel: 'Advice areas',
+      feature: {
+        label: 'Next step',
+        title: 'Talk it through with an adviser.',
+        cta: 'Book a free consultation',
+        to: '/schedule-consultation',
+        imageKey: 'services-menu',
+      },
+    },
     isActive: (p) => p === '/services' || serviceItems.some((i) => i.path === p),
   },
   {
     key: 'solutions',
     label: 'Solutions',
     items: solutionItems,
-    panel: solutionsPanel,
-    wide: false,
+    copy: {
+      tagline: 'Tailored guidance for wherever you are.',
+      body: 'Advice shaped around your situation, whether you are planning for a household, a business or a practice.',
+      cta: { label: 'Speak to an adviser', to: '/contact' },
+      listLabel: 'Who we help',
+      feature: {
+        label: 'Next step',
+        title: 'Get a quote tailored to you.',
+        cta: 'Request a quote',
+        to: '/get-quote',
+        imageKey: 'solutions-menu',
+      },
+    },
     isActive: (p) => p.startsWith('/solutions'),
   },
   {
     key: 'company',
     label: 'Company',
     items: companyItems,
-    panel: companyPanel,
-    wide: false,
+    copy: {
+      tagline: `Get to know ${COMPANY.tradingName}.`,
+      body: `An independent, proudly South African financial advisory practice. FSP ${COMPANY.fspNumber}.`,
+      cta: { label: 'Contact us', to: '/contact' },
+      listLabel: 'Explore',
+      feature: {
+        label: 'Our people',
+        title: 'The people behind the advice.',
+        cta: 'Meet our founder',
+        to: '/team',
+        imageKey: 'company-menu',
+      },
+    },
     // /team is reached from About, not the menu, but it is a company page.
     isActive: (p) => p === '/team' || companyItems.some((i) => i.path === p),
   },
@@ -87,18 +132,19 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
   const { pathname } = useLocation();
   const [openMenu, setOpenMenu] = useState<MenuKey | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetSection, setSheetSection] = useState<MenuKey | null>(null);
-  const rowRef = useRef<HTMLDivElement>(null);
+  // The board opens the phone menu with Services expanded.
+  const [sheetSection, setSheetSection] = useState<MenuKey | null>('services');
+  const navRef = useRef<HTMLElement>(null);
   const idBase = useId();
 
   // Any navigation closes every menu.
   useEffect(() => {
     setOpenMenu(null);
     setSheetOpen(false);
-    setSheetSection(null);
+    setSheetSection('services');
   }, [pathname]);
 
-  // Escape closes, and so does a click outside the navigation row.
+  // Escape closes, and so does a click outside the navigation.
   useEffect(() => {
     if (!openMenu && !sheetOpen) return;
     const onKey = (event: KeyboardEvent) => {
@@ -108,7 +154,7 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
       }
     };
     const onPointer = (event: PointerEvent) => {
-      if (rowRef.current && !rowRef.current.contains(event.target as Node)) {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
         setOpenMenu(null);
       }
     };
@@ -128,17 +174,17 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
       <div className="nwh-top" data-collapsed={isScrolled ? 'true' : 'false'}>
         <div className="nwh-wrap nwh-top-row">
           <div className="nwh-hours">
-            <Clock size={14} strokeWidth={1.75} aria-hidden="true" />
+            <ClockIcon size={15} stroke={INK} />
             <span>{BUSINESS_HOURS}</span>
           </div>
           <div className="nwh-top-contacts">
             <a className="nwh-toplink" href={PHONE_HREF}>
-              <Phone size={14} strokeWidth={1.75} aria-hidden="true" />
-              <span>{PHONE_DISPLAY}</span>
+              <PhoneIcon size={15} stroke={INK} />
+              <span>{TOP_BAR_PHONE}</span>
             </a>
             <span className="nwh-top-sep" aria-hidden="true" />
             <a className="nwh-toplink" href={`mailto:${COMPANY.email}`}>
-              <Mail size={14} strokeWidth={1.75} aria-hidden="true" />
+              <MailIcon size={15} stroke={INK} />
               <span>{COMPANY.email}</span>
             </a>
             <span className="nwh-top-sep" aria-hidden="true" />
@@ -148,12 +194,12 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <MessageCircle size={14} strokeWidth={1.75} aria-hidden="true" />
+              <ChatIcon size={15} stroke={WHATSAPP_GREEN} />
               <span>WhatsApp</span>
             </a>
             <span className="nwh-top-sep" aria-hidden="true" />
             <Link className="nwh-toplink" to="/get-quote">
-              <FileText size={14} strokeWidth={1.75} aria-hidden="true" />
+              <QuoteIcon size={15} stroke={QUOTE_BLUE} />
               <span>Get Quote</span>
             </Link>
           </div>
@@ -163,7 +209,7 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
               href={PHONE_HREF}
               aria-label={`Call Navigate Wealth on ${PHONE_DISPLAY}`}
             >
-              <Phone size={16} strokeWidth={1.75} aria-hidden="true" />
+              <PhoneIcon size={15} stroke={INK} />
             </a>
             <a
               className="nwh-toplink"
@@ -172,27 +218,28 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
               rel="noopener noreferrer"
               aria-label="Chat to Navigate Wealth on WhatsApp"
             >
-              <MessageCircle size={16} strokeWidth={1.75} aria-hidden="true" />
+              <ChatIcon size={15} stroke={WHATSAPP_GREEN} />
             </a>
             <Link className="nwh-toplink" to="/get-quote" aria-label="Get a quote">
-              <FileText size={16} strokeWidth={1.75} aria-hidden="true" />
+              <QuoteIcon size={15} stroke={QUOTE_BLUE} rules="top" />
             </Link>
           </div>
         </div>
       </div>
 
       <nav
+        ref={navRef}
         aria-label="Main navigation"
         className="nwh-bar"
         data-scrolled={isScrolled ? 'true' : 'false'}
       >
-        <div className="nwh-wrap nwh-row" ref={rowRef}>
+        <div className="nwh-wrap nwh-row">
           <Link to="/" className="nwh-home" aria-label="Navigate Wealth home">
             <Logo />
           </Link>
 
-          <div className="nwh-links nwh-desktop">
-            <Link className="nwh-link" to="/" aria-current={current('/')}>
+          <div className="nwh-links nwh-desktop" data-menu-open={openMenu ? 'true' : undefined}>
+            <Link className="nwh-link nwh-link-home" to="/" aria-current={current('/')}>
               Home
             </Link>
             {MENUS.map((menu) => {
@@ -203,22 +250,20 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
                   type="button"
                   className="nwh-link"
                   aria-expanded={open}
-                  aria-controls={`${idBase}-${menu.key}`}
+                  aria-controls={`${idBase}-mega`}
                   data-active={menu.isActive(pathname) ? 'true' : undefined}
-                  onClick={() => setOpenMenu(open ? null : menu.key)}
+                  onClick={() => {
+                    setOpenMenu(open ? null : menu.key);
+                    setSheetOpen(false);
+                  }}
                 >
                   {menu.label}
-                  <ChevronDown
-                    className="nwh-chev"
-                    size={14}
-                    strokeWidth={1.75}
-                    aria-hidden="true"
-                  />
+                  <ChevronIcon className="nwh-chev" size={14} />
                 </button>
               );
             })}
             <Link className="nwh-link" to="/ask-vasco" aria-current={current('/ask-vasco')}>
-              <Compass size={16} strokeWidth={1.75} aria-hidden="true" />
+              <CompassIcon size={16} />
               Ask Vasco
             </Link>
             <Link
@@ -241,7 +286,7 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
 
           <div className="nwh-actions nwh-desktop">
             <Link className="nwh-ghost" to="/login">
-              <LogIn size={16} strokeWidth={1.75} aria-hidden="true" />
+              <LogInIcon className="nwh-login-ic" size={16} />
               Log In
             </Link>
             <Link className="nwh-primary" to="/signup">
@@ -250,7 +295,7 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
           </div>
 
           <div className="nwh-mobile">
-            <Link className="nwh-primary" to="/signup">
+            <Link className="nwh-primary nwh-mcta" to="/signup">
               Get Started
             </Link>
             <button
@@ -259,103 +304,77 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
               aria-label={sheetOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={sheetOpen}
               aria-controls={`${idBase}-sheet`}
-              onClick={() => setSheetOpen((open) => !open)}
+              onClick={() => {
+                setSheetOpen((open) => !open);
+                setOpenMenu(null);
+              }}
             >
-              {sheetOpen ? (
-                <X size={20} strokeWidth={1.75} aria-hidden="true" />
-              ) : (
-                <Menu size={20} strokeWidth={1.75} aria-hidden="true" />
-              )}
+              {sheetOpen ? <CloseIcon /> : <BurgerIcon />}
             </button>
           </div>
 
-          {activeMenu && (
-            <MegaPanel
-              id={`${idBase}-${activeMenu.key}`}
-              menu={activeMenu}
-              onNavigate={() => setOpenMenu(null)}
-            />
-          )}
-        </div>
-
-        {sheetOpen && (
-          <div className="nwh-sheet" id={`${idBase}-sheet`}>
-            <div className="nwh-sheet-inner">
-              <ul className="nwh-sheet-list">
-                <li>
-                  <Link className="nwh-mrow" to="/" aria-current={current('/')}>
-                    Home
-                  </Link>
-                </li>
-                {MENUS.map((menu) => {
-                  const open = sheetSection === menu.key;
-                  return (
-                    <li key={menu.key}>
-                      <button
-                        type="button"
-                        className="nwh-mrow"
-                        aria-expanded={open}
-                        aria-controls={`${idBase}-m-${menu.key}`}
-                        onClick={() => setSheetSection(open ? null : menu.key)}
-                      >
-                        {menu.label}
-                        <ChevronDown
-                          className="nwh-chev"
-                          size={18}
-                          strokeWidth={1.75}
-                          aria-hidden="true"
-                        />
-                      </button>
-                      {open && (
-                        <ul className="nwh-msub" id={`${idBase}-m-${menu.key}`}>
-                          {menu.key === 'services' && (
-                            <li>
-                              <Link to="/services">
-                                <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
-                                All services
-                              </Link>
-                            </li>
-                          )}
-                          {menu.items.map((item) => (
-                            <li key={item.path}>
-                              <Link to={item.path} aria-current={current(item.path)}>
-                                <item.icon size={16} strokeWidth={1.75} aria-hidden="true" />
-                                {item.label}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </li>
-                  );
-                })}
-                <li>
-                  <Link className="nwh-mrow" to="/ask-vasco" aria-current={current('/ask-vasco')}>
-                    Ask Vasco
-                  </Link>
-                </li>
-                <li>
-                  <Link className="nwh-mrow" to="/resources" aria-current={current('/resources')}>
-                    Resources
-                  </Link>
-                </li>
-                <li>
-                  <Link className="nwh-mrow" to="/contact" aria-current={current('/contact')}>
-                    Contact
-                  </Link>
-                </li>
-              </ul>
+          {sheetOpen && (
+            <div className="nwh-sheet nwh-mobile" id={`${idBase}-sheet`}>
+              <Link className="nwh-mrow" to="/" aria-current={current('/')}>
+                Home
+              </Link>
+              {MENUS.map((menu) => {
+                const open = sheetSection === menu.key;
+                return (
+                  <div key={menu.key} className="nwh-mgroup">
+                    <button
+                      type="button"
+                      className="nwh-mrow nwh-mrow--group"
+                      aria-expanded={open}
+                      aria-controls={`${idBase}-m-${menu.key}`}
+                      onClick={() => setSheetSection(open ? null : menu.key)}
+                    >
+                      <span>{menu.label}</span>
+                      <ChevronIcon className="nwh-chev" size={18} />
+                    </button>
+                    {open && (
+                      <div className="nwh-mtiles" id={`${idBase}-m-${menu.key}`}>
+                        {menu.items.map((item) => (
+                          <Link
+                            key={item.path}
+                            className="nwh-tile"
+                            to={item.path}
+                            aria-current={current(item.path)}
+                          >
+                            <span className="nwh-tile-i" aria-hidden="true">
+                              <MenuIcon path={item.path} size={16} />
+                            </span>
+                            <span className="nwh-tile-t">{item.label}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <Link className="nwh-mrow" to="/ask-vasco" aria-current={current('/ask-vasco')}>
+                <CompassIcon size={18} stroke={INK} />
+                Ask Vasco
+              </Link>
+              <Link className="nwh-mrow" to="/resources" aria-current={current('/resources')}>
+                Resources
+              </Link>
+              <Link className="nwh-mrow" to="/contact" aria-current={current('/contact')}>
+                Contact
+              </Link>
               <div className="nwh-sheet-actions">
-                <Link className="nw-outline" to="/login">
-                  <LogIn size={16} strokeWidth={1.75} aria-hidden="true" />
+                <Link className="nwh-ghost nwh-sheet-login" to="/login">
+                  <LogInIcon size={16} />
                   Log In
                 </Link>
-                <Link className="nw-btn" to="/signup">
+                <Link className="nwh-primary nwh-sheet-start" to="/signup">
                   Get Started
                 </Link>
+              </div>
+              <div className="nwh-sheet-quick">
                 <a className="nwh-quick" href={PHONE_HREF}>
-                  <Phone size={15} strokeWidth={1.75} aria-hidden="true" />
-                  Call us
+                  <PhoneIcon size={17} stroke={INK} />
+                  Call
                 </a>
                 <a
                   className="nwh-quick"
@@ -363,12 +382,34 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <MessageCircle size={15} strokeWidth={1.75} aria-hidden="true" />
+                  <ChatIcon size={17} stroke={WHATSAPP_GREEN} />
                   WhatsApp
                 </a>
+                <Link className="nwh-quick" to="/get-quote">
+                  <QuoteIcon size={17} stroke={QUOTE_BLUE} rules="lower" />
+                  Get Quote
+                </Link>
               </div>
+              <p className="nwh-sheet-note">
+                {BUSINESS_HOURS} · FSP {COMPANY.fspNumber}
+              </p>
             </div>
-          </div>
+          )}
+        </div>
+
+        {activeMenu && (
+          <>
+            <div
+              className="nwh-scrim nwh-desktop"
+              aria-hidden="true"
+              onClick={() => setOpenMenu(null)}
+            />
+            <MegaPanel
+              id={`${idBase}-mega`}
+              menu={activeMenu}
+              onNavigate={() => setOpenMenu(null)}
+            />
+          </>
         )}
       </nav>
     </header>
@@ -384,55 +425,72 @@ function MegaPanel({
   menu: MenuDef;
   onNavigate: () => void;
 }) {
-  const { panel, items } = menu;
+  const { copy, items } = menu;
+  const { feature } = copy;
   return (
-    <div
-      id={id}
-      className={`nwh-panel nwh-desktop ${menu.wide ? 'nwh-panel--wide' : 'nwh-panel--narrow'}`}
-    >
-      <div className="nwh-panel-media">
-        <picture>
-          <source
-            type="image/avif"
-            srcSet={`${getOptimizedImageUrl(panel.image.key, 480, 'avif')} 480w, ${getOptimizedImageUrl(panel.image.key, 768, 'avif')} 768w`}
-            sizes="300px"
-          />
-          <img
-            src={getOptimizedImageUrl(panel.image.key, 768, 'webp')}
-            alt={panel.image.alt}
-            width={300}
-            height={320}
-            decoding="async"
-          />
-        </picture>
-        <div className="nwh-panel-copy">
-          <p className="nwh-panel-heading">{panel.heading}</p>
-          <p className="nwh-panel-tagline">{panel.tagline}</p>
-          {panel.cta && (
-            <Link className="nwh-cta" to={panel.cta.to} onClick={onNavigate}>
-              {panel.cta.label}
-              <ArrowRight size={14} strokeWidth={1.75} aria-hidden="true" />
+    <div id={id} className="nwh-panel nwh-desktop" role="region" aria-label={`${menu.label} menu`}>
+      <div className="nwh-wrap">
+        <div className="nwh-mm-grid">
+          <div className="nwh-mm-intro">
+            <p className="nwh-mm-label">{menu.label}</p>
+            <p className="nwh-mm-tagline">{copy.tagline}</p>
+            <p className="nwh-mm-body">{copy.body}</p>
+            <Link className="nwh-mm-cta nwh-mm-more" to={copy.cta.to} onClick={onNavigate}>
+              {copy.cta.label}
+              <ArrowIcon size={15} />
             </Link>
-          )}
+          </div>
+
+          <div>
+            <p className="nwh-mm-label">{copy.listLabel}</p>
+            <div className="nwh-mm-list">
+              {items.map((item) => (
+                <Link key={item.path} className="nwh-mm-item" to={item.path} onClick={onNavigate}>
+                  <span className="nwh-mm-ic" aria-hidden="true">
+                    <MenuIcon path={item.path} size={17} />
+                  </span>
+                  <span className="nwh-mm-text">
+                    <span className="nwh-mm-t">{item.label}</span>
+                    <span className="nwh-mm-d" data-testid="nav-tile-description">
+                      {item.description}
+                    </span>
+                  </span>
+                  <ArrowIcon className="nwh-mm-arrow" size={16} />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="nwh-mm-feature">
+            <p className="nwh-mm-label">{feature.label}</p>
+            <Link className="nwh-mm-card" to={feature.to} onClick={onNavigate}>
+              <div className="nwh-mm-card-media">
+                <picture>
+                  <source
+                    type="image/avif"
+                    srcSet={`${getOptimizedImageUrl(feature.imageKey, 480, 'avif')} 480w, ${getOptimizedImageUrl(feature.imageKey, 768, 'avif')} 768w`}
+                    sizes="272px"
+                  />
+                  <img
+                    src={getOptimizedImageUrl(feature.imageKey, 768, 'webp')}
+                    alt=""
+                    width={272}
+                    height={120}
+                    decoding="async"
+                  />
+                </picture>
+              </div>
+              <div className="nwh-mm-card-body">
+                <span className="nwh-mm-card-t">{feature.title}</span>
+                <span className="nwh-mm-cta nwh-mm-card-cta">
+                  {feature.cta}
+                  <ArrowIcon size={14} />
+                </span>
+              </div>
+            </Link>
+          </div>
         </div>
       </div>
-      <ul className="nwh-grid" aria-label={menu.label}>
-        {items.map((item) => (
-          <li key={item.path}>
-            <Link className="nwh-tile" to={item.path} onClick={onNavigate}>
-              <span className="nwh-tile-i" aria-hidden="true">
-                <item.icon size={18} strokeWidth={1.75} />
-              </span>
-              <span>
-                <span className="nwh-tile-t">{item.label}</span>
-                <span className="nwh-tile-d" data-testid="nav-tile-description">
-                  {item.description}
-                </span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

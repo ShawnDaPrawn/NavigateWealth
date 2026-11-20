@@ -9,8 +9,8 @@
  *       signing → rejected (signer declines)
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router';
+import { lazy, Suspense } from 'react';
+import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Loader2, AlertCircle, ShieldCheck, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Card } from '../ui/card';
@@ -20,142 +20,50 @@ import { OtpVerificationStep } from './OtpVerificationStep';
 import { KbaVerificationStep } from './KbaVerificationStep';
 import { SigningWorkflow } from './SigningWorkflow';
 import { SigningCompletePage } from './SigningCompletePage';
-import { useSignerSession } from './hooks/useSignerSession';
+import { useSignerLandingFlow } from './hooks/useSignerLandingFlow';
 import { useSignerBranding } from './hooks/useSignerBranding';
 import { t, normaliseLang } from './i18n';
 import type { SignerOrderSummary } from './types';
+import { SITE_DESIGN } from '../../site/design';
 
-type SigningStep =
-  'loading' | 'expired' | 'otp' | 'kba' | 'signing' | 'waiting' | 'complete' | 'rejected' | 'error';
+const NavigatorSigningPage = lazy(() =>
+  import('../../site/pages/NavigatorSigningPage').then((m) => ({
+    default: m.NavigatorSigningPage,
+  })),
+);
 
+/**
+ * The page a signer opens from their email. The build's design switch picks
+ * the layout; both run the same flow (hooks/useSignerLandingFlow.ts) — the
+ * same token handling, the same calls and the same step decisions — and differ
+ * only in how each step is drawn.
+ */
 export function SignerLandingPage() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-
-  // SECURITY (SECURITY-AUDIT S8): the access token arrives as `/sign?token=…`
-  // and IS the signer's credential. Left in the address bar it reaches browser
-  // history, the `Referer` header on any outbound link, and anything reading
-  // `location.href`. It is therefore captured ONCE here and stripped from the
-  // URL below.
-  //
-  // The capture must be a ref rather than a plain read: after the
-  // `replaceState` the query string is gone, so re-reading `searchParams` on a
-  // later render would yield null and bounce a valid signer to the "expired"
-  // screen. Every later use in this component (OTP, KBA, submit, reject) reads
-  // this captured value.
-  const tokenRef = useRef<string | null>(searchParams.get('token'));
-  const token = tokenRef.current;
-
-  useEffect(() => {
-    if (!token) return;
-    const url = new URL(window.location.href);
-    if (!url.searchParams.has('token')) return;
-    url.searchParams.delete('token');
-    // replaceState, not pushState: the token-bearing entry must be REPLACED, or
-    // Back would restore it to the address bar.
-    window.history.replaceState(
-      window.history.state,
-      '',
-      `${url.pathname}${url.search}${url.hash}`,
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorSigningPage />
+      </Suspense>
     );
-  }, [token]);
+  }
+  return <LegacySignerLandingPage />;
+}
 
-  const [currentStep, setCurrentStep] = useState<SigningStep>('loading');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+function LegacySignerLandingPage() {
+  const navigate = useNavigate();
   const {
+    token,
+    currentStep,
+    errorMessage,
     sessionData,
-    validateToken,
     verifyOtp,
     verifyKba,
     submitSignature,
-    rejectDocument,
     resendOtp,
-  } = useSignerSession();
-
-  // Initial token validation
-  useEffect(() => {
-    if (!token) {
-      setCurrentStep('expired');
-      return;
-    }
-
-    validateToken(token).then((result) => {
-      if (result.success && result.data) {
-        // Check envelope status first
-        if (result.data.envelope_status === 'voided') {
-          setErrorMessage('This document has been voided by the sender.');
-          setCurrentStep('expired');
-          return;
-        }
-
-        // Check if already signed
-        if (result.data.signer_status === 'signed') {
-          setCurrentStep('complete');
-        } else if (
-          result.data.signer_status === 'rejected' ||
-          result.data.signer_status === 'declined'
-        ) {
-          setCurrentStep('rejected');
-        } else if (result.data.is_turn === false) {
-          // Sequential signing: not this signer's turn yet
-          setCurrentStep('waiting');
-        } else if (
-          result.data.missing_factors?.includes('otp') ||
-          result.data.missing_factors?.includes('access_code') ||
-          (result.data.otp_required && result.data.signer_status !== 'otp_verified')
-        ) {
-          setCurrentStep('otp');
-        } else if (result.data.missing_factors?.includes('kba')) {
-          setCurrentStep('kba');
-        } else if (result.data.challenge_required) {
-          setErrorMessage('This signing challenge is not supported. Please contact the sender.');
-          setCurrentStep('expired');
-        } else {
-          setCurrentStep('signing');
-        }
-      } else {
-        setErrorMessage(result.error || 'This link has expired or is invalid.');
-        setCurrentStep('expired');
-      }
-    });
-  }, [token, validateToken]);
-
-  const handleChallengeVerified = async () => {
-    if (!token) return;
-    const refreshed = await validateToken(token);
-    if (refreshed.success && refreshed.data) {
-      if (
-        refreshed.data.missing_factors?.includes('otp') ||
-        refreshed.data.missing_factors?.includes('access_code')
-      ) {
-        setCurrentStep('otp');
-        return;
-      }
-      if (refreshed.data.missing_factors?.includes('kba')) {
-        setCurrentStep('kba');
-        return;
-      }
-      if (!refreshed.data.challenge_required) {
-        setCurrentStep('signing');
-        return;
-      }
-    }
-    setErrorMessage(refreshed.error || 'Unable to open the document after verification.');
-    setCurrentStep('expired');
-  };
-
-  const handleSigningComplete = () => {
-    setCurrentStep('complete');
-  };
-
-  const handleReject = async (reason: string) => {
-    if (!token) return;
-
-    const result = await rejectDocument(token, reason);
-    if (result.success) {
-      setCurrentStep('rejected');
-    }
-  };
+    handleChallengeVerified,
+    handleSigningComplete,
+    handleReject,
+  } = useSignerLandingFlow();
 
   // P8.6 / P8.7 — derive firm branding + signer-preferred language
   // once per render. Both fall back to platform defaults when nothing

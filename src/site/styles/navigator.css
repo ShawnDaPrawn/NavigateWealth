@@ -141,6 +141,36 @@
 .nw-site p {
   text-wrap: pretty;
 }
+/*
+ * The board page: what a .dc.html artboard's <body> gives the text in it.
+ *
+ * The boards draw on a bare page: 16px text in the font's normal line box, and
+ * headings, paragraphs and form controls that inherit from their parent. This
+ * site's root is 14px, Tailwind's preflight puts 1.5 on <html>, and globals.css
+ * gives bare p, h3, label and button the legacy site's sizes (p at
+ * 1.125rem/1.6, h3 at 600 in black). Anything that does not set its own size or
+ * line-height therefore came out smaller or taller than the board.
+ *
+ * Opt-in per page with `nw-base` on the page root (the header and footer always
+ * use it), so pages built against the old base keep their measurements. The
+ * element rules have zero specificity: any class rule in a page stylesheet
+ * still wins.
+ */
+.nw-site .nwh,
+.nw-site .nwf,
+.nw-site.nw-base {
+  font-size: 16px;
+  line-height: normal;
+}
+:where(.nwh, .nwf, .nw-base) :where(p, label, button, input, select, textarea) {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+:where(.nwh, .nwf, .nw-base) :where(h1, h2, h3, h4, h5, h6) {
+  line-height: inherit;
+  color: inherit;
+}
 .nw-site .nw-wrap {
   max-width: 1320px;
   margin: 0 auto;
@@ -218,14 +248,24 @@
   padding: 0 28px;
   font-size: 16px;
 }
+/* Phones: the boards bring every 56px action down to 48px and 15px. */
+@media (max-width: 640px) {
+  .nw-site .nw-btn--lg {
+    height: 48px;
+    font-size: 15px;
+  }
+}
 .nw-site .nw-btn {
   background: var(--nw-violet);
   color: #ffffff;
   border: 0;
 }
-.nw-site .nw-btn:hover,
-.nw-site .nw-btn:focus-visible {
+.nw-site .nw-btn:hover {
   background: var(--nw-violet-hover);
+  color: #ffffff;
+}
+/* Focus shows the ring only; the board does not darken a focused button. */
+.nw-site .nw-btn:focus-visible {
   color: #ffffff;
 }
 .nw-site .nw-btn:disabled {
@@ -258,6 +298,15 @@
 }
 .nw-site :is(.nw-btn, .nw-outline, .nw-ghost-dark):active {
   transform: translateY(1px);
+}
+/* The board's arrow nudge. It needs an element before the arrow: an action
+   whose label is bare text has the arrow as its first element child, and on
+   the board that arrow stays put. */
+.nw-site :is(.nw-btn, .nw-outline, .nw-ghost-dark) > svg:last-child:not(:first-child) {
+  transition: transform var(--nw-dur-2) var(--nw-ease);
+}
+.nw-site :is(.nw-btn, .nw-outline, .nw-ghost-dark):hover > svg:last-child:not(:first-child) {
+  transform: translateX(3px);
 }
 /* Icons inside actions always take the action's text colour. */
 .nw-site :is(.nw-btn, .nw-outline, .nw-ghost-dark) svg {
@@ -325,7 +374,7 @@
 .nw-site .nwh-top-icons {
   display: none;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .nw-site .nwh-toplink {
   display: flex;
@@ -336,9 +385,11 @@
   transition: color 0.2s;
 }
 .nw-site .nwh-top-icons .nwh-toplink {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   justify-content: center;
+  border-radius: var(--nw-r-sm);
+  background: rgba(255, 255, 255, 0.75);
 }
 .nw-site .nwh-toplink:hover {
   color: var(--nw-ink);
@@ -365,6 +416,13 @@
   align-items: center;
   flex-shrink: 0;
 }
+/* Logo.tsx's high-quality-image class lifts contrast and puts the logo on its
+   own layer, which resamples it differently; the board's logo is a plain img. */
+.nw-site .nwh-home img {
+  filter: none;
+  transform: none;
+  backface-visibility: visible;
+}
 .nw-site .nwh-links {
   display: flex;
   align-items: center;
@@ -385,14 +443,25 @@
   align-items: center;
   gap: 6px;
   height: 72px;
+  white-space: nowrap;
   transition: color 0.2s;
 }
-.nw-site .nwh-link[aria-current='page'],
-.nw-site .nwh-link[data-active='true'] {
+.nw-site .nwh-link:hover {
+  color: var(--nw-ink);
+}
+/* One highlighted item at a time: the open menu while one is open, otherwise
+   the current page (or its section). As on the board, hovering a highlighted
+   item turns its label ink; the underline stays. */
+.nw-site
+  .nwh-links:not([data-menu-open])
+  .nwh-link:is([aria-current='page'], [data-active='true']):not(:hover),
+.nw-site .nwh-links[data-menu-open] .nwh-link[aria-expanded='true']:not(:hover) {
   color: var(--nw-violet);
 }
-.nw-site .nwh-link[aria-current='page']::after,
-.nw-site .nwh-link[data-active='true']::after {
+.nw-site
+  .nwh-links:not([data-menu-open])
+  .nwh-link:is([aria-current='page'], [data-active='true'])::after,
+.nw-site .nwh-links[data-menu-open] .nwh-link[aria-expanded='true']::after {
   content: '';
   position: absolute;
   left: 0;
@@ -423,6 +492,7 @@
   border-radius: var(--nw-r-sm);
   font-size: 15px;
   font-weight: 500;
+  white-space: nowrap;
   color: var(--nw-ink);
   text-decoration: none;
   transition:
@@ -431,6 +501,7 @@
 }
 .nw-site .nwh-ghost:hover {
   background: rgba(13, 22, 38, 0.048);
+  color: var(--nw-ink);
 }
 .nw-site .nwh-primary {
   display: inline-flex;
@@ -443,14 +514,16 @@
   background: var(--nw-violet);
   color: var(--nw-white);
   text-decoration: none;
-  white-space: nowrap;
   transition:
     background-color 0.2s,
     box-shadow 0.2s;
 }
-.nw-site .nwh-primary:hover {
+.nw-site .nwh-primary:hover,
+.nw-site .nwh-primary:focus-visible {
   background: var(--nw-violet-hover);
   color: var(--nw-white);
+}
+.nw-site .nwh-primary:hover {
   box-shadow: 0 10px 24px -10px rgba(13, 22, 38, 0.42);
 }
 .nw-site .nwh-mobile {
@@ -458,12 +531,19 @@
   align-items: center;
   gap: 8px;
 }
+.nw-site .nwh-mcta {
+  height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  white-space: nowrap;
+}
 .nw-site .nwh-burger {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
+  padding: 0;
   border: 1px solid var(--nw-line);
   border-radius: var(--nw-r-sm);
   background: var(--nw-white);
@@ -471,7 +551,8 @@
   cursor: pointer;
 }
 
-/* Mega menu */
+/* Mega menu: a full-width panel anchored to the nav bar, its content on the
+   page grid, over a scrim. */
 @keyframes nwhPop {
   from {
     opacity: 0;
@@ -482,137 +563,293 @@
     transform: none;
   }
 }
+@keyframes nwhFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.nw-site .nwh-scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 1px);
+  height: 100vh;
+  background: rgba(13, 22, 38, 0.32);
+  z-index: 55;
+  animation: nwhFade 0.2s ease-out;
+}
 .nw-site .nwh-panel {
   position: absolute;
   left: 0;
   right: 0;
   top: calc(100% + 1px);
-  margin: 0 auto;
-  max-width: calc(100% - 32px);
-  display: flex;
-  height: 320px;
   background: var(--nw-white);
-  border: 1px solid var(--nw-line);
-  border-radius: var(--nw-r-md);
-  box-shadow: 0 32px 64px -24px rgba(17, 24, 39, 0.38);
-  overflow: hidden;
+  box-shadow: 0 40px 80px -48px rgba(13, 22, 38, 0.45);
   z-index: 60;
   animation: nwhPop 0.18s ease-out;
 }
-.nw-site .nwh-panel--wide {
-  width: 880px;
+.nw-site .nwh-mm-grid {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr) 272px;
+  column-gap: 48px;
+  align-items: start;
+  padding: 28px 0 32px;
 }
-.nw-site .nwh-panel--narrow {
-  width: 560px;
+.nw-site .nwh-mm-label {
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--nw-line-soft);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
 }
-.nw-site .nwh-panel-media {
-  position: relative;
-  flex-shrink: 0;
-  background: var(--nw-ink);
-  overflow: hidden;
-}
-.nw-site .nwh-panel--wide .nwh-panel-media {
-  width: 300px;
-}
-.nw-site .nwh-panel--narrow .nwh-panel-media {
-  width: 240px;
-}
-.nw-site .nwh-panel-media img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.nw-site .nwh-panel-media::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(17, 24, 39, 0.94) 0%,
-    rgba(17, 24, 39, 0.4) 55%,
-    rgba(17, 24, 39, 0.05) 100%
-  );
-}
-.nw-site .nwh-panel-copy {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  padding: 20px;
+.nw-site .nwh-mm-intro {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
-.nw-site .nwh-panel-heading {
-  margin: 0;
+.nw-site .nwh-mm-tagline {
+  margin: 0 0 10px;
   font-family: var(--nw-font-serif);
-  font-size: 19px;
-  font-weight: 600;
-  color: var(--nw-white);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--nw-ink);
 }
-.nw-site .nwh-panel-tagline {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.85);
+.nw-site .nwh-mm-body {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--nw-text);
 }
-.nw-site .nwh-cta {
-  margin-top: 4px;
+.nw-site .nwh-mm-cta {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  color: var(--nw-violet);
   font-weight: 600;
-  color: var(--nw-white);
   text-decoration: none;
 }
-.nw-site .nwh-cta:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.nw-site .nwh-mm-cta:hover {
+  color: var(--nw-violet-hover);
 }
-.nw-site .nwh-grid {
-  flex: 1;
+.nw-site .nwh-mm-cta svg {
+  transition: transform 0.15s;
+}
+.nw-site .nwh-mm-cta:hover svg,
+.nw-site .nwh-mm-card:hover .nwh-mm-cta svg {
+  transform: translateX(3px);
+}
+.nw-site .nwh-mm-more {
+  width: fit-content;
+  font-size: 14px;
+}
+.nw-site .nwh-mm-list {
   display: grid;
-  /* 1fr, not minmax(0, 1fr): a row never shrinks below its tallest tile, so a
-     long title and description ("Investment Management", "Local and offshore
-     portfolios.") cannot spill out of the bottom of its tile. */
-  grid-template-rows: repeat(2, 1fr);
-  gap: 6px;
-  padding: 14px;
-  margin: 0;
-  list-style: none;
-  border-left: 1px solid var(--nw-line-soft);
-}
-.nw-site .nwh-panel--wide .nwh-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-.nw-site .nwh-panel--narrow .nwh-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+  row-gap: 2px;
+  margin: 0 -12px;
 }
-.nw-site .nwh-tile {
-  height: 100%;
+.nw-site .nwh-mm-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 10px 34px 10px 12px;
+  border-radius: var(--nw-r-sm);
+  text-decoration: none;
+  transition: background-color 0.15s;
+}
+.nw-site .nwh-mm-item:hover {
+  background: var(--nw-paper);
+}
+.nw-site .nwh-mm-ic {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--nw-r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+  color: var(--nw-ink);
   box-sizing: border-box;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+.nw-site .nwh-mm-item:hover .nwh-mm-ic {
+  background: var(--nw-ink);
+  border-color: var(--nw-ink);
+  color: var(--nw-white);
+}
+.nw-site .nwh-mm-text {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 1px;
+}
+.nw-site .nwh-mm-t {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--nw-ink);
+}
+.nw-site .nwh-mm-d {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--nw-muted);
+}
+.nw-site .nwh-mm-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  margin-top: -8px;
+  color: var(--nw-violet);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+.nw-site .nwh-mm-item:hover .nwh-mm-arrow {
+  opacity: 1;
+  transform: none;
+}
+.nw-site .nwh-mm-card {
+  display: block;
+  border: 1px solid var(--nw-line);
+  border-radius: var(--nw-r-md);
+  overflow: hidden;
+  background: var(--nw-paper-3);
+  color: var(--nw-ink);
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site .nwh-mm-card:hover {
+  border-color: var(--nw-line-strong);
+  box-shadow: var(--nw-shadow-2);
+}
+.nw-site .nwh-mm-card-media {
+  height: 120px;
+  overflow: hidden;
+  background: var(--nw-ink);
+}
+.nw-site .nwh-mm-card-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.88) contrast(1.03) sepia(0.06);
+  transition: transform 0.4s var(--nw-ease);
+}
+.nw-site .nwh-mm-card:hover img {
+  transform: scale(1.03);
+}
+.nw-site .nwh-mm-card-body {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  padding: 14px;
+  padding: 14px 16px 16px;
+}
+.nw-site .nwh-mm-card-t {
+  font-family: var(--nw-font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--nw-ink);
+}
+.nw-site .nwh-mm-card-cta {
+  font-size: 13.5px;
+}
+
+/* Phone menu sheet */
+.nw-site .nwh-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 1px);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  background: var(--nw-white);
+  border-bottom: 1px solid var(--nw-line);
+  box-shadow: 0 30px 60px -30px rgba(17, 24, 39, 0.45);
+  padding: 6px clamp(16px, 4vw, 48px) 20px;
+  z-index: 60;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  box-sizing: border-box;
+  animation: nwhPop 0.18s ease-out;
+}
+/* The board's rows are content-box: a row's 52px excludes its hairline. */
+.nw-site .nwh-mrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-sizing: content-box;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--nw-ink);
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s;
+}
+.nw-site .nwh-mrow:hover {
+  color: var(--nw-ink);
+}
+.nw-site a.nwh-mrow,
+.nw-site .nwh-mgroup {
+  border-bottom: 1px solid var(--nw-line-soft);
+}
+.nw-site .nwh-mrow--group {
+  justify-content: space-between;
+}
+.nw-site .nwh-mtiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px;
+  padding: 0 0 14px;
+}
+.nw-site .nwh-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 10px;
+  box-sizing: content-box;
   border-radius: var(--nw-r-sm);
   text-decoration: none;
   transition:
     background-color 0.2s,
-    transform 0.2s;
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 .nw-site .nwh-tile:hover {
   background: var(--nw-paper);
   transform: translateY(-1px);
 }
 .nw-site .nwh-tile-i {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--nw-r-sm);
   display: flex;
   align-items: center;
@@ -629,118 +866,91 @@
   color: var(--nw-white);
 }
 .nw-site .nwh-tile-t {
-  display: block;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.3;
   color: var(--nw-ink);
 }
-.nw-site .nwh-tile-d {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--nw-muted);
-}
-.nw-site .nwh-tile:hover .nwh-tile-d {
-  color: var(--nw-text);
-}
-
-/* Mobile menu sheet */
-.nw-site .nwh-sheet {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  z-index: 60;
-  max-height: calc(100dvh - 72px);
-  overflow-y: auto;
-  background: var(--nw-white);
-  border-bottom: 1px solid var(--nw-line);
-  box-shadow: 0 32px 64px -24px rgba(17, 24, 39, 0.38);
-  animation: nwhPop 0.18s ease-out;
-}
-.nw-site .nwh-sheet-inner {
-  padding: 12px clamp(16px, 4vw, 48px) 24px;
-}
-.nw-site .nwh-sheet-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.nw-site .nwh-sheet-list > li {
-  border-bottom: 1px solid var(--nw-line-soft);
-}
-.nw-site .nwh-mrow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 52px;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--nw-ink);
-  text-decoration: none;
-  cursor: pointer;
-  text-align: left;
-}
-.nw-site .nwh-mrow[aria-current='page'] {
-  color: var(--nw-violet);
-}
-.nw-site .nwh-msub {
-  list-style: none;
-  margin: 0 0 12px;
-  padding: 0;
-  display: grid;
-  gap: 2px;
-}
-.nw-site .nwh-msub a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  padding: 0 4px;
-  border-radius: var(--nw-r-sm);
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--nw-text-strong);
-  text-decoration: none;
-}
-.nw-site .nwh-msub a:hover {
-  background: var(--nw-paper);
-  color: var(--nw-ink);
-}
 .nw-site .nwh-sheet-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 18px;
 }
-.nw-site .nwh-quick {
+.nw-site .nwh-sheet-login,
+.nw-site .nwh-sheet-start {
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 48px;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+/* content-box, as drawn: the outlined button is 50px beside a 48px one. */
+.nw-site .nwh-sheet-login {
+  border: 1px solid var(--nw-line-strong);
+  box-sizing: content-box;
+}
+.nw-site .nwh-sheet-quick {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  min-height: 44px;
-  padding: 0 12px;
+  margin-top: 10px;
+}
+.nw-site .nwh-quick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 60px;
+  box-sizing: content-box;
   border-radius: var(--nw-r-sm);
   border: 1px solid var(--nw-line-soft);
   background: var(--nw-paper);
   color: var(--nw-text-strong);
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 600;
   text-decoration: none;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
 }
 .nw-site .nwh-quick:hover {
   border-color: var(--nw-on-dark);
   color: var(--nw-ink);
 }
+.nw-site .nwh-sheet-note {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--nw-muted);
+}
 
+@media (max-width: 1320px) {
+  .nw-site .nwh-links {
+    gap: 22px;
+  }
+}
+@media (max-width: 1280px) {
+  .nw-site .nwh-mm-feature {
+    display: none;
+  }
+  .nw-site .nwh-mm-grid {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+}
+@media (max-width: 1240px) {
+  .nw-site .nwh-links {
+    gap: 18px;
+  }
+  .nw-site .nwh-link-home,
+  .nw-site .nwh-login-ic {
+    display: none;
+  }
+}
 /* The board switches to the phone menu at 1100px, but the real header (top bar,
    five links, Ask Vasco, Log In, Get Started) needs about 1196px: between 1101
    and 1195px it ran off the right edge and the page scrolled sideways (an iPad
@@ -762,15 +972,13 @@
   }
 }
 @media (max-width: 420px) {
-  .nw-site .nwh-row {
-    gap: 10px;
-  }
-  /* The board's phone header draws the logo 21px tall (25.5px wider up).
-     Logo.tsx sets its height inline, hence !important. */
   .nw-site .nwh-home img {
     height: 21px !important;
   }
-  .nw-site .nwh-mobile .nwh-primary {
+  .nw-site .nwh-row {
+    gap: 10px;
+  }
+  .nw-site .nwh-mcta {
     padding: 0 12px;
   }
 }
@@ -783,6 +991,13 @@
   background: var(--nw-ink-deep);
   color: var(--nw-white);
   font-family: var(--nw-font-sans);
+}
+.nw-site .nwf-rose {
+  position: absolute;
+  right: -170px;
+  top: -170px;
+  opacity: 0.45;
+  pointer-events: none;
 }
 .nw-site .nwf-inner {
   position: relative;
@@ -888,6 +1103,7 @@
 .nw-site .nwf-contacts svg {
   flex: 0 0 16px;
   margin-top: 3px;
+  color: var(--nw-on-dark-muted);
 }
 .nw-site .nwf-h {
   margin: 0 0 22px;
@@ -910,17 +1126,16 @@
   color: var(--nw-on-dark);
   text-decoration: none;
   font-size: 14px;
-  line-height: 1.45;
   transition: color 0.2s;
 }
 .nw-site .nwf-col .nwf-link {
+  line-height: 1.45;
   white-space: nowrap;
 }
+/* The board keeps footer links in their resting colour on hover. */
 .nw-site .nwf-link:hover,
 .nw-site .nwf-contact:hover {
-  color: var(--nw-white);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: var(--nw-on-dark);
 }
 .nw-site .nwf-contact {
   color: var(--nw-on-dark);
@@ -958,6 +1173,8 @@
   gap: 10px;
 }
 .nw-site .nwf-social {
+  /* content-box, as drawn: 40px inside the hairline. */
+  box-sizing: content-box;
   width: 40px;
   height: 40px;
   border-radius: var(--nw-r-sm);
@@ -973,7 +1190,7 @@
 }
 .nw-site .nwf-social:hover {
   color: var(--nw-on-dark);
-  background: rgba(246, 244, 239, 0.06);
+  background: rgba(13, 22, 38, 0.084);
   border-color: rgba(246, 244, 239, 0.35);
 }
 .nw-site .nwf-disc {
@@ -1017,6 +1234,15 @@
   .nw-site .nwf-news-h {
     font-size: 22px;
   }
+  .nw-site .nwf-news-p {
+    font-size: 14px;
+  }
+  .nw-site .nwf-rose {
+    width: 360px;
+    height: 360px;
+    right: -150px;
+    top: -150px;
+  }
   .nw-site .nwf-form {
     flex: 1 1 100%;
   }
@@ -1031,6 +1257,10 @@
   .nw-site .nwf-brand {
     flex-direction: column;
     gap: 22px;
+  }
+  /* The board's phone rule closes up every footer list, the contacts too. */
+  .nw-site .nwf-contacts {
+    gap: 2px;
   }
   .nw-site .nwf-company {
     order: 1;
@@ -1048,11 +1278,12 @@
   .nw-site .nwf-col ul {
     gap: 4px;
   }
+  .nw-site .nwf-link {
+    display: inline-block;
+    padding: 7px 0;
+  }
   .nw-site .nwf-col .nwf-link {
     white-space: normal;
-    display: inline-flex;
-    align-items: center;
-    min-height: 40px;
   }
   .nw-site .nwf-h {
     margin-bottom: 12px;
@@ -1071,9 +1302,7 @@
     gap: 2px 24px;
   }
   .nw-site .nwf-legal .nwf-link {
-    display: inline-flex;
-    align-items: center;
-    min-height: 40px;
+    padding: 6px 0;
   }
   .nw-site .nwf-disc {
     padding-top: 24px;

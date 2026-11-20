@@ -3,7 +3,7 @@
  * Manages signer session state and API calls
  */
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { esignSignerService } from '../services/esignSignerService';
 import type {
   SignerSessionData,
@@ -19,7 +19,12 @@ export function useSignerSession() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const validateToken = async (token: string): Promise<SignerSessionValidation> => {
+  // Stable across renders. The signing page validates the link in an effect
+  // that depends on this function: a new function on every render re-ran that
+  // effect after every response, POSTing /signer/validate without end until
+  // the server's rate limit (30 per 5 minutes) answered 429, which the page
+  // shows as a dead link. It reads only state setters and the service module.
+  const validateToken = useCallback(async (token: string): Promise<SignerSessionValidation> => {
     setLoading(true);
     setError(null);
 
@@ -51,7 +56,7 @@ export function useSignerSession() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const verifyOtp = async (
     token: string,

@@ -111,7 +111,7 @@ export function NavigatorPressPage() {
   };
 
   return (
-    <div className="nw-site nwpr2">
+    <div className="nw-site nw-base nwpr2">
       <SEO
         title={seoData.title}
         description={seoData.description}

@@ -84,7 +84,7 @@ export function NavigatorHomePage() {
   };
 
   return (
-    <div className="nw-site">
+    <div className="nw-site nw-base nwhome">
       <SEO
         title={seoData.title}
         description={seoData.description}

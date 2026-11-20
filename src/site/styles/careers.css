@@ -530,7 +530,6 @@
 .nw-site .nwcr-value:hover {
   transform: translateY(-3px);
   background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(201, 209, 224, 0.35);
 }
 /* Content-box, as the board draws it: 48px inside a 1px border. */
 .nw-site .nwcr-value-i {
@@ -589,7 +588,6 @@
     transform 0.3s;
 }
 .nw-site .nwcr-perk:hover {
-  border-color: var(--nw-on-dark);
   box-shadow: 0 22px 40px -28px rgba(17, 24, 39, 0.45);
   transform: translateY(-2px);
 }
@@ -982,10 +980,6 @@
   .nw-site .nwcr :is(h1, h2, h3),
   .nw-site.nwcr-portal :is(h1, h2, h3) {
     overflow-wrap: break-word;
-  }
-  /* 16px text so iOS does not zoom the page when a field is focused. */
-  .nw-site .nwcr-input {
-    font-size: 16px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

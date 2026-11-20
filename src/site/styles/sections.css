@@ -53,6 +53,8 @@
 
 /* Numbered section label: "01 — For Individuals". */
 .nw-site .nw-kicker {
+  /* A div on every board: plain wrapping, not the paragraph's pretty wrap. */
+  text-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -943,10 +945,12 @@
   padding: 24px 26px;
 }
 .nw-site .nw-faq-help-t {
+  text-wrap: wrap;
   margin: 0;
   font-family: var(--nw-font-serif);
   font-size: var(--nw-fs-h5);
   font-weight: 500;
+  letter-spacing: -0.012em;
   line-height: 1.25;
   color: var(--nw-ink);
 }
@@ -991,6 +995,9 @@
   padding-top: 18px;
   border-top: 1px solid var(--nw-line-soft);
 }
+.nw-site .nw-faq-actions .nw-outline {
+  padding: 0 20px;
+}
 .nw-site .nw-faq-list {
   margin: 0;
   padding: 4px clamp(18px, 3vw, 32px);
@@ -1007,6 +1014,8 @@
   text-wrap: pretty;
 }
 .nw-site .nw-faq-q {
+  /* The boards' questions are a button's span, not a heading: plain wrapping. */
+  text-wrap: wrap;
   width: 100%;
   min-height: 56px;
   display: flex;
@@ -1025,6 +1034,8 @@
   text-align: left;
 }
 .nw-site .nw-faq-icon {
+  /* content-box, as on every board: the ring sits outside the 34px. */
+  box-sizing: content-box;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -1070,6 +1081,16 @@
   .nw-site .nw-faq-contact {
     flex-direction: column;
   }
+  /* The boards stack the help card's two actions full width on phones. */
+  .nw-site .nw-faq-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site .nw-faq-actions > a {
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+  }
   /* Phones: drop the card so questions and answers use the full width. */
   .nw-site .nw-faq-list {
     background: transparent;
@@ -1088,6 +1109,10 @@
   .nw-site .nw-faq-icon {
     width: 30px;
     height: 30px;
+  }
+  .nw-site .nw-faq-icon svg {
+    width: 14px;
+    height: 14px;
   }
   .nw-site .nw-faq-a {
     margin: -4px 0 20px;

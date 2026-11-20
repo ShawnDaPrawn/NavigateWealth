@@ -11,13 +11,12 @@ import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import type { SignerField } from '../types';
-
-function maskSaId(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 13);
-  if (digits.length <= 6) return digits;
-  if (digits.length <= 10) return `${digits.slice(0, 6)} ${digits.slice(6)}`;
-  return `${digits.slice(0, 6)} ${digits.slice(6, 10)} ${digits.slice(10)}`;
-}
+import {
+  inputModeByFormat,
+  maskSaId,
+  placeholderByFormat,
+  titleByFormat,
+} from './textFieldFormats';
 
 interface TextInputDialogProps {
   open: boolean;
@@ -44,31 +43,6 @@ export function TextInputDialog({
   const fmt = (meta.format as string | undefined) ?? 'free_text';
   const customHelp = typeof meta.helpText === 'string' ? meta.helpText : '';
   const maxLength = typeof meta.maxLength === 'number' ? meta.maxLength : undefined;
-
-  const titleByFormat: Record<string, string> = {
-    sa_id: 'Enter SA ID number',
-    number: 'Enter a number',
-    email: 'Enter your email address',
-    phone: 'Enter your phone number',
-    custom_regex: 'Enter required value',
-    free_text: 'Enter text',
-  };
-  const placeholderByFormat: Record<string, string> = {
-    sa_id: '000000 0000 0 00',
-    number: '0',
-    email: 'name@example.com',
-    phone: '+27 82 123 4567',
-    custom_regex: 'Enter value...',
-    free_text: 'Enter text...',
-  };
-  const inputModeByFormat: Record<string, 'text' | 'numeric' | 'email' | 'tel'> = {
-    sa_id: 'numeric',
-    number: 'numeric',
-    email: 'email',
-    phone: 'tel',
-    custom_regex: 'text',
-    free_text: 'text',
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
