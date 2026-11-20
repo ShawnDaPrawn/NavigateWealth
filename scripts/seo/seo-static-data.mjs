@@ -31,7 +31,15 @@ export function faqsForRoute(route) {
 
 export const DEFAULT_SITE_URL = 'https://www.navigatewealth.co';
 export const DEFAULT_TIMEZONE = 'Africa/Johannesburg';
-export const DEFAULT_OG_IMAGE_PATH = '/brand-assets/navigate-wealth-og.png';
+/**
+ * The site's default share image: the redesign's ShareBrand board, 1200×630.
+ * It must stay in step with BRAND_SHARE_IMAGE_PATH in
+ * src/components/seo/shareImages.ts, which the SPA uses once it has loaded;
+ * social crawlers read only this prerendered head.
+ */
+export const DEFAULT_OG_IMAGE_PATH = '/brand-assets/share/navigate-wealth.png';
+/** Every image under this folder is a 1200×630 share image. */
+export const SHARE_IMAGE_DIR = '/brand-assets/share/';
 export const DEFAULT_OG_IMAGE_WIDTH = 1200;
 export const DEFAULT_OG_IMAGE_HEIGHT = 630;
 export const DEFAULT_LANGUAGE = 'en-ZA';
@@ -216,6 +224,7 @@ export const publicSeoRoutes = [
     ogType: 'website',
     schema: 'service',
     serviceType: 'Risk Management',
+    ogImage: '/brand-assets/share/risk-management.png',
   },
   {
     path: '/retirement-planning',
@@ -228,6 +237,7 @@ export const publicSeoRoutes = [
     ogType: 'website',
     schema: 'service',
     serviceType: 'Retirement Planning',
+    ogImage: '/brand-assets/share/retirement-planning.png',
   },
   {
     path: '/investment-management',
@@ -240,6 +250,7 @@ export const publicSeoRoutes = [
     ogType: 'website',
     schema: 'service',
     serviceType: 'Investment Management',
+    ogImage: '/brand-assets/share/investment-management.png',
   },
   {
     path: '/tax-planning',
@@ -252,6 +263,7 @@ export const publicSeoRoutes = [
     ogType: 'website',
     schema: 'service',
     serviceType: 'Tax Planning',
+    ogImage: '/brand-assets/share/tax-planning.png',
   },
   {
     path: '/estate-planning',
@@ -264,6 +276,7 @@ export const publicSeoRoutes = [
     ogType: 'website',
     schema: 'service',
     serviceType: 'Estate Planning',
+    ogImage: '/brand-assets/share/estate-planning.png',
   },
   {
     path: '/financial-planning',
@@ -276,6 +289,7 @@ export const publicSeoRoutes = [
     ogType: 'website',
     schema: 'service',
     serviceType: 'Financial Planning',
+    ogImage: '/brand-assets/share/financial-planning.png',
   },
   {
     path: '/medical-aid',
@@ -288,6 +302,7 @@ export const publicSeoRoutes = [
     ogType: 'website',
     schema: 'service',
     serviceType: 'Medical Aid Advice',
+    ogImage: '/brand-assets/share/medical-aid.png',
   },
   {
     path: '/employee-benefits',
@@ -300,6 +315,7 @@ export const publicSeoRoutes = [
     ogType: 'website',
     schema: 'service',
     serviceType: 'Employee Benefits',
+    ogImage: '/brand-assets/share/employee-benefits.png',
   },
   {
     path: '/get-quote',

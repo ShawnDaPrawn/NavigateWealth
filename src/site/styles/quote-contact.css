@@ -485,6 +485,13 @@
 .nw-site .nw-btn.nwqc-submit:focus-visible:not(:hover, :disabled) {
   background: var(--nw-violet);
 }
+/* The design system's trailing-arrow nudge on hover. */
+.nw-site .nw-btn.nwqc-submit > svg {
+  transition: transform var(--nw-dur-2) var(--nw-ease);
+}
+.nw-site .nw-btn.nwqc-submit:hover > svg {
+  transform: translateX(3px);
+}
 .nw-site .nwqc-note {
   margin: 0;
   display: flex;

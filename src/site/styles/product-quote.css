@@ -1,0 +1,1317 @@
+/*
+ * Navigator quote funnel, "quote details" step (/get-quote/:service) — ported
+ * from the "Quote details" board of the Claude Design canvas (ProductQuote,
+ * and MobileQuote on a phone), its inline styles turned into classes. The
+ * grid texture, the eyebrow, the accent and the entrance animation come from
+ * sections.css and navigator.css; buttons and tokens from navigator.css.
+ *
+ * The board draws one wizard (risk) and one one-step form; the other
+ * services' questions use the same controls: option cards, the yes-or-no
+ * pair, chips, the paper panel and the review list.
+ *
+ * Scoped to `.nw-site`, like navigator.css. Every class is prefixed `nwpq-`.
+ */
+
+/* The board's page has a 16px base, the browser's normal line height and
+   content-box sizing. The site's root is 14px, Tailwind's preflight sizes
+   every box by its border, and the global base typography gives p, headings,
+   labels, buttons and inputs line heights of their own; all restated here at
+   zero specificity, so every rule below (and navigator.css's border-box
+   buttons and wrap) still wins. */
+.nw-site.nwpq {
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-text);
+  background: var(--nw-paper);
+  /* The design system's warning colour (nw-system.css), which navigator.css
+     does not carry. */
+  --nwpq-warn: #92400e;
+}
+:where(.nw-site.nwpq)
+  :where(p, h1, h2, h3, label, button, input, select, textarea, legend, dt, dd, li) {
+  line-height: inherit;
+}
+:where(.nw-site.nwpq),
+:where(.nw-site.nwpq) :where(*, ::before, ::after) {
+  box-sizing: content-box;
+}
+
+/* ── Hero ── */
+.nw-site .nwpq-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--nw-ink);
+  color: var(--nw-paper);
+}
+.nw-site .nwpq-route {
+  position: absolute;
+  right: clamp(24px, 5vw, 80px);
+  top: 50%;
+  margin-top: -150px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.nw-site .nw-wrap.nwpq-hero-wrap {
+  position: relative;
+  padding-top: clamp(28px, 4vw, 44px);
+  padding-bottom: clamp(88px, 10vw, 120px);
+}
+.nw-site .nwpq-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.nw-site .nwpq-crumb {
+  color: var(--nw-on-dark-muted);
+  text-decoration: none;
+}
+.nw-site .nwpq-crumb:hover {
+  color: var(--nw-paper);
+}
+.nw-site .nwpq-crumb-sep {
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-crumb-here {
+  color: var(--nw-paper);
+}
+.nw-site .nwpq-eyebrow {
+  margin: 36px 0 0;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwpq-title {
+  margin: 16px 0 0;
+  max-width: 760px;
+  font-size: var(--nw-fs-display);
+  line-height: 1.06;
+  color: var(--nw-paper);
+}
+.nw-site .nwpq-lead {
+  margin: 18px 0 0;
+  max-width: 580px;
+  font-size: clamp(15.5px, 1.5vw, 17px);
+  line-height: 1.7;
+  color: var(--nw-on-dark);
+}
+
+/* ── Funnel progress ── */
+.nw-site .nwpq-main {
+  padding-bottom: var(--nw-sec-lg);
+}
+.nw-site .nw-wrap.nwpq-main-wrap {
+  margin-top: -56px;
+  position: relative;
+}
+.nw-site .nwpq-steps {
+  padding: 20px clamp(16px, 3vw, 32px);
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwpq-steps-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.nw-site .nwpq-step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.nw-site .nwpq-step-done {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--nw-ink);
+  color: var(--nw-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwpq-step-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-ink);
+  text-decoration: none;
+}
+.nw-site .nwpq-step-rule {
+  flex: 0 0 32px;
+  height: 1px;
+  background: var(--nw-ink);
+}
+.nw-site .nwpq-step-no {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--nw-violet);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.nw-site .nwpq-step-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+
+/* ── Layout ── */
+.nw-site .nwpq-layout {
+  margin-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+.nw-site .nwpq-col {
+  flex: 999 1 600px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.nw-site .nwpq-card {
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwpq-italic {
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* ── Contact details ── */
+.nw-site .nwpq-contact {
+  padding: clamp(22px, 3.5vw, 36px);
+}
+.nw-site .nwpq-contact-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.nw-site .nwpq-contact-title {
+  margin: 0;
+  font-size: var(--nw-fs-h4);
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--nw-text);
+}
+.nw-site .nwpq-contact-fields {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 14px;
+}
+.nw-site .nwpq-contact-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nw-ink);
+}
+
+/* ── Quote card ── */
+.nw-site .nwpq-quote {
+  overflow: hidden;
+}
+.nw-site .nwpq-quote-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: clamp(20px, 3.5vw, 32px) clamp(20px, 3.5vw, 36px) 20px;
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site .nwpq-quote-eyebrow {
+  margin: 0;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-quote-title {
+  margin: 10px 0 0;
+  font-size: var(--nw-fs-h3);
+  line-height: 1.1;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 0 1 260px;
+  min-width: 220px;
+}
+.nw-site .nwpq-pick-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-select.nwpq-pick-select {
+  height: 46px;
+  padding: 0 38px 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwpq-chev.nwpq-pick-chev {
+  top: 15px;
+}
+.nw-site .nwpq-waiting {
+  margin: 0;
+  padding: clamp(22px, 3.5vw, 36px);
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-muted);
+}
+
+/* Wizard steps */
+.nw-site .nwpq-tabs-wrap {
+  padding: 18px clamp(20px, 3.5vw, 36px) 0;
+}
+.nw-site .nwpq-tabs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--nwpq-n, 4), minmax(0, 1fr));
+  gap: 6px;
+}
+.nw-site .nwpq-tab {
+  min-width: 0;
+}
+.nw-site .nwpq-tab-btn {
+  width: 100%;
+  font-weight: 400;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: 13.3333px;
+  text-align: left;
+  color: inherit;
+  cursor: default;
+}
+.nw-site .nwpq-tab-btn--done {
+  cursor: pointer;
+}
+.nw-site .nwpq-tab-bar {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: var(--nw-line);
+}
+.nw-site .nwpq-tab-btn--current .nwpq-tab-bar {
+  background: var(--nw-violet);
+}
+.nw-site .nwpq-tab-btn--done .nwpq-tab-bar {
+  background: var(--nw-ink);
+}
+.nw-site .nwpq-tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  min-width: 0;
+}
+.nw-site .nwpq-tab-no {
+  font-size: 15px;
+  color: var(--nw-on-dark-muted);
+}
+.nw-site .nwpq-tab-label {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nw-muted);
+}
+.nw-site :is(.nwpq-tab-btn--current, .nwpq-tab-btn--done) :is(.nwpq-tab-no, .nwpq-tab-label) {
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-tab-btn--current .nwpq-tab-label {
+  font-weight: 600;
+}
+
+/* Step body */
+.nw-site .nwpq-body {
+  padding: clamp(22px, 3.5vw, 36px);
+}
+.nw-site .nwpq-step {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.nw-site .nwpq-step-title {
+  margin: 0;
+  font-size: var(--nw-fs-h4);
+  color: var(--nw-ink);
+  /* Focused when the step changes; clear of the sticky header. */
+  scroll-margin-top: calc(72px + 40px);
+}
+.nw-site .nwpq-step-title:focus {
+  outline: none;
+}
+.nw-site .nwpq-step-lead {
+  margin: 6px 0 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-muted);
+}
+
+/* Bottom bar */
+.nw-site .nwpq-foot {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px clamp(20px, 3.5vw, 36px);
+  border-top: 1px solid var(--nw-line);
+  background: var(--nw-paper-3);
+}
+.nw-site .nwpq-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 22px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 500;
+}
+.nw-site .nwpq-foot-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex: 1 1 260px;
+}
+.nw-site .nwpq-hint {
+  font-size: 13px;
+  color: var(--nw-muted);
+}
+.nw-site :is(.nwpq-next, .nwpq-submit) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 22px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwpq-next {
+  min-width: 150px;
+}
+
+/* A failed send */
+.nw-site .nwpq-alert {
+  scroll-margin-top: calc(72px + 40px);
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-danger-line);
+  background: var(--nw-danger-bg);
+  color: var(--nw-danger-dark);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.nw-site .nwpq-alert svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+/* ── Fields ── */
+.nw-site .nwpq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
+}
+.nw-site .nwpq-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.nw-site .nwpq-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-sublabel {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nw-text);
+}
+.nw-site .nwpq-req {
+  color: var(--nw-danger);
+}
+.nw-site .nwpq-optional {
+  font-weight: 400;
+  color: var(--nw-muted);
+}
+/* The board's fields, over the app input's own classes where the rand and
+   number fields are the app's components. */
+.nw-site .nwpq-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  margin: 0;
+  padding: 0 12px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  background: var(--nw-white);
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--nw-ink);
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.nw-site .nwpq-input.nwpq-input--46 {
+  height: 46px;
+}
+.nw-site .nwpq-input::placeholder {
+  color: var(--nw-muted);
+  opacity: 1;
+}
+/* Hover and focus, as the board draws them: its inline border outranks its
+   hover and focus border colours, so only the violet ring shows. */
+.nw-site .nwpq-input:hover {
+  border-color: var(--nw-line-strong);
+}
+.nw-site .nwpq-input:focus,
+.nw-site .nwpq-input:focus-visible {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 1px;
+  border-color: var(--nw-line-strong);
+  box-shadow: none;
+}
+.nw-site .nwpq-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.nw-site .nwpq-money > div {
+  position: relative;
+}
+.nw-site .nwpq-money .nwpq-input {
+  padding-left: 28px;
+}
+.nw-site .nwpq-money > div > span {
+  position: absolute;
+  left: 12px;
+  top: 14px;
+  /* Tailwind's -translate-y-1/2 sets the translate property, not transform. */
+  translate: none;
+  transform: none;
+  font-size: 15px;
+  line-height: normal;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-money.nwpq-money--46 .nwpq-input {
+  height: 46px;
+}
+.nw-site .nwpq-money.nwpq-money--46 > div > span {
+  top: 13px;
+}
+.nw-site .nwpq-select-box {
+  position: relative;
+}
+.nw-site .nwpq-select {
+  padding-right: 36px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: default;
+}
+.nw-site .nwpq-chev {
+  position: absolute;
+  right: 12px;
+  top: 16px;
+  pointer-events: none;
+}
+.nw-site .nwpq-input.nwpq-textarea {
+  height: auto;
+  padding: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.nw-site .nwpq-amount-row {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+.nw-site .nwpq-amount-row > .nwpq-money {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.nw-site .nwpq-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-note--warn,
+.nw-site .nwpq-warn {
+  font-size: 12.5px;
+  color: var(--nwpq-warn);
+}
+
+/* ── Option cards (the board's covers and adviser card) ── */
+.nw-site .nwpq-opt {
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line-strong);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  color: var(--nw-ink);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.nw-site .nwpq-opt:hover {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwpq-opt:is([aria-pressed='true'], [aria-checked='true'], .nwpq-cover--on) {
+  border-color: var(--nw-ink);
+  box-shadow: inset 0 0 0 1px var(--nw-ink);
+}
+.nw-site .nwpq-opts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+.nw-site .nwpq-opts.nwpq-opts--list {
+  grid-template-columns: minmax(0, 1fr);
+}
+.nw-site .nwpq-opt--card {
+  display: flex;
+  font-weight: 400;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 16px;
+  min-height: 44px;
+  border-radius: var(--nw-r-md);
+  font-size: 13.3333px;
+  box-sizing: border-box;
+}
+.nw-site .nwpq-opt-text {
+  display: block;
+  min-width: 0;
+}
+.nw-site .nwpq-opt-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-opt-info {
+  display: block;
+  margin-top: 4px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--nw-muted);
+}
+/* The tick box */
+.nw-site .nwpq-box {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-on-dark-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  color: var(--nw-white);
+}
+.nw-site :is([aria-pressed='true'], .nwpq-cover--on) > .nwpq-box,
+.nw-site .nwpq-cover--on > .nwpq-cover-btn > .nwpq-box {
+  background: var(--nw-violet);
+  border-color: var(--nw-violet);
+}
+/* The round mark (the "your details" board's) */
+.nw-site .nwpq-radio {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 1px solid var(--nw-on-dark-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.nw-site .nwpq-radio-dot {
+  display: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nw-ink);
+}
+.nw-site [aria-checked='true'] > .nwpq-radio {
+  border-color: var(--nw-ink);
+}
+.nw-site [aria-checked='true'] > .nwpq-radio > .nwpq-radio-dot {
+  display: block;
+}
+
+/* Covers: a card whose top is the button and whose amount opens below. */
+.nw-site .nwpq-covers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+.nw-site .nwpq-cover {
+  border-radius: var(--nw-r-md);
+  cursor: default;
+}
+.nw-site .nwpq-cover-btn {
+  width: 100%;
+  font-weight: 400;
+  min-height: 56px;
+  margin: 0;
+  display: flex;
+  /* The board centres a one-line cover; with its explanation under it the
+     box sits by the name, as on the board's two-line adviser card. */
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--nw-r-md);
+  background: transparent;
+  font-family: inherit;
+  font-size: 13.3333px;
+  text-align: left;
+  color: var(--nw-ink);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.nw-site .nwpq-cover-btn .nwpq-opt-info {
+  font-size: 12.5px;
+}
+.nw-site .nwpq-cover-more {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nw-site .nwpq-tick {
+  display: flex;
+  font-weight: 400;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  min-height: 24px;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-align: left;
+  color: var(--nw-text);
+  cursor: pointer;
+}
+.nw-site .nwpq-tick > .nwpq-box {
+  margin-top: 0;
+}
+
+/* The yes-or-no pair (the board's "None" / "Yes, I have conditions") */
+.nw-site .nwpq-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.nw-site .nwpq-pair.nwpq-pair--3 {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+.nw-site .nwpq-pair-btn {
+  min-height: 64px;
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--nw-r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Chips (the board's conditions) */
+.nw-site .nwpq-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.nw-site .nwpq-field > .nwpq-chips {
+  margin-top: 3px;
+}
+.nw-site .nwpq-chip {
+  min-height: 40px;
+  font-weight: 400;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line-strong);
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--nw-text);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    color 0.2s;
+}
+.nw-site .nwpq-chip:hover {
+  border-color: var(--nw-ink);
+}
+.nw-site .nwpq-chip:is([aria-pressed='true'], [aria-checked='true']) {
+  background: var(--nw-ink);
+  border-color: var(--nw-ink);
+  color: var(--nw-paper);
+}
+.nw-site .nwpq-chip.nwpq-chip--tall {
+  flex: 0 0 auto;
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+/* The paper panel (the board's conditions panel) */
+.nw-site .nwpq-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-paper);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwpq-panel--warn {
+  border-left: 2px solid var(--nwpq-warn);
+}
+.nw-site .nwpq-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.nw-site .nwpq-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-panel-text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+.nw-site .nwpq-panel .nwpq-field > .nwpq-note {
+  margin-top: -2px;
+}
+.nw-site .nw-outline.nwpq-add {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.nw-site .nwpq-child {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwpq-child-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwpq-child-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+
+/* Text buttons (the board's "Edit") */
+.nw-site .nwpq-link {
+  margin: 0;
+  font-weight: 400;
+  padding: 0;
+  min-height: 24px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--nw-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--nw-line-heavy);
+}
+.nw-site .nwpq-link:hover {
+  text-decoration-color: var(--nw-ink);
+}
+
+/* ── Review ── */
+.nw-site .nwpq-review {
+  border: 1px solid var(--nw-line);
+  border-radius: var(--nw-r-md);
+}
+.nw-site .nwpq-review-sec {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site .nwpq-review-sec:last-child {
+  border-bottom: 0;
+}
+.nw-site .nwpq-review-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwpq-review-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-review-dl {
+  margin: 10px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 20px;
+}
+.nw-site .nwpq-review-dl.nwpq-review-dl--narrow {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+.nw-site .nwpq-review-dt {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-review-dd {
+  margin: 2px 0 0;
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-review-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nw-site .nwpq-review-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14.5px;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-review-fig {
+  color: var(--nw-text);
+  text-align: right;
+}
+.nw-site .nwpq-review-p {
+  margin: 10px 0 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-review-p.nwpq-review-p--muted {
+  line-height: normal;
+  color: var(--nw-muted);
+}
+
+/* ── One-step details form ── */
+.nw-site .nwpq-details {
+  margin: 0;
+  padding: clamp(22px, 3.5vw, 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.nw-site .nwpq-details-lead {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-details .nwpq-alert {
+  margin-top: 0;
+}
+.nw-site .nwpq-details-actions {
+  display: flex;
+  flex-wrap: wrap-reverse;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+}
+.nw-site .nw-btn.nwpq-details-submit {
+  flex: 1 1 240px;
+  max-width: 340px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 28px;
+  border-radius: var(--nw-r-sm);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ── Privacy note ── */
+.nw-site .nwpq-privacy {
+  margin: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-privacy svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.nw-site .nwpq-privacy a {
+  color: var(--nw-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.nw-site .nwpq-privacy a:hover {
+  text-decoration-thickness: 1px;
+}
+
+/* ── Sidebar ── */
+.nw-site .nwpq-aside {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.nw-site .nwpq-why {
+  padding: 26px;
+}
+.nw-site .nwpq-why-title {
+  margin: 0;
+  font-size: var(--nw-fs-h4);
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-why-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.nw-site .nwpq-why-list li {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--nw-paper-2);
+}
+.nw-site .nwpq-why-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwpq-why-label {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-why-desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-checks {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--nw-line);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.nw-site .nwpq-checks li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.nw-site .nwpq-checks svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.nw-site .nwpq-check-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-check-desc {
+  display: block;
+  font-size: 13px;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-providers {
+  padding: 22px 24px;
+}
+.nw-site .nwpq-providers-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwpq-providers-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwpq-providers-count {
+  font-size: 15px;
+  font-style: italic;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-logos {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  border-top: 1px solid var(--nw-line);
+  border-left: 1px solid var(--nw-line);
+}
+.nw-site .nwpq-logo {
+  height: 56px;
+  padding: 8px;
+  border-right: 1px solid var(--nw-line);
+  border-bottom: 1px solid var(--nw-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.nw-site .nwpq-logo img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 72px;
+  max-height: 28px;
+  object-fit: contain;
+  filter: grayscale(1);
+  opacity: 0.85;
+}
+.nw-site .nwpq-logo-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--nw-text);
+}
+.nw-site .nwpq-trust {
+  list-style: none;
+  margin: 0;
+  padding: 16px 20px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-ink);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+.nw-site .nwpq-trust li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--nw-on-dark);
+}
+
+/* ── Sent ── */
+.nw-site .nwpq-done {
+  padding: clamp(28px, 5vw, 56px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+}
+.nw-site .nwpq-done-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid var(--nw-ink);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwpq-done-title {
+  margin: 0;
+  font-size: var(--nw-fs-h2);
+  line-height: 1.1;
+  color: var(--nw-ink);
+  scroll-margin-top: calc(72px + 40px);
+}
+.nw-site .nwpq-done-title:focus {
+  outline: none;
+}
+.nw-site .nwpq-done-text {
+  margin: 0;
+  max-width: 560px;
+  font-size: var(--nw-fs-body);
+  line-height: 1.7;
+  color: var(--nw-text);
+}
+.nw-site .nwpq-done-text strong {
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-done-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+.nw-site .nwpq-done-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 22px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwpq-done-btn.nwpq-done-btn--outline {
+  font-weight: 500;
+}
+
+/* ── Unknown service ── */
+.nw-site .nwpq-missing {
+  padding: var(--nw-sec-lg) 0;
+}
+.nw-site .nw-wrap.nwpq-missing-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+.nw-site .nwpq-missing-title {
+  margin: 0;
+  font-size: var(--nw-fs-h2s);
+  line-height: 1.1;
+  color: var(--nw-ink);
+}
+.nw-site .nwpq-missing-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--nw-text);
+}
+
+/* ── Narrow screens ── */
+@media (max-width: 860px) {
+  .nw-site .nwpq-hide-md {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  /* The sent card's two links stack, each full width (the board's phone
+     rule for a primary and an outline link side by side). */
+  .nw-site .nwpq-done-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nw-site .nwpq-done-actions > .nwpq-done-btn {
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+  /* The board's phone rule steps a 56px button down to 48px and 15px. */
+  .nw-site .nw-btn.nwpq-details-submit {
+    height: 48px;
+    font-size: 15px;
+  }
+}
+@media (max-width: 560px) {
+  .nw-site .nwpq-tab-label {
+    font-size: 11.5px;
+  }
+  /* The board draws four steps, which fit a phone. Five leave a long label
+     ("Preferences") no room, so on a phone a five-step wizard names only
+     the current step, under its number, free to run into the unnamed
+     columns beside it (each step's button still carries its full name). */
+  .nw-site .nwpq-tabs--many .nwpq-tab-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .nw-site .nwpq-tabs--many .nwpq-tab-label {
+    visibility: hidden;
+    white-space: nowrap;
+  }
+  .nw-site .nwpq-tabs--many .nwpq-tab-btn--current .nwpq-tab-label {
+    visibility: visible;
+  }
+}

@@ -56,14 +56,20 @@ import '../styles/sections.css';
 
 interface FaqRailProps {
   id?: string;
-  index: string;
+  /** Omit for an unnumbered kicker. */
+  index?: string;
+  /** The kicker after the number; "FAQ" unless a board says otherwise. */
+  kicker?: string;
   faqs: readonly { question: string; answer: string }[];
   lead?: string;
-  /** The help card's main action. A service page sends visitors to its quote. */
-  action: { label: string; to: string; arrow?: boolean };
+  /**
+   * The help card's main action. A service page sends visitors to its quote,
+   * or with `href` to a spot on the same page (its call-back form).
+   */
+  action: { label: string; arrow?: boolean } & ({ to: string } | { href: string });
 }
 
-export function FaqRail({ id = 'faq', index, faqs, lead, action }: FaqRailProps) {
+export function FaqRail({ id = 'faq', index, kicker = 'FAQ', faqs, lead, action }: FaqRailProps) {
   const base = useId();
   const [open, setOpen] = useState(0);
   if (faqs.length === 0) return null;
@@ -74,7 +80,7 @@ export function FaqRail({ id = 'faq', index, faqs, lead, action }: FaqRailProps)
         <div className="nw-faq-rail">
           <SectionHead
             index={index}
-            kicker="FAQ"
+            kicker={kicker}
             title="Frequently Asked Questions"
             lead={lead}
             className="nw-faq-head"
@@ -97,12 +103,21 @@ export function FaqRail({ id = 'faq', index, faqs, lead, action }: FaqRailProps)
               </li>
             </ul>
             <div className="nw-faq-actions">
-              <Link className="nw-btn" to={action.to}>
-                {action.label}
-                {action.arrow === false ? null : (
-                  <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
-                )}
-              </Link>
+              {'href' in action ? (
+                <a className="nw-btn" href={action.href}>
+                  {action.label}
+                  {action.arrow === false ? null : (
+                    <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
+                  )}
+                </a>
+              ) : (
+                <Link className="nw-btn" to={action.to}>
+                  {action.label}
+                  {action.arrow === false ? null : (
+                    <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
+                  )}
+                </Link>
+              )}
               <Link className="nw-outline" to="/ask-vasco">
                 <CompassIcon />
                 Ask Vasco

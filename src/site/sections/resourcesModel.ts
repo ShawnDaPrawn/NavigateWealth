@@ -28,8 +28,11 @@ export const ALL_CATEGORY_ID = '__all__';
 /** The library loads this many cards at a time (the board's page size). */
 export const LIBRARY_PAGE_SIZE = 9;
 
-/** The live page's cap on search results. */
-export const SEARCH_RESULT_LIMIT = 15;
+/**
+ * The search panel lists at most this many ("Top 8 matches"), as the board
+ * does; the live page lists 15.
+ */
+export const SEARCH_RESULT_LIMIT = 8;
 
 /** Featured insights: one lead and two beside it. */
 export const FEATURED_COUNT = 3;
@@ -156,7 +159,8 @@ export interface SearchResult {
 
 /**
  * The live page's search: titles, excerpts and category names of articles,
- * then the titles of whatever market news has been fetched; at most 15.
+ * then the titles of whatever market news has been fetched; at most
+ * SEARCH_RESULT_LIMIT.
  */
 export function searchResources(
   query: string,

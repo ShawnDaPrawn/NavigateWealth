@@ -3,7 +3,7 @@
  * service page renders ServicePageTemplate, and the design switch hands it to
  * NavigatorServicePage. Covers what the redesign must not lose (every product's
  * copy, the FAQ answers, the JSON-LD, the lead form reaching the endpoint) and
- * what it adds (search-led H1, field validation, honeypot, focus handling).
+ * what it adds (field validation, honeypot, focus handling).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -20,6 +20,8 @@ vi.mock('../../utils/supabase/info', async (importOriginal) => ({
 Element.prototype.scrollTo = () => {};
 
 const { MedicalAidPage } = await import('../../components/pages/MedicalAidPage');
+const { TaxPlanningPage } = await import('../../components/pages/TaxPlanningPage');
+const { RiskManagementPage } = await import('../../components/pages/RiskManagementPage');
 
 async function renderPage() {
   render(
@@ -45,11 +47,12 @@ afterEach(() => {
 });
 
 describe('Navigator service page', () => {
-  it('leads with the searched-for phrase as the only H1, the slogan beneath it', async () => {
+  it("leads with the board's two-line headline as the only H1", async () => {
     const h1 = await renderPage();
-    expect(h1.textContent).toBe('Independent Medical Aid Advice in South Africa');
+    expect(h1.textContent).toBe('Your Health,Our Priority');
+    expect(h1.querySelector('br')).not.toBeNull();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByText('Your Health, Our Priority')).toBeDefined();
+    expect(screen.getByText('Medical Aid Solutions')).toBeDefined();
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(crumbs).getByRole('link', { name: 'Home' }).getAttribute('href')).toBe('/');
     expect(within(crumbs).getByRole('link', { name: 'Services' }).getAttribute('href')).toBe(
@@ -75,7 +78,6 @@ describe('Navigator service page', () => {
         'tel:+27126672505',
         'mailto:info@navigatewealth.co',
         '/ask-vasco',
-        '/legal/privacy-notice',
       ]),
     );
   });
@@ -171,6 +173,41 @@ describe('Navigator service page', () => {
   });
 });
 
+describe('Navigator service page layouts', () => {
+  it('draws the jump layout on Tax Planning', async () => {
+    render(
+      <MemoryRouter initialEntries={['/tax-planning']}>
+        <TaxPlanningPage />
+      </MemoryRouter>,
+    );
+    const h1 = await screen.findByRole('heading', { level: 1 });
+    expect(h1.textContent).toBe('Maximize YourTax Efficiency');
+    const jump = screen.getByRole('navigation', { name: 'On this page' });
+    expect(within(jump).getByRole('link', { name: 'Individuals' }).getAttribute('href')).toBe(
+      '#individuals',
+    );
+    expect(
+      screen.getAllByRole('link', { name: 'Call Me Back' }).map((a) => a.getAttribute('href')),
+    ).toEqual(['#callback', '#callback']);
+    expect(screen.getByText('STEP 01')).toBeDefined();
+    expect(screen.getByText(/in line with POPIA and our Privacy Notice/)).toBeDefined();
+  });
+
+  it('draws the risk layout: no breadcrumb or approach, a logo strip', async () => {
+    render(
+      <MemoryRouter initialEntries={['/risk-management']}>
+        <RiskManagementPage />
+      </MemoryRouter>,
+    );
+    const h1 = await screen.findByRole('heading', { level: 1 });
+    expect(h1.textContent).toBe('Protecting WhatMatters Most');
+    expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'On this page' })).toBeNull();
+    expect(document.getElementById('approach')).toBeNull();
+    expect(screen.getByRole('heading', { name: '7 Insurers Compared' })).toBeDefined();
+  });
+});
+
 describe('Navigator call-back form', () => {
   function form() {
     return screen.getByRole('form', { name: 'Request a call back' });
@@ -207,7 +244,7 @@ describe('Navigator call-back form', () => {
     });
     fireEvent.click(within(f).getByRole('button', { name: /Call Me Back/ }));
 
-    expect(await screen.findByText('Thank you, Thandi.')).toBeDefined();
+    expect(await screen.findByText('Request Submitted Successfully')).toBeDefined();
     const call = vi
       .mocked(fetch)
       .mock.calls.find(([url]) => String(url).includes('/contact-form/submit'));
@@ -241,6 +278,6 @@ describe('Navigator call-back form', () => {
     });
     fireEvent.click(within(f).getByRole('button', { name: /Call Me Back/ }));
     expect((await screen.findByRole('alert')).textContent).toContain('Validation failed');
-    expect(screen.queryByText(/Thank you/)).toBeNull();
+    expect(screen.queryByText('Request Submitted Successfully')).toBeNull();
   });
 });

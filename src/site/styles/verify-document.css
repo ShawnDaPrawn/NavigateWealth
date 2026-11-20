@@ -1,0 +1,634 @@
+/*
+ * Navigator document verification page — /verify-document and /verify —
+ * ported from the "Verify Document" board of the Claude Design canvas, its
+ * inline styles turned into classes. Buttons, the focus ring and tokens come
+ * from navigator.css; .nw-mono and .nw-in from sections.css.
+ *
+ * The route renders outside MainLayout, so the page root carries `.nw-site`
+ * itself. Scoped to `.nw-site`, like navigator.css. Every class is prefixed
+ * `nwvd-`.
+ */
+
+/* The board has a 16px base, the browser's normal line height and no
+   border-box reset. The site's root is 14px, Tailwind's preflight sizes every
+   box by its border, and the global base typography gives p, headings,
+   labels, buttons and inputs line heights of their own; all restated here at
+   zero specificity, so every rule below (and navigator.css's border-box
+   buttons) still wins. */
+.nw-site.nwvd {
+  width: 100%;
+  min-height: 100vh;
+  font-size: 16px;
+  line-height: normal;
+  color: var(--nw-ink);
+  /* The board's ruled paper. */
+  background-color: var(--nw-paper);
+  background-image:
+    linear-gradient(rgba(13, 22, 38, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 22, 38, 0.035) 1px, transparent 1px);
+  background-size: 96px 96px;
+}
+:where(.nw-site.nwvd) :where(p, h1, h2, h3, label, button, input, li) {
+  line-height: inherit;
+}
+:where(.nw-site.nwvd) :where(label) {
+  font-size: inherit;
+  font-weight: inherit;
+}
+:where(.nw-site.nwvd),
+:where(.nw-site.nwvd) :where(*, ::before, ::after) {
+  box-sizing: content-box;
+}
+
+/* ── Header ── */
+.nw-site .nwvd-head {
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--nw-line);
+}
+.nw-site .nwvd-head-row {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px clamp(16px, 4vw, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.nw-site .nwvd-home {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--nw-ink);
+  text-decoration: none;
+}
+.nw-site .nwvd-logo {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+.nw-site .nwvd-label {
+  padding-left: 14px;
+  border-left: 1px solid var(--nw-line);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwvd-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: var(--nw-r-sm);
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--nw-text);
+  text-decoration: none;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwvd-back:hover {
+  color: var(--nw-ink);
+  background: var(--nw-paper-2);
+}
+.nw-site .nwvd-back svg {
+  display: inline;
+}
+/* Below 457px the board's label no longer fits beside the logo and "Back to
+   site", and the board draws the two on top of each other; the label steps
+   aside there instead. */
+@media (max-width: 456px) {
+  .nw-site .nwvd-label {
+    display: none;
+  }
+}
+
+/* ── Intro ── */
+.nw-site .nwvd-main {
+  display: block;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 64px) 16px 64px;
+  box-sizing: border-box;
+}
+.nw-site .nwvd-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwvd-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 1px solid var(--nw-ink);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwvd-title {
+  margin: 20px 0 0;
+  font-size: var(--nw-fs-h1s);
+  line-height: 1.1;
+}
+.nw-site .nwvd-lead {
+  margin: 12px 0 0;
+  max-width: 560px;
+  font-size: 16.5px;
+  line-height: 1.65;
+  color: var(--nw-text);
+}
+
+/* ── The card ── */
+.nw-site .nwvd-card {
+  margin-top: 32px;
+  background: var(--nw-white);
+  border-radius: var(--nw-r-sm);
+  box-shadow: 0 0 0 1px var(--nw-line);
+  overflow: hidden;
+}
+.nw-site .nwvd-card-head {
+  padding: 22px clamp(18px, 4vw, 28px) 0;
+}
+/* The board's h2 rule forces the serif at 500. */
+.nw-site .nwvd-card-title {
+  margin: 0;
+  font-size: 19px;
+}
+.nw-site .nwvd-card-desc {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--nw-text);
+}
+.nw-site .nwvd-card-body {
+  padding: 18px clamp(18px, 4vw, 28px) 24px;
+}
+
+/* The upload area. */
+.nw-site .nwvd-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 210px;
+  padding: 24px;
+  border-radius: var(--nw-r-sm);
+  text-align: center;
+  box-sizing: border-box;
+  border: 2px dashed var(--nw-line-strong);
+  background: var(--nw-white);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+.nw-site .nwvd-drop:hover {
+  border-color: var(--nw-ink);
+  background: var(--nw-paper-3);
+}
+.nw-site .nwvd-drop.nwvd-drop--over {
+  border-color: var(--nw-ink);
+  background: var(--nw-paper);
+}
+/* The file input is invisible, so the area shows the keyboard focus. */
+.nw-site .nwvd-drop:has(.nwvd-file-input:focus-visible) {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 2px;
+}
+.nw-site .nwvd-drop-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nw-site .nwvd-drop-title {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+.nw-site .nwvd-drop-hint {
+  font-size: 12px;
+  color: var(--nw-muted);
+}
+.nw-site .nwvd-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+}
+.nw-site .nwvd-pick-error {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  color: var(--nw-danger);
+}
+
+/* Hashing and checking. */
+.nw-site .nwvd-busy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 0;
+  text-align: center;
+}
+.nw-site .nwvd-doc {
+  position: relative;
+  width: 72px;
+  height: 88px;
+  border-radius: var(--nw-r-sm);
+  border: 1.5px solid var(--nw-line);
+  background: var(--nw-paper);
+  overflow: hidden;
+}
+.nw-site .nwvd-doc-lines {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.nw-site .nwvd-doc-lines > span {
+  height: 5px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-line);
+}
+.nw-site .nwvd-doc-lines > .nwvd-doc-line--80 {
+  width: 80%;
+}
+.nw-site .nwvd-doc-lines > .nwvd-doc-line--60 {
+  width: 60%;
+}
+.nw-site .nwvd-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 14px;
+  height: 2px;
+  background: var(--nw-ink);
+  animation: nwvd-scan 1.2s ease-in-out infinite alternate;
+}
+@keyframes nwvd-scan {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(46px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwvd-scan {
+    animation: none;
+  }
+}
+.nw-site .nwvd-busy-text {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwvd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+  font-size: 12px;
+  color: var(--nw-text);
+}
+
+/* ── Outcomes ── */
+.nw-site .nwvd-result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.nw-site .nwvd-result--verified {
+  gap: 18px;
+}
+.nw-site .nwvd-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  border-radius: var(--nw-r-sm);
+}
+/* The board's verified greens and the live page's amber for unfinished signing. */
+.nw-site .nwvd-banner--ok {
+  --nwvd-tone: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+.nw-site .nwvd-banner--warn {
+  --nwvd-tone: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+.nw-site .nwvd-banner--danger {
+  --nwvd-tone: var(--nw-danger-dark);
+  background: var(--nw-danger-bg);
+  border: 1px solid var(--nw-danger-line);
+}
+.nw-site .nwvd-banner-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  color: var(--nwvd-tone);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwvd-banner--danger .nwvd-banner-icon {
+  color: var(--nw-danger);
+}
+.nw-site .nwvd-banner-copy {
+  min-width: 0;
+}
+.nw-site .nwvd-banner-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.nw-site .nwvd-banner-title {
+  margin: 0;
+  font-size: var(--nw-fs-body);
+  font-weight: 700;
+  color: var(--nwvd-tone);
+}
+.nw-site .nwvd-banner-text {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--nwvd-tone);
+}
+.nw-site .nwvd-banner-text--plain {
+  line-height: normal;
+}
+.nw-site .nwvd-match {
+  padding: 2px 9px;
+  border-radius: var(--nw-r-sm);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.nw-site .nwvd-match--signed {
+  background: #f0fdf4;
+  color: #15803d;
+}
+.nw-site .nwvd-match--original {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.nw-site .nwvd-sub {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--nw-text);
+}
+.nw-site .nwvd-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+.nw-site .nwvd-cell {
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-3);
+}
+.nw-site .nwvd-cell--wide {
+  grid-column: 1 / -1;
+}
+.nw-site .nwvd-cell-label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--nw-muted);
+}
+.nw-site .nwvd-cell-label--pill {
+  margin: 0 0 4px;
+}
+.nw-site .nwvd-cell-title {
+  margin: 3px 0 0;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.nw-site .nwvd-cell-value {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.nw-site .nwvd-pill {
+  padding: 2px 9px;
+  border-radius: var(--nw-r-sm);
+  font-size: 12px;
+  font-weight: 600;
+}
+.nw-site .nwvd-pill--ok {
+  background: #f0fdf4;
+  color: #15803d;
+}
+.nw-site .nwvd-pill--warn {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.nw-site .nwvd-signers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nw-site .nwvd-signer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-paper-2);
+}
+.nw-site .nwvd-signer-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.nw-site .nwvd-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.nw-site .nwvd-signer-copy {
+  min-width: 0;
+}
+.nw-site .nwvd-signer-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.nw-site .nwvd-signer-role {
+  margin: 1px 0 0;
+  font-size: 12px;
+  color: var(--nw-muted);
+}
+.nw-site .nwvd-signed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--nw-text);
+  text-align: right;
+}
+.nw-site .nwvd-pending {
+  padding: 2px 9px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line);
+  font-size: 12px;
+  color: var(--nw-text);
+}
+
+.nw-site .nwvd-hash {
+  padding: 12px 14px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-3);
+  border: 1px solid var(--nw-paper-2);
+}
+.nw-site .nwvd-hash-label {
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwvd-hash-value {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--nw-text);
+  word-break: break-all;
+}
+
+.nw-site .nwvd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nw-site .nwvd-file {
+  font-size: 12px;
+  color: var(--nw-muted);
+}
+.nw-site .nw-outline.nwvd-again,
+.nw-site .nw-btn.nwvd-retry {
+  height: 48px;
+  padding: 0 22px;
+  border-radius: var(--nw-r-sm);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+}
+.nw-site .nw-btn.nwvd-retry {
+  align-self: flex-end;
+}
+
+.nw-site .nwvd-reasons {
+  padding: 14px 16px;
+  border-radius: var(--nw-r-sm);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+.nw-site .nwvd-reasons-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.nw-site .nwvd-reasons-list {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ── How it works ── */
+.nw-site .nwvd-how {
+  margin-top: 32px;
+}
+.nw-site .nwvd-sub.nwvd-how-title {
+  margin: 0 0 14px;
+}
+.nw-site .nwvd-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.nw-site .nwvd-step {
+  padding: 18px;
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-white);
+  border: 1px solid var(--nw-line);
+}
+.nw-site .nwvd-step-num {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--nw-r-sm);
+  border: 1px solid var(--nw-line-strong);
+  color: var(--nw-ink);
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+.nw-site .nwvd-step-title {
+  margin: 12px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.nw-site .nwvd-step-desc {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--nw-text);
+}
+.nw-site .nwvd-privacy {
+  margin: 18px 0 0;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  font-size: 13px;
+  color: var(--nw-text);
+  text-align: center;
+}
+.nw-site .nwvd-privacy-icon {
+  flex-shrink: 0;
+}

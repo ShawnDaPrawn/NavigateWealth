@@ -532,7 +532,8 @@
 .nw-site .nwbk-slot {
   height: 48px;
   margin: 0;
-  padding: 0;
+  /* The board leaves the browser's button padding in place. */
+  padding: 1px 6px;
   border-radius: var(--nw-r-sm);
   background: var(--nw-white);
   border: 1px solid var(--nw-line);
@@ -803,6 +804,11 @@
   color: var(--nw-muted);
   box-shadow: inset 0 0 0 1px var(--nw-line);
   cursor: not-allowed;
+}
+/* Keyboard focus shows the ring only: the board's buttons keep their colour
+   (navigator.css darkens them on focus as on hover). */
+.nw-site.nwbk .nw-btn:focus-visible:not(:hover, :disabled, .nwbk-next--off) {
+  background: var(--nw-violet);
 }
 .nw-site .nwbk-next > svg {
   transition: transform var(--nw-dur-2) var(--nw-ease);
@@ -1133,11 +1139,8 @@
   color: var(--nw-ink);
   text-decoration: none;
 }
-.nw-site .nwbk-route-link:hover {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
+/* No underline on hover: the board's inline text-decoration outranks its
+   link hover rule, so the board's phone and email links never change. */
 .nw-site .nwbk-route-link--wrap {
   overflow-wrap: anywhere;
 }

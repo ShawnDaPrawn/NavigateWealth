@@ -44,6 +44,7 @@ import { ConsultationModal } from '../modals/ConsultationModal';
 import { toast } from 'sonner';
 import { splitFullName, submitContactEnquiry } from '../../services/contactEnquiry';
 import { SITE_DESIGN } from '../../site/design';
+import { serviceShareImage } from '../seo/shareImages';
 import { buildServiceStructuredData } from './serviceStructuredData';
 
 // The redesigned page loads only when the build selects it, so the live
@@ -105,9 +106,10 @@ export interface ServicePageConfig {
     /** Get quote link */
     quoteLink?: string;
     /**
-     * The H1 in the redesign: the phrase people search for, e.g. "Independent
-     * Medical Aid Advice" + "in South Africa". titleLine1/titleLine2 then
-     * become the slogan beneath it. The live design ignores this.
+     * The phrase people search for, e.g. "Independent Medical Aid Advice" +
+     * "in South Africa". Neither design shows it: both lead with
+     * titleLine1/titleLine2, as the service boards draw the H1. Kept for SEO
+     * copy (titles, descriptions) to draw on.
      */
     searchHeading?: { lead: string; accent?: string };
     /**
@@ -320,7 +322,7 @@ function LegacyServicePageTemplate({ config, seoData, children }: ServicePageTem
         keywords={seoData.keywords}
         canonicalUrl={seoData.canonicalUrl}
         ogType={seoData.ogType}
-        ogImage={config.hero.heroImage}
+        ogImage={serviceShareImage(config.seoKey) ?? config.hero.heroImage}
         structuredData={structuredData}
       />
 

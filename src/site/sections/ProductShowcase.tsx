@@ -8,14 +8,24 @@
  *
  * Phones (≤760px): a tappable list; each row opens the product in a sheet.
  */
-import { useId, useRef, useState, type ComponentType, type KeyboardEvent } from 'react';
+import { useId, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { Link } from 'react-router';
-import { ArrowRight, Check, ChevronRight } from 'lucide-react';
 import { NwImage } from '../components/NwImage';
 import { SectionHead } from './SectionHead';
 import { ProductSheet } from './ProductSheet';
+import { ServiceIcon, type ServiceIconName } from './serviceIcons';
 import { pad2 } from './format';
 import '../styles/sections.css';
+
+/** The service boards' three layouts (see pages/serviceBoards.ts). */
+type ShowcaseLayout = 'standard' | 'jump' | 'risk';
+
+/** What the phone list calls the products, per layout. */
+const LIST_NOUN: Record<ShowcaseLayout, [string, string]> = {
+  standard: ['solution', 'solutions'],
+  jump: ['service', 'services'],
+  risk: ['cover option', 'cover options'],
+};
 
 export interface ShowcaseProduct {
   id: string;
@@ -32,7 +42,13 @@ export interface ShowcaseProduct {
 
 interface ProductShowcaseProps {
   id: string;
-  index: string;
+  /**
+   * `standard`: tabs under the heading with a position counter and a "Next"
+   * button. `jump` and `risk`: tabs beside the heading, no counter or "Next".
+   */
+  layout?: ShowcaseLayout;
+  /** Omit for an unnumbered kicker (the risk board). */
+  index?: string;
   kicker: string;
   title: string;
   subtitle: string;
@@ -42,7 +58,11 @@ interface ProductShowcaseProps {
   /** Put the picture on the right (the business group does). */
   flip?: boolean;
   chipLabel: string;
-  chipIcon: ComponentType<{ className?: string }>;
+  chipIcon: ServiceIconName;
+  /** Width of the heading beside the tabs (`jump`). */
+  headWidth?: number;
+  /** Horizontal tab padding (`jump`). */
+  tabPad?: number;
   products: ShowcaseProduct[];
   quoteLink: string;
   consultationLink: string;
@@ -51,6 +71,7 @@ interface ProductShowcaseProps {
 
 export function ProductShowcase({
   id,
+  layout = 'standard',
   index,
   kicker,
   title,
@@ -59,7 +80,9 @@ export function ProductShowcase({
   tone,
   flip,
   chipLabel,
-  chipIcon: ChipIcon,
+  chipIcon,
+  headWidth,
+  tabPad,
   products,
   quoteLink,
   consultationLink,
@@ -99,41 +122,68 @@ export function ProductShowcase({
 
   if (count === 0) return null;
 
+  const headStyle = {
+    ...(headWidth ? { '--nwp-head-w': `${headWidth}px` } : null),
+    ...(tabPad ? { '--nwp-tab-pad': `${tabPad}px` } : null),
+  } as CSSProperties;
+
+  const tablist = (
+    <div role="tablist" aria-label={ariaLabel ?? title} className="nwp-tabs nwp-desk">
+      {products.map((p, i) => (
+        <button
+          key={p.id}
+          ref={(el) => {
+            tabRefs.current[i] = el;
+          }}
+          type="button"
+          role="tab"
+          id={tabId(i)}
+          aria-selected={i === active}
+          aria-controls={panelId(i)}
+          tabIndex={i === active ? 0 : -1}
+          className="nwp-tab"
+          onClick={() => select(i, false)}
+          onKeyDown={onTabKey}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  );
+  const [one, many] = LIST_NOUN[layout];
+
   return (
     <section
       id={id}
       aria-label={ariaLabel ?? title}
-      className={`nw-sec ${tone === 'paper' ? 'nw-sec--paper' : 'nw-sec--white'}`}
+      className={`nw-sec nwp-sec nwp-sec--${layout} ${tone === 'paper' ? 'nw-sec--paper' : 'nw-sec--white'}`}
+      style={headStyle}
     >
       <div className="nw-wrap">
-        <SectionHead index={index} kicker={kicker} title={title} lead={subtitle} />
-
-        <div className="nwp-bar nwp-desk">
-          <div role="tablist" aria-label={ariaLabel ?? title} className="nwp-tabs">
-            {products.map((p, i) => (
-              <button
-                key={p.id}
-                ref={(el) => {
-                  tabRefs.current[i] = el;
-                }}
-                type="button"
-                role="tab"
-                id={tabId(i)}
-                aria-selected={i === active}
-                aria-controls={panelId(i)}
-                tabIndex={i === active ? 0 : -1}
-                className="nwp-tab"
-                onClick={() => select(i, false)}
-                onKeyDown={onTabKey}
-              >
-                {p.label}
-              </button>
-            ))}
+        {layout === 'standard' ? (
+          <SectionHead index={index} kicker={kicker} title={title} lead={subtitle} />
+        ) : (
+          <div className="nwp-headrow">
+            <SectionHead
+              index={index}
+              kicker={kicker}
+              title={title}
+              lead={subtitle}
+              className="nwp-head"
+            />
+            {tablist}
           </div>
-          <span className="nwp-pos nw-mono" aria-hidden="true">
-            {pad2(active + 1)} / {pad2(count)}
-          </span>
-        </div>
+        )}
+
+        {layout === 'standard' ? (
+          // On phones the bar's contents hide but the bar keeps its top margin, as drawn.
+          <div className="nwp-bar">
+            {tablist}
+            <span className="nwp-pos nwp-desk nw-mono" aria-hidden="true">
+              {pad2(active + 1)} / {pad2(count)}
+            </span>
+          </div>
+        ) : null}
 
         {products.map((p, i) => {
           const next = products[(i + 1) % count];
@@ -156,9 +206,7 @@ export function ProductShowcase({
                 />
                 <div className="nwp-cap">
                   <span className="nwp-chip">
-                    <span className="nwp-chip-icon" aria-hidden="true">
-                      <ChipIcon />
-                    </span>
+                    <ServiceIcon name={chipIcon} size={13} />
                     {chipLabel}
                   </span>
                   <h3 className="nwp-title">{p.title}</h3>
@@ -179,7 +227,7 @@ export function ProductShowcase({
                   {p.benefits.map((b) => (
                     <li key={b}>
                       <span className="nwp-tick" aria-hidden="true">
-                        <Check size={13} strokeWidth={1.75} />
+                        <ServiceIcon name="check" size={13} />
                       </span>
                       {b}
                     </li>
@@ -188,12 +236,12 @@ export function ProductShowcase({
                 <div className="nwp-actions">
                   <Link className="nw-btn" to={quoteLink}>
                     Get a Quote
-                    <ArrowRight size={16} strokeWidth={1.75} aria-hidden="true" />
+                    <ServiceIcon name="arrowRight" size={16} />
                   </Link>
-                  {count > 1 ? (
+                  {count > 1 && layout === 'standard' ? (
                     <button type="button" className="nwp-next" onClick={() => select(i + 1, true)}>
-                      Next: {next.label}
-                      <ChevronRight size={15} strokeWidth={1.75} aria-hidden="true" />
+                      Next: <span>{next.label}</span>
+                      <ServiceIcon name="chevronRight" size={15} />
                     </button>
                   ) : null}
                 </div>
@@ -205,7 +253,7 @@ export function ProductShowcase({
         <div className="nwp-list">
           <div className="nwp-list-head nw-mono" aria-hidden="true">
             <span>
-              {count} {count === 1 ? 'solution' : 'solutions'}
+              {count} {count === 1 ? one : many}
             </span>
             <span>Tap to read more</span>
           </div>
@@ -229,7 +277,7 @@ export function ProductShowcase({
                     <span className="nwp-row-d">{p.description}</span>
                   </span>
                   <span className="nwp-chev" aria-hidden="true">
-                    <ChevronRight size={15} strokeWidth={1.75} />
+                    <ServiceIcon name="chevronRight" size={15} />
                   </span>
                 </button>
               </li>

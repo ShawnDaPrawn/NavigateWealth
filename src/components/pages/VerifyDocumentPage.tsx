@@ -7,7 +7,7 @@
  * Accessible at /verify (no auth required).
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { Suspense, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -24,6 +24,13 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { esignApi } from '../admin/modules/esign';
+import { SITE_DESIGN } from '../../site/design';
+
+const NavigatorVerifyDocumentPage = React.lazy(() =>
+  import('../../site/pages/NavigatorVerifyDocumentPage').then((m) => ({
+    default: m.NavigatorVerifyDocumentPage,
+  })),
+);
 
 type VerificationState = 'idle' | 'hashing' | 'verifying' | 'verified' | 'not_found' | 'error';
 
@@ -46,7 +53,23 @@ interface VerificationResult {
   message: string;
 }
 
+/**
+ * The public document verification page. The build's design switch picks the
+ * layout; both hash the file in the browser and check it through the same
+ * public call (esignApi.verifyDocumentHash).
+ */
 export function VerifyDocumentPage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorVerifyDocumentPage />
+      </Suspense>
+    );
+  }
+  return <LegacyVerifyDocumentPage />;
+}
+
+function LegacyVerifyDocumentPage() {
   const [state, setState] = useState<VerificationState>('idle');
   const [fileName, setFileName] = useState<string>('');
   const [fileSize, setFileSize] = useState<number>(0);

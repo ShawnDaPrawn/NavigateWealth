@@ -13,7 +13,7 @@
  * §3.1 — Dependency direction: UI → hooks → API
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import { useParams, useLocation, useNavigate, Link, Navigate } from 'react-router';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
@@ -46,28 +46,19 @@ import { InvestmentQuoteWizard } from './quote/components/InvestmentQuoteWizard'
 import { RetirementQuoteWizard } from './quote/components/RetirementQuoteWizard';
 import { EmployeeBenefitsQuoteWizard } from './quote/components/EmployeeBenefitsQuoteWizard';
 import { TaxPlanningQuoteWizard } from './quote/components/TaxPlanningQuoteWizard';
+import {
+  INDEXABLE_QUOTE_SERVICES,
+  SESSION_KEY,
+  loadSession,
+  saveSession,
+} from './quote/productQuoteSession';
+import { SITE_DESIGN } from '../../site/design';
 
-// ── Session persistence ───────────────────────────────────────────────────────
-const SESSION_KEY = 'nw_product_quote';
-/** Quote URLs Google is allowed to index. Keep in sync with vercel.json. */
-const INDEXABLE_QUOTE_SERVICES = new Set(['medical-aid']);
-
-function loadSession(service: string): Record<string, string> {
-  try {
-    const raw = sessionStorage.getItem(`${SESSION_KEY}_${service}`);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveSession(service: string, data: Record<string, string>) {
-  try {
-    sessionStorage.setItem(`${SESSION_KEY}_${service}`, JSON.stringify(data));
-  } catch {
-    /* non-critical */
-  }
-}
+const NavigatorProductQuotePage = React.lazy(() =>
+  import('../../site/pages/NavigatorProductQuotePage').then((m) => ({
+    default: m.NavigatorProductQuotePage,
+  })),
+);
 
 // ── Success screen ────────────────────────────────────────────────────────────
 
@@ -112,7 +103,24 @@ function SuccessScreen({ serviceName }: { serviceName: string }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
+/**
+ * The quote funnel's "quote details" step. The build's design switch picks the
+ * layout; both ask the same questions (quote/constants.ts and the wizards'
+ * models), keep progress under the same session keys and send the same
+ * request.
+ */
 export function ProductQuotePage() {
+  if (SITE_DESIGN === 'navigator') {
+    return (
+      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+        <NavigatorProductQuotePage />
+      </Suspense>
+    );
+  }
+  return <LegacyProductQuotePage />;
+}
+
+function LegacyProductQuotePage() {
   const { service } = useParams<{ service: string }>();
   const location = useLocation();
   const navigate = useNavigate();

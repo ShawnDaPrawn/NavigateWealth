@@ -267,9 +267,10 @@ export function BookingWizard({
                   <BookingIcon name="calendar" size={16} stroke="#0D1626" />
                   {dateLabel}
                 </span>
+                {/* The board sets the time and "(SAST)" apart by the row's gap. */}
                 <span>
                   <BookingIcon name="clock" size={16} stroke="#0D1626" />
-                  {timeLabel} (SAST)
+                  <span>{timeLabel}</span> <span>(SAST)</span>
                 </span>
               </div>
               <button type="button" className="nw-btn nwbk-done-btn" onClick={reset}>

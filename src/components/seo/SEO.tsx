@@ -10,6 +10,7 @@
 import { useEffect } from 'react';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
 import organization from './organization.json';
+import { BRAND_SHARE_IMAGE_PATH, SHARE_IMAGE_SIZE, isShareImage } from './shareImages';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -55,8 +56,12 @@ interface ServiceOffer {
 
 const SITE_NAME = 'Navigate Wealth';
 const BASE_URL = SITE_ORIGIN;
-/** Default OG image used when a page-specific one is not supplied (1200x630). */
-const DEFAULT_OG_IMAGE = `${BASE_URL}/brand-assets/navigate-wealth-og.png`;
+/**
+ * Default OG image used when a page-specific one is not supplied (1200x630):
+ * the brand share image (shareImages.ts). The previous default,
+ * /brand-assets/navigate-wealth-og.png, stays in public/ for the static SEO.
+ */
+const DEFAULT_OG_IMAGE = `${BASE_URL}${BRAND_SHARE_IMAGE_PATH}`;
 
 /* -------------------------------------------------------------------------- */
 /*  SEO Component                                                             */
@@ -112,11 +117,11 @@ export function SEO({
     setMeta('property', 'og:site_name', SITE_NAME);
     setMeta('property', 'og:locale', 'en_ZA');
     setMeta('property', 'og:image', resolvedImage);
-    if (resolvedImage === DEFAULT_OG_IMAGE) {
-      // Dimensions are only known for our own OG asset; claiming them for
+    if (resolvedImage === DEFAULT_OG_IMAGE || isShareImage(resolvedImage)) {
+      // Dimensions are only known for our own share images; claiming them for
       // arbitrary page images (article heroes) would be wrong.
-      setMeta('property', 'og:image:width', '1200');
-      setMeta('property', 'og:image:height', '630');
+      setMeta('property', 'og:image:width', String(SHARE_IMAGE_SIZE.width));
+      setMeta('property', 'og:image:height', String(SHARE_IMAGE_SIZE.height));
     } else {
       removeMeta('property', 'og:image:width');
       removeMeta('property', 'og:image:height');
