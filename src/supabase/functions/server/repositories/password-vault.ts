@@ -71,10 +71,10 @@ async function open<T>(value: Envelope, context: string): Promise<T> {
 
 export async function encryptFields(
   id: string,
-  { name, url, username, password, notes }: CredentialInput,
+  { name, url, username, password, notes, portal }: CredentialInput,
 ) {
   const metadata = await seal(
-    { name: name || new URL(url).hostname, url, username },
+    { name: name || new URL(url).hostname, url, username, portal },
     id + '/metadata',
   );
   const secret = await seal({ password, notes }, id + '/secret');
@@ -82,7 +82,7 @@ export async function encryptFields(
 }
 
 export async function summary(entry: VaultEntry): Promise<VaultSummary> {
-  const metadata = await open<Pick<CredentialInput, 'name' | 'url' | 'username'>>(
+  const metadata = await open<Pick<CredentialInput, 'name' | 'url' | 'username' | 'portal'>>(
     entry.metadata,
     entry.id + '/metadata',
   );

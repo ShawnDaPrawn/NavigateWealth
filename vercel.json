@@ -104,6 +104,15 @@
   ],
   "rewrites": [
     {
+      "source": "/mcp/broker-operations",
+      "destination": "https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/mcp/broker-operations"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/mcp/broker-operations",
+      "destination": "/broker-resource.json"
+    },
+    { "source": "/.well-known/oauth-authorization-server", "destination": "/broker-issuer.json" },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

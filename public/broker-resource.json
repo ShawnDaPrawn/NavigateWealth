@@ -1,0 +1,6 @@
+{
+  "resource": "https://www.navigatewealth.co/mcp/broker-operations",
+  "authorization_servers": ["https://www.navigatewealth.co"],
+  "scopes_supported": ["portal.jobs"],
+  "bearer_methods_supported": ["header"]
+}

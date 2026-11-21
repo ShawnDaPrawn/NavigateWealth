@@ -33,6 +33,15 @@ export default async function middleware(request: Request): Promise<Response | u
 
   const { pathname } = new URL(request.url);
 
+  if (
+    [
+      '/mcp/broker-operations',
+      '/.well-known/oauth-protected-resource/mcp/broker-operations',
+      '/.well-known/oauth-authorization-server',
+    ].includes(pathname)
+  )
+    return undefined;
+
   if (shouldReturnNotFound(pathname, manifest as SeoRouteManifest)) {
     // Serve the prerendered 404 shell with a real 404 status (not a soft 200).
     const notFound = await fetch(new URL('/404.html', request.url));

@@ -77,7 +77,16 @@ export function Sidebar({
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
-  const [vaultOpen, setVaultOpen] = useState(false);
+  const [vaultOpen, setVaultOpen] = useState(() => {
+    try {
+      return (
+        Boolean(sessionStorage.getItem('nw-broker-consent')) ||
+        new URLSearchParams(window.location.search).has('brokerRun')
+      );
+    } catch {
+      return false;
+    }
+  });
   const { installApp, isInstalling, showInstallOption } = usePWAInstall();
 
   const isSuperAdmin = user?.role === 'super_admin';

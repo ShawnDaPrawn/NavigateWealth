@@ -1,3 +1,4 @@
+import { isHostedAssistantOrigin } from './broker-ops-origin.ts';
 /**
  * ****************************************************************************
  * NAVIGATE WEALTH ADMIN SERVER — APPLICATION FACTORY
@@ -304,7 +305,13 @@ export function createApp(options: CreateAppOptions = {}): Hono {
   app.use(
     '*',
     cors({
-      origin: (origin) => {
+      origin: (origin, c) => {
+        if (
+          (c.req.path === SERVER_PREFIX + '/mcp/broker-operations' ||
+            c.req.path === SERVER_PREFIX + '/broker-token') &&
+          isHostedAssistantOrigin(origin)
+        )
+          return origin;
         if (!origin) return null;
         if (!allowedOrigins) return origin; // permissive fallback (see cors-origin.ts)
         return allowedOrigins.includes(origin) ? origin : null;

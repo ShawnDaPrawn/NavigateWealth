@@ -7,27 +7,35 @@ import { entries, encryptFields, replace, reveal, summary } from './repositories
 import { sha256Hex } from './sha256.ts';
 import { AdminAuditService } from './admin-audit-service.ts';
 
-const credential = z.object({
-  name: z.string().trim().max(200),
-  url: z
-    .string()
-    .trim()
-    .max(2048)
-    .refine((value) => {
-      try {
-        const url = new URL(value);
-        return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password;
-      } catch {
-        return false;
-      }
-    }, 'Enter an HTTP or HTTPS URL without embedded login details'),
-  username: z.string().max(512),
-  password: z.string().min(1).max(8192),
-  notes: z.string().max(8192),
-});
+import { profile, allowedUrl } from './broker-ops-model.ts';
+import { verifyBrokerLinks } from './repositories/broker-ops.ts';
+const credential = z
+  .object({
+    name: z.string().trim().max(200),
+    url: z
+      .string()
+      .trim()
+      .max(2048)
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password;
+        } catch {
+          return false;
+        }
+      }, 'Enter an HTTP or HTTPS URL without embedded login details'),
+    username: z.string().max(512),
+    password: z.string().min(1).max(8192),
+    notes: z.string().max(8192),
+    portal: profile.optional(),
+  })
+  .refine(
+    (input) => !input.portal || allowedUrl(input.url, input.portal.provider, true),
+    'Login URL must match the selected provider',
+  );
 const batch = z.object({ entries: z.array(credential).min(1).max(100) });
 const revision = z.object({ revision: z.uuid() });
-const edit = revision.extend({ credential });
+const edit = revision.extend({ credential, clearPortal: z.boolean().optional() });
 const app = new Hono();
 app.use('*', requireSuperAdmin);
 app.use('*', async (c, next) => {
@@ -73,6 +81,15 @@ app.get('/', async (c) => {
   });
 });
 app.post('/', validateBody(batch), async (c) => {
+  const incoming = body(c, batch).entries;
+  if (
+    !(
+      await Promise.all(
+        incoming.map((input) => (input.portal ? verifyBrokerLinks(input.portal) : true)),
+      )
+    ).every(Boolean)
+  )
+    return c.json({ error: 'Select an existing broker' }, 400);
   const rows = await Promise.all(
     body(c, batch).entries.map(async (input) => {
       const id = crypto.randomUUID();
@@ -102,9 +119,15 @@ app.put('/:id', validateBody(edit), async (c) => {
   const entry = await entries.get(c.req.param('id')!);
   if (!entry) return missing(c);
   const input = body(c, edit);
+  if (input.credential.portal && !(await verifyBrokerLinks(input.credential.portal)))
+    return c.json({ error: 'Select an existing broker' }, 400);
   const updated = {
     ...entry,
-    ...(await encryptFields(entry.id, input.credential)),
+    ...(await encryptFields(entry.id, {
+      ...input.credential,
+      portal:
+        input.credential.portal ?? (input.clearPortal ? undefined : (await summary(entry)).portal),
+    })),
     revision: crypto.randomUUID(),
   };
   if (!(await replace(updated, input.revision))) return conflict(c);

@@ -1,0 +1,30 @@
+name: Broker reporting worker
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Broker operations run ID
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: broker-report-${{ inputs.job_id }}
+  cancel-in-progress: false
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --prefer-offline
+      - run: npx playwright install --with-deps chromium
+      - name: Run broker report
+        env:
+          NW_PORTAL_JOB_ID: ${{ inputs.job_id }}
+          NW_PORTAL_WORKER_SECRET: ${{ secrets.NW_PORTAL_WORKER_SECRET }}
+        run: node scripts/broker-report-worker.mjs
