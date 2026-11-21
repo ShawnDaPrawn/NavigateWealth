@@ -734,7 +734,7 @@
   max-height: var(--nwl-logo-h, 52px);
 }
 
-.nw-site .nwl-strip {
+.nw-site .nwl-partner-strip {
   padding: 72px 0;
   background: var(--nw-white);
   border-bottom: 1px solid var(--nw-line-soft);

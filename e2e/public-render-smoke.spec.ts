@@ -109,6 +109,21 @@ for (const route of ROUTES) {
   });
 }
 
+test('risk management providers occupy their own section between business cover and FAQs', async ({
+  page,
+}) => {
+  await page.goto('/risk-management', { waitUntil: 'domcontentloaded' });
+  const partners = page.getByRole('region', { name: 'Trusted partners' });
+  await expect(partners.getByRole('img')).toHaveCount(7);
+
+  const business = await page.locator('#businesses').boundingBox();
+  const providers = await partners.boundingBox();
+  const faq = await page.locator('#faq').boundingBox();
+  if (!business || !providers || !faq) throw new Error('Expected visible service page sections');
+  expect(providers.y).toBeGreaterThanOrEqual(business.y + business.height);
+  expect(providers.y + providers.height).toBeLessThanOrEqual(faq.y);
+});
+
 test('/get-quote presents an interactive wizard, not a static page', async ({ page }) => {
   // The quote wizard is the untested revenue path. This does not submit — see
   // the header — but it does assert the first step is present and interactive,

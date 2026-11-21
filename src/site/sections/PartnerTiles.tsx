@@ -50,7 +50,7 @@ export function PartnerTiles({
 
   if (variant === 'strip') {
     return (
-      <section id={id} aria-label="Trusted partners" className="nwl-strip">
+      <section id={id} aria-label="Trusted partners" className="nwl-partner-strip">
         <div className="nw-wrap nwl-strip-row">
           <div className="nwl-strip-head">
             <p className="nwl-strip-k nw-mono">{kicker}</p>
