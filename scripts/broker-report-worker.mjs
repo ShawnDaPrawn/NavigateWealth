@@ -185,30 +185,33 @@ export async function runReport(browser, task, api) {
     // A result must expose its own broker and period, independently of the
     // page-level selector. Never take the first download link on a page.
     const rows = page.locator(s.reportRow);
-    await Promise.any([
-      rows.first().waitFor({ state: 'visible', timeout: 12000 }),
-      page.locator(s.emptyState).waitFor({ state: 'visible', timeout: 12000 }),
-    ]).catch(() => {
-      throw new CheckFailed('document');
-    });
-    const matching = [];
-    for (const row of await rows.all()) {
-      if (
-        (await verify(row.locator(s.rowBroker), task.code)) &&
-        (await verify(row.locator(s.rowMonth), task.month))
-      )
-        matching.push(row);
-    }
-    await checkpoint(page, 'report', api);
-    if (!matching.length) {
-      if (await page.locator(s.emptyState).isVisible()) {
-        await api.event('missing');
-        return;
+    const empty = page.locator(s.emptyState);
+    const isRequestedResult = async (result) =>
+      (await result.isVisible()) &&
+      (await verify(result.locator(s.rowBroker), task.code)) &&
+      (await verify(result.locator(s.rowMonth), task.month));
+    const resultsDeadline = Date.now() + 12000;
+    let href;
+    while (Date.now() < resultsDeadline) {
+      const matching = [];
+      for (const row of await rows.all()) {
+        if (await isRequestedResult(row)) matching.push(row);
       }
-      throw new CheckFailed('document');
+      if (matching.length > 1) throw new CheckFailed('document');
+      const confirmedEmpty = (await empty.count()) === 1 && (await isRequestedResult(empty));
+      if (matching.length || confirmedEmpty) {
+        await checkScope();
+        await checkpoint(page, 'report', api);
+        if (confirmedEmpty) {
+          if (matching.length) throw new CheckFailed('document');
+          await api.event('missing');
+          return;
+        }
+        href = await matching[0].locator(s.documentLink).getAttribute('href');
+        break;
+      }
+      await sleep(200);
     }
-    if (matching.length !== 1) throw new CheckFailed('document');
-    const href = await matching[0].locator(s.documentLink).getAttribute('href');
     if (!href) throw new CheckFailed('document');
     const target = new URL(href, page.url()).href;
     if (!trusted(target)) throw new CheckFailed('scope');

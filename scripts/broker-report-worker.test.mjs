@@ -83,7 +83,28 @@ test('signed-in reporting selects the broker, verifies the file, and isolates fa
       }
       res.setHeader('content-type', 'text/html');
       res.end(
-        `<b id="identity">Practice</b><select id="brokers" onchange="show()"><option>A101</option><option>B202</option><option>C303</option></select><b id="code">A101</b><select id="month"><option>2026-10</option></select><table><tr class="row"><td class="b">A101</td><td class="m">2026-10</td><td><a href="/file">Download</a></td></tr></table><p id="empty" hidden>No statements</p><script>function show(){const code=document.querySelector('#brokers').value;document.querySelector('#code').textContent=code;document.querySelector('.b').textContent=code;document.querySelector('.row').hidden=code==='B202';document.querySelector('#empty').hidden=code!=='B202';}</script>`,
+        `<b id="identity">Practice</b>
+         <select id="brokers" onchange="setBroker()"><option>A101</option><option>B202</option><option>C303</option></select>
+         <b id="code">A101</b>
+         <select id="month" onchange="setTimeout(renderResults, 700)"><option>2026-09</option><option>2026-10</option></select>
+         <table><tr class="row"><td class="b"></td><td class="m"></td><td><a href="/file">Download</a></td></tr></table>
+         <p id="empty">No statements for <span class="b"></span> in <span class="m"></span></p>
+         <script>
+            function setBroker() {
+              document.querySelector('#code').textContent = document.querySelector('#brokers').value;
+              renderResults();
+            }
+            function renderResults() {
+              const broker = document.querySelector('#code').textContent;
+              const month = document.querySelector('#month').value;
+              const missing = month === '2026-09' ? broker === 'A101' : broker === 'B202';
+              for (const code of document.querySelectorAll('.b')) code.textContent = broker;
+              for (const period of document.querySelectorAll('.m')) period.textContent = month;
+              document.querySelector('.row').hidden = missing;
+              document.querySelector('#empty').hidden = !missing;
+            }
+            renderResults();
+         </script>`,
       );
     },
   );

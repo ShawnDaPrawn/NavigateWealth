@@ -20,8 +20,8 @@ const labels: Record<keyof Selectors, string> = {
   brokerCode: 'Current broker code',
   monthSelect: 'Statement month dropdown',
   reportRow: 'Statement table rows',
-  rowBroker: 'Broker code inside row',
-  rowMonth: 'Month inside row',
+  rowBroker: 'Broker code inside result or empty message',
+  rowMonth: 'Month inside result or empty message',
   documentLink: 'PDF link inside row',
   emptyState: 'Provider’s empty results message',
 };

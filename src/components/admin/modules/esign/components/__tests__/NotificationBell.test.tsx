@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
-vi.mock('../api', () => ({
+vi.mock('../../api', () => ({
   esignApi: {
-    listInAppNotifications: vi.fn().mockResolvedValue({ items: [], unread: 0 }),
+    listInAppNotifications: vi.fn().mockResolvedValue({ items: [], unread: 1 }),
     markInAppNotificationRead: vi.fn().mockResolvedValue({}),
     markAllInAppNotificationsRead: vi.fn().mockResolvedValue({}),
   },
@@ -12,18 +12,20 @@ vi.mock('../api', () => ({
 import { NotificationBell } from '../NotificationBell';
 
 describe('NotificationBell', () => {
-  it('renders without crashing', () => {
+  it('renders without crashing', async () => {
     const { container } = render(<NotificationBell />);
+    await screen.findByRole('button', { name: 'Notifications (1 unread)' });
     expect(container.firstChild).toBeDefined();
   });
 
-  it('renders bell button', () => {
+  it('renders bell button', async () => {
     render(<NotificationBell />);
-    expect(screen.queryAllByRole('button').length).toBeGreaterThanOrEqual(0);
+    expect(await screen.findByRole('button', { name: 'Notifications (1 unread)' })).toBeDefined();
   });
 
-  it('renders non-empty container', () => {
+  it('renders non-empty container', async () => {
     const { container } = render(<NotificationBell />);
+    await screen.findByRole('button', { name: 'Notifications (1 unread)' });
     expect(container.innerHTML.length).toBeGreaterThan(0);
   });
 });
