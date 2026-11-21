@@ -44,6 +44,10 @@ export function mountCoreRoutes(app: Hono) {
   );
   lazy(app, '/integrations', () => import('./integrations.ts'));
 
+  lazy(app, '/broker-operations', () => import('./broker-ops-admin.ts'));
+  lazy(app, '/broker-worker', () => import('./broker-ops-worker.ts'));
+  lazy(app, '/broker-token', () => import('./broker-ops-token.ts'));
+  lazy(app, '/mcp/broker-operations', () => import('./broker-ops-mcp.ts'));
   lazy(app, '/password-vault', () => import('./password-vault-routes.ts'));
   lazy(app, '/mcp/password-vault', () => import('./password-vault-mcp.ts'));
   lazy(app, '/kv-store', () => import('./kv-routes.ts'));

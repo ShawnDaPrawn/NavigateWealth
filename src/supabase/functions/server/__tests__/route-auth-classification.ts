@@ -77,6 +77,14 @@ export interface RouteAuthGroup {
 
 export const ROUTE_AUTH_GROUPS: RouteAuthGroup[] = [
   {
+    kind: 'broker-assistant',
+    classification: 'guarded',
+    reason:
+      'Broker MCP authenticates a hashed, expiring named assistant bearer at mount. The OAuth exchange verifies the registered client secret, one-time authorization code, exact redirect and PKCE challenge.',
+    routes: ['broker-ops-mcp.ts POST /', 'broker-ops-token.ts POST /'],
+  },
+
+  {
     kind: 'module-descriptor',
     classification: 'public',
     reason:

@@ -43,6 +43,7 @@ const SECRET_KEY_PREFIXES = [
   'esign_signing_key',
   'smtp_config:',
   'password-vault:',
+  'broker-ops:',
   'api_credentials:',
   'integration_secrets:',
   'provider_portal_credentials:',

@@ -15,16 +15,30 @@ import { getModuleUrl } from '../../../utils/api/config';
 import type { CredentialInput, VaultPage, VaultSummary } from '../../../shared/password-manager';
 import { importCsv } from './importCsv';
 
+import PortalProfileFields from './PortalProfileFields';
+import PortalOperations, { type OpsTab } from './PortalOperations';
+
+import { providers } from '../../../shared/broker-operations';
+import { getSetup, consentRequest } from './portalApi';
+import type { Broker } from '../../../shared/broker-operations';
+
 const path = '/password-vault';
 const empty: CredentialInput = { name: '', url: '', username: '', password: '', notes: '' };
 const request = { retryTransientFailures: false, cache: 'no-store' } as const;
-type Screen = 'list' | 'edit' | 'add' | 'import' | 'connect' | 'delete';
+type Screen = 'list' | 'edit' | 'add' | 'import' | 'connect' | 'delete' | 'operations';
 type IssuedToken = { token: string; expiresAt: string };
 
 export default function PasswordManager({ onClose }: { onClose: () => void }) {
-  const [screen, setScreen] = useState<Screen>('list');
+  const [linkedRun] = useState(() => new URLSearchParams(window.location.search).get('brokerRun'));
+  const [screen, setScreen] = useState<Screen>(() =>
+    consentRequest() || linkedRun ? 'operations' : 'list',
+  );
+  const [opsTab, setOpsTab] = useState<OpsTab>(linkedRun ? 'Runs' : 'AI connections'),
+    [search, setSearch] = useState(''),
+    [directory, setDirectory] = useState<Broker[]>([]);
+  const [preview, setPreview] = useState<CredentialInput[]>([]),
+    [chosen, setChosen] = useState<number[]>([]);
   const [items, setItems] = useState<VaultSummary[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
   const [selection, select] = useState<VaultSummary | null>(null);
   const [draft, setDraft] = useState<CredentialInput>(empty);
   const [visible, show] = useState(false);
@@ -39,14 +53,27 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
     let active = true;
     setBusy(true);
     setError('');
-    api
-      .get<VaultPage>(path, request)
-      .then((page) => {
-        if (active) {
-          setItems(page.items);
-          setCursor(page.nextCursor);
-        }
-      })
+    async function load() {
+      const all: VaultSummary[] = [];
+      let cursor: string | null = null;
+      do {
+        const page: VaultPage = await api.get<VaultPage>(
+          path + (cursor ? '?after=' + encodeURIComponent(cursor) : ''),
+          request,
+        );
+        if (!active) return;
+        all.push(...page.items);
+        cursor = page.nextCursor;
+      } while (cursor);
+      if (active) {
+        setItems(all);
+      }
+      if (all.some((a) => a.portal)) {
+        const d = await getSetup();
+        if (active) setDirectory(d.brokers);
+      }
+    }
+    load()
       .catch(() => {
         if (active)
           setError('Could not load credentials. Check your access and vault configuration.');
@@ -77,6 +104,8 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
     setDraft(empty);
     show(false);
     setFile(null);
+    setPreview([]);
+    setChosen([]);
     setIssued(null);
     setError('');
     setNotice('');
@@ -100,6 +129,7 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
         username: detail.username,
         password: detail.password,
         notes: detail.notes,
+        portal: detail.portal,
       });
     });
   }
@@ -108,6 +138,7 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
     selection?.connectionExpiresAt && Date.parse(selection.connectionExpiresAt) > Date.now(),
   );
   const titles: Record<Screen, string> = {
+    operations: 'Broker operations',
     list: 'Password manager',
     edit: 'Edit credential',
     add: 'Add credential',
@@ -127,15 +158,17 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
         <DialogHeader>
           <DialogTitle>{titles[screen]}</DialogTitle>
           <DialogDescription>
-            {screen === 'list'
-              ? 'Saved logins and service access'
-              : screen === 'import'
-                ? 'Upload a CSV exported from your password manager.'
-                : screen === 'connect'
-                  ? 'Give a service read access to this login.'
-                  : screen === 'delete'
-                    ? 'Deleting this login also revokes its MCP connection.'
-                    : 'Store the sign-in details for a service.'}
+            {screen === 'operations'
+              ? 'Manage assistant connections, provider workflows and broker runs.'
+              : screen === 'list'
+                ? 'Saved logins and service access'
+                : screen === 'import'
+                  ? 'Upload a CSV exported from your password manager.'
+                  : screen === 'connect'
+                    ? 'Give a service read access to this login.'
+                    : screen === 'delete'
+                      ? 'Deleting this login also revokes its MCP connection.'
+                      : 'Store the sign-in details for a service.'}
           </DialogDescription>
         </DialogHeader>
         {error && (
@@ -148,6 +181,14 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
             {notice}
           </p>
         )}
+        {screen === 'operations' && (
+          <PortalOperations
+            linkedRun={linkedRun}
+            initialTab={opsTab}
+            accounts={items}
+            selected={selection}
+          />
+        )}
         {screen === 'list' && (
           <>
             <div className="flex flex-wrap gap-2">
@@ -158,6 +199,16 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
               <Button disabled={busy} variant="outline" onClick={() => go('import')}>
                 <Upload />
                 Import CSV
+              </Button>
+              <Button
+                disabled={busy}
+                variant="outline"
+                onClick={() => {
+                  setOpsTab('AI connections');
+                  go('operations');
+                }}
+              >
+                Broker operations
               </Button>
               {error && (
                 <Button disabled={busy} variant="outline" onClick={() => refresh((n) => n + 1)}>
@@ -175,53 +226,78 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
                 Your vault is empty. Add a login or import a CSV to get started.
               </p>
             )}
-            <ul className="divide-y">
-              {items.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex flex-wrap items-center justify-between gap-2 py-3"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{item.name}</p>
-                    <p className="truncate text-sm text-muted-foreground">
-                      {item.username} · {new URL(item.url).host}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => edit(item)}>
-                      Open
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => go('connect', item)}
-                    >
-                      <KeyRound />
-                      MCP
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {cursor && (
-              <Button
-                disabled={busy}
-                variant="outline"
-                onClick={() =>
-                  void perform(async () => {
-                    const page = await api.get<VaultPage>(
-                      path + '?after=' + encodeURIComponent(cursor),
-                      request,
-                    );
-                    setItems((prev) => [...prev, ...page.items]);
-                    setCursor(page.nextCursor);
-                  })
-                }
-              >
-                Load more
-              </Button>
+            {items.length > 0 && (
+              <Input
+                aria-label="Search portal accounts"
+                placeholder="Search by account, broker, provider or code"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             )}
+            <ul className="divide-y">
+              {items
+                .filter((item) =>
+                  [
+                    item.name,
+                    item.url,
+                    item.username,
+                    item.portal?.brokerage,
+                    item.portal?.purpose,
+                    item.portal && providers[item.portal.provider].name,
+                    ...(item.portal?.brokers.flatMap((b) => [
+                      b.code,
+                      directory.find((row) => row.id === b.brokerId)?.name,
+                    ]) ?? []),
+                  ]
+                    .join(' ')
+                    .toLowerCase()
+                    .includes(search.toLowerCase()),
+                )
+                .map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-wrap items-center justify-between gap-2 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{item.name}</p>
+                      <p className="truncate text-sm text-muted-foreground">
+                        {item.username} · {new URL(item.url).host}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      {item.portal && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setOpsTab('Runs');
+                            go('operations', item);
+                          }}
+                        >
+                          Run
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => edit(item)}
+                      >
+                        Open
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => go('connect', item)}
+                      >
+                        <KeyRound />
+                        MCP
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+            </ul>
           </>
         )}
         {(screen === 'add' || screen === 'edit') && (
@@ -233,7 +309,11 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
                 if (selection)
                   await api.put(
                     itemPath,
-                    { revision: selection.revision, credential: draft },
+                    {
+                      revision: selection.revision,
+                      credential: draft,
+                      clearPortal: !!selection.portal && !draft.portal,
+                    },
                     request,
                   );
                 else await api.post(path, { entries: [draft] }, request);
@@ -296,6 +376,10 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
                   </span>
                 </label>
               ))}
+              <PortalProfileFields
+                profile={draft.portal}
+                onChange={(portal) => setDraft({ ...draft, portal })}
+              />
             </fieldset>
             <div className="flex flex-wrap gap-2">
               <Button disabled={busy}>Save credential</Button>
@@ -321,7 +405,21 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
                 if (!file) return;
                 if (file.size > 1024 * 1024)
                   throw new Error('Choose a CSV file smaller than 1 MiB.');
-                const entries = importCsv(await file.text());
+                if (!preview.length) {
+                  const entries = importCsv(await file.text());
+                  const seen = new Set(items.map((a) => a.url + '\n' + a.username));
+                  setChosen(
+                    entries.flatMap((row, i) => {
+                      const key = row.url + '\n' + row.username;
+                      if (seen.has(key)) return [];
+                      seen.add(key);
+                      return [i];
+                    }),
+                  );
+                  setPreview(entries);
+                  return;
+                }
+                const entries = preview.filter((_, i) => chosen.includes(i));
                 const result = await api.post<{ count: number }>(path, { entries }, request);
                 back(
                   'Imported ' + result.count + ' credential' + (result.count === 1 ? '.' : 's.'),
@@ -340,9 +438,32 @@ export default function PasswordManager({ onClose }: { onClose: () => void }) {
               accept=".csv,text/csv"
               required
               disabled={busy}
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                setFile(e.target.files?.[0] ?? null);
+                setPreview([]);
+                setChosen([]);
+              }}
             />
-            <Button disabled={busy || !file}>Import credentials</Button>
+            {preview.length > 0 && (
+              <fieldset>
+                <legend>Choose accounts to import. Matching logins are initially unchecked.</legend>
+                {preview.map((row, i) => (
+                  <label className="flex items-center gap-2 py-1 text-sm" key={i}>
+                    <input
+                      type="checkbox"
+                      checked={chosen.includes(i)}
+                      onChange={(e) =>
+                        setChosen(e.target.checked ? [...chosen, i] : chosen.filter((n) => n !== i))
+                      }
+                    />
+                    {row.name || row.url} · {row.username}
+                  </label>
+                ))}
+              </fieldset>
+            )}
+            <Button disabled={busy || !file || (!!preview.length && !chosen.length)}>
+              {preview.length ? 'Import ' + chosen.length + ' accounts' : 'Preview import'}
+            </Button>
           </form>
         )}
         {screen === 'connect' && selection && (
