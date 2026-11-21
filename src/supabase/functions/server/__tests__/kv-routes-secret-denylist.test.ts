@@ -81,6 +81,7 @@ describe('secret-key denylist', () => {
     for (const key of [
       'esign_config:anything',
       'smtp_config:primary',
+      'password-vault:credential-id',
       'api_credentials:sendgrid',
       'integration_secrets:momentum',
       'provider_portal_credentials:discovery',

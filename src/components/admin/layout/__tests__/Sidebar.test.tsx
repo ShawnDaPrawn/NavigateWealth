@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
 import type { AdminModule, PendingCounts } from '../types';
 
+let role = 'super_admin';
 const navigate = vi.fn();
 const logout = vi.fn();
 
 vi.mock('react-router', () => ({ useNavigate: () => navigate }));
 vi.mock('../../../auth/AuthContext', () => ({
   useAuth: () => ({
-    user: { name: 'Erica', role: 'super_admin', email: 'erica@example.com' },
+    user: { name: 'Erica', role, email: 'erica@example.com' },
     logout,
   }),
 }));
@@ -53,7 +54,10 @@ function renderSidebar(
 const desktopNav = () => screen.getByRole('complementary', { name: 'Admin navigation' });
 
 describe('admin Sidebar', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    role = 'super_admin';
+    localStorage.clear();
+  });
   afterEach(() => cleanup());
 
   it('shows Dashboard, the five groups and Locked in the footer', () => {
@@ -145,7 +149,18 @@ describe('admin Sidebar', () => {
     const settings = await screen.findByRole('menuitem', { name: 'Account settings' });
     expect(screen.getByText('Super admin · erica@example.com')).toBeDefined();
     expect(screen.getByRole('menuitem', { name: 'Log out' })).toBeDefined();
+    expect(screen.getByRole('menuitem', { name: 'Password manager' })).toBeDefined();
     fireEvent.click(settings);
     expect(navigate).toHaveBeenCalledWith('/admin?module=personnel&profile=me');
+  });
+  it('omits the password manager for an ordinary admin', async () => {
+    role = 'admin';
+    renderSidebar();
+    fireEvent.pointerDown(within(desktopNav()).getByRole('button', { name: /Erica/ }), {
+      button: 0,
+      ctrlKey: false,
+    });
+    await screen.findByRole('menuitem', { name: 'Account settings' });
+    expect(screen.queryByRole('menuitem', { name: 'Password manager' })).toBeNull();
   });
 });
