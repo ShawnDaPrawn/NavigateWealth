@@ -42,6 +42,7 @@ const SECRET_KEY_PREFIXES = [
   'esign_config:', // platform signing certificate (private key + passphrase)
   'esign_signing_key',
   'smtp_config:',
+  'password-vault:',
   'api_credentials:',
   'integration_secrets:',
   'provider_portal_credentials:',

@@ -313,6 +313,7 @@ export function createApp(options: CreateAppOptions = {}): Hono {
       allowHeaders: [
         'Content-Type',
         'Authorization',
+        'MCP-Protocol-Version',
         'x-client-info',
         'apikey',
         'x-request-id',
