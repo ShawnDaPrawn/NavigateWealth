@@ -74,6 +74,22 @@ describe('admin Navigator theme', () => {
     expect(css).toMatch(/html\.nw-admin-theme :is\(h1, h2\):not\(:is\([^)]*\.letter-page\) \*\)/);
   });
 
+  it('lets a colour a screen sets on a table cell, heading or card title win', () => {
+    // A red withdrawal or a green gain in a results table must stay red or green.
+    const css = readRepoFile('src/styles/admin-navigator.css')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ');
+    const cell = css.match(/\[data-slot='table-cell'\][^{]*\{([^}]*)\}/);
+    expect(cell?.[1]).toBeDefined();
+    expect(cell?.[1]).not.toMatch(/(^|;)\s*color:/);
+    // The heading's colour only while its own default class is there; the
+    // title's under the utilities layer.
+    expect(css).toMatch(
+      /\[data-slot='table-head'\]\.text-foreground[^{]*\{ color: var\(--nw-muted\)/,
+    );
+    expect(css).toMatch(/@layer components \{ html\.nw-admin-theme \[data-slot='card-title'\]/);
+  });
+
   it('remaps the colour scales the admin is built from', () => {
     const css = readRepoFile('src/styles/admin-navigator.css');
     // Warm neutrals and navy ink, one violet, the website's status colours.

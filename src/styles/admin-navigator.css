@@ -536,7 +536,6 @@ html.nw-admin-theme
   font-size: 15px;
   line-height: 22px;
   font-weight: 600;
-  color: var(--nw-ink);
 }
 html.nw-admin-theme
   [data-slot='card-description']:not(
@@ -553,7 +552,6 @@ html.nw-admin-theme
   ) {
   font-size: 13px;
   line-height: 19px;
-  color: var(--nw-muted);
 }
 
 /* ── Tables: the board's .tbl. Small-caps headings on paper, soft rules ── */
@@ -577,7 +575,6 @@ html.nw-admin-theme
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--nw-muted);
   background: var(--nw-paper-3);
 }
 html.nw-admin-theme
@@ -611,7 +608,6 @@ html.nw-admin-theme
   ) {
   padding: 12px 14px;
   font-size: 13.5px;
-  color: var(--nw-text-strong);
 }
 html.nw-admin-theme
   [data-slot='table-body']
@@ -628,6 +624,43 @@ html.nw-admin-theme
       *
   ) {
   border-color: var(--nw-line-soft);
+}
+
+/* Default text colours for card titles and table headings. A colour a screen
+   passes in (a red total, a green gain) always wins: the title's is layered
+   under the utilities, and the heading's applies only while the component's
+   own default colour class is still on it. */
+@layer components {
+  html.nw-admin-theme
+    [data-slot='card-title']:not(
+      :is(
+          [data-pdf-export-root],
+          .pdf-preview-container,
+          .legal-paged-preview-root,
+          [data-legal-pdf-renderer],
+          .pdf-viewport,
+          .pdf-page,
+          .letter-page
+        )
+        *
+    ) {
+    color: var(--nw-ink);
+  }
+}
+html.nw-admin-theme
+  [data-slot='table-head'].text-foreground:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  color: var(--nw-muted);
 }
 
 /* ── Client documents keep their own look ──
