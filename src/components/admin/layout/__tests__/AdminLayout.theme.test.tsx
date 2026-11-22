@@ -90,6 +90,21 @@ describe('admin Navigator theme', () => {
     expect(css).toMatch(/@layer components \{ html\.nw-admin-theme \[data-slot='card-title'\]/);
   });
 
+  it('keeps the field focus rule as specific as the resting edge rule it must beat', () => {
+    // The resting edge rule carries the client-document exclusion, which adds
+    // specificity; the focus rule must carry it too, or a focused field keeps
+    // its resting edge instead of turning violet (caught in a browser check).
+    const css = readRepoFile('src/styles/admin-navigator.css')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\( /g, '(')
+      .replace(/ \)/g, ')');
+    const focus = css.match(
+      /:focus-visible:not\(\[aria-invalid='true'\]\)([^{]*)\{ border-color: var\(--nw-violet\)/,
+    );
+    expect(focus?.[1]).toContain('.letter-page) *)');
+  });
+
   it('remaps the colour scales the admin is built from', () => {
     const css = readRepoFile('src/styles/admin-navigator.css');
     // Warm neutrals and navy ink, one violet, the website's status colours.

@@ -435,15 +435,40 @@ html.nw-admin-theme
   ) {
   --tw-shadow: 0 0 #0000;
 }
+/* Hover and focus carry the same document exclusion as the resting rules
+   above, so they stay at least as specific and, coming later, win: without
+   it the resting edge colour held through focus. */
 html.nw-admin-theme
   :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):hover:not(
     :focus-visible
-  ):not(:disabled):not([aria-invalid='true']) {
+  ):not(:disabled):not([aria-invalid='true']):not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
   border-color: var(--nw-line-heavy);
 }
 html.nw-admin-theme
   :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):focus-visible:not(
     [aria-invalid='true']
+  ):not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
   ) {
   border-color: var(--nw-violet);
   background-color: #ffffff;
