@@ -26,7 +26,7 @@ export function Notice({ kind = 'neutral', title, children, action, className }:
     <div
       role={kind === 'error' ? 'alert' : 'status'}
       className={cn(
-        'flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border px-4 py-3 text-sm',
+        'flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[4px] border px-4 py-3 text-sm',
         KIND[kind],
         className,
       )}

@@ -1,0 +1,850 @@
+/*
+ * Navigate Wealth admin: the website's Navigator design, admin-wide.
+ *
+ * The public site's Navigator design (src/site/styles/navigator.css) is
+ * applied here to the whole admin, matching the admin design canvases. The admin is
+ * built from Tailwind's colour scale and the shared ui/ components, used in
+ * close to a thousand files, so rather than restyle each one, this sheet
+ * changes what those colours and components resolve to while the admin is open:
+ *
+ *   - AdminLayout puts `nw-admin-theme` on <html> for as long as it is mounted
+ *     (and takes it off again), so dialogs, sheets, menus and tooltips, which
+ *     portal to <body>, are themed too. Nothing outside the admin carries it.
+ *   - Tailwind v4 colour utilities read CSS variables (`bg-gray-100` is
+ *     `var(--color-gray-100)`), so redefining the scale below re-colours every
+ *     admin screen: warm ivory neutrals and navy ink, one violet accent, and
+ *     the website's quieter status colours.
+ *   - The shared components keep their markup; their admin look is set by
+ *     data-slot. A rule only overrides a default the component itself chose
+ *     (it checks the class is still there), so a colour a screen passes in
+ *     through className is left alone.
+ *
+ * Loaded with the admin chunk only (imported by AdminLayout), not the public
+ * bundle. The font files are the site's own, so the build shares them.
+ */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../site/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('../site/fonts/newsreader-latin-standard-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ── Tokens ── */
+html.nw-admin-theme {
+  /* The shared components' theme variables. */
+  --background: #ffffff;
+  --foreground: var(--nw-ink);
+  --card: #ffffff;
+  --card-foreground: var(--nw-ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--nw-ink);
+  --primary: var(--nw-violet);
+  --primary-foreground: #ffffff;
+  --secondary: var(--nw-paper-2);
+  --secondary-foreground: var(--nw-text-strong);
+  --muted: var(--nw-paper);
+  --muted-foreground: var(--nw-muted);
+  --accent: var(--nw-paper);
+  --accent-foreground: var(--nw-ink);
+  --destructive: var(--nw-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--nw-line);
+  --input: var(--nw-line-strong);
+  --input-background: var(--nw-paper-3);
+  --switch-background: var(--nw-line-strong);
+  --ring: var(--nw-violet);
+
+  /* Corners: 4px for controls, 8px for cards and panels, nothing rounder. */
+  --radius: 8px;
+  --radius-sm-step: 4px;
+  --radius-md-step: 4px;
+  --radius-xl-step: 0px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+  --radius-4xl: 8px;
+
+  /* Type: Inter for everything, Newsreader for page and section titles. */
+  --default-font-family: var(--nw-font-sans);
+  --font-sans: var(--nw-font-sans);
+  --font-serif: var(--nw-font-serif);
+
+  /* Neutrals: warm ivory paper, hairlines and navy ink. */
+  --color-gray-50: #fbfaf7;
+  --color-gray-100: #f6f4ef;
+  --color-gray-200: #e2ddd3;
+  --color-gray-300: #d3ccbf;
+  --color-gray-400: #9aa3b2;
+  --color-gray-500: #5e6676;
+  --color-gray-600: #3d4556;
+  --color-gray-700: #2f3747;
+  --color-gray-800: #12203a;
+  --color-gray-900: #0d1626;
+  --color-gray-950: #0a0f1a;
+  --color-slate-50: #fbfaf7;
+  --color-slate-100: #f6f4ef;
+  --color-slate-200: #e2ddd3;
+  --color-slate-300: #d3ccbf;
+  --color-slate-400: #9aa3b2;
+  --color-slate-500: #5e6676;
+  --color-slate-600: #3d4556;
+  --color-slate-700: #2f3747;
+  --color-slate-800: #12203a;
+  --color-slate-900: #0d1626;
+  --color-slate-950: #0a0f1a;
+  --color-zinc-50: #fbfaf7;
+  --color-zinc-100: #f6f4ef;
+  --color-zinc-200: #e2ddd3;
+  --color-zinc-300: #d3ccbf;
+  --color-zinc-400: #9aa3b2;
+  --color-zinc-500: #5e6676;
+  --color-zinc-600: #3d4556;
+  --color-zinc-700: #2f3747;
+  --color-zinc-800: #12203a;
+  --color-zinc-900: #0d1626;
+  --color-zinc-950: #0a0f1a;
+  --color-neutral-50: #fbfaf7;
+  --color-neutral-100: #f6f4ef;
+  --color-neutral-200: #e2ddd3;
+  --color-neutral-300: #d3ccbf;
+  --color-neutral-400: #9aa3b2;
+  --color-neutral-500: #5e6676;
+  --color-neutral-600: #3d4556;
+  --color-neutral-700: #2f3747;
+  --color-neutral-800: #12203a;
+  --color-neutral-900: #0d1626;
+  --color-neutral-950: #0a0f1a;
+  --color-stone-50: #fbfaf7;
+  --color-stone-100: #f6f4ef;
+  --color-stone-200: #e2ddd3;
+  --color-stone-300: #d3ccbf;
+  --color-stone-400: #9aa3b2;
+  --color-stone-500: #5e6676;
+  --color-stone-600: #3d4556;
+  --color-stone-700: #2f3747;
+  --color-stone-800: #12203a;
+  --color-stone-900: #0d1626;
+  --color-stone-950: #0a0f1a;
+  /* One accent: the website violet. */
+  --color-purple-50: #f4f1fb;
+  --color-purple-100: #eae3f8;
+  --color-purple-200: #ddd3f3;
+  --color-purple-300: #c4b5ea;
+  --color-purple-400: #a38bdd;
+  --color-purple-500: #6d28d9;
+  --color-purple-600: #6d28d9;
+  --color-purple-700: #5b21b6;
+  --color-purple-800: #4c1d95;
+  --color-purple-900: #2e1065;
+  --color-purple-950: #1e0b4b;
+  --color-violet-50: #f4f1fb;
+  --color-violet-100: #eae3f8;
+  --color-violet-200: #ddd3f3;
+  --color-violet-300: #c4b5ea;
+  --color-violet-400: #a38bdd;
+  --color-violet-500: #6d28d9;
+  --color-violet-600: #6d28d9;
+  --color-violet-700: #5b21b6;
+  --color-violet-800: #4c1d95;
+  --color-violet-900: #2e1065;
+  --color-violet-950: #1e0b4b;
+  --color-indigo-50: #f4f1fb;
+  --color-indigo-100: #eae3f8;
+  --color-indigo-200: #ddd3f3;
+  --color-indigo-300: #c4b5ea;
+  --color-indigo-400: #a38bdd;
+  --color-indigo-500: #6d28d9;
+  --color-indigo-600: #6d28d9;
+  --color-indigo-700: #5b21b6;
+  --color-indigo-800: #4c1d95;
+  --color-indigo-900: #2e1065;
+  --color-indigo-950: #1e0b4b;
+  /* Status: the light shades are already the website's -bg and -line; the
+     mid shades take its deeper, quieter status colours. */
+  --color-red-500: #b91c1c;
+  --color-red-600: #b91c1c;
+  --color-red-700: #991b1b;
+  --color-red-800: #7f1d1d;
+  --color-green-500: #15803d;
+  --color-green-600: #15803d;
+  --color-green-700: #166534;
+  --color-green-800: #14532d;
+  --color-emerald-50: #f0fdf4;
+  --color-emerald-100: #dcfce7;
+  --color-emerald-200: #bbf7d0;
+  --color-emerald-300: #86efac;
+  --color-emerald-400: #4ade80;
+  --color-emerald-500: #15803d;
+  --color-emerald-600: #15803d;
+  --color-emerald-700: #166534;
+  --color-emerald-800: #14532d;
+  --color-emerald-900: #14532d;
+  --color-emerald-950: #052e16;
+  --color-amber-500: #b45309;
+  --color-amber-600: #b45309;
+  --color-amber-700: #92400e;
+  --color-amber-800: #78350f;
+  --color-blue-500: #1d4ed8;
+  --color-blue-600: #1d4ed8;
+  --color-blue-700: #1e40af;
+  --color-blue-800: #1e3a8a;
+  --color-orange-500: #c2410c;
+  --color-orange-600: #c2410c;
+  --color-orange-700: #9a3412;
+  --color-orange-800: #7c2d12;
+  --color-yellow-50: #fffbeb;
+  --color-yellow-100: #fef3c7;
+  --color-yellow-200: #fde68a;
+  --color-yellow-300: #fcd34d;
+  --color-yellow-400: #fbbf24;
+  --color-yellow-500: #b45309;
+  --color-yellow-600: #b45309;
+  --color-yellow-700: #92400e;
+  --color-yellow-800: #78350f;
+  --color-yellow-900: #78350f;
+  --color-yellow-950: #451a03;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Base ── */
+html.nw-admin-theme
+  :is(h1, h2):not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  font-family: var(--nw-font-serif);
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+/* One focus ring everywhere: 2px violet, offset 2px. The components' own
+   focus box-shadow rings are switched off so the two never stack. Fields keep
+   theirs (see Fields). */
+html.nw-admin-theme
+  :is(
+    a,
+    button,
+    summary,
+    [role='button'],
+    [role='tab'],
+    [role='menuitem'],
+    [role='option'],
+    [role='switch'],
+    [role='checkbox'],
+    [role='radio'],
+    [tabindex]
+  ):not([data-slot='select-trigger']):not(input):not(textarea):focus-visible {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 2px;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-ring-offset-shadow: 0 0 #0000;
+}
+
+/* ── Buttons: the website's ── */
+html.nw-admin-theme [data-slot='button'] {
+  transition:
+    background-color var(--nw-dur-2) var(--nw-ease),
+    color var(--nw-dur-2) var(--nw-ease),
+    border-color var(--nw-dur-2) var(--nw-ease),
+    box-shadow var(--nw-dur-2) var(--nw-ease),
+    translate var(--nw-dur-1) var(--nw-ease);
+}
+html.nw-admin-theme [data-slot='button']:not([class*='rounded-full']) {
+  border-radius: var(--nw-r-sm);
+}
+html.nw-admin-theme [data-slot='button']:not([data-variant='ghost']):not([data-variant='link']) {
+  font-weight: 600;
+}
+/* Press: down 1px, no shrink. */
+html.nw-admin-theme [data-slot='button']:active:not(:disabled) {
+  scale: none;
+  translate: 0 1px;
+}
+/* Primary: violet, darker violet on hover, flat. */
+html.nw-admin-theme [data-slot='button'].bg-primary {
+  box-shadow: none;
+}
+html.nw-admin-theme [data-slot='button'].bg-primary:hover {
+  background-color: var(--nw-violet-hover);
+}
+/* Delete and other destructive actions: the website's danger red. */
+html.nw-admin-theme [data-slot='button'].bg-destructive {
+  box-shadow: none;
+}
+html.nw-admin-theme [data-slot='button'].bg-destructive:hover {
+  background-color: var(--nw-danger-dark);
+}
+/* Secondary (outline): the website's navy outline. Hover adds a soft navy
+   tint and doubles the edge. */
+html.nw-admin-theme [data-slot='button'][data-variant='outline'].border-border {
+  border-color: var(--nw-ink);
+}
+html.nw-admin-theme [data-slot='button'][data-variant='outline'].text-foreground {
+  color: var(--nw-ink);
+}
+html.nw-admin-theme [data-slot='button'][data-variant='outline'].bg-background {
+  background-color: transparent;
+}
+html.nw-admin-theme [data-slot='button'][data-variant='outline'].hover\:bg-accent:hover {
+  background-color: rgba(13, 22, 38, 0.05);
+  color: var(--nw-ink);
+  box-shadow: inset 0 0 0 1px var(--nw-ink);
+}
+/* Disabled: ivory with a hairline, not a faded colour. */
+html.nw-admin-theme
+  [data-slot='button']:disabled:not([data-variant='ghost']):not([data-variant='link']) {
+  opacity: 1;
+  background-color: var(--nw-paper-2);
+  border-color: transparent;
+  color: var(--nw-muted);
+  box-shadow: inset 0 0 0 1px var(--nw-line);
+}
+/* A trailing forward arrow nudges ahead on hover. Matched by the icon's own
+   class (lucide names each icon), because the label before it is a text node,
+   which CSS cannot see. */
+html.nw-admin-theme
+  [data-slot='button']
+  > svg:last-child:is(.lucide-arrow-right, .lucide-chevron-right, .lucide-move-right) {
+  transition: translate var(--nw-dur-2) var(--nw-ease);
+}
+html.nw-admin-theme
+  [data-slot='button']:hover:not(:disabled)
+  > svg:last-child:is(.lucide-arrow-right, .lucide-chevron-right, .lucide-move-right) {
+  translate: 3px 0;
+}
+
+/* ── Badges: the website's squared pill ── */
+html.nw-admin-theme
+  [data-slot='badge']:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  border-radius: var(--nw-r-sm);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+/* ── Switches: 40 x 24 track, 18px knob, violet when on ── */
+html.nw-admin-theme [data-slot='switch'] {
+  width: 40px;
+  height: 24px;
+  padding: 0 2px;
+  transition: background-color var(--nw-dur-2) var(--nw-ease);
+}
+html.nw-admin-theme [data-slot='switch-thumb'] {
+  width: 18px;
+  height: 18px;
+  background-color: #ffffff;
+  box-shadow: var(--nw-shadow-1);
+  transition: translate var(--nw-dur-2) var(--nw-ease);
+}
+
+/* ── Fields: ivory, a warm edge; focus is a violet edge and a soft navy halo ── */
+html.nw-admin-theme
+  [data-slot='input'].bg-white:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  background-color: var(--nw-paper-3);
+}
+html.nw-admin-theme
+  [data-slot='input'].border-border:not([aria-invalid='true']):not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  border-color: var(--nw-line-strong);
+}
+html.nw-admin-theme
+  [data-slot='input'].rounded-lg:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  border-radius: var(--nw-r-sm);
+}
+/* Flat, like the website's: drop the component's shadow but keep its focus
+   halo (both are box-shadow layers). */
+html.nw-admin-theme
+  [data-slot='input'].shadow-sm:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  --tw-shadow: 0 0 #0000;
+}
+html.nw-admin-theme
+  :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):hover:not(
+    :focus-visible
+  ):not(:disabled):not([aria-invalid='true']) {
+  border-color: var(--nw-line-heavy);
+}
+html.nw-admin-theme
+  :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):focus-visible:not(
+    [aria-invalid='true']
+  ) {
+  border-color: var(--nw-violet);
+  background-color: #ffffff;
+  --tw-ring-color: rgba(13, 22, 38, 0.09);
+}
+
+/* ── Tabs: the segmented control. Ivory track, the chosen one in navy ── */
+html.nw-admin-theme [data-slot='tabs-list'] {
+  border-radius: var(--nw-r-sm);
+}
+html.nw-admin-theme [data-slot='tabs-list'].bg-muted {
+  background-color: var(--nw-paper-2);
+  box-shadow: inset 0 0 0 1px var(--nw-line-soft);
+}
+html.nw-admin-theme [data-slot='tabs-trigger'] {
+  border-radius: 3px;
+  transition:
+    background-color var(--nw-dur-2) var(--nw-ease),
+    color var(--nw-dur-2) var(--nw-ease);
+}
+html.nw-admin-theme [data-slot='tabs-trigger'][data-state='active'] {
+  background-color: var(--nw-ink);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: none;
+}
+html.nw-admin-theme [data-slot='tabs-trigger'][data-state='inactive']:hover {
+  background-color: rgba(255, 255, 255, 0.7);
+  color: var(--nw-ink);
+}
+
+/* ── Overlays: tooltips in navy, a navy scrim behind dialogs ── */
+html.nw-admin-theme [data-slot='tooltip-content'].bg-primary {
+  background-color: var(--nw-ink);
+}
+html.nw-admin-theme [data-slot='tooltip-content'] .fill-primary {
+  background-color: var(--nw-ink);
+  fill: var(--nw-ink);
+}
+html.nw-admin-theme [data-slot$='-overlay'].bg-black\/50 {
+  background-color: rgba(13, 22, 38, 0.5);
+}
+
+/* ── Cards: hairline, 8px corners, no shadow, 15px titles ── */
+html.nw-admin-theme
+  [data-slot='card']:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  border-radius: var(--nw-r-md);
+  border-color: var(--nw-line);
+  box-shadow: none;
+}
+html.nw-admin-theme
+  [data-slot='card']:hover:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  box-shadow: none;
+}
+html.nw-admin-theme
+  [data-slot='card-title']:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--nw-ink);
+}
+html.nw-admin-theme
+  [data-slot='card-description']:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--nw-muted);
+}
+
+/* ── Tables: the board's .tbl. Small-caps headings on paper, soft rules ── */
+html.nw-admin-theme
+  [data-slot='table-head']:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  height: auto;
+  padding: 11px 14px;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+  background: var(--nw-paper-3);
+}
+html.nw-admin-theme
+  [data-slot='table-header']
+  [data-slot='table-row']:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  border-bottom: 1px solid var(--nw-line);
+}
+html.nw-admin-theme
+  [data-slot='table-cell']:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  padding: 12px 14px;
+  font-size: 13.5px;
+  color: var(--nw-text-strong);
+}
+html.nw-admin-theme
+  [data-slot='table-body']
+  [data-slot='table-row']:not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  border-color: var(--nw-line-soft);
+}
+
+/* ── Client documents keep their own look ──
+   FNA reports, wills, letters and forms are previewed inside the admin and
+   exported from that same DOM (html2canvas, the print window), so they are
+   client-facing output, not admin UI. Inside a document preview the colour
+   scale, theme variables, corners and font go back to what they were before
+   the admin theme, and the heading, field, card and table rules above skip
+   it (their :not(...)). Zero specificity, so a document's own CSS still wins. */
+:where(html.nw-admin-theme)
+  :where(
+    [data-pdf-export-root],
+    .pdf-preview-container,
+    .legal-paged-preview-root,
+    [data-legal-pdf-renderer],
+    .pdf-viewport,
+    .pdf-page,
+    .letter-page
+  ) {
+  --background: #f8f9fa;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #6d28d9;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #000000;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #000000;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --input-background: #f8f9fa;
+  --switch-background: #e2e8f0;
+  --ring: #6d28d9;
+  --radius: 0.625rem;
+  --radius-sm-step: 4px;
+  --radius-md-step: 2px;
+  --radius-xl-step: 4px;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+  --radius-4xl: 2rem;
+  --default-font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial,
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans', Arial,
+    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  font-family: var(--font-sans);
+  --color-gray-50: oklch(98.5% 0.002 247.839);
+  --color-gray-100: oklch(96.7% 0.003 264.542);
+  --color-gray-200: oklch(92.8% 0.006 264.531);
+  --color-gray-300: oklch(87.2% 0.01 258.338);
+  --color-gray-400: oklch(70.7% 0.022 261.325);
+  --color-gray-500: oklch(55.1% 0.027 264.364);
+  --color-gray-600: oklch(44.6% 0.03 256.802);
+  --color-gray-700: oklch(37.3% 0.034 259.733);
+  --color-gray-800: oklch(27.8% 0.033 256.848);
+  --color-gray-900: oklch(21% 0.034 264.665);
+  --color-gray-950: oklch(13% 0.028 261.692);
+  --color-slate-50: oklch(98.4% 0.003 247.858);
+  --color-slate-100: oklch(96.8% 0.007 247.896);
+  --color-slate-200: oklch(92.9% 0.013 255.508);
+  --color-slate-300: oklch(86.9% 0.022 252.894);
+  --color-slate-400: oklch(70.4% 0.04 256.788);
+  --color-slate-500: oklch(55.4% 0.046 257.417);
+  --color-slate-600: oklch(44.6% 0.043 257.281);
+  --color-slate-700: oklch(37.2% 0.044 257.287);
+  --color-slate-800: oklch(27.9% 0.041 260.031);
+  --color-slate-900: oklch(20.8% 0.042 265.755);
+  --color-slate-950: oklch(12.9% 0.042 264.695);
+  --color-zinc-50: oklch(98.5% 0 none);
+  --color-zinc-100: oklch(96.7% 0.001 286.375);
+  --color-zinc-200: oklch(92% 0.004 286.32);
+  --color-zinc-300: oklch(87.1% 0.006 286.286);
+  --color-zinc-400: oklch(70.5% 0.015 286.067);
+  --color-zinc-500: oklch(55.2% 0.016 285.938);
+  --color-zinc-600: oklch(44.2% 0.017 285.786);
+  --color-zinc-700: oklch(37% 0.013 285.805);
+  --color-zinc-800: oklch(27.4% 0.006 286.033);
+  --color-zinc-900: oklch(21% 0.006 285.885);
+  --color-zinc-950: oklch(14.1% 0.005 285.823);
+  --color-neutral-50: oklch(98.5% 0 none);
+  --color-neutral-100: oklch(97% 0 none);
+  --color-neutral-200: oklch(92.2% 0 none);
+  --color-neutral-300: oklch(87% 0 none);
+  --color-neutral-400: oklch(70.8% 0 none);
+  --color-neutral-500: oklch(55.6% 0 none);
+  --color-neutral-600: oklch(43.9% 0 none);
+  --color-neutral-700: oklch(37.1% 0 none);
+  --color-neutral-800: oklch(26.9% 0 none);
+  --color-neutral-900: oklch(20.5% 0 none);
+  --color-neutral-950: oklch(14.5% 0 none);
+  --color-stone-50: oklch(98.5% 0.001 106.423);
+  --color-stone-100: oklch(97% 0.001 106.424);
+  --color-stone-200: oklch(92.3% 0.003 48.717);
+  --color-stone-300: oklch(86.9% 0.005 56.366);
+  --color-stone-400: oklch(70.9% 0.01 56.259);
+  --color-stone-500: oklch(55.3% 0.013 58.071);
+  --color-stone-600: oklch(44.4% 0.011 73.639);
+  --color-stone-700: oklch(37.4% 0.01 67.558);
+  --color-stone-800: oklch(26.8% 0.007 34.298);
+  --color-stone-900: oklch(21.6% 0.006 56.043);
+  --color-stone-950: oklch(14.7% 0.004 49.25);
+  --color-purple-50: oklch(97.7% 0.014 308.299);
+  --color-purple-100: oklch(94.6% 0.033 307.174);
+  --color-purple-200: oklch(90.2% 0.063 306.703);
+  --color-purple-300: oklch(82.7% 0.119 306.383);
+  --color-purple-400: oklch(71.4% 0.203 305.504);
+  --color-purple-500: oklch(62.7% 0.265 303.9);
+  --color-purple-600: oklch(55.8% 0.288 302.321);
+  --color-purple-700: oklch(49.6% 0.265 301.924);
+  --color-purple-800: oklch(43.8% 0.218 303.724);
+  --color-purple-900: oklch(38.1% 0.176 304.987);
+  --color-purple-950: oklch(29.1% 0.149 302.717);
+  --color-violet-50: oklch(96.9% 0.016 293.756);
+  --color-violet-100: oklch(94.3% 0.029 294.588);
+  --color-violet-200: oklch(89.4% 0.057 293.283);
+  --color-violet-300: oklch(81.1% 0.111 293.571);
+  --color-violet-400: oklch(70.2% 0.183 293.541);
+  --color-violet-500: oklch(60.6% 0.25 292.717);
+  --color-violet-600: oklch(54.1% 0.281 293.009);
+  --color-violet-700: oklch(49.1% 0.27 292.581);
+  --color-violet-800: oklch(43.2% 0.232 292.759);
+  --color-violet-900: oklch(38% 0.189 293.745);
+  --color-violet-950: oklch(28.3% 0.141 291.089);
+  --color-indigo-50: oklch(96.2% 0.018 272.314);
+  --color-indigo-100: oklch(93% 0.034 272.788);
+  --color-indigo-200: oklch(87% 0.065 274.039);
+  --color-indigo-300: oklch(78.5% 0.115 274.713);
+  --color-indigo-400: oklch(67.3% 0.182 276.935);
+  --color-indigo-500: oklch(58.5% 0.233 277.117);
+  --color-indigo-600: oklch(51.1% 0.262 276.966);
+  --color-indigo-700: oklch(45.7% 0.24 277.023);
+  --color-indigo-800: oklch(39.8% 0.195 277.366);
+  --color-indigo-900: oklch(35.9% 0.144 278.697);
+  --color-indigo-950: oklch(25.7% 0.09 281.288);
+  --color-red-50: oklch(97.1% 0.013 17.38);
+  --color-red-100: oklch(93.6% 0.032 17.717);
+  --color-red-200: oklch(88.5% 0.062 18.334);
+  --color-red-300: oklch(80.8% 0.114 19.571);
+  --color-red-400: oklch(70.4% 0.191 22.216);
+  --color-red-500: oklch(63.7% 0.237 25.331);
+  --color-red-600: oklch(57.7% 0.245 27.325);
+  --color-red-700: oklch(50.5% 0.213 27.518);
+  --color-red-800: oklch(44.4% 0.177 26.899);
+  --color-red-900: oklch(39.6% 0.141 25.723);
+  --color-red-950: oklch(25.8% 0.092 26.042);
+  --color-green-50: oklch(98.2% 0.018 155.826);
+  --color-green-100: oklch(96.2% 0.044 156.743);
+  --color-green-200: oklch(92.5% 0.084 155.995);
+  --color-green-300: oklch(87.1% 0.15 154.449);
+  --color-green-400: oklch(79.2% 0.209 151.711);
+  --color-green-500: oklch(72.3% 0.219 149.579);
+  --color-green-600: oklch(62.7% 0.194 149.214);
+  --color-green-700: oklch(52.7% 0.154 150.069);
+  --color-green-800: oklch(44.8% 0.119 151.328);
+  --color-green-900: oklch(39.3% 0.095 152.535);
+  --color-green-950: oklch(26.6% 0.065 152.934);
+  --color-emerald-50: oklch(97.9% 0.021 166.113);
+  --color-emerald-100: oklch(95% 0.052 163.051);
+  --color-emerald-200: oklch(90.5% 0.093 164.15);
+  --color-emerald-300: oklch(84.5% 0.143 164.978);
+  --color-emerald-400: oklch(76.5% 0.177 163.223);
+  --color-emerald-500: oklch(69.6% 0.17 162.48);
+  --color-emerald-600: oklch(59.6% 0.145 163.225);
+  --color-emerald-700: oklch(50.8% 0.118 165.612);
+  --color-emerald-800: oklch(43.2% 0.095 166.913);
+  --color-emerald-900: oklch(37.8% 0.077 168.94);
+  --color-emerald-950: oklch(26.2% 0.051 172.552);
+  --color-amber-50: oklch(98.7% 0.022 95.277);
+  --color-amber-100: oklch(96.2% 0.059 95.617);
+  --color-amber-200: oklch(92.4% 0.12 95.746);
+  --color-amber-300: oklch(87.9% 0.169 91.605);
+  --color-amber-400: oklch(82.8% 0.189 84.429);
+  --color-amber-500: oklch(76.9% 0.188 70.08);
+  --color-amber-600: oklch(66.6% 0.179 58.318);
+  --color-amber-700: oklch(55.5% 0.163 48.998);
+  --color-amber-800: oklch(47.3% 0.137 46.201);
+  --color-amber-900: oklch(41.4% 0.112 45.904);
+  --color-amber-950: oklch(27.9% 0.077 45.635);
+  --color-blue-50: oklch(97% 0.014 254.604);
+  --color-blue-100: oklch(93.2% 0.032 255.585);
+  --color-blue-200: oklch(88.2% 0.059 254.128);
+  --color-blue-300: oklch(80.9% 0.105 251.813);
+  --color-blue-400: oklch(70.7% 0.165 254.624);
+  --color-blue-500: oklch(62.3% 0.214 259.815);
+  --color-blue-600: oklch(54.6% 0.245 262.881);
+  --color-blue-700: oklch(48.8% 0.243 264.376);
+  --color-blue-800: oklch(42.4% 0.199 265.638);
+  --color-blue-900: oklch(37.9% 0.146 265.522);
+  --color-blue-950: oklch(28.2% 0.091 267.935);
+  --color-orange-50: oklch(98% 0.016 73.684);
+  --color-orange-100: oklch(95.4% 0.038 75.164);
+  --color-orange-200: oklch(90.1% 0.076 70.697);
+  --color-orange-300: oklch(83.7% 0.128 66.29);
+  --color-orange-400: oklch(75% 0.183 55.934);
+  --color-orange-500: oklch(70.5% 0.213 47.604);
+  --color-orange-600: oklch(64.6% 0.222 41.116);
+  --color-orange-700: oklch(55.3% 0.195 38.402);
+  --color-orange-800: oklch(47% 0.157 37.304);
+  --color-orange-900: oklch(40.8% 0.123 38.172);
+  --color-orange-950: oklch(26.6% 0.079 36.259);
+  --color-yellow-50: oklch(98.7% 0.026 102.212);
+  --color-yellow-100: oklch(97.3% 0.071 103.193);
+  --color-yellow-200: oklch(94.5% 0.129 101.54);
+  --color-yellow-300: oklch(90.5% 0.182 98.111);
+  --color-yellow-400: oklch(85.2% 0.199 91.936);
+  --color-yellow-500: oklch(79.5% 0.184 86.047);
+  --color-yellow-600: oklch(68.1% 0.162 75.834);
+  --color-yellow-700: oklch(55.4% 0.135 66.442);
+  --color-yellow-800: oklch(47.6% 0.114 61.907);
+  --color-yellow-900: oklch(42.1% 0.095 57.708);
+  --color-yellow-950: oklch(28.6% 0.066 53.813);
+}

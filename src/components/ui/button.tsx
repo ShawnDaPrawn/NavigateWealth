@@ -45,6 +45,10 @@ const Button = React.forwardRef<
   return (
     <Comp
       data-slot="button"
+      // Read by the admin theme (src/styles/admin-navigator.css) to give each
+      // variant the website's look; nothing else styles from them.
+      data-variant={variant ?? 'default'}
+      data-size={size ?? 'default'}
       className={cn(buttonVariants({ variant, size, className }))}
       ref={ref}
       {...props}
