@@ -34,6 +34,7 @@ const createEmailTemplateMock = vi.hoisted(() => vi.fn((content: string) => `<ht
 vi.mock('../email-service.ts', () => ({
   sendEmail: sendEmailMock,
   createEmailTemplate: createEmailTemplateMock,
+  getFooterSettings: vi.fn(async () => ({})),
 }));
 
 vi.mock('../communication-attachments.ts', () => ({

@@ -46,6 +46,7 @@ vi.mock('../stderr-logger.ts', () => ({
 vi.mock('../email-service.ts', () => ({
   sendEmail: vi.fn(),
   createEmailTemplate: vi.fn((html: string) => html),
+  getFooterSettings: vi.fn(async () => ({})),
 }));
 
 vi.mock('../communication-repo.ts', () => ({

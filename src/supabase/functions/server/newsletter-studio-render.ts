@@ -84,8 +84,8 @@ export function renderNewsletterEmail(input: RenderNewsletterEmailInput): Render
   const unsubscribeUrl = buildUnsubscribeUrl(recipient.email);
   const greeting = recipient.firstName ? `Hi ${escapeHtml(recipient.firstName)},` : 'Hello,';
 
+  // The title is the layout's headline, so the body starts at the description.
   const content =
-    `<h1 style="font-size:22px;line-height:1.3;margin:0 0 16px 0;">${escapeHtml(campaign.title)}</h1>` +
     descriptionHtml(campaign.description) +
     `<p style="margin:24px 0 8px 0;font-size:13px;color:#6b7280;">The newsletter is also attached to this email as a PDF.</p>`;
 
@@ -94,6 +94,8 @@ export function renderNewsletterEmail(input: RenderNewsletterEmailInput): Render
     greeting,
     buttonUrl: readUrl,
     buttonLabel: 'Read the newsletter',
+    // The read link is a long tracked URL; printing it as text adds nothing.
+    buttonFallback: false,
     unsubscribeLink: unsubscribeUrl,
     footerSettings,
   });

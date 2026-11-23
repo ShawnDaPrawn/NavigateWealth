@@ -8,7 +8,7 @@ import {
 } from './communication-types.ts';
 import * as kv from './kv_store.tsx';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
-import { sendEmail, createEmailTemplate } from './email-service.ts';
+import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
 import * as repo from './communication-repo.ts';
 import { logger } from './stderr-logger.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
@@ -441,6 +441,8 @@ export async function processScheduledCampaigns() {
 
     const results = [];
     const stripHtml = (html: string) => html.replace(/<[^>]*>?/gm, '');
+    // Once per run, not per recipient: the admin's Global Footer.
+    const footerSettings = dueCampaigns.length > 0 ? await getFooterSettings() : undefined;
 
     for (const campaign of dueCampaigns) {
       campaign.status = 'sending';
@@ -462,6 +464,7 @@ export async function processScheduledCampaigns() {
         const subject = resolveMergeFields(campaign.subject, recipient);
         const htmlBody = createEmailTemplate(resolveMergeFields(campaign.bodyHtml, recipient), {
           title: subject,
+          footerSettings,
         });
         const textBody = stripHtml(resolveMergeFields(campaign.bodyHtml, recipient));
         try {

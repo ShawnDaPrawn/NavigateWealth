@@ -8,67 +8,33 @@ import { Switch } from '../../../../ui/switch';
 import { Card, CardContent } from '../../../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../../ui/tabs';
 import { Loader2, ChevronLeft, Save, RefreshCw, Eye, ZoomIn, ZoomOut } from 'lucide-react';
+import { renderEmailLayout } from '@/shared/email/emailLayout';
 import { communicationApi } from '../api';
 import { EmailTemplate, EmailFooterSettings } from '../types';
 import { toast } from 'sonner';
+import { EmailPreviewFrame, EmailSchemeToggle, type EmailPreviewScheme } from './EmailPreviewFrame';
 
 interface EmailTemplateEditorProps {
   templateId: string;
   onBack: () => void;
 }
 
-const BASE_TEMPLATE = `<!DOCTYPE html>
-<html lang="en" style="margin:0; padding:0;">
-  <head>
-    <meta charset="UTF-8" />
-    <title>{{ .Title }} - Navigate Wealth</title>
-    <meta name="color-scheme" content="light dark">
-    <meta name="supported-color-schemes" content="light dark">
-    <style>
-      @media (prefers-color-scheme: dark) {
-        body.email-body { background-color: #020617 !important; }
-        table.email-card { background-color: #020617 !important; border-color: #1f2937 !important; }
-        .email-text, .email-heading, .email-footer { color: #e5e7eb !important; }
-        .email-muted { color: #9ca3af !important; }
-        .email-link { color: #a855f7 !important; }
-        .email-button { background-color: #8b5cf6 !important; }
-      }
-    </style>
-  </head>
-  <body class="email-body" style="background-color:#f3f4f6; margin:0; padding:40px 0; font-family: Arial, sans-serif;">
-    <table align="center" width="600" cellpadding="0" cellspacing="0" class="email-card" style="background-color:#ffffff; border-radius:12px; border:1px solid #e5e7eb; padding:0; text-align:center; font-family: Arial, sans-serif; box-shadow:0 8px 20px rgba(15,23,42,0.10);">
-      <tr><td style="height:5px; background:linear-gradient(90deg,#6d28d9,#a855f7,#6d28d9); border-radius:12px 12px 0 0;"></td></tr>
-      <tr>
-        <td style="padding:30px 32px 24px 32px;">
-          <div style="margin-bottom:20px;">
-            <span style="font-size:24px; font-weight:bold; color:#000000;">Navigate</span>
-            <span style="font-size:24px; font-weight:bold; color:#6d28d9;">Wealth</span>
-          </div>
-          <div class="email-heading" style="font-size:16px; font-weight:bold; color:#111827; margin-bottom:8px;">{{ .Title }}</div>
-          <div class="email-muted" style="font-size:14px; color:#6b7280; margin-bottom:20px;">{{ .Subtitle }}</div>
-          <div class="email-text" style="font-size:14px; color:#374151; line-height:1.6; text-align:left; margin:0 auto 8px auto; max-width:100%;">{{ .Greeting }}</div>
-          <div class="email-text" style="font-size:14px; color:#374151; line-height:1.6; text-align:left; margin:0 auto 18px auto; max-width:100%;">
-            {{ .BodyHtml }}
-          </div>
-          {{ if .ButtonURL }}
-          <p style="text-align:center; margin:10px 0 6px 0;">
-            <a href="{{ .ButtonURL }}" class="email-button" style="display:inline-block; background-color:#6d28d9; color:#ffffff; padding:10px 20px; text-decoration:none; border-radius:999px; font-weight:bold; font-size:14px; font-family: Arial, sans-serif;">{{ .ButtonLabel }}</a>
-          </p>
-          {{ end }}
-          {{ if .FooterNote }}
-          <div class="email-text" style="font-size:12px; color:#6b7280; line-height:1.6; margin-top:10px; text-align:center;">{{ .FooterNote }}</div>
-          {{ end }}
-        </td>
-      </tr>
-      <tr><td style="padding:0 32px;"><hr style="border:none; border-top:1px solid #e5e7eb; margin:0;"></td></tr>
-      <tr>
-        <td class="email-footer" style="padding:18px 32px 24px 32px; font-size:12px; color:#6b7280; line-height:1.6; text-align:center;">
-          {{ .FooterContent }}
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>`;
+/** Example values for merge fields, so the preview reads like a real email. */
+const PREVIEW_SAMPLE: Record<string, string> = {
+  Name: 'John Doe',
+  FirstName: 'John',
+  RecipientName: 'John Doe',
+  SenderName: 'Navigate Wealth',
+};
+
+/** `{{ .Name }}` → sample text; any `…Link` / `…Url` → '#'; anything else is left visible. */
+function fillSample(value: string | undefined): string {
+  return (value ?? '').replace(/\{\{\s*\.([A-Za-z0-9_]+)\s*\}\}/g, (match, key: string) => {
+    if (PREVIEW_SAMPLE[key]) return PREVIEW_SAMPLE[key];
+    if (/(Link|Url|URL)$/.test(key)) return '#';
+    return match;
+  });
+}
 
 export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorProps) {
   const [template, setTemplate] = useState<EmailTemplate | null>(null);
@@ -77,6 +43,7 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('edit');
   const [scale, setScale] = useState(0.9);
+  const [scheme, setScheme] = useState<EmailPreviewScheme>('light');
 
   const loadTemplate = useCallback(async () => {
     setLoading(true);
@@ -113,80 +80,19 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
     }
   };
 
+  /** The real layout, as the server sends it, with this template and the saved footer. */
   const generatePreview = () => {
     if (!template) return '';
-
-    let html = BASE_TEMPLATE.replace('{{ .Title }}', template.title || '') // Header title
-      .replace('{{ .Title }}', template.title || '') // Meta title
-      .replace('{{ .Subtitle }}', template.subtitle || '')
-      .replace('{{ .Greeting }}', template.greeting || '')
-      .replace('{{ .BodyHtml }}', template.bodyHtml || '')
-      .replace('{{ .ButtonLabel }}', template.buttonLabel || '')
-      .replace('{{ .ButtonURL }}', template.buttonUrl || '')
-      .replace('{{ .FooterNote }}', template.footerNote || '')
-      .replace('{{ .Year }}', new Date().getFullYear().toString());
-
-    // Handle conditional rendering for button
-    if (!template.buttonUrl) {
-      // Remove button block if no URL
-      html = html.replace(/{{ if .ButtonURL }}[\s\S]*?{{ end }}/, '');
-    } else {
-      html = html.replace('{{ if .ButtonURL }}', '').replace('{{ end }}', '');
-    }
-
-    // Handle conditional rendering for footer note
-    if (!template.footerNote) {
-      html = html.replace(/{{ if .FooterNote }}[\s\S]*?{{ end }}/, '');
-    } else {
-      html = html.replace('{{ if .FooterNote }}', '').replace('{{ end }}', '');
-    }
-
-    // Build footer content from settings
-    let footerHtml = '';
-    if (footerSettings) {
-      const socialLinksHtml = footerSettings.socialLinks
-        ? Object.entries(footerSettings.socialLinks)
-            .filter(([platform, url]) => url && platform !== 'youtube')
-            .map(([platform, url]) => {
-              const label =
-                platform === 'twitter' ? 'X' : platform.charAt(0).toUpperCase() + platform.slice(1);
-              return `<a href="${url}" class="email-link" style="color:#6d28d9; text-decoration:none; margin: 0 5px;">${label}</a>`;
-            })
-            .join(' | ')
-        : '';
-
-      const socialSection = socialLinksHtml
-        ? `<p style="margin:12px 0 0;"><strong>Follow us:</strong><br />${socialLinksHtml}</p>`
-        : '';
-
-      const copyright = footerSettings.copyrightText.replace(
-        '{{Year}}',
-        new Date().getFullYear().toString(),
-      );
-
-      const emailLink = footerSettings.contactEmail
-        ? `<p style="margin:8px 0 0;">Email: <a href="mailto:${footerSettings.contactEmail}" class="email-link" style="color:#6d28d9; text-decoration:none;">${footerSettings.contactEmail}</a></p>`
-        : '';
-
-      footerHtml = `
-          <p style="margin:0;"><strong>${footerSettings.companyName}</strong><br />Independent Financial Advisory Services</p>
-          <p style="margin:8px 0 0;">${footerSettings.address}</p>
-          ${emailLink}
-          ${socialSection}
-          <p style="margin:12px 0 0;" class="email-muted">${copyright}</p>
-        `;
-    }
-
-    html = html.replace('{{ .FooterContent }}', footerHtml);
-
-    // Simple variable substitution for preview
-    html = html.replace(/{{ .Name }}/g, 'John Doe');
-    html = html.replace(/{{ .InviteLink }}/g, '#');
-    html = html.replace(/{{ .DashboardLink }}/g, '#');
-    html = html.replace(/{{ .ApplicationLink }}/g, '#');
-    html = html.replace(/{{ .ResetLink }}/g, '#');
-
-    return html;
+    return renderEmailLayout({
+      title: fillSample(template.title),
+      subtitle: fillSample(template.subtitle),
+      greeting: fillSample(template.greeting),
+      bodyHtml: fillSample(template.bodyHtml),
+      buttonUrl: fillSample(template.buttonUrl),
+      buttonLabel: fillSample(template.buttonLabel),
+      footerNote: fillSample(template.footerNote),
+      footer: footerSettings,
+    });
   };
 
   if (loading) {
@@ -401,6 +307,8 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
                 <ZoomIn className="h-4 w-4" />
               </Button>
               <div className="w-px h-4 bg-border mx-1" aria-hidden="true" />
+              <EmailSchemeToggle value={scheme} onChange={setScheme} />
+              <div className="w-px h-4 bg-border mx-1" aria-hidden="true" />
               <Button
                 variant="ghost"
                 size="icon"
@@ -412,28 +320,13 @@ export function EmailTemplateEditor({ templateId, onBack }: EmailTemplateEditorP
             </div>
           </div>
           <div className="flex-1 overflow-auto p-4 flex items-start justify-center bg-gray-50/50">
-            <div
-              style={{
-                width: `${600 * scale}px`,
-                height: `${1000 * scale}px`,
-                transition: 'width 0.2s, height 0.2s',
-              }}
-              className="relative shrink-0"
-            >
-              <div
-                className="absolute top-0 left-0 w-[600px] h-[1000px] bg-white shadow-xl rounded-xl overflow-hidden transition-transform duration-200"
-                style={{
-                  transform: `scale(${scale})`,
-                  transformOrigin: 'top left',
-                }}
-              >
-                <iframe
-                  srcDoc={generatePreview()}
-                  className="w-full h-full border-none"
-                  title="Email Preview"
-                />
-              </div>
-            </div>
+            <EmailPreviewFrame
+              html={generatePreview()}
+              scheme={scheme}
+              scale={scale}
+              title="Email Preview"
+              className="w-auto shrink-0 overflow-hidden rounded-xl shadow-xl"
+            />
           </div>
         </div>
       </div>
