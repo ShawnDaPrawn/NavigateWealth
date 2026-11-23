@@ -162,7 +162,11 @@ export function Sidebar({
 
       {isSuperAdmin && vaultOpen && (
         <Suspense fallback={null}>
-          <PasswordManager key={user?.id} onClose={() => setVaultOpen(false)} />
+          <PasswordManager
+            key={user?.id}
+            userId={user?.id ?? null}
+            onClose={() => setVaultOpen(false)}
+          />
         </Suspense>
       )}
       <InstallHelpDialog open={showInstallHelp} onOpenChange={setShowInstallHelp} />
