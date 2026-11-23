@@ -10,9 +10,9 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
-import { useForm, type Resolver } from 'react-hook-form';
+import { useForm, useFormContext, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Info, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Button } from '../../../../ui/button';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
 import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
@@ -31,6 +31,7 @@ import { DependantsForm } from './step1/DependantsForm';
 import { ExistingCoverForm } from './step1/ExistingCoverForm';
 import { useFormPrefill } from '../../form-prefill';
 import { FNAStepNavigation } from '../../fna';
+import { formatCurrency } from '../utils';
 
 interface Step1Props {
   clientId?: string;
@@ -47,6 +48,108 @@ function formatOptionalNumber(value: number | undefined | null, fallback = '0'):
 
 function hasPersistedRiskIntake(data?: Partial<InformationGatheringInput>): boolean {
   return !!data && Object.keys(data).length > 0;
+}
+
+/** The three sections of Step 1 and the fields each holds (for error markers). */
+const STEP1_TABS: ReadonlyArray<{
+  value: string;
+  label: string;
+  fields: ReadonlyArray<keyof InformationGatheringFormValues>;
+}> = [
+  {
+    value: 'income',
+    label: 'Income & personal',
+    fields: [
+      'grossMonthlyIncome',
+      'netMonthlyIncome',
+      'incomeEscalationAssumption',
+      'currentAge',
+      'retirementAge',
+      'employmentType',
+      'totalOutstandingDebts',
+      'totalCurrentAssets',
+      'estateWorth',
+      'totalHouseholdMonthlyExpenditure',
+    ],
+  },
+  {
+    value: 'dependants',
+    label: 'Dependants & family',
+    fields: ['dependants', 'spouseFullName', 'spouseAverageMonthlyIncome'],
+  },
+  {
+    value: 'existing',
+    label: 'Existing cover',
+    fields: [
+      'existingCoverLifePersonal',
+      'existingCoverLifeGroup',
+      'existingCoverDisabilityPersonal',
+      'existingCoverDisabilityGroup',
+      'existingCoverSevereIllnessPersonal',
+      'existingCoverSevereIllnessGroup',
+      'existingCoverIPTemporaryPersonal',
+      'existingCoverIPTemporaryGroup',
+      'existingCoverIPPermanentPersonal',
+      'existingCoverIPPermanentGroup',
+      'ipTemporaryBenefitPeriod',
+      'ipPermanentEscalation',
+    ],
+  },
+];
+
+/**
+ * The figures the calculation will start from, kept in view while the adviser
+ * moves between sections. A row of tiles above the form on smaller screens; a
+ * sticky panel beside it on wide ones. Read-only: every value is edited in the form.
+ */
+function RiskStep1Summary() {
+  const form = useFormContext<InformationGatheringFormValues>();
+  const v = form.watch();
+  const num = (x: unknown) => Number(x || 0);
+
+  const gross = num(v.grossMonthlyIncome);
+  const rows: Array<{ label: string; value: string; unit?: string }> = [
+    { label: 'Gross income', value: formatCurrency(gross * 12), unit: '/ yr' },
+    { label: 'Net income', value: formatCurrency(num(v.netMonthlyIncome) * 12), unit: '/ yr' },
+    { label: 'Net worth', value: formatCurrency(num(v.estateWorth)) },
+    {
+      label: 'Household income',
+      value: formatCurrency(gross + num(v.spouseAverageMonthlyIncome)),
+      unit: '/ mo',
+    },
+    { label: 'Dependants', value: String(v.dependants?.length ?? 0) },
+    {
+      label: 'Life cover',
+      value: formatCurrency(num(v.existingCoverLifePersonal) + num(v.existingCoverLifeGroup)),
+    },
+  ];
+
+  return (
+    <aside
+      aria-label="Summary"
+      className="order-first overflow-hidden rounded-lg border border-nw-line bg-white xl:sticky xl:top-4 xl:order-none xl:w-72 xl:flex-none"
+    >
+      <h3 className="hidden border-b border-nw-line-soft px-5 py-3.5 text-[15px] leading-[22px] font-semibold text-nw-ink xl:block">
+        Summary
+      </h3>
+      <dl className="grid grid-cols-2 gap-px bg-nw-line-soft sm:grid-cols-3 xl:grid-cols-1 xl:gap-0 xl:divide-y xl:divide-nw-line-soft xl:bg-white xl:px-5 xl:py-1">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="flex flex-col gap-0.5 bg-white px-4 py-3 xl:flex-row xl:items-baseline xl:justify-between xl:gap-3 xl:px-0 xl:py-2.5"
+          >
+            <dt className="text-[11px] leading-4 font-semibold tracking-[0.12em] text-nw-muted uppercase">
+              {row.label}
+            </dt>
+            <dd className="text-[15px] whitespace-nowrap text-nw-ink tabular-nums">
+              {row.value}
+              {row.unit && <span className="ml-1 text-xs text-nw-muted">{row.unit}</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </aside>
+  );
 }
 
 export function Step1InformationGathering({
@@ -196,14 +299,14 @@ export function Step1InformationGathering({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {!intakeMode && PrefillUI}
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            {intakeMode
-              ? 'Review suggested values from your profile. You can edit any field before continuing.'
-              : 'Use "Review matches" to prefill from the client record. You can edit any field before continuing.'}
-          </AlertDescription>
-        </Alert>
+        {intakeMode && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              Review suggested values from your profile. You can edit any field before continuing.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Validation Summary - show errors if form is submitted */}
         {Object.keys(form.formState.errors).length > 0 && form.formState.isSubmitted && (
@@ -222,40 +325,49 @@ export function Step1InformationGathering({
           </Alert>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <SegmentedList aria-label="Information sections">
-            <SegmentedTrigger value="income">Income &amp; personal</SegmentedTrigger>
-            <SegmentedTrigger value="dependants">Dependants &amp; family</SegmentedTrigger>
-            <SegmentedTrigger value="existing">Existing cover</SegmentedTrigger>
-          </SegmentedList>
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0 flex-1">
+            <SegmentedList aria-label="Information sections">
+              {STEP1_TABS.map((tab) => {
+                const hasError =
+                  form.formState.isSubmitted &&
+                  tab.fields.some((name) => name in form.formState.errors);
+                return (
+                  <SegmentedTrigger key={tab.value} value={tab.value} className="gap-1.5">
+                    {tab.label}
+                    {hasError && (
+                      <>
+                        <span
+                          className="h-1.5 w-1.5 rounded-full bg-[var(--nw-danger)]"
+                          aria-hidden="true"
+                        />
+                        <span className="sr-only">(has errors)</span>
+                      </>
+                    )}
+                  </SegmentedTrigger>
+                );
+              })}
+            </SegmentedList>
 
-          <TabsContent value="income" className="mt-6">
-            <IncomeDetailsForm />
-          </TabsContent>
+            <TabsContent value="income" className="mt-5">
+              <IncomeDetailsForm />
+            </TabsContent>
 
-          <TabsContent value="dependants" className="mt-6">
-            <DependantsForm />
-          </TabsContent>
+            <TabsContent value="dependants" className="mt-5">
+              <DependantsForm />
+            </TabsContent>
 
-          <TabsContent value="existing" className="mt-6">
-            <ExistingCoverForm
-              clientId={intakeMode ? undefined : clientId}
-              isRecalculating={refreshing}
-              onRecalculate={() => void refreshFromPolicies()}
-            />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="existing" className="mt-5">
+              <ExistingCoverForm
+                clientId={intakeMode ? undefined : clientId}
+                isRecalculating={refreshing}
+                onRecalculate={() => void refreshFromPolicies()}
+              />
+            </TabsContent>
+          </Tabs>
 
-        {!intakeMode && (
-          <Alert className="border-blue-200 bg-blue-50">
-            <Info className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-sm text-blue-900">
-              <strong>Next Step:</strong> The system will automatically calculate risk needs based
-              on the information you&apos;ve entered. You&apos;ll be able to review all calculations
-              in detail before making any manual adjustments.
-            </AlertDescription>
-          </Alert>
-        )}
+          <RiskStep1Summary />
+        </div>
 
         <FNAStepNavigation
           step={1}

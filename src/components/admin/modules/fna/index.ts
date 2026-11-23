@@ -13,6 +13,7 @@ export { FNACard } from './components/FNACard';
 export { FNAStatusBadge } from './components/FNAStatusBadge';
 export { FNAWizardShell, FNAWizardStepper } from './wizard/FNAWizardShell';
 export { FNAStepNavigation } from './wizard/FNAStepNavigation';
+export { FNAFormPanel, FNAFormSection, FNAFieldHint } from './wizard/FNAFormSection';
 export { FNAAssumptionOverrides } from './wizard/FNAAssumptionOverrides';
 export {
   hasAssumptionOverrides,

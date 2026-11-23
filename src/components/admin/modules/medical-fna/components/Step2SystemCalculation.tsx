@@ -174,15 +174,6 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
         </CardContent>
       </Card>
 
-      {/* Next Step Preview */}
-      <Alert className="border-primary/20 bg-primary/5">
-        <Info className="h-4 w-4 text-primary" />
-        <AlertDescription className="text-sm">
-          <strong>Next Step:</strong> You can apply manual overrides to any calculated values in
-          Step 3. All overrides must include a reason for compliance purposes.
-        </AlertDescription>
-      </Alert>
-
       <FNAStepNavigation step={2} onBack={onBack} onNext={onNext} />
     </div>
   );

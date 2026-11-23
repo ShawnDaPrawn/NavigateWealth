@@ -299,15 +299,6 @@ export function Step3ManualAdjustment({
         </CardContent>
       </Card>
 
-      {/* Next Step Preview */}
-      <Alert className="border-blue-200 bg-blue-50">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-sm text-blue-900">
-          <strong>Next Step:</strong> Review the recalculated results with your adjustments and
-          finalize the analysis for publication.
-        </AlertDescription>
-      </Alert>
-
       <FNAStepNavigation step={3} onBack={onBack} onNext={() => onNext(adjustments)} />
     </div>
   );

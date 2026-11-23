@@ -1,7 +1,5 @@
 import { useEffect } from 'react';
 import { useFormContext } from 'react-hook-form';
-import { Card, CardHeader, CardTitle, CardContent } from '../../../../../ui/card';
-import { Label } from '../../../../../ui/label';
 import {
   Select,
   SelectContent,
@@ -17,12 +15,12 @@ import {
   FormMessage,
   FormDescription,
 } from '../../../../../ui/form';
-import { Separator } from '../../../../../ui/separator';
 import { CurrencyInputField } from '../../../../../ui/currency-input';
 import { NumberInputField } from '../../../../../ui/number-input';
 import { formatCurrency } from '../../utils';
 import { EMPLOYMENT_TYPE_LABELS } from '../../constants';
 import type { InformationGatheringFormValues } from '../../schema';
+import { FNAFormPanel, FNAFormSection } from '../../../fna';
 
 export function IncomeDetailsForm() {
   const form = useFormContext<InformationGatheringFormValues>();
@@ -51,216 +49,198 @@ export function IncomeDetailsForm() {
     }
   }, [watchAssets, watchDebts, calculatedEstateValue, form, watchEstateWorth]);
 
+  const currentAge = Number(form.watch('currentAge') || 0);
+  const retirementAge = Number(form.watch('retirementAge') || 0);
+  const yearsToRetirement = retirementAge - currentAge;
+
+  const hint = 'text-[13px] leading-[18px] text-nw-muted tabular-nums';
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Income Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="grossMonthlyIncome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Gross Monthly Income</FormLabel>
-                  <FormControl>
-                    <CurrencyInputField className="text-sm" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Gross Annual Income (Derived)</Label>
-              <div className="h-10 flex items-center px-3 rounded-md border bg-muted/50 text-sm font-medium">
-                {formatCurrency(grossAnnual)}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="netMonthlyIncome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Net Monthly Income</FormLabel>
-                  <FormControl>
-                    <CurrencyInputField className="text-sm" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Net Annual Income (Derived)</Label>
-              <div className="h-10 flex items-center px-3 rounded-md border bg-muted/50 text-sm font-medium">
-                {formatCurrency(netAnnual)}
-              </div>
-            </div>
-          </div>
-
+    <FNAFormPanel>
+      <FNAFormSection title="Income">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="grossMonthlyIncome"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Gross monthly income</FormLabel>
+                <FormControl>
+                  <CurrencyInputField {...field} />
+                </FormControl>
+                <FormDescription className={hint}>
+                  {formatCurrency(grossAnnual)} a year
+                </FormDescription>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="netMonthlyIncome"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Net monthly income</FormLabel>
+                <FormControl>
+                  <CurrencyInputField {...field} />
+                </FormControl>
+                <FormDescription className={hint}>
+                  {formatCurrency(netAnnual)} a year
+                </FormDescription>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="incomeEscalationAssumption"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium">
-                  Annual Income Escalation Assumption (%)
-                </FormLabel>
+                <FormLabel>Annual income escalation (%)</FormLabel>
                 <FormControl>
-                  <NumberInputField decimals={2} placeholder="6" className="text-sm" {...field} />
+                  <NumberInputField
+                    decimals={2}
+                    placeholder="6"
+                    className="sm:max-w-40"
+                    {...field}
+                  />
                 </FormControl>
-                <FormDescription className="text-xs">
-                  Expected annual income increase percentage
+                <FormDescription className={hint}>Expected yearly increase</FormDescription>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+        </div>
+      </FNAFormSection>
+
+      <FNAFormSection title="Personal">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
+          <FormField
+            control={form.control}
+            name="currentAge"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Current age</FormLabel>
+                <FormControl>
+                  <NumberInputField placeholder="35" {...field} />
+                </FormControl>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="retirementAge"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Retirement age</FormLabel>
+                <FormControl>
+                  <NumberInputField placeholder="65" {...field} />
+                </FormControl>
+                {currentAge > 0 && yearsToRetirement > 0 && (
+                  <FormDescription className={hint}>
+                    {yearsToRetirement} year{yearsToRetirement === 1 ? '' : 's'} to go
+                  </FormDescription>
+                )}
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="employmentType"
+            render={({ field }) => (
+              <FormItem className="col-span-2">
+                <FormLabel>Employment type</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(EMPLOYMENT_TYPE_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+        </div>
+      </FNAFormSection>
+
+      <FNAFormSection title="Financial position">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="totalCurrentAssets"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Total current assets</FormLabel>
+                <FormControl>
+                  <CurrencyInputField {...field} />
+                </FormControl>
+                <FormDescription className={hint}>Property, investments, savings</FormDescription>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="totalOutstandingDebts"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Total outstanding debts</FormLabel>
+                <FormControl>
+                  <CurrencyInputField {...field} />
+                </FormControl>
+                <FormDescription className={hint}>
+                  Home loan, vehicle finance, credit cards
                 </FormDescription>
                 <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Personal Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <FormField
-              control={form.control}
-              name="currentAge"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Current Age</FormLabel>
-                  <FormControl>
-                    <NumberInputField placeholder="35" className="text-sm" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="retirementAge"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Retirement Age</FormLabel>
-                  <FormControl>
-                    <NumberInputField placeholder="65" className="text-sm" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="employmentType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Employment Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(EMPLOYMENT_TYPE_LABELS).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Financial Position</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FormField
-              control={form.control}
-              name="totalOutstandingDebts"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Total Outstanding Debts</FormLabel>
-                  <FormControl>
-                    <CurrencyInputField className="text-sm" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    All liabilities (home loan, car finance, credit cards, etc.)
-                  </FormDescription>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="totalCurrentAssets"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-medium">Total Current Assets</FormLabel>
-                  <FormControl>
-                    <CurrencyInputField className="text-sm" {...field} />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    All assets (property, investments, savings, etc.)
-                  </FormDescription>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
-          </div>
-
           <FormField
             control={form.control}
             name="estateWorth"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium">Estate Worth / Net Worth</FormLabel>
+                <div className="flex items-center justify-between gap-2">
+                  <FormLabel>Estate worth / net worth</FormLabel>
+                  <span className="rounded-sm bg-nw-violet-tint px-1.5 py-0.5 text-[11px] font-semibold text-nw-violet-hover">
+                    Calculated
+                  </span>
+                </div>
                 <FormControl>
-                  <CurrencyInputField className="text-sm" {...field} />
+                  <CurrencyInputField {...field} />
                 </FormControl>
-                <FormDescription className="text-xs">
-                  Auto-calculated as Assets - Debts ({formatCurrency(calculatedEstateValue)}). You
-                  can manually override this value if needed.
+                <FormDescription className={hint}>
+                  Assets less debts ({formatCurrency(calculatedEstateValue)}). Type to override.
                 </FormDescription>
                 <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
-
-          <Separator />
-
           <FormField
             control={form.control}
             name="totalHouseholdMonthlyExpenditure"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium">
-                  Total Household Monthly Expenditure
-                </FormLabel>
+                <FormLabel>Household monthly expenditure</FormLabel>
                 <FormControl>
-                  <CurrencyInputField className="text-sm" {...field} />
+                  <CurrencyInputField {...field} />
                 </FormControl>
-                <FormDescription className="text-xs">Monthly household expenses</FormDescription>
                 <FormMessage className="text-xs" />
               </FormItem>
             )}
           />
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </FNAFormSection>
+    </FNAFormPanel>
   );
 }
