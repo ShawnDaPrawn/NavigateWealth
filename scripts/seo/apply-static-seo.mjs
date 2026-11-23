@@ -4,21 +4,17 @@ import createDOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import {
   createArticleStaticBodyHtml,
-  DEFAULT_OG_IMAGE_HEIGHT,
-  DEFAULT_OG_IMAGE_PATH,
-  DEFAULT_OG_IMAGE_WIDTH,
-  SHARE_IMAGE_DIR,
   DEFAULT_SITE_URL,
+  NEWSLETTER_PATH_PREFIX,
   clampSeoDescription,
   createArticleRoute,
-  createArticleSchema,
-  createRouteSchema,
+  createNewsletterRoute,
   createStaticBodyHtml,
+  createStaticSeoHead,
   escapeHtml,
   normalizeSiteUrl,
   publicSeoRoutes,
   requireArticles,
-  resolveImageUrl,
   resolveSiteVerificationToken,
   routeCanonicalUrl,
 } from './seo-static-data.mjs';
@@ -46,10 +42,13 @@ async function main() {
 
   const baseHtml = injectSiteVerification(fs.readFileSync(baseIndexPath, 'utf8'));
   const articleRoutes = await fetchPublishedArticleRoutes();
-  const routes = dedupeRoutes([...publicSeoRoutes, ...articleRoutes]).map((route) => ({
-    ...route,
-    description: clampSeoDescription(route.description),
-  }));
+  const newsletterRoutes = await fetchPublishedNewsletterRoutes();
+  const routes = dedupeRoutes([...publicSeoRoutes, ...articleRoutes, ...newsletterRoutes]).map(
+    (route) => ({
+      ...route,
+      description: clampSeoDescription(route.description),
+    }),
+  );
 
   for (const route of routes) {
     const html = applySeoToHtml(baseHtml, route);
@@ -83,26 +82,31 @@ function writeRouteManifest(routes) {
     if (canonical && canonical !== route.path) paths.add(canonical);
   }
 
-  const articleSlugs = [
-    ...new Set(
-      routes
-        .filter((route) => route.path?.startsWith('/resources/article/'))
-        .map((route) => {
-          const encoded = route.path.replace('/resources/article/', '');
-          try {
-            return decodeURIComponent(encoded);
-          } catch {
-            return encoded;
-          }
-        }),
-    ),
-  ].sort();
+  const slugsUnder = (prefix) =>
+    [
+      ...new Set(
+        routes
+          .filter((route) => route.path?.startsWith(prefix))
+          .map((route) => {
+            const encoded = route.path.slice(prefix.length);
+            try {
+              return decodeURIComponent(encoded);
+            } catch {
+              return encoded;
+            }
+          }),
+      ),
+    ].sort();
 
+  // The edge middleware reads both slug lists: a slug in neither was published
+  // after this build, and gets its share tags from the API instead (see
+  // src/middleware/share-meta.ts).
   const edgeManifest = {
     generated: true,
     generatedAt: new Date().toISOString(),
     paths: [...paths].sort(),
-    articleSlugs,
+    articleSlugs: slugsUnder('/resources/article/'),
+    newsletterSlugs: slugsUnder(NEWSLETTER_PATH_PREFIX),
   };
 
   const json = `${JSON.stringify(edgeManifest, null, 2)}\n`;
@@ -152,7 +156,7 @@ function outputPathForRoute(routePath) {
 
 function applySeoToHtml(html, route) {
   const cleaned = removeExistingStaticSeo(html);
-  const head = buildHead(route);
+  const head = createStaticSeoHead(route, siteUrl);
   const withHead = cleaned.replace(/<\/head>/i, `${head}\n    </head>`);
   return applyStaticBody(withHead, route);
 }
@@ -170,55 +174,6 @@ function removeExistingStaticSeo(html) {
     .replace(/\s*<meta\s+property=["']article:[^"']+["'][^>]*>/gi, '')
     .replace(/\s*<link\s+rel=["']canonical["'][^>]*>/gi, '')
     .replace(/\s*<script\s+id=["']seo-structured-data["'][\s\S]*?<\/script>/gi, '');
-}
-
-function buildHead(route) {
-  const canonicalUrl = routeCanonicalUrl(route, siteUrl);
-  const ogImageUrl = resolveImageUrl(siteUrl, route.ogImage || DEFAULT_OG_IMAGE_PATH);
-  const schema =
-    route.schema === 'article'
-      ? createArticleSchema(route, siteUrl)
-      : createRouteSchema(route, siteUrl);
-  const json = JSON.stringify(schema).replace(/<\/script/gi, '<\\/script');
-
-  const keywordsTag = route.keywords
-    ? `      <meta name="keywords" content="${escapeHtml(route.keywords)}" />\n`
-    : '';
-
-  return `
-      <!-- static-seo:start -->
-      <title>${escapeHtml(route.title)}</title>
-      <meta name="description" content="${escapeHtml(route.description)}" />
-      <meta name="robots" content="index, follow" />
-${keywordsTag}      <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
-      <meta property="og:title" content="${escapeHtml(route.title)}" />
-      <meta property="og:description" content="${escapeHtml(route.description)}" />
-      <meta property="og:type" content="${escapeHtml(route.ogType || 'website')}" />
-      <meta property="og:site_name" content="Navigate Wealth" />
-      <meta property="og:locale" content="en_ZA" />
-      <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />
-      <meta property="og:image" content="${escapeHtml(ogImageUrl)}" />
-${ogImageDimensionTags(ogImageUrl)}      <meta property="og:image:alt" content="${escapeHtml(route.title)}" />
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content="${escapeHtml(route.title)}" />
-      <meta name="twitter:description" content="${escapeHtml(route.description)}" />
-      <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}" />
-      <meta name="twitter:site" content="@Navigate_ZA" />
-      <script id="seo-structured-data" type="application/ld+json">${json}</script>
-      <!-- static-seo:end -->`;
-}
-
-/**
- * Emit og:image:width/height only for our own OG asset — dimensions of
- * arbitrary page images (article heroes) are unknown at build time.
- */
-function ogImageDimensionTags(ogImageUrl) {
-  if (!ogImageUrl.endsWith(DEFAULT_OG_IMAGE_PATH) && !ogImageUrl.includes(SHARE_IMAGE_DIR))
-    return '';
-  return (
-    `      <meta property="og:image:width" content="${DEFAULT_OG_IMAGE_WIDTH}" />\n` +
-    `      <meta property="og:image:height" content="${DEFAULT_OG_IMAGE_HEIGHT}" />\n`
-  );
 }
 
 /**
@@ -300,6 +255,36 @@ function onArticleFetchFailure(reason) {
   }
   console.warn(`[static-seo] Skipping article pages (${reason})`);
   return [];
+}
+
+/**
+ * Published newsletter issues, for their own prerendered head. Lenient on any
+ * failure: an issue without a prerender still renders (it previews as the
+ * home page, as every issue did before), and the edge middleware fills in its
+ * share tags. That is not worth failing a deploy over.
+ */
+async function fetchPublishedNewsletterRoutes() {
+  const projectRef = process.env.SUPABASE_PROJECT_REF || 'vpjmdsltwrnpefzcgdmz';
+  const fnBase =
+    process.env.SUPABASE_FUNCTIONS_BASE_URL ||
+    `https://${projectRef}.supabase.co/functions/v1/make-server-91ed8379`;
+
+  try {
+    const res = await fetchWithOptionalAuth(
+      `${fnBase}/newsletter-site/newsletters`,
+      readSupabaseAnonKey(),
+    );
+    if (!res.ok) {
+      console.warn(`[static-seo] Skipping newsletter pages (HTTP ${res.status})`);
+      return [];
+    }
+    const json = await res.json();
+    const rows = Array.isArray(json?.newsletters) ? json.newsletters : [];
+    return rows.map((row) => createNewsletterRoute(row)).filter(Boolean);
+  } catch (e) {
+    console.warn(`[static-seo] Skipping newsletter pages (${e?.message || String(e)})`);
+    return [];
+  }
 }
 
 async function fetchWithOptionalAuth(url, anonKey) {

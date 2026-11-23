@@ -11,6 +11,8 @@ export interface SeoRouteManifest {
   generatedAt: string | null;
   paths: string[];
   articleSlugs: string[];
+  /** Newsletter issues the build prerendered (absent from older manifests). */
+  newsletterSlugs?: string[];
 }
 
 /** SPA routes that are valid but not in the static SEO manifest. */

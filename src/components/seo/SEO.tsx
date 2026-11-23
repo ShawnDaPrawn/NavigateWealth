@@ -10,7 +10,12 @@
 import { useEffect } from 'react';
 import { SITE_ORIGIN } from '@/utils/siteOrigin';
 import organization from './organization.json';
-import { BRAND_SHARE_IMAGE_PATH, SHARE_IMAGE_SIZE, isShareImage } from './shareImages';
+import {
+  BRAND_SHARE_IMAGE_PATH,
+  SHARE_IMAGE_SIZE,
+  isShareImage,
+  pageShareImage,
+} from './shareImages';
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */
@@ -109,8 +114,9 @@ export function SEO({
       document.querySelector(`meta[${attr}="${key}"]`)?.remove();
     };
 
-    // Open Graph
-    const resolvedImage = ogImage || DEFAULT_OG_IMAGE;
+    // Open Graph. A page without an image of its own gets its card (the
+    // same file its prerendered head names), else the brand card.
+    const resolvedImage = ogImage || pageShareImage(canonicalUrl) || DEFAULT_OG_IMAGE;
     setMeta('property', 'og:title', title);
     setMeta('property', 'og:description', description);
     setMeta('property', 'og:type', ogType);

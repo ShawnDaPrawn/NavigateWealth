@@ -1,13 +1,24 @@
 /**
  * Vercel Routing Middleware (framework-agnostic — this is a Vite SPA, NOT Next.js).
  *
- * Returns a genuine HTTP 404 for unmatched public URLs instead of the SPA's
- * soft-404 (200 + client-side NotFound). Uses standard Web APIs only — do NOT
- * import from `next/server` here (this project has no `next` dependency, and
- * doing so breaks the Vercel Edge build; see docs/archive/production-readiness-ledger-2026.md).
+ * Two jobs, both reading the build's seo-route-manifest.json:
+ * - a genuine HTTP 404 for unmatched public URLs instead of the SPA's
+ *   soft-404 (200 + client-side NotFound);
+ * - share tags for an article or newsletter issue published after the last
+ *   build, for link-preview fetchers such as WhatsApp's, which would
+ *   otherwise be shown the home page's (src/middleware/share-meta.ts).
+ *
+ * Uses standard Web APIs only — do NOT import from `next/server` here (this
+ * project has no `next` dependency, and doing so breaks the Vercel Edge build;
+ * see docs/archive/production-readiness-ledger-2026.md).
  */
 import manifest from './seo-route-manifest.json';
 import { shouldReturnNotFound, type SeoRouteManifest } from './src/middleware/route-policy';
+import {
+  isLinkPreviewAgent,
+  pendingShareTarget,
+  renderPendingShare,
+} from './src/middleware/share-meta';
 
 export const config = {
   matcher: [
@@ -49,6 +60,17 @@ export default async function middleware(request: Request): Promise<Response | u
       status: 404,
       headers: { 'content-type': 'text/html; charset=utf-8' },
     });
+  }
+
+  // Published since the last build: give link previews this item's tags, not
+  // the home page's. Browsers skip this and get the SPA as before; any failure
+  // falls through to normal routing.
+  if (request.method === 'GET') {
+    const target = pendingShareTarget(pathname, manifest as SeoRouteManifest);
+    if (target && isLinkPreviewAgent(request.headers.get('user-agent'))) {
+      const shared = await renderPendingShare(request, target);
+      if (shared) return shared;
+    }
   }
 
   return undefined; // continue to normal routing
