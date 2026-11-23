@@ -18,6 +18,12 @@ import { CommunicationDraft, SchedulingConfig } from '../../types';
 import { SchedulingOptions } from '../SchedulingOptions';
 import { communicationApi } from '../../api';
 import DOMPurify from 'dompurify';
+import { renderEmailLayout } from '@/shared/email/emailLayout';
+import {
+  EmailPreviewFrame,
+  EmailSchemeToggle,
+  type EmailPreviewScheme,
+} from '../EmailPreviewFrame';
 
 interface Step3Props {
   draft: CommunicationDraft;
@@ -49,6 +55,7 @@ export function Step3Review({
 }: Step3Props) {
   const [isSending, setIsSending] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [previewScheme, setPreviewScheme] = useState<EmailPreviewScheme>('light');
 
   const handleSend = async () => {
     setIsSending(true);
@@ -227,89 +234,25 @@ export function Step3Review({
                   </div>
 
                   <div>
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Email Preview
-                    </span>
-                    {/* Mini WYSIWYG preview matching the actual email template */}
-                    <div
-                      className="mt-2 rounded-lg overflow-hidden border shadow-sm"
-                      style={{ backgroundColor: '#f3f4f6' }}
-                    >
-                      <div style={{ padding: '16px 8px' }}>
-                        <div
-                          style={{
-                            maxWidth: '100%',
-                            margin: '0 auto',
-                            backgroundColor: '#ffffff',
-                            borderRadius: '8px',
-                            border: '1px solid #e5e7eb',
-                            overflow: 'hidden',
-                            fontFamily: 'Arial, sans-serif',
-                          }}
-                        >
-                          {/* Purple gradient accent */}
-                          <div
-                            style={{
-                              height: '3px',
-                              background: 'linear-gradient(90deg, #6d28d9, #a855f7, #6d28d9)',
-                            }}
-                          />
-                          <div style={{ padding: '16px 20px', textAlign: 'center' }}>
-                            <div style={{ marginBottom: '12px' }}>
-                              <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#000' }}>
-                                Navigate
-                              </span>
-                              <span
-                                style={{ fontSize: '16px', fontWeight: 'bold', color: '#6d28d9' }}
-                              >
-                                Wealth
-                              </span>
-                            </div>
-                            <div
-                              style={{
-                                fontSize: '13px',
-                                fontWeight: 'bold',
-                                color: '#111827',
-                                marginBottom: '12px',
-                              }}
-                            >
-                              {draft.subject || 'Navigate Wealth'}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: '12px',
-                                color: '#374151',
-                                lineHeight: '1.5',
-                                textAlign: 'left',
-                              }}
-                            >
-                              {draft.bodyHtml ? (
-                                <div
-                                  className="line-clamp-4"
-                                  dangerouslySetInnerHTML={{
-                                    __html: DOMPurify.sanitize(draft.bodyHtml),
-                                  }}
-                                />
-                              ) : (
-                                <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>
-                                  No content...
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <div
-                            style={{
-                              padding: '8px 20px 12px',
-                              fontSize: '10px',
-                              color: '#9ca3af',
-                              textAlign: 'center',
-                              borderTop: '1px solid #e5e7eb',
-                            }}
-                          >
-                            Navigate Wealth &middot; Independent Financial Advisory Services
-                          </div>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                        Email Preview
+                      </span>
+                      <EmailSchemeToggle value={previewScheme} onChange={setPreviewScheme} />
+                    </div>
+                    {/* The real email layout — the same renderer the server sends with. */}
+                    <div className="mt-2 overflow-hidden rounded-lg border shadow-sm">
+                      <EmailPreviewFrame
+                        html={renderEmailLayout({
+                          title: draft.subject || 'Navigate Wealth',
+                          bodyHtml: draft.bodyHtml
+                            ? DOMPurify.sanitize(draft.bodyHtml)
+                            : '<p style="color:#9ca3af;font-style:italic;">No content...</p>',
+                        })}
+                        scheme={previewScheme}
+                        maxHeight={480}
+                        title="Email preview"
+                      />
                     </div>
                   </div>
                 </div>
