@@ -1,4 +1,14 @@
-export type LegalPdfRendererVersion = 'legacy' | 'paged';
+/**
+ * How a legal PDF is laid out.
+ *
+ * - 'navigator' (the default since 2026-11-23): the website's restyle, a dark
+ *   cover and the document page's own type; see legalPdfNavigatorModel.ts.
+ * - 'paged': the earlier paged.js layout. Kept for one release as a rollback,
+ *   reachable with `?legalPdfRenderer=paged`.
+ * - 'legacy': the original hand-paginated layout, and the fallback when either
+ *   of the others fails.
+ */
+export type LegalPdfRendererVersion = 'navigator' | 'legacy' | 'paged';
 
 export type LegalPdfRendererResolution = {
   defaultVersion: LegalPdfRendererVersion;
@@ -8,7 +18,7 @@ export type LegalPdfRendererResolution = {
   pagedAvailable: boolean;
 };
 
-export const DEFAULT_LEGAL_PDF_RENDERER_VERSION: LegalPdfRendererVersion = 'paged';
+export const DEFAULT_LEGAL_PDF_RENDERER_VERSION: LegalPdfRendererVersion = 'navigator';
 export const LEGAL_PDF_RENDERER_QUERY_PARAM = 'legalPdfRenderer';
 export const LEGAL_PDF_RENDERER_STORAGE_KEY = 'nw:legal-pdf-renderer';
 
@@ -17,7 +27,7 @@ function normalizeLegalPdfRendererVersion(
 ): LegalPdfRendererVersion | null {
   if (!value) return null;
   const normalized = value.trim().toLowerCase();
-  if (normalized === 'legacy' || normalized === 'paged') {
+  if (normalized === 'navigator' || normalized === 'legacy' || normalized === 'paged') {
     return normalized;
   }
   return null;
@@ -66,7 +76,7 @@ export function resolveLegalPdfRendererVersion({
   }
 
   const effectiveVersion: LegalPdfRendererVersion =
-    requestedVersion === 'paged' ? (pagedAvailable ? 'paged' : 'legacy') : 'legacy';
+    requestedVersion === 'paged' ? (pagedAvailable ? 'paged' : 'legacy') : requestedVersion;
 
   return {
     defaultVersion: DEFAULT_LEGAL_PDF_RENDERER_VERSION,
@@ -87,4 +97,19 @@ export function resolveActiveLegalPdfRenderer(): LegalPdfRendererResolution {
   return resolveLegalPdfRendererVersion({
     pagedAvailable: true,
   });
+}
+
+/** The selector for one printed page of the given layout. */
+export function legalPdfPageSelector(version: LegalPdfRendererVersion): string {
+  if (version === 'navigator') return '.nwlp-page';
+  if (version === 'paged') return '.pagedjs_page';
+  return '.pdf-page';
+}
+
+/**
+ * Whether the layout measures its pages after mounting, and so reports itself
+ * ready later. The legacy layout is ready as soon as it renders.
+ */
+export function legalPdfRendererLaysOutAsync(version: LegalPdfRendererVersion): boolean {
+  return version !== 'legacy';
 }

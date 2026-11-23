@@ -130,6 +130,36 @@ function freezePageCounters(
   });
 }
 
+/** How long a page capture waits for its fonts before drawing with what it has. */
+const CLONE_FONT_WAIT_MS = 4000;
+
+/**
+ * Loads, in html2canvas's cloned document, every font the page uses.
+ *
+ * html2canvas lays the page out again in a hidden iframe, and only waits for
+ * that iframe's fonts.ready, which settles before any face has been asked for.
+ * So the layout and the baseline it measures came from the fallback font while
+ * the glyphs were drawn in the real one: large text landed low, on the line
+ * below it (the legal PDF's cover title overlapped its description). Asking for
+ * each family, weight and size in use first makes both sides agree.
+ */
+async function loadClonedDocumentFonts(clonedDocument: Document, element: HTMLElement) {
+  const fonts = clonedDocument.fonts;
+  const view = clonedDocument.defaultView;
+  if (!fonts || typeof fonts.load !== 'function' || !view) return;
+
+  const requests = new Set<string>();
+  [element, ...Array.from(element.querySelectorAll<HTMLElement>('*'))].forEach((node) => {
+    const style = view.getComputedStyle(node);
+    requests.add(`${style.fontStyle} ${style.fontWeight} 16px ${style.fontFamily}`);
+  });
+
+  await Promise.race([
+    Promise.all(Array.from(requests, (font) => fonts.load(font).catch(() => null))),
+    new Promise((resolve) => window.setTimeout(resolve, CLONE_FONT_WAIT_MS)),
+  ]);
+}
+
 export function resolvePdfExportPages(container: ParentNode, pageSelector?: string) {
   const selectors = [pageSelector, ...DEFAULT_EXPORT_PAGE_SELECTORS].filter(
     (value): value is string => Boolean(value),
@@ -216,6 +246,60 @@ export async function exportPdfFromPreview({
     throw new Error('No preview pages were found for PDF export');
   }
 
+  // html2canvas finds each font's baseline by measuring a sample in a scratch
+  // element on <body>, which inherits the body's line height (1.5 here). A tall
+  // line box there pushes the measured baseline down, so every line of text was
+  // drawn low: by about 32px at the legal cover's 40pt title, onto the line
+  // below. The page's own layout is unaffected; only that sample is. Measure it
+  // with a normal line height, and put the body back afterwards.
+  const bodyLineHeight = document.body.style.getPropertyValue('line-height');
+  const bodyLineHeightPriority = document.body.style.getPropertyPriority('line-height');
+  document.body.style.setProperty('line-height', 'normal', 'important');
+  try {
+    await renderPreviewPages({
+      previewContainer,
+      pageNodes,
+      pageSize,
+      orientation,
+      onProgress,
+      imageFormat,
+      canvasScale,
+      html2canvas,
+      jsPDF,
+      title,
+    });
+  } finally {
+    if (bodyLineHeight) {
+      document.body.style.setProperty('line-height', bodyLineHeight, bodyLineHeightPriority);
+    } else {
+      document.body.style.removeProperty('line-height');
+    }
+  }
+}
+
+async function renderPreviewPages({
+  previewContainer,
+  pageNodes,
+  pageSize,
+  orientation,
+  onProgress,
+  imageFormat,
+  canvasScale,
+  html2canvas,
+  jsPDF,
+  title,
+}: {
+  previewContainer: HTMLElement;
+  pageNodes: HTMLElement[];
+  pageSize: PdfPageSize;
+  orientation: PdfOrientation;
+  onProgress?: (completedPages: number, totalPages: number) => void;
+  imageFormat: 'PNG' | 'JPEG';
+  canvasScale: number;
+  html2canvas: typeof import('html2canvas').default;
+  jsPDF: typeof import('jspdf').default;
+  title: string;
+}) {
   const pageDimensions = getPdfDimensions(pageSize, orientation);
   const pdf = new jsPDF({
     orientation,
@@ -272,6 +356,8 @@ export async function exportPdfFromPreview({
         height: pageHeight,
         windowWidth: pageWidth,
         windowHeight: pageHeight,
+        onclone: (clonedDocument: Document, element: HTMLElement) =>
+          loadClonedDocumentFonts(clonedDocument, element),
       });
     } finally {
       document.body.removeChild(pageHost);
