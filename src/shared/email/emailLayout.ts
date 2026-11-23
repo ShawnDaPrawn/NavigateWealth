@@ -30,6 +30,13 @@
  *   keep (phone layout) holds nothing but class selectors and a width query;
  *   attribute selectors and the dark-mode query sit in a block of their own.
  *   Outlook for Windows (Word) reads only the `[if mso]` block.
+ * - Outlook for Windows (Word) rules, each learnt from a broken send
+ *   (November 2026): the body is paper, not ink, because Word paints the body
+ *   colour into a band above the email and a strip down its right edge; the
+ *   card's border and white sit on a cell with `bgcolor`, because Word draws a
+ *   table's own border only part-way and lets cells without a fill show
+ *   through; and no cell uses `font-size:0` — the card's bottom spacer did,
+ *   and Word drew it as a solid ink bar.
  *
  * DARK MODE, CLIENT BY CLIENT
  * - Apple Mail, iOS Mail, Outlook for Mac, Thunderbird: the email declares
@@ -230,7 +237,7 @@ img{border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;}
 .nw-shell-foot{padding:40px 12px 48px !important;}
 .nw-px{padding-left:24px !important;padding-right:24px !important;}
 .nw-pt{padding-top:32px !important;}
-.nw-pb{height:32px !important;}
+.nw-pb{height:32px !important;line-height:32px !important;}
 .nw-h1{font-size:26px !important;line-height:32px !important;}
 .nw-lead{font-size:16px !important;line-height:24px !important;}
 .nw-btn-wrap{width:100% !important;}
@@ -323,7 +330,7 @@ export const EMAIL_LAYOUT_HTML = `<!DOCTYPE html>
 <style>${CORE_CSS}</style>
 <style>${ENHANCED_CSS}</style>
 </head>
-<body class="nw-bg-foot" style="margin:0;padding:0;width:100%;background-color:${LIGHT.ink};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+<body class="nw-bg-canvas" bgcolor="${LIGHT.paper}" style="margin:0;padding:0;width:100%;background-color:${LIGHT.paper};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
 {{ if .Preheader }}<div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${LIGHT.paper};">{{ .Preheader }}${PREHEADER_FILLER}</div>{{ end }}
 <div role="article" aria-roledescription="email" aria-label="{{ .TitleAttr }}" lang="en" dir="ltr">
 <table ${PRESENTATION} width="100%" style="width:100%;">
@@ -345,7 +352,10 @@ export const EMAIL_LAYOUT_HTML = `<!DOCTYPE html>
 </tr>
 <tr>
 <td>
-<table ${PRESENTATION} width="100%" class="nw-bg-card nw-ring" style="width:100%;background-color:${LIGHT.white};border:1px solid ${LIGHT.line};border-radius:4px;border-collapse:separate;box-shadow:0 24px 44px -32px rgba(13,22,38,0.55);">
+<table ${PRESENTATION} width="100%" style="width:100%;border-collapse:separate;">
+<tr>
+<td class="nw-bg-card nw-ring" bgcolor="${LIGHT.white}" style="background-color:${LIGHT.white};border:1px solid ${LIGHT.line};border-radius:4px;box-shadow:0 24px 44px -32px rgba(13,22,38,0.55);">
+<table ${PRESENTATION} width="100%" class="nw-bg-card" bgcolor="${LIGHT.white}" style="width:100%;background-color:${LIGHT.white};border-collapse:separate;">
 <tr>
 <td class="nw-bar" height="4" style="height:4px;font-size:4px;line-height:4px;background-color:${LIGHT.ink};border-radius:3px 3px 0 0;mso-line-height-rule:exactly;">&nbsp;</td>
 </tr>
@@ -399,7 +409,10 @@ Button not working? Copy this link into your browser:<br>
 </table>
 </td>
 </tr>{{ end }}
-<tr><td class="nw-pb" height="44" style="height:44px;font-size:0;line-height:0;">&nbsp;</td></tr>
+<tr><td class="nw-pb" height="44" style="height:44px;font-size:1px;line-height:44px;mso-line-height-rule:exactly;">&nbsp;</td></tr>
+</table>
+</td>
+</tr>
 </table>
 </td>
 </tr>
