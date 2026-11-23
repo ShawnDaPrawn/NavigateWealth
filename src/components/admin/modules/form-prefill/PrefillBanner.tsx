@@ -1,7 +1,6 @@
 import { Link } from 'react-router';
-import { Alert, AlertDescription } from '../../../ui/alert';
 import { Button } from '../../../ui/button';
-import { Info, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { Info, Loader2, RefreshCw } from 'lucide-react';
 
 interface PrefillBannerProps {
   loading?: boolean;
@@ -31,88 +30,94 @@ export function PrefillBanner({
     : '/admin?module=clients';
 
   return (
-    <div className="space-y-2">
-      <Alert className="border-purple-100 bg-purple-50/40">
-        <Sparkles className="h-4 w-4 text-purple-600" />
-        <AlertDescription className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-sm">
-            {loading && (
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Matching client data…
-              </span>
-            )}
+    <div className="space-y-2" data-resolver-version={resolverVersion || undefined}>
+      <div
+        role="status"
+        className="flex flex-col gap-3 rounded-lg border border-[var(--nw-info-line)] bg-[var(--nw-info-bg)] px-4 py-3 text-sm text-[var(--nw-info-dark)] sm:flex-row sm:items-center"
+      >
+        <span className="flex flex-1 items-start gap-2.5">
+          {loading ? (
+            <Loader2 className="mt-0.5 h-4 w-4 flex-none animate-spin" aria-hidden="true" />
+          ) : (
+            <Info className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" />
+          )}
+          <span>
+            {loading && 'Matching client data…'}
             {!loading && appliedCount > 0 && (
-              <span>
-                Prefilled {appliedCount} field{appliedCount === 1 ? '' : 's'} from the client record
-                {resolverVersion ? ` (resolver ${resolverVersion})` : ''}.
-              </span>
+              <>
+                <strong className="font-semibold">
+                  Prefilled {appliedCount} field{appliedCount === 1 ? '' : 's'} from the client
+                  record.
+                </strong>{' '}
+                You can edit any of them.
+              </>
             )}
             {!loading && appliedCount === 0 && matchCount > 0 && (
-              <span>
-                {matchCount} client data match{matchCount === 1 ? '' : 'es'} available — review
-                before applying
-                {resolverVersion ? ` (v${resolverVersion})` : ''}.
-              </span>
+              <>
+                <strong className="font-semibold">
+                  {matchCount} value{matchCount === 1 ? '' : 's'} found in the client record.
+                </strong>{' '}
+                Review them before they fill the form.
+              </>
             )}
-            {!loading && matchCount === 0 && appliedCount === 0 && (
-              <span className="inline-flex items-center gap-1">
-                <Info className="h-3.5 w-3.5" />
-                Client data can be matched to this form when available.
-              </span>
-            )}
+            {!loading && matchCount === 0 && appliedCount === 0 && 'No client data to match yet.'}
           </span>
-          <div className="flex flex-wrap gap-2">
-            {onReview && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={onReview}
-                disabled={loading}
-                data-testid="prefill-review-matches"
-              >
-                Review matches
-              </Button>
-            )}
-            {onRefreshFromPolicies && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={onRefreshFromPolicies}
-                disabled={loading}
-                data-testid="prefill-refresh-from-policies"
-              >
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-                Load from policies
-              </Button>
-            )}
-            {onReapply && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={onReapply}
-                disabled={loading}
-              >
-                Re-apply
-              </Button>
-            )}
-          </div>
-        </AlertDescription>
-      </Alert>
+        </span>
+        <div className="flex flex-wrap gap-2 max-sm:[&>button]:h-11 max-sm:[&>button]:flex-1">
+          {onReview && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onReview}
+              disabled={loading}
+              data-testid="prefill-review-matches"
+              className="bg-white"
+            >
+              {matchCount > 0 && appliedCount === 0
+                ? `Review ${matchCount} match${matchCount === 1 ? '' : 'es'}`
+                : 'Review matches'}
+            </Button>
+          )}
+          {onRefreshFromPolicies && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onRefreshFromPolicies}
+              disabled={loading}
+              data-testid="prefill-refresh-from-policies"
+              className="bg-white"
+            >
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+              Load from policies
+            </Button>
+          )}
+          {onReapply && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={onReapply}
+              disabled={loading}
+              className="text-[var(--nw-info-dark)] hover:bg-white/60"
+            >
+              Re-apply
+            </Button>
+          )}
+        </div>
+      </div>
       {!loading && matchCount === 0 && appliedCount === 0 && missingProfileHints.length > 0 && (
-        <Alert className="border-amber-100 bg-amber-50/50">
-          <Info className="h-4 w-4 text-amber-700" />
-          <AlertDescription className="text-sm text-amber-900">
+        <div className="flex items-start gap-2.5 rounded-lg border border-nw-warn-line bg-nw-warn-bg px-4 py-3 text-sm text-nw-warn-dark">
+          <Info className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" />
+          <span>
             Profile may be incomplete — add {missingProfileHints.slice(0, 4).join(', ')}
             {missingProfileHints.length > 4 ? '…' : ''} for richer matches.{' '}
-            <Link to={profileEditUrl} className="font-medium text-primary hover:underline">
+            <Link to={profileEditUrl} className="font-semibold underline-offset-2 hover:underline">
               Edit client profile
             </Link>
-          </AlertDescription>
-        </Alert>
+          </span>
+        </div>
       )}
     </div>
   );

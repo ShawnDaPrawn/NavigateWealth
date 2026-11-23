@@ -49,15 +49,6 @@ export function Step2AutoCalculation({ calculations, onNext, onBack }: Step2Prop
         <p>System Version: {metadata.systemVersion}</p>
       </div>
 
-      {/* Next Step Preview */}
-      <Alert className="border-blue-200 bg-blue-50">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-sm text-blue-900">
-          <strong>Next Step:</strong> You can apply manual overrides to any calculated values in
-          Step 3. All overrides must include a reason and classification for compliance purposes.
-        </AlertDescription>
-      </Alert>
-
       <FNAStepNavigation step={2} onBack={onBack} onNext={onNext} />
     </div>
   );
