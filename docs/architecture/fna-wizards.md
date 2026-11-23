@@ -23,12 +23,26 @@ A wizard may give each step its own one-line description
 
 The pieces every wizard uses, all exported from the `fna` module barrel:
 
-- `FNAWizardShell` — the dialog, the "&lt;analysis&gt; — &lt;client&gt;" header, the
-  stepper, the scrolling body and the publishing overlay.
-- `FNAStepNavigation` — the footer each step ends with: "Back to &lt;previous
-  step&gt;" on the left, the step's primary action on the right. The client
-  intake portal reuses the Step 1 forms and is the only caller that relabels
-  the primary action.
+- `FNAWizardShell` — a full page (not a dialog): "‹ &lt;category&gt;" back link,
+  the analysis name as the H1 with "&lt;client&gt; · Draft" under it, the stepper,
+  the step body in one white panel, and the publishing overlay. The stepper is
+  one compact row (number, title, state, joined by a hairline); on a phone it
+  becomes "Step n of 4 · &lt;title&gt;" over a four-part progress bar.
+- `FNAStepNavigation` — the footer each step ends with: "Back" on the left
+  ("Step 1 of 4" on Step 1), the step's primary action on the right. It is
+  sticky to the bottom of the window, and on a phone its buttons stack full
+  width. The client intake portal reuses the Step 1 forms and is the only
+  caller that relabels the primary action.
+- `FNAFormPanel`, `FNAFormSection`, `FNAFieldHint` — the Step 1 form layout:
+  one card, sections divided by hairlines, each section's title down the left
+  and its fields to the right (stacked on a phone). A derived value (an annual
+  figure, years to retirement) is a hint under the field it comes from, never
+  a read-only box beside it. Risk Planning uses them; the other Step 1 forms
+  still use cards and can move over one at a time.
+- `PrefillBanner` (form-prefill module) — the one notice at the top of every
+  Step 1: how many client values were found, "Review n matches", "Load from
+  policies", "Re-apply". Step 1 forms do not add their own "use Review matches"
+  or "Next step" notices; the footer already names the next step.
 - `useFNAPublish` — the Step 4 sequence: publishing flag, success and failure
   messages, `onFNAComplete(fnaId)`, close.
 - `FNAAssumptionOverrides` — the Step 3 table for analyses whose adjustment is

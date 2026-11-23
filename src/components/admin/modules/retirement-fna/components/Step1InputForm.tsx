@@ -168,14 +168,6 @@ export function Step1InputForm({
         </Alert>
       )}
 
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription className="text-sm">
-          Review client information below. Use &quot;Review matches&quot; to prefill from the client
-          record where available.
-        </AlertDescription>
-      </Alert>
-
       <form onSubmit={handleSubmit} className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <SegmentedList aria-label="Information sections">

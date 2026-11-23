@@ -10,7 +10,7 @@
  */
 
 import { useState } from 'react';
-import { Edit2, RotateCcw, AlertTriangle, Info } from 'lucide-react';
+import { Edit2, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../ui/card';
 import { Button } from '../../../../ui/button';
 import { CurrencyInputField } from '../../../../ui/currency-input';
@@ -307,16 +307,6 @@ export function Step3ManualAdjustment({
         calculations.incomeProtection.permanent.netShortfall,
         true,
       )}
-
-      {/* Next Step Preview */}
-      <Alert className="border-blue-200 bg-blue-50">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-sm text-blue-900">
-          <strong>Next Step:</strong> Review the final risk analysis summary and publish the FNA.
-          Once published, the FNA will be locked and ready for client review with full compliance
-          documentation.
-        </AlertDescription>
-      </Alert>
 
       <FNAStepNavigation step={3} onBack={onBack} onNext={handleProceed} />
 

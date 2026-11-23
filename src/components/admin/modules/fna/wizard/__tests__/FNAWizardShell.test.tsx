@@ -36,6 +36,20 @@ describe('FNAWizardShell', () => {
     expect(screen.getByText('body')).toBeTruthy();
   });
 
+  it('names the step once and shows "Step n of 4" for phones', () => {
+    render(
+      <FNAWizardShell open onClose={vi.fn()} fnaType="risk" steps={steps} currentStep={3}>
+        <p>body</p>
+      </FNAWizardShell>,
+    );
+    // One text node, so the step title itself is not on the page twice.
+    expect(screen.getByText('Step 3 of 4 · Adviser manual adjustment')).toBeTruthy();
+    expect(screen.getAllByText('Adviser manual adjustment')).toHaveLength(1);
+    // Earlier steps read as done, later ones keep their description.
+    expect(screen.getAllByText('Done')).toHaveLength(2);
+    expect(screen.getByText('In progress')).toBeTruthy();
+  });
+
   it('shows the loading state instead of the step body', () => {
     render(
       <FNAWizardShell open onClose={vi.fn()} fnaType="estate" steps={steps} currentStep={1} loading>
@@ -92,6 +106,7 @@ describe('FNAStepNavigation', () => {
     const onNext = vi.fn();
     render(<FNAStepNavigation step={1} onNext={onNext} />);
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    expect(screen.getByText('Step 1 of 4')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Next: System auto-calculation/ }));
     expect(onNext).toHaveBeenCalledTimes(1);
   });

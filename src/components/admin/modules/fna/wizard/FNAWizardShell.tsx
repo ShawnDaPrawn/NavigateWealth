@@ -10,7 +10,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { CheckCircle2, ChevronLeft, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, Loader2 } from 'lucide-react';
 import { Card } from '../../../../ui/card';
 import { PageHeader } from '../../../layout/page';
 import { useAppendBreadcrumb } from '../../../layout/page';
@@ -41,6 +41,11 @@ interface FNAWizardShellProps {
   children: React.ReactNode;
 }
 
+/**
+ * The four steps as one compact row: number, title and state, joined by a
+ * hairline. On a phone it collapses to "Step n of 4 · <title>" over a
+ * four-part progress bar, so it never wraps into a wall of boxes.
+ */
 export function FNAWizardStepper({
   steps,
   currentStep,
@@ -48,41 +53,73 @@ export function FNAWizardStepper({
   steps: readonly FNAWizardFlowStep[];
   currentStep: FNAWizardStepNumber;
 }) {
+  const current = steps[currentStep - 1];
+
   return (
-    <div className="relative">
-      <div className="absolute top-5 left-0 w-full h-0.5 bg-muted -z-10" aria-hidden="true" />
-      <ol className="flex justify-between items-start" aria-label="Wizard steps">
-        {steps.map((step) => {
+    <div className="rounded-lg border border-nw-line bg-white px-4 py-3 sm:px-5">
+      {/* Phone heading. The live region in the shell announces the step, so this is
+          visual only, and one text node so the step title is not in the page twice. */}
+      <p className="mb-2 text-sm font-semibold text-nw-ink sm:hidden" aria-hidden="true">
+        {`Step ${currentStep} of ${steps.length} · ${current?.title ?? ''}`}
+      </p>
+      <ol
+        className="grid grid-cols-4 gap-1 sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-3"
+        aria-label="Wizard steps"
+      >
+        {steps.map((step, index) => {
           const isActive = currentStep === step.step;
           const isCompleted = currentStep > step.step;
+          const isLast = index === steps.length - 1;
 
           return (
             <li
               key={step.step}
-              className="flex flex-col items-center bg-background px-2"
+              className={`min-w-0 sm:flex sm:items-center sm:gap-2.5 ${
+                isLast ? 'sm:flex-[0_1_auto]' : 'sm:flex-[1_1_200px]'
+              }`}
               aria-current={isActive ? 'step' : undefined}
             >
-              <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
-                  isActive || isCompleted
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-muted-foreground text-muted-foreground bg-background'
+              {/* Phone: one segment of the progress bar. */}
+              <span
+                className={`block h-1 rounded-full sm:hidden ${
+                  isActive || isCompleted ? 'bg-nw-violet' : 'bg-nw-paper-2'
                 }`}
+                aria-hidden="true"
+              />
+              <span
+                className={`hidden h-7 w-7 flex-none items-center justify-center rounded-full text-[13px] font-semibold sm:inline-flex ${
+                  isActive
+                    ? 'bg-nw-violet text-white'
+                    : isCompleted
+                      ? 'border-[1.5px] border-nw-violet bg-white text-nw-violet'
+                      : 'border-[1.5px] border-nw-control-border bg-white text-nw-muted'
+                }`}
+                aria-hidden="true"
               >
-                {isCompleted ? (
-                  <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
-                ) : (
-                  <span className="font-medium text-sm">{step.step}</span>
-                )}
-              </div>
-              <div className="mt-2 text-center max-w-[180px]">
-                <p
-                  className={`text-sm font-semibold ${isActive ? 'text-primary' : 'text-foreground'}`}
+                {isCompleted ? <Check className="h-4 w-4" strokeWidth={2.25} /> : step.step}
+              </span>
+              <span className="flex min-w-0 flex-col max-sm:sr-only">
+                <span
+                  className={`truncate text-sm ${
+                    isActive ? 'font-semibold text-nw-ink' : 'font-medium text-nw-text'
+                  }`}
                 >
                   {step.title}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">{step.description}</p>
-              </div>
+                </span>
+                <span
+                  className={`truncate text-xs leading-4 ${
+                    isActive ? 'font-medium text-nw-violet' : 'text-nw-muted'
+                  }`}
+                >
+                  {isActive ? 'In progress' : isCompleted ? 'Done' : step.description}
+                </span>
+              </span>
+              {!isLast && (
+                <span
+                  className="hidden h-px min-w-3 flex-1 bg-nw-line-strong sm:block"
+                  aria-hidden="true"
+                />
+              )}
             </li>
           );
         })}
@@ -159,7 +196,7 @@ export function FNAWizardShell({
 
       <FNAWizardStepper steps={steps} currentStep={currentStep} />
 
-      <div className="min-h-[500px] rounded-xl border border-nw-line bg-white p-6">
+      <div className="rounded-lg border border-nw-line bg-white p-4 sm:p-6">
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
