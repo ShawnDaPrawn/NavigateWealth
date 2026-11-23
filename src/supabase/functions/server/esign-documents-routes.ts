@@ -795,6 +795,7 @@ documentsRoutes.post(
         });
 
         const emailSent = await sendEmail({
+          kind: 'esign_invitation',
           to: targetSigner.email,
           subject: `Signature Request: ${envelope.title}`,
           html: emailContent.html,

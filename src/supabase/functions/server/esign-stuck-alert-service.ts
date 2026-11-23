@@ -189,7 +189,7 @@ export async function runStuckAlertSweep(): Promise<StuckSweepResult> {
             signerCount: signers.length,
             dashboardLink,
           });
-          await sendEmail({ to: sender.email, subject, html, text });
+          await sendEmail({ to: sender.email, subject, html, text, kind: 'esign_stuck_alert' });
         }
       }
 

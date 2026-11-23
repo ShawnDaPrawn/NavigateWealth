@@ -492,6 +492,8 @@ adminRoutes.post('/articles/:id/send-notifications', requireAdmin, async (c) => 
         });
 
         await sendEmail({
+          kind: 'publication_notification',
+          batchId: `publication:${article.id}`,
           to: recipient.email,
           subject: `New article: ${article.title}`,
           html,

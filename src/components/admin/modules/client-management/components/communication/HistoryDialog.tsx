@@ -21,6 +21,9 @@ import {
 import { Search, Loader2, MessageSquare, CheckCircle2, Eye, Paperclip, Trash2 } from 'lucide-react';
 import { useVirtualizedRows } from '../../../../../shared/useVirtualizedRows';
 import { getCategoryIcon, getCategoryColor, CATEGORIES } from './constants';
+
+/** Filter value for every automated email (not a real category). */
+const AUTOMATED_FILTER = '__automated__';
 import type { CommunicationLog } from '../../../communication';
 
 export interface HistoryDialogProps {
@@ -92,7 +95,11 @@ export function HistoryDialog({
         comm.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (comm.body && comm.body.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const matchesCategory = filterCategory === 'All' || comm.category === filterCategory;
+      const matchesCategory =
+        filterCategory === 'All' ||
+        (filterCategory === AUTOMATED_FILTER
+          ? comm.automated === true
+          : comm.category === filterCategory);
 
       let matchesDate = true;
       if (filterStartDate) {
@@ -119,6 +126,13 @@ export function HistoryDialog({
     overscan: 8,
     threshold: 50,
   });
+
+  // Automated emails (birthday greeting, newsletter, e-sign…) are labelled by
+  // their email type, so the filter offers the types this client has received.
+  const automatedCategories = useMemo(
+    () => [...new Set(communications.filter((c) => c.automated).map((c) => c.category))].sort(),
+    [communications],
+  );
 
   const readCount = communications.filter((c) => c.read).length;
   const unreadCount = communications.filter((c) => !c.read).length;
@@ -148,6 +162,16 @@ export function HistoryDialog({
                   {cat}
                 </SelectItem>
               ))}
+              {automatedCategories.length > 0 && (
+                <SelectItem value={AUTOMATED_FILTER}>All automated emails</SelectItem>
+              )}
+              {automatedCategories
+                .filter((cat) => !(CATEGORIES as readonly string[]).includes(cat))
+                .map((cat) => (
+                  <SelectItem key={`auto-${cat}`} value={cat}>
+                    {cat}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -290,7 +314,7 @@ export function HistoryDialog({
                           variant="outline"
                           className="text-[10px] h-5 px-1.5 font-normal text-gray-500"
                         >
-                          Portal
+                          {log.automated ? 'Automated' : 'Portal'}
                         </Badge>
                       </div>
                       {log.attachments && log.attachments.length > 0 && (
@@ -301,18 +325,21 @@ export function HistoryDialog({
                       )}
                     </div>
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Delete communication"
-                      className="h-8 w-8 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(log.id, e);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {/* Automated emails are the delivery record; nothing to delete. */}
+                    {!log.automated && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Delete communication"
+                        className="h-8 w-8 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(log.id, e);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               );

@@ -159,6 +159,7 @@ app.post(
       );
 
       const sent = await sendEmail({
+        kind: 'calendar_digest',
         to: ADMIN_EMAIL,
         subject: `Daily Calendar — ${todayFormatted} (No events)`,
         html,
@@ -314,6 +315,7 @@ This is an automated daily digest from Navigate Wealth.
 
     // 8. Send
     const sent = await sendEmail({
+      kind: 'calendar_digest',
       to: ADMIN_EMAIL,
       subject: `Daily Calendar (${events.length}) — ${todayFormatted}`,
       html,
@@ -530,6 +532,7 @@ app.post(
       .join('\n');
 
     const sent = await sendEmail({
+      kind: 'birthday_digest',
       to: ADMIN_EMAIL,
       subject: `Client Birthdays — ${todayFormatted} (${birthdays.length})`,
       html,

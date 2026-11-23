@@ -246,6 +246,7 @@ app.post(
 
       try {
         const ok = await sendEmail({
+          kind: 'client_birthday',
           to: email,
           subject: fill(template.subject),
           html,

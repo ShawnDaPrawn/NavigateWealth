@@ -197,6 +197,7 @@ app.post('/send-documents', requireAdmin, async (c) => {
     `;
 
     const success = await sendEmail({
+      kind: 'documents_sent',
       to: email,
       subject: 'Secure Document Upload Notification',
       html: emailHtml,

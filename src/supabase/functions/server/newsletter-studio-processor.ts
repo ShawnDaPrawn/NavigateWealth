@@ -253,6 +253,8 @@ async function deliverToRecipient(
   for (let attempt = 1; attempt <= MAX_SEND_ATTEMPTS_PER_DELIVERY; attempt++) {
     try {
       await sendEmail({
+        kind: 'newsletter',
+        batchId: `newsletter:${campaign.id}`,
         to: item.email,
         subject: campaign.title,
         html,

@@ -333,6 +333,7 @@ ${template.footerNote || ''}
     }
 
     const success = await sendEmail({
+      kind: 'documents_sent',
       to: email,
       cc: finalCc.length > 0 ? finalCc : undefined,
       subject,

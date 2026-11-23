@@ -109,6 +109,7 @@ async function sendExistingAccountSignupNotice(
   });
 
   await sendEmail({
+    kind: 'signup_existing_account',
     to: email,
     subject: 'You already have a Navigate Wealth account',
     html,

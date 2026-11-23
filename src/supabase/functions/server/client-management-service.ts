@@ -34,6 +34,8 @@ import {
   resolveClientLastName,
 } from './client-display-name.ts';
 import { mgetBatched } from './kv-batch.ts';
+import { listDeliveriesForRecipient } from './email-delivery-log.ts';
+import { emailKindLabel, KINDS_IN_CAMPAIGN_HISTORY } from '../../../shared/email/emailKinds.ts';
 
 const log = createModuleLogger('clients-service');
 
@@ -692,11 +694,11 @@ export class ClientsService {
    * Get client communication history
    */
   async getClientCommunication(clientId: string): Promise<CommunicationRecord[]> {
-    const communications = (await kv.getByPrefix(
-      `communication_log:${clientId}:`,
-    )) as CommunicationRecord[];
+    const logged = ((await kv.getByPrefix(`communication_log:${clientId}:`)) ||
+      []) as CommunicationRecord[];
+    const communications = [...logged, ...(await this.getClientEmailDeliveries(clientId))];
 
-    if (!communications || communications.length === 0) {
+    if (communications.length === 0) {
       return [];
     }
 
@@ -706,6 +708,47 @@ export class ClientsService {
     );
 
     return communications;
+  }
+
+  /**
+   * Every other email the platform sent this client — birthday greetings,
+   * newsletters, article notifications, e-sign, account security — from the
+   * email delivery log, shaped like the profile's own communication rows.
+   *
+   * Individual messages and campaign fan-outs are left out: they already have
+   * a `communication_log` row each. Rows are read-only (`automated: true`);
+   * the delete action on the profile does not apply to them.
+   *
+   * Best effort: if the auth lookup or the log fails, the profile still shows
+   * its own rows.
+   */
+  private async getClientEmailDeliveries(clientId: string): Promise<CommunicationRecord[]> {
+    try {
+      const { data } = await createServiceClient().auth.admin.getUserById(clientId);
+      const email = data?.user?.email;
+      if (!email) return [];
+      const rows = await listDeliveriesForRecipient(email);
+      return rows
+        .filter((r) => !(KINDS_IN_CAMPAIGN_HISTORY as readonly string[]).includes(r.kind))
+        .map((r) => ({
+          id: `delivery:${r.id}`,
+          subject: r.subject,
+          category: emailKindLabel(r.kind),
+          created_at: r.createdAt,
+          read: true,
+          sender_name: 'Navigate Wealth (automated)',
+          sent_via_email: r.status === 'sent',
+          email_status: r.status,
+          ...(r.error ? { email_error: r.error } : {}),
+          automated: true,
+          email_kind: r.kind,
+        }));
+    } catch (error) {
+      log.error('Could not read the email delivery log for a client', error as Error, {
+        clientId,
+      });
+      return [];
+    }
   }
 
   /**

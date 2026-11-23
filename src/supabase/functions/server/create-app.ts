@@ -359,7 +359,10 @@ export function createApp(options: CreateAppOptions = {}): Hono {
     // via router.fetch(), which run inside this same async chain — now logs
     // with this id attached (Stage B / B4). Degrades to today's behaviour if
     // the deployed runtime lacks node:async_hooks.
-    const requestContext: RequestContext = { requestId };
+    const requestContext: RequestContext = {
+      requestId,
+      route: `${c.req.method} ${c.req.path}`,
+    };
     await runWithRequestContext(requestContext, () => next());
     c.header('x-request-id', requestId);
     // Every 5xx, thrown or hand-built, reaches the issues dashboard from here.
