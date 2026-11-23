@@ -1057,7 +1057,7 @@
   position: relative;
   display: block;
   margin: -32px -32px 6px;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: var(--nw-ratio-hero);
   overflow: hidden;
   background: var(--nw-ink-2);
 }

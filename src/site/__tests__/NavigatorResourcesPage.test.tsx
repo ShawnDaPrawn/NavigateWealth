@@ -284,6 +284,22 @@ describe('Navigator Resources page', () => {
     ]);
   });
 
+  // Covers carry their headline in the image, so each frame gets artwork drawn
+  // for its shape: the wide hero, or the 4:3 thumbnail in the phone layout.
+  it('gives a featured side story its hero, and its thumbnail on a phone', async () => {
+    stubData({
+      articles: [article(1, { is_featured: true }), article(2, { is_featured: true })],
+    });
+    await renderLoaded();
+    const featured = screen.getByRole('region', { name: 'Featured insights' });
+    const side = within(featured).getAllByRole('link')[1];
+    expect(side.getAttribute('href')).toBe('/resources/article/article-2');
+    expect(side.querySelector('img')?.getAttribute('src')).toBe('https://cdn.test/hero-2.jpg');
+    const phone = side.querySelector('picture > source');
+    expect(phone?.getAttribute('media')).toBe('(max-width: 640px)');
+    expect(phone?.getAttribute('srcset')).toBe('https://cdn.test/thumb-2.jpg');
+  });
+
   it('counts what it shows from the data', async () => {
     await renderLoaded();
     expect(within(screen.getByRole('tab', { name: /Insights/ })).getByText('12')).toBeDefined();

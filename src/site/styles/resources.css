@@ -599,7 +599,7 @@
   flex-direction: column;
 }
 .nw-site.nwrs .nwrs-flead-img {
-  aspect-ratio: 1200 / 630;
+  aspect-ratio: var(--nw-ratio-hero);
 }
 .nw-site.nwrs .nwrs-flead-meta {
   margin-top: 22px;
@@ -641,11 +641,17 @@
   flex-direction: column;
   gap: 16px;
 }
+/* The hero here; the phone layout swaps in the thumbnail (ResourcesInsights). */
 .nw-site.nwrs .nwrs-si-img {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--nw-ratio-hero);
 }
 .nw-site.nwrs .nwrs-si-img img {
   object-position: center top;
+}
+.nw-site.nwrs .nwrs-media picture {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .nw-site.nwrs .nwrs-si-body {
   min-width: 0;
@@ -700,7 +706,7 @@
 .nw-site.nwrs .nwrs-acard-img {
   display: block;
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: var(--nw-ratio-thumb);
   border-radius: var(--nw-r-sm);
   overflow: hidden;
   background: var(--nw-ink-2);
@@ -1679,7 +1685,7 @@
   .nw-site.nwrs .nwrs-si-img {
     flex: 0 0 104px;
     width: 104px;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: var(--nw-ratio-thumb);
     align-self: flex-start;
     border-radius: var(--nw-r-sm);
   }
@@ -1702,7 +1708,7 @@
   .nw-site.nwrs .nwrs-acard-img {
     flex: 0 0 104px;
     width: 104px;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: var(--nw-ratio-thumb);
     align-self: flex-start;
   }
   .nw-site.nwrs .nwrs-noimg svg {
