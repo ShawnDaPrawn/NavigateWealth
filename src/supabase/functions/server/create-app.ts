@@ -308,6 +308,7 @@ export function createApp(options: CreateAppOptions = {}): Hono {
       origin: (origin, c) => {
         if (
           (c.req.path === SERVER_PREFIX + '/mcp/broker-operations' ||
+            c.req.path === SERVER_PREFIX + '/mcp/password-vault' ||
             c.req.path === SERVER_PREFIX + '/broker-token') &&
           isHostedAssistantOrigin(origin)
         )

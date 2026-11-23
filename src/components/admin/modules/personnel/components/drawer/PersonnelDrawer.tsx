@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Avatar, AvatarFallback } from '../../../../../ui/avatar';
 import { Badge } from '../../../../../ui/badge';
 import { Button } from '../../../../../ui/button';
@@ -24,6 +24,8 @@ interface PersonnelDrawerProps {
   onTabChange: (value: string) => void;
   onUpdate: (id: string, data: Partial<Personnel>) => Promise<boolean>;
   onInviteCancelled?: () => void;
+  /** Extra sections under the profile (the signed-in person's own page only). */
+  profileExtra?: ReactNode;
 }
 
 export function PersonnelDrawer({
@@ -36,6 +38,7 @@ export function PersonnelDrawer({
   onTabChange,
   onUpdate,
   onInviteCancelled,
+  profileExtra,
 }: PersonnelDrawerProps) {
   const { canDo } = useCurrentUserPermissions();
   const canManagePermissions = canDo('personnel', 'manage_permissions');
@@ -143,6 +146,7 @@ export function PersonnelDrawer({
             onInviteCancelled={onInviteCancelled}
             onFormStateChange={setProfileForm}
           />
+          {profileExtra && <div className="mt-6">{profileExtra}</div>}
         </TabsContent>
 
         {canManagePermissions && (

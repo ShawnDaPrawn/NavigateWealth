@@ -1,14 +1,41 @@
 # Super admin password manager
 
-The database migration generates a 32-byte encryption key in Supabase Vault under `navigatewealth_password_manager_key`. Include that secret and the project’s Vault recovery material in your existing backup procedures. Restoring password records requires the matching key. Changing the key requires re-encrypting or re-importing those records.
+The password manager keeps brokerage-wide and personal logins encrypted, and lets AI tools use them over MCP with as much or as little supervision as you choose. Only super admins can open it.
 
-In the admin sidebar, open the account settings dropdown and select **Password manager**. Add a single login or import a UTF-8 CSV with `url`, `username` and `password` headers. Optional columns are `name` and `notes` (or `note`). Each import creates new entries. A file accepts up to 100 entries and 1 MiB. After import, handle the plaintext export according to your organisation’s password handling procedures.
+## Opening it
 
-To connect a trusted service, select **MCP** beside its credential and create a token. In a client supporting Streamable HTTP and custom bearer authentication, enter the endpoint shown in the dialog and supply the token in the `Authorization: Bearer <token>` header. The client can call `get_credential` with an empty arguments object. The result contains the stored URL, username and plaintext password. Configure the receiving service to keep tool results out of logs and chat history.
+Account menu → **Password manager**. The vault opens only for a session that has just passed two-factor (the email code the platform already uses) and locks again after 15 idle minutes. A super admin without two-factor is asked to turn it on first.
 
-Each credential supports one active token. Tokens expire after 90 days. Replacing the token, revoking access or deleting the entry stops subsequent reads. If a service already retrieved a password, rotate that password at the originating site to invalidate its copy. Password changes saved in the vault become available to the existing connection.
+## Keys and storage
 
-The vault encrypts records with AES-256-GCM before they enter the existing service-role KV store. The vault stores only token hashes and writes credential access events to the admin audit log using record IDs.
+The database migration generates a 32-byte master key in Supabase Vault under `navigatewealth_password_manager_key`. Include that secret and the project’s Vault recovery material in your backups: restoring records requires the matching key. Each collection has its own data key, sealed by the master key, so a connection scoped to one collection only ever unwraps that collection’s key. Logins saved before collections existed stay sealed by the master key until they are next saved or moved. Records live in the service-role KV store under `password-vault:` (logins) and `pvault-*` (collections, connections, workflows, runs, approvals, activity). Activity never records a secret.
+
+## Collections and logins
+
+Every login lives in one collection: **Brokerage** (shared by the firm, created automatically) or a person’s own (create one per adviser and set its owner). A login carries its type, tags, category, an optional authenticator setup key (the vault then shows the current code), a rotation reminder, and its **AI access**: Never, Find only, Use only or Reveal, plus **Ask first**. Health flags reused, weak, overdue and “seen by AI” passwords.
+
+Collection owners never open the vault. Under their own account settings, **My saved logins** lists their logins without passwords and lets them replace a password (the previous one is kept 7 days) or add a login (it starts as Find only). Import takes the same CSV as before (`url`, `username`, `password`, optional `name`, `notes`), up to 100 rows and 1 MiB.
+
+## AI connections
+
+Add the server once in the AI tool: `https://www.navigatewealth.co/mcp/password-vault` (Streamable HTTP). Create one connection per person per tool under **AI connections**:
+
+- **Collections** it can see, optionally only logins with one tag.
+- **Level**: Find, Find and use, Find use and reveal, or **Full access** (everything in its collections, overriding each login’s own AI access).
+- **Autonomy**: Supervised, Checks only or **Full autonomy** (no human in the loop), then any line changed individually: reveal, “Ask first” logins, read-only workflows, record changes, money moves. Each check (signed instruction attached, identity, per-instruction and daily limits, duplicates in 24 hours, page matches) can block, ask a person, log only or be off. Limits are optional; a hold before money moves is optional.
+- **Sign-in**: an HTTPS OAuth callback (Claude custom connector, ChatGPT app) — enter the returned client ID and secret in the tool and approve the consent in super admin — or no callback for a 90-day bearer token.
+
+**Pause all AI access** stops every connection at once. Revoking a connection lists the passwords it had seen, so you can rotate them. The trust ladder suggests moving a workflow to the next autonomy level once it has a clean record (10 clean runs from Supervised, 25 from Checks only); you decide.
+
+Tools an AI sees (tools above its level are not listed): `list_collections`, `search_credentials`, `list_workflows`, `get_skill`, `get_approval_status`, `start_workflow`, `get_run`, `session_read`, `session_act`, `complete_run`, `get_one_time_code`, `get_credential`. When a person must approve, the tool answers `waiting_for_approval` with an `approval_id`; approvals appear under **Approvals** (and, for record changes on their own connections, in the owner’s account settings). Repeat the call with the `approval_id` once approved; an approval is used once.
+
+Per-login MCP tokens issued before this change (`nwv_…`, one login each) keep working until they expire.
+
+## Workflows and skills
+
+Each login can carry workflows. **Automated steps** run a broker-reporting workflow on the runner (below). A **skill** is written instructions — when to use it, inputs, steps (some marked as checkpoints), guardrails (allowed websites, checkpoint button labels, never/stop-if rules) and what to return. Edits are drafts; **Publish** freezes a numbered version that runs use.
+
+Skills run in a signed-in browser hosted by `scripts/vault-browser-host.mjs`: it signs in itself, keeps navigation on the allowed websites, and never returns password fields. Run it anywhere with Node 22 and Playwright Chromium behind HTTPS, with `NW_BROWSER_HOST_TOKEN` set to a long random value, then set the Edge Function secrets `NW_BROWSER_HOST_URL` and `NW_BROWSER_HOST_TOKEN` (Supabase dashboard → Edge Functions → Secrets). Until then, skill runs fail with “browser host not configured”; everything else works.
 
 ## Broker reporting from Claude, ChatGPT or another MCP client
 

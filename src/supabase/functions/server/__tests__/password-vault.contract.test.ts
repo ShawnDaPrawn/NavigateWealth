@@ -15,11 +15,23 @@ vi.mock('../auth-mw.ts', async () => ({
   ),
 }));
 vi.mock('../admin-audit-service.ts', () => ({ AdminAuditService: { record: vi.fn() } }));
+// The unlock gate has its own suite (vault-unlock.test.ts); here the vault is open.
+vi.mock('../vault-unlock.ts', () => ({
+  requireUnlocked: (_c: unknown, next: () => Promise<void>) => next(),
+  lockState: async () => ({ unlocked: true, twoFactorEnabled: true, expiresAt: null }),
+  unlock: async () => ({ unlocked: true, twoFactorEnabled: true, expiresAt: null }),
+  lock: async () => undefined,
+}));
 const keyRpc = vi.hoisted(() => vi.fn());
 vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   createClient: () => ({
     rpc: keyRpc,
     from: () => ({
+      insert: ({ key, value }: { key: string; value: unknown }) => {
+        if (kvStore.has(key)) return { error: { code: '23505' } };
+        kvStore.set(key, value);
+        return { error: null };
+      },
       update: ({ value }: { value: VaultEntry }) => ({
         eq: (_key: string, key: string) => ({
           eq: (_revision: string, revision: string) => ({

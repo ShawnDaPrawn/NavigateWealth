@@ -1,0 +1,6 @@
+{
+  "resource": "https://www.navigatewealth.co/mcp/password-vault",
+  "authorization_servers": ["https://www.navigatewealth.co"],
+  "scopes_supported": ["vault"],
+  "bearer_methods_supported": ["header"]
+}

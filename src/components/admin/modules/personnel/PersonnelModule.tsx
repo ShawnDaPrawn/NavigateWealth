@@ -24,6 +24,7 @@ import { PersonnelFilters } from './components/PersonnelFilters';
 import { InviteUserDialog } from './components/InviteUserDialog';
 import { PersonnelDrawer } from './components/drawer/PersonnelDrawer';
 import { SuperAdminProfileCard } from './components/SuperAdminProfileCard';
+import MySavedLogins from '../../password-manager/MySavedLogins';
 
 // Hooks
 import {
@@ -401,6 +402,9 @@ export function PersonnelModule() {
             closePerson();
             setSelectedPersonnel(null);
           }}
+          profileExtra={
+            myPermissions?.personnelId === livePersonnel.id ? <MySavedLogins /> : undefined
+          }
         />
         {dialogs}
       </div>
@@ -448,6 +452,7 @@ export function PersonnelModule() {
           onEditingChange={setEditingAdminProfile}
         />
       )}
+      {isSuperAdmin && showSuperAdmin && <MySavedLogins />}
 
       {/* ── Figures ───────────────────────────────────────────── */}
       <div className="ds-stats">
