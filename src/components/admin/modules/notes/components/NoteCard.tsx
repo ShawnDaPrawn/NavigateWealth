@@ -160,25 +160,32 @@ export function NoteCard({
         }}
         className={cn(
           'ds-note group',
-          viewMode === 'list' && '!flex-row !items-center !gap-4',
+          // List rows sit on one line from sm up; on a phone they stack like a
+          // compact card, because a 256px title plus the meta ran off the screen.
+          viewMode === 'list' && 'sm:!flex-row sm:!items-center sm:!gap-4',
           isSelecting && isSelected && 'sel',
         )}
       >
         {note.color !== 'default' && (
           <span className={cn('sw', colorCfg.accent)} aria-hidden="true" />
         )}
-        <b className={cn('pr-8', viewMode === 'list' ? 'w-64 shrink-0 truncate' : 'line-clamp-2')}>
+        <b
+          className={cn(
+            'pr-8',
+            viewMode === 'list' ? 'truncate sm:w-64 sm:shrink-0' : 'line-clamp-2',
+          )}
+        >
           {checkbox}
           {note.title || 'Untitled note'}
         </b>
         {preview ? (
-          <p className={viewMode === 'list' ? 'min-w-0 flex-1 truncate' : 'line-clamp-3'}>
+          <p className={viewMode === 'list' ? 'min-w-0 truncate sm:flex-1' : 'line-clamp-3'}>
             {preview}
           </p>
         ) : (
           <p className={cn('italic text-nw-text-3', viewMode === 'list' && 'flex-1')}>Empty note</p>
         )}
-        <span className={cn('ds-meta', viewMode === 'list' ? 'shrink-0 pr-8' : 'mt-auto')}>
+        <span className={cn('ds-meta', viewMode === 'list' ? 'sm:shrink-0 sm:pr-8' : 'mt-auto')}>
           {meta}
         </span>
         {menu}

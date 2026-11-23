@@ -52,30 +52,75 @@ body.schedule-consultation-modal-open footer.bg-black {
   --sidebar-badge: #f59e0b;
   --sidebar-badge-foreground: #111827;
 
-  /* Navigate Wealth admin design system (design-system/README, "Building it").
-     Used by the admin shell; the public site keeps its own tokens above. */
+  /* Navigate Wealth admin design system: the website's Navigator tokens
+     (src/site/styles/navigator.css, where `.nw-site` holds the same values),
+     so the admin and the public site are one design. The admin-only names
+     further down are aliases kept so existing markup goes on working. Violet
+     is for actions, active states and focus only. */
+  --nw-ink: #0d1626;
+  --nw-ink-2: #12203a;
+  --nw-ink-3: #1c2638;
+  --nw-paper: #f6f4ef;
+  --nw-paper-2: #efebe3;
+  --nw-paper-3: #fbfaf7;
+  --nw-line: #e2ddd3;
+  --nw-line-soft: #ece7de;
+  --nw-line-strong: #d3ccbf;
+  --nw-line-heavy: #b9b2a4;
+  /* Field and control outlines: the design system's nw-control-border,
+     3.66:1 on white and 3.33:1 on paper (WCAG 1.4.11). */
+  --nw-control-border: #8c8577;
+  --nw-text-strong: #2f3747;
+  --nw-text: #3d4556;
+  --nw-muted: #5e6676;
+  --nw-on-dark: #c5cad3;
+  --nw-on-dark-muted: #9aa3b2;
+  --nw-cream: #e3d9c3;
   --nw-violet: #6d28d9;
-  --nw-violet-hover: #7c3edd;
-  --nw-violet-600: #5b21b6;
-  --nw-violet-100: #ede9fe;
-  --nw-violet-50: #f5f3ff;
-  --nw-ink: #111827;
-  --nw-text-2: #4b5563;
-  --nw-text-3: #6b7280;
+  --nw-violet-hover: #5b21b6;
+  --nw-violet-tint: #f4f1fb;
+  --nw-success: #15803d;
+  --nw-success-bg: #f0fdf4;
+  --nw-success-line: #bbf7d0;
+  --nw-danger: #b91c1c;
+  --nw-danger-dark: #991b1b;
+  --nw-danger-bg: #fef2f2;
+  --nw-danger-line: #fecaca;
+  --nw-warn: #b45309;
+  --nw-warn-dark: #92400e;
+  --nw-warn-bg: #fffbeb;
+  --nw-warn-line: #fde68a;
+  --nw-info: #1d4ed8;
+  --nw-info-dark: #1e3a8a;
+  --nw-info-bg: #eff6ff;
+  --nw-info-line: #bfdbfe;
+  --nw-r-sm: 4px;
+  --nw-r-md: 8px;
+  --nw-shadow-1: 0 1px 2px rgba(13, 22, 38, 0.06);
+  --nw-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --nw-dur-1: 0.15s;
+  --nw-dur-2: 0.25s;
+  --nw-font-serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+  --nw-font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Aliases: the admin's older token names, now pointing at Navigator. */
+  --nw-violet-600: var(--nw-violet-hover);
+  --nw-violet-100: #eae3f8;
+  --nw-violet-50: var(--nw-violet-tint);
+  --nw-text-2: var(--nw-text);
+  --nw-text-3: var(--nw-muted);
   --nw-surface: #ffffff;
-  --nw-bg: #f6f7f9;
-  --nw-line: #e5e7eb;
-  --nw-line-2: #f1f2f4;
-  --nw-amber-700: #92400e;
-  --nw-amber-100: #fef3c7;
-  --nw-amber-dot: #f59e0b;
-  --nw-nav-bg: #fbfbfc;
-  --nw-nav-line: #e9eaee;
-  --nw-nav-hover: #f0f1f4;
-  --nw-nav-active: #f1ecff;
-  --nw-nav-icon: #9ca3af;
-  --nw-nav-text: #374151;
-  --nw-count: #eef0f3;
+  --nw-bg: var(--nw-paper);
+  --nw-line-2: var(--nw-line-soft);
+  --nw-amber-700: var(--nw-warn-dark);
+  --nw-amber-100: var(--nw-warn-bg);
+  --nw-amber-dot: var(--nw-warn);
+  --nw-nav-bg: #ffffff;
+  --nw-nav-line: var(--nw-line);
+  --nw-nav-hover: var(--nw-paper);
+  --nw-nav-active: var(--nw-paper);
+  --nw-nav-icon: var(--nw-muted);
+  --nw-nav-text: var(--nw-text);
+  --nw-count: var(--nw-paper-2);
 
   /* Theme-specific section backgrounds */
   --section-black: #000000;
@@ -152,10 +197,13 @@ body.schedule-consultation-modal-open footer.bg-black {
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  /* The steps are variables so the admin theme (admin-navigator.css) can hold
+     every corner to the Navigator's 4px and 8px; elsewhere they default to the
+     steps these utilities always had. */
+  --radius-sm: calc(var(--radius) - var(--radius-sm-step, 4px));
+  --radius-md: calc(var(--radius) - var(--radius-md-step, 2px));
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + var(--radius-xl-step, 4px));
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -189,6 +237,23 @@ body.schedule-consultation-modal-open footer.bg-black {
   --color-nw-nav-icon: var(--nw-nav-icon);
   --color-nw-nav-text: var(--nw-nav-text);
   --color-nw-count: var(--nw-count);
+  --color-nw-ink-2: var(--nw-ink-2);
+  --color-nw-paper: var(--nw-paper);
+  --color-nw-paper-2: var(--nw-paper-2);
+  --color-nw-paper-3: var(--nw-paper-3);
+  --color-nw-line-soft: var(--nw-line-soft);
+  --color-nw-line-strong: var(--nw-line-strong);
+  --color-nw-line-heavy: var(--nw-line-heavy);
+  --color-nw-control-border: var(--nw-control-border);
+  --color-nw-text: var(--nw-text);
+  --color-nw-text-strong: var(--nw-text-strong);
+  --color-nw-muted: var(--nw-muted);
+  --color-nw-cream: var(--nw-cream);
+  --color-nw-violet-tint: var(--nw-violet-tint);
+  --color-nw-warn: var(--nw-warn);
+  --color-nw-warn-dark: var(--nw-warn-dark);
+  --color-nw-warn-bg: var(--nw-warn-bg);
+  --color-nw-warn-line: var(--nw-warn-line);
 
   --color-section-black: var(--section-black);
   --color-section-white: var(--section-white);

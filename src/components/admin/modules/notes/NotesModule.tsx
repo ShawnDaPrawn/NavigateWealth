@@ -616,7 +616,7 @@ export function NotesModule() {
               onClick={handleToggleSelecting}
               aria-pressed={isSelecting}
               disabled={isLoading || !!error}
-              style={isSelecting ? { borderColor: '#c4b5fd', background: '#f5f3ff' } : undefined}
+              style={isSelecting ? { borderColor: '#ddd3f3', background: '#f4f1fb' } : undefined}
             >
               {isSelecting ? 'Exit select' : 'Select'}
             </DsButton>

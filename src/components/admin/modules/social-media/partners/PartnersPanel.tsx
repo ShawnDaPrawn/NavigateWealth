@@ -149,7 +149,9 @@ export function PartnersPanel({ onViewAnalytics }: { onViewAnalytics?: () => voi
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
+            {/* relative: keeps the header's sr-only label inside the scroller;
+                absolutely placed against the page, it widened it on a phone. */}
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-nw-line text-left text-xs text-nw-text-3">

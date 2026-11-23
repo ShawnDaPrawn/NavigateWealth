@@ -142,7 +142,7 @@ export function AskAIInterface() {
           </DsButton>
         </div>
 
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#fafafb]">
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[#fbfaf7]">
           {/* API Key Warning */}
           <div className="flex-none px-4 empty:hidden [&:has(>*)]:pt-2">
             <ApiKeyWarning status={apiKeyStatus} />

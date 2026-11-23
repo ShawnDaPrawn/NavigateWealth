@@ -142,8 +142,8 @@ function eventKind(event: CalendarEvent): 'e' | 't' | 'b' | 'r' {
 const DOT_COLOUR: Record<'e' | 't' | 'b' | 'r', string> = {
   e: '#6d28d9',
   t: '#1d4ed8',
-  b: '#d97706',
-  r: '#047857',
+  b: '#b45309',
+  r: '#15803d',
 };
 
 function eventLabel(event: CalendarEvent): string {

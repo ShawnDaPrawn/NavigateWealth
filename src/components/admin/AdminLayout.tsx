@@ -8,6 +8,12 @@ import { GlobalSearch } from './layout/GlobalSearch';
 import { AdminModule } from './layout/types';
 import { moduleConfig, sidebarGroupOf } from './layout/config';
 import { BreadcrumbContext, type Crumb } from './layout/page';
+// The website's Navigator design, admin-wide (palette, shared components,
+// cards, tables). Loaded with the admin chunk only.
+import '../../styles/admin-navigator.css';
+
+/** The <html> class that turns the admin theme on; see admin-navigator.css. */
+export const ADMIN_THEME_CLASS = 'nw-admin-theme';
 
 interface AdminLayoutProps {
   activeModule: AdminModule;
@@ -28,6 +34,16 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
 
   const pendingCounts = usePendingCounts();
 
+  // The theme lives on <html> rather than on this tree, so dialogs, sheets,
+  // menus and tooltips (portalled to <body>) are themed too. It comes off
+  // again when the admin unmounts, so the client portal and public site
+  // never carry it.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add(ADMIN_THEME_CLASS);
+    return () => root.classList.remove(ADMIN_THEME_CLASS);
+  }, []);
+
   // Expose sidebar width as a CSS variable on :root so portals (Sheet, Dialog)
   // can reference it for responsive sizing — Guidelines §8.4.
   useEffect(() => {
@@ -43,8 +59,12 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
   // Steps after the module (tab, record, sub-page), set by the module.
   const [trail, setTrail] = useState<Crumb[]>([]);
   const breadcrumb = useMemo(() => ({ trail, setTrail }), [trail]);
+  // Crumbs are quiet: muted links that turn ink with a hairline underline on
+  // hover (violet is kept for actions).
   const crumbLink =
-    'rounded text-nw-violet-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60';
+    'rounded-[4px] text-nw-muted transition-colors duration-[250ms] hover:text-nw-ink hover:underline hover:decoration-1 hover:underline-offset-[3px]';
+  const iconButton =
+    'inline-flex size-10 items-center justify-center rounded-[4px] border border-nw-line bg-white text-nw-ink transition-colors duration-[250ms] hover:border-nw-ink lg:hidden';
 
   return (
     <div className="relative h-screen overflow-hidden bg-nw-bg">
@@ -65,10 +85,10 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
         )}
       >
         {/* Top bar: breadcrumb and global search */}
-        <header className="sticky top-0 z-30 flex h-[60px] shrink-0 items-center gap-3 border-b border-nw-line bg-white px-4 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-nw-line bg-white/[0.97] px-4 lg:px-8">
           <button
             type="button"
-            className="inline-flex size-9 items-center justify-center rounded-lg text-nw-text-2 hover:bg-nw-nav-hover hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 lg:hidden"
+            className={iconButton}
             onClick={() => setMobileSidebarOpen(true)}
             aria-label="Open navigation menu"
           >
@@ -76,16 +96,16 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
           </button>
 
           <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
-            <ol className="flex min-w-0 items-center gap-1.5 text-[13px] text-nw-text-3">
+            <ol className="flex min-w-0 items-center gap-2 text-[13.5px] text-nw-muted">
               {group && (
-                <li className="hidden items-center gap-1.5 sm:flex">
-                  <span className="text-nw-violet-600">{group}</span>
-                  <ChevronRight className="size-3.5 text-gray-300" aria-hidden="true" />
+                <li className="hidden items-center gap-2 sm:flex">
+                  <span>{group}</span>
+                  <ChevronRight className="size-3.5 text-nw-line-heavy" aria-hidden="true" />
                 </li>
               )}
               {trail.length === 0 ? (
                 <li
-                  className="truncate font-medium text-nw-ink max-sm:text-base max-sm:font-semibold"
+                  className="truncate font-semibold text-nw-ink max-sm:text-base"
                   aria-current="page"
                 >
                   {moduleLabel}
@@ -93,7 +113,7 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
               ) : (
                 <>
                   {/* On a phone only the last step shows, as the page title. */}
-                  <li className="hidden items-center gap-1.5 sm:flex">
+                  <li className="hidden items-center gap-2 sm:flex">
                     <button
                       type="button"
                       className={crumbLink}
@@ -101,7 +121,7 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
                     >
                       {moduleLabel}
                     </button>
-                    <ChevronRight className="size-3.5 text-gray-300" aria-hidden="true" />
+                    <ChevronRight className="size-3.5 text-nw-line-heavy" aria-hidden="true" />
                   </li>
                   {trail.map((crumb, i) => {
                     const last = i === trail.length - 1;
@@ -109,13 +129,13 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
                       <Fragment key={`${i}-${crumb.label}`}>
                         {last ? (
                           <li
-                            className="truncate font-medium text-nw-ink max-sm:text-base max-sm:font-semibold"
+                            className="truncate font-semibold text-nw-ink max-sm:text-base"
                             aria-current="page"
                           >
                             {crumb.label}
                           </li>
                         ) : (
-                          <li className="hidden min-w-0 items-center gap-1.5 sm:flex">
+                          <li className="hidden min-w-0 items-center gap-2 sm:flex">
                             {crumb.onClick ? (
                               <button
                                 type="button"
@@ -128,7 +148,7 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
                               <span className="truncate">{crumb.label}</span>
                             )}
                             <ChevronRight
-                              className="size-3.5 shrink-0 text-gray-300"
+                              className="size-3.5 shrink-0 text-nw-line-heavy"
                               aria-hidden="true"
                             />
                           </li>
@@ -141,12 +161,12 @@ export function AdminLayout({ activeModule, onModuleChange, children }: AdminLay
             </ol>
           </nav>
 
-          <div className="hidden w-full max-w-sm lg:block">
+          <div className="hidden w-full max-w-[380px] lg:block">
             <GlobalSearch />
           </div>
           <button
             type="button"
-            className="inline-flex size-9 items-center justify-center rounded-lg text-nw-text-2 hover:bg-nw-nav-hover hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 lg:hidden"
+            className={iconButton}
             onClick={() => setMobileSearchOpen((open) => !open)}
             aria-label={mobileSearchOpen ? 'Close search' : 'Search clients and staff'}
             aria-expanded={mobileSearchOpen}

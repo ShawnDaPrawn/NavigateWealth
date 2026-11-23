@@ -35,22 +35,22 @@ interface ContentAnalyticsProps {
 
 // Status colour tokens
 const STATUS_CHART_COLORS: Record<string, string> = {
-  published: '#16a34a',
-  draft: '#6b7280',
+  published: '#15803d',
+  draft: '#5e6676',
   in_review: '#eab308',
-  scheduled: '#3b82f6',
-  archived: '#ef4444',
+  scheduled: '#1d4ed8',
+  archived: '#b91c1c',
 };
 
 const CATEGORY_COLORS = [
-  '#7c3aed',
-  '#3b82f6',
+  '#5b21b6',
+  '#1d4ed8',
   '#10b981',
-  '#f59e0b',
-  '#ef4444',
+  '#b45309',
+  '#b91c1c',
   '#ec4899',
   '#06b6d4',
-  '#8b5cf6',
+  '#6d28d9',
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -538,8 +538,8 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
       >
         <defs key="velocity-defs">
           <linearGradient id="ca-vel-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#7c3aed" stopOpacity={0.12} />
-            <stop offset="100%" stopColor="#7c3aed" stopOpacity={0} />
+            <stop offset="0%" stopColor="#5b21b6" stopOpacity={0.12} />
+            <stop offset="100%" stopColor="#5b21b6" stopOpacity={0} />
           </linearGradient>
         </defs>
 
@@ -551,7 +551,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
             x2={dims.w - pad.right}
             y1={toY(tick)}
             y2={toY(tick)}
-            stroke="#f3f4f6"
+            stroke="#f6f4ef"
             strokeWidth={1}
           />
         ))}
@@ -564,7 +564,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
             y={toY(tick) + 4}
             textAnchor="end"
             fontSize={11}
-            fill="#9ca3af"
+            fill="#9aa3b2"
           >
             {tick}
           </text>
@@ -578,7 +578,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
             y={dims.h - 8}
             textAnchor="middle"
             fontSize={11}
-            fill="#9ca3af"
+            fill="#9aa3b2"
           >
             {d.label}
           </text>
@@ -591,7 +591,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
         <path
           d={publishedPath}
           fill="none"
-          stroke="#7c3aed"
+          stroke="#5b21b6"
           strokeWidth={2.5}
           strokeLinejoin="round"
         />
@@ -600,7 +600,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
         <path
           d={draftsPath}
           fill="none"
-          stroke="#9ca3af"
+          stroke="#9aa3b2"
           strokeWidth={1.5}
           strokeDasharray="4 3"
           strokeLinejoin="round"
@@ -608,7 +608,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
 
         {/* Published dots */}
         {data.map((d, i) => (
-          <circle key={`pub-dot-${i}`} cx={toX(i)} cy={toY(d.published)} r={3} fill="#7c3aed" />
+          <circle key={`pub-dot-${i}`} cx={toX(i)} cy={toY(d.published)} r={3} fill="#5b21b6" />
         ))}
 
         {/* Hover indicator */}
@@ -618,7 +618,7 @@ function VelocityLineChart({ data }: VelocityLineChartProps) {
             x2={tooltip.x}
             y1={pad.top}
             y2={pad.top + chartH}
-            stroke="#e5e7eb"
+            stroke="#e2ddd3"
             strokeWidth={1}
             strokeDasharray="3 3"
           />
@@ -716,10 +716,10 @@ function DonutChart({ data }: DonutChartProps) {
         />
       ))}
       {/* Center text */}
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize={20} fontWeight={700} fill="#111827">
+      <text x={cx} y={cy - 6} textAnchor="middle" fontSize={20} fontWeight={700} fill="#0d1626">
         {total}
       </text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={11} fill="#9ca3af">
+      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={11} fill="#9aa3b2">
         total
       </text>
     </svg>

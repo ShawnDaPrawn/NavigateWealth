@@ -205,7 +205,9 @@ export function ChannelsPanel() {
         <Button
           variant="ghost"
           size="sm"
-          className="px-0"
+          // The label is a sentence: let it wrap on a phone instead of running
+          // 500px wide.
+          className="h-auto items-start whitespace-normal px-0 py-1 text-left"
           onClick={() => setPersonalOpen((v) => !v)}
         >
           {personalOpen ? (

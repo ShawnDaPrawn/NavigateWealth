@@ -207,7 +207,7 @@ export function ExtractionHistoryPanel({
                     data={sparklineData.map((d) => ({ value: d.confidence, label: d.date }))}
                     width={80}
                     height={24}
-                    color={trendPositive ? '#22c55e' : '#ef4444'}
+                    color={trendPositive ? '#15803d' : '#b91c1c'}
                     gradientId={gradientId}
                   />
                 </div>

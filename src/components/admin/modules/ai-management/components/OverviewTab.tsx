@@ -297,12 +297,12 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" allowDecimals={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9aa3b2" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#9aa3b2" allowDecimals={false} />
                   <Tooltip
                     contentStyle={{
                       borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid #e2ddd3',
                       fontSize: '12px',
                     }}
                   />
@@ -310,16 +310,16 @@ export function OverviewTab({ onNavigate }: OverviewTabProps) {
                   <Area
                     type="monotone"
                     dataKey="Messages"
-                    stroke="#7c3aed"
-                    fill="#7c3aed"
+                    stroke="#5b21b6"
+                    fill="#5b21b6"
                     fillOpacity={0.1}
                     strokeWidth={2}
                   />
                   <Area
                     type="monotone"
                     dataKey="Conversations"
-                    stroke="#3b82f6"
-                    fill="#3b82f6"
+                    stroke="#1d4ed8"
+                    fill="#1d4ed8"
                     fillOpacity={0.1}
                     strokeWidth={2}
                   />

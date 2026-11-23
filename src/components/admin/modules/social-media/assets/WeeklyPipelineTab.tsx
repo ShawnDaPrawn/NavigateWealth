@@ -200,7 +200,7 @@ export function WeeklyPipelineTab({ onOpenSettings }: WeeklyPipelineTabProps = {
                   const counts = countChannel(assets);
                   return (
                     <section key={channel} aria-label={`${CHANNEL_LABEL[channel]} assets`}>
-                      <div className="flex items-center justify-between gap-2 border-b border-nw-line bg-[#fafafb] px-4 py-2">
+                      <div className="flex items-center justify-between gap-2 border-b border-nw-line bg-[#fbfaf7] px-4 py-2">
                         <span className="flex items-center gap-2 text-[13px] font-medium text-nw-ink">
                           <Icon className="h-4 w-4" aria-hidden="true" />
                           {CHANNEL_LABEL[channel]}

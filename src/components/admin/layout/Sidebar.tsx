@@ -260,37 +260,39 @@ function SidebarContent({
             : undefined
         }
         className={cn(
-          'group/item relative flex items-center rounded-lg text-[13.5px] outline-none transition-colors',
-          'focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+          'group/item relative flex items-center rounded-[4px] text-[14px] outline-none',
+          'transition-[background-color,color] duration-[250ms] ease-[cubic-bezier(.2,.8,.2,1)]',
           rail
             ? 'h-10 w-11 justify-center'
             : cn(
                 'w-full gap-2.5 px-2.5 text-left',
                 // Phone and tablet drawer: 44px touch targets (design system).
-                isMobile ? 'h-11' : 'h-[34px]',
+                isMobile ? 'h-11' : 'h-9',
               ),
+          // Active: ivory, ink text and a 2px violet rail (the website's
+          // dashboard navigation).
           isActive
-            ? 'bg-nw-nav-active font-semibold text-nw-violet-600'
-            : 'text-nw-nav-text hover:bg-nw-nav-hover hover:text-nw-ink',
+            ? 'bg-nw-paper font-semibold text-nw-ink shadow-[inset_2px_0_0_var(--nw-violet)]'
+            : 'text-nw-text hover:bg-nw-paper hover:text-nw-ink',
         )}
       >
         <Icon
           aria-hidden="true"
           className={cn(
             'size-[18px] shrink-0',
-            isActive ? 'text-nw-violet' : 'text-nw-nav-icon group-hover/item:text-nw-text-3',
+            isActive ? 'text-nw-ink' : 'text-nw-muted group-hover/item:text-nw-ink',
           )}
         />
         {!rail && <span className="min-w-0 flex-1 truncate">{config.label}</span>}
         {!rail && counted && (
           <span
             className={cn(
-              'inline-flex h-5 min-w-[22px] items-center justify-center rounded-full px-[7px] text-[11.5px] font-semibold tabular-nums',
+              'inline-flex h-5 min-w-[22px] items-center justify-center rounded-[4px] px-1.5 text-[11.5px] font-semibold tabular-nums',
               isActive
-                ? 'bg-white text-nw-violet-600'
+                ? 'bg-white text-nw-ink ring-1 ring-inset ring-nw-line'
                 : waiting
-                  ? 'bg-nw-amber-100 text-nw-amber-700'
-                  : 'bg-nw-count text-nw-text-2',
+                  ? 'bg-nw-warn-bg text-nw-warn-dark ring-1 ring-inset ring-nw-warn-line'
+                  : 'bg-nw-paper-2 text-nw-text-strong',
             )}
           >
             {count.toLocaleString()}
@@ -300,8 +302,8 @@ function SidebarContent({
           <span
             aria-hidden="true"
             className={cn(
-              'pointer-events-none absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold leading-none tabular-nums ring-2 ring-nw-nav-bg',
-              waiting ? 'bg-nw-amber-100 text-nw-amber-700' : 'bg-nw-count text-nw-text-2',
+              'pointer-events-none absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-[4px] px-1 text-[10px] font-semibold leading-none tabular-nums ring-2 ring-white',
+              waiting ? 'bg-nw-warn-bg text-nw-warn-dark' : 'bg-nw-paper-2 text-nw-text-strong',
             )}
           >
             {formatSidebarBadgeCount(count)}
@@ -335,7 +337,7 @@ function SidebarContent({
     <TooltipProvider>
       <div
         className={cn(
-          'flex h-full flex-col border-r border-nw-nav-line bg-nw-nav-bg text-sm text-nw-ink',
+          'flex h-full flex-col border-r border-nw-line bg-white text-sm text-nw-ink',
           rail ? 'items-center px-2 pt-3.5 pb-3' : 'px-3 pt-3.5 pb-3',
         )}
       >
@@ -361,7 +363,7 @@ function SidebarContent({
               onClick={() => setCollapsed(!rail)}
               aria-label={rail ? 'Expand sidebar' : 'Collapse sidebar'}
               title={rail ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-nw-text-3 hover:bg-nw-nav-hover hover:text-nw-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+              className="inline-flex size-8 items-center justify-center rounded-[4px] text-nw-muted transition-colors duration-[250ms] hover:bg-nw-paper hover:text-nw-ink"
             >
               {rail ? (
                 <PanelLeftOpen className="size-4" aria-hidden="true" />
@@ -375,7 +377,7 @@ function SidebarContent({
               type="button"
               onClick={() => setMobileOpen(false)}
               aria-label="Close navigation menu"
-              className="inline-flex size-8 items-center justify-center rounded-lg text-nw-text-3 hover:bg-nw-nav-hover hover:text-nw-ink"
+              className="inline-flex size-8 items-center justify-center rounded-[4px] text-nw-muted transition-colors duration-[250ms] hover:bg-nw-paper hover:text-nw-ink"
             >
               <X className="size-4" aria-hidden="true" />
             </button>
@@ -421,12 +423,12 @@ function SidebarContent({
                   onClick={() => toggleGroup(group.label)}
                   aria-expanded={open}
                   aria-controls={listId}
-                  className="flex h-7 w-full items-center gap-1.5 rounded-md px-2.5 text-left text-xs font-semibold text-nw-text-3 outline-none hover:bg-gray-100 hover:text-nw-ink focus-visible:ring-2 focus-visible:ring-nw-violet/60"
+                  className="flex h-7 w-full items-center gap-1.5 rounded-[4px] px-2.5 text-left text-[11px] font-semibold tracking-[0.14em] text-nw-muted uppercase outline-none transition-colors duration-[250ms] hover:bg-nw-paper hover:text-nw-ink"
                 >
                   <span className="flex-1">{group.label}</span>
                   {!open && waitingInGroup && (
                     <span
-                      className="size-[7px] rounded-full bg-nw-amber-dot"
+                      className="size-[7px] rounded-full bg-nw-warn"
                       aria-label="Items waiting"
                       role="img"
                     />
@@ -449,7 +451,7 @@ function SidebarContent({
         {/* Footer: Locked and the account menu */}
         <div
           className={cn(
-            'mt-2.5 flex shrink-0 flex-col gap-0.5 border-t border-nw-line pt-2.5',
+            'mt-2.5 flex shrink-0 flex-col gap-0.5 border-t border-nw-line-soft pt-2.5',
             rail && 'w-full items-center',
           )}
         >
@@ -460,23 +462,23 @@ function SidebarContent({
                 type="button"
                 aria-label={rail ? `${userName}, account menu` : undefined}
                 className={cn(
-                  'flex items-center rounded-lg text-left outline-none hover:bg-nw-nav-hover focus-visible:ring-2 focus-visible:ring-nw-violet/60',
+                  'flex items-center rounded-[4px] text-left outline-none transition-colors duration-[250ms] hover:bg-nw-paper',
                   rail ? 'size-11 justify-center' : 'w-full gap-2.5 px-2 pt-2 pb-1.5',
                 )}
               >
                 <span
                   aria-hidden="true"
-                  className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-full bg-nw-violet-100 text-xs font-semibold text-nw-violet-600"
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-nw-ink text-xs font-semibold text-nw-cream"
                 >
                   {userName[0]?.toUpperCase() || 'A'}
                 </span>
                 {!rail && (
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-semibold">{userName}</span>
-                    <span className="block truncate text-xs text-nw-text-3">{userRole}</span>
+                    <span className="block truncate text-xs text-nw-muted">{userRole}</span>
                   </span>
                 )}
-                {!rail && <ChevronsUpDown className="size-4 text-nw-text-3" aria-hidden="true" />}
+                {!rail && <ChevronsUpDown className="size-4 text-nw-muted" aria-hidden="true" />}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" className="w-56" sideOffset={8}>

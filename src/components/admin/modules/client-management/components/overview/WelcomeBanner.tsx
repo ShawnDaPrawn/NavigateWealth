@@ -41,7 +41,7 @@ export function HealthScoreRing({
     >
       <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
         {/* Background track */}
-        <circle cx="50" cy="50" r={radius} fill="none" stroke="#f3f4f6" strokeWidth="8" />
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="#f6f4ef" strokeWidth="8" />
         {/* Progress arc */}
         <circle
           cx="50"

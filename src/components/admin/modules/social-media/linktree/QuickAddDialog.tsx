@@ -102,7 +102,7 @@ export function QuickAddDialog({
                   className="flex items-center justify-center h-9 w-9 rounded-lg flex-shrink-0"
                   style={{ backgroundColor: added ? '#dcfce7' : BRAND.navyLight }}
                 >
-                  <span style={{ color: added ? '#16a34a' : BRAND.navy }}>
+                  <span style={{ color: added ? '#15803d' : BRAND.navy }}>
                     {added ? <Check className="h-4 w-4" /> : template.icon}
                   </span>
                 </div>

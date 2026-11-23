@@ -807,7 +807,7 @@ export function NoteEditorModal({
           {metadataBlock}
 
           {isEditing && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ddd6fe] bg-[#f5f3ff] px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ddd3f3] bg-[#f4f1fb] px-4 py-3">
               <p className="text-sm text-nw-text-2">
                 <span className="font-medium text-nw-ink">AI summary</span> ·{' '}
                 {localSummary ? 'generated' : 'not generated yet'}

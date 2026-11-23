@@ -604,10 +604,10 @@ export function CalendarModule() {
       <span className="grow" />
       <ul className="ds-key" aria-label="Colour key">
         {[
-          ['#ede9fe', 'Event'],
+          ['#f4f1fb', 'Event'],
           ['#eff6ff', 'Task due'],
-          ['#fef3c7', 'Birthday'],
-          ['#ecfdf5', 'Policy renewal'],
+          ['#fffbeb', 'Birthday'],
+          ['#f0fdf4', 'Policy renewal'],
         ].map(([bg, label]) => (
           <li key={label} className="inline-flex items-center gap-1.5">
             <i style={{ background: bg }} aria-hidden="true" />

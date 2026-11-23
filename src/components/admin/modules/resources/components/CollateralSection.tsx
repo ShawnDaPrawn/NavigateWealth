@@ -166,7 +166,7 @@ export function CollateralSection({ onUpdate }: { onUpdate: () => void }) {
               key={item.id}
               className="flex flex-col overflow-hidden rounded-[10px] border border-nw-line bg-white"
             >
-              <div className="flex h-32 items-center justify-center overflow-hidden border-b border-nw-line bg-[#fafafb]">
+              <div className="flex h-32 items-center justify-center overflow-hidden border-b border-nw-line bg-[#fbfaf7]">
                 {item.signedUrl && isImage(item.mimeType) ? (
                   <img
                     src={item.signedUrl}

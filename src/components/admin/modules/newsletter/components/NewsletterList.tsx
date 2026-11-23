@@ -202,7 +202,7 @@ export function NewsletterList({
                           onOpen(campaign.id);
                         }
                       }}
-                      className="ds-todo-row cursor-pointer focus:outline-none focus-visible:bg-[#fafafb]"
+                      className="ds-todo-row cursor-pointer focus:outline-none focus-visible:bg-[#fbfaf7]"
                     >
                       <div className="grow">
                         <div className="flex flex-wrap items-center gap-2">

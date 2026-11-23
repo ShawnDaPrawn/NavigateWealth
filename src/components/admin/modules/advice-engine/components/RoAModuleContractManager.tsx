@@ -459,7 +459,10 @@ export function RoAModuleContractManager() {
                   : editorTab
             }
             onValueChange={(v) => setEditorTab(v as ContractTab)}
-            className="space-y-4"
+            // min-w-0: a grid item otherwise grows to its widest child, so the
+            // editor's tab row pushed the page past a phone's width instead of
+            // scrolling inside it.
+            className="min-w-0 space-y-4"
           >
             <div className="flex flex-col gap-3 rounded-xl border border-nw-line bg-white p-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
