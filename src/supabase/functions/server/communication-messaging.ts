@@ -8,7 +8,7 @@
 import { createModuleLogger } from './stderr-logger.ts';
 import * as kv from './kv_store.tsx';
 import { ValidationError } from './error.middleware.ts';
-import { sendEmail, createEmailTemplate } from './email-service.ts';
+import { sendEmail, createEmailTemplate, getFooterSettings } from './email-service.ts';
 import { resolveMergeFields } from './communication-business-logic.ts';
 import type {
   Message,
@@ -205,6 +205,7 @@ export async function sendMessage(
             subject: resolvedSubject,
             html: createEmailTemplate(resolvedContent, {
               title: resolvedSubject,
+              footerSettings: await getFooterSettings(),
             }),
             text: resolvedContent.replace(/<[^>]*>/g, ''),
             attachments: emailAttachments,
