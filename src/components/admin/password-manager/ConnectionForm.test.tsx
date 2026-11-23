@@ -2,11 +2,19 @@ import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { cleanup, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import ConnectionForm from './ConnectionForm';
 import { api } from '../../../utils/api/client';
-import { actionLabels, type ActionKey } from '../../../shared/password-manager';
+import { actionLabels, type ActionKey, type Collection } from '../../../shared/password-manager';
 vi.mock('../../../utils/api/client', () => ({
   api: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
+const brokerage: Collection = {
+  id: 'brokerage',
+  name: 'Brokerage',
+  kind: 'brokerage',
+  ownerUserId: null,
+  ownerName: '',
+  createdAt: '',
+};
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.get).mockResolvedValue({ data: [] });
@@ -21,7 +29,12 @@ describe('connection form', () => {
     const onSaved = vi.fn();
     vi.mocked(api.post).mockResolvedValue({ connection: { id: 'c1' }, token: 'tok' });
     render(
-      <ConnectionForm connection={null} collections={[]} onClose={vi.fn()} onSaved={onSaved} />,
+      <ConnectionForm
+        connection={null}
+        collections={[brokerage]}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />,
     );
     expect(actionSelect('money_workflow').value).toBe('ask');
     const presets = screen.getByRole('group', { name: 'Autonomy preset' });
@@ -37,11 +50,16 @@ describe('connection form', () => {
       target: { value: 'Amy’s Claude' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create connection' }));
+    await screen.findByText('Choose at least one collection.');
+    expect(api.post).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByLabelText('Brokerage'));
+    fireEvent.click(screen.getByRole('button', { name: 'Create connection' }));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(api.post).toHaveBeenCalledWith(
       '/password-vault/connections',
       expect.objectContaining({
         personName: 'Amy',
+        collectionIds: ['brokerage'],
         expiresInDays: 90,
         autonomy: expect.objectContaining({
           level: 'custom',

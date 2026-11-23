@@ -123,7 +123,8 @@ export const updateCredential = (
   revision: string,
   credential: CredentialInput,
   clearPortal: boolean,
-) => put<unknown>(id(credentialId), { revision, credential, clearPortal });
+  clearOtp = false,
+) => put<unknown>(id(credentialId), { revision, credential, clearPortal, clearOtp });
 export const deleteCredential = (credentialId: string) => remove<unknown>(id(credentialId));
 export const revealCredential = (credentialId: string) =>
   post<RevealedCredential>(id(credentialId) + '/reveal');
@@ -160,8 +161,10 @@ export const createConnection = (input: ConnectionInput) =>
   post<IssuedConnection>('/connections', input);
 export const updateConnection = (connectionId: string, patch: ConnectionPatch) =>
   put<VaultConnection>('/connections' + id(connectionId), patch);
+/** The logins the connection had seen, so they can be rotated. */
+export type RevokedSeen = { credentialId: string; name: string; at: string };
 export const revokeConnection = (connectionId: string) =>
-  post<unknown>('/connections' + id(connectionId) + '/revoke');
+  post<{ seen?: RevokedSeen[] }>('/connections' + id(connectionId) + '/revoke');
 export const pauseAllConnections = () => post<unknown>('/connections/pause-all');
 export const resumeAllConnections = () => post<unknown>('/connections/resume-all');
 export const trustSuggestions = async (connectionId: string) =>
@@ -200,7 +203,16 @@ export async function listStaff(): Promise<StaffMember[]> {
 
 // ── Collection owners (write-only) ──────────────────────────────────────────
 
-export const listMine = async () => listOf(await api.get<Listed<OwnedLogin>>(minePath, request));
-export const addMine = (input: OwnedLoginInput) => api.post<OwnedLogin>(minePath, input, request);
+/** `hasCollection` is false for someone who owns no collection (nothing to show). */
+export async function listMine(): Promise<{ items: OwnedLogin[]; hasCollection: boolean }> {
+  const result = await api.get<{ items?: OwnedLogin[]; hasCollection?: boolean }>(
+    minePath,
+    request,
+  );
+  const items = result?.items ?? [];
+  return { items, hasCollection: result?.hasCollection ?? items.length > 0 };
+}
+export const addMine = (input: OwnedLoginInput) =>
+  api.post<{ id: string }>(minePath, input, request);
 export const replaceMyPassword = (loginId: string, password: string) =>
   api.put<unknown>(minePath + id(loginId) + '/password', { password }, request);

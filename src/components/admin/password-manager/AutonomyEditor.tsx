@@ -128,7 +128,7 @@ export default function AutonomyEditor({
           <NumberInputField
             placeholder="No limit"
             value={value.limits.signInsPerHour}
-            onValueChange={(amount) => limit('signInsPerHour', amount)}
+            onValueChange={(amount) => limit('signInsPerHour', amount || undefined)}
           />
         </Field>
         <Field label="Hold money moves (minutes)" hint="Time to cancel before it is submitted.">

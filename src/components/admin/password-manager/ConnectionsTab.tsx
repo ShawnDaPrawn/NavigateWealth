@@ -20,6 +20,7 @@ import {
   resumeAllConnections,
   revokeConnection,
   updateConnection,
+  type RevokedSeen,
 } from './vaultApi';
 import { collectionName } from './vaultFilters';
 import {
@@ -42,7 +43,7 @@ export default function ConnectionsTab({
   const [rows, setRows] = useState<VaultConnection[] | null>(null);
   const [editing, setEditing] = useState<VaultConnection | 'new' | null>(null);
   const [issued, setIssued] = useState<IssuedConnection | null>(null);
-  const [revoked, setRevoked] = useState<{ name: string; seen: VaultSummary[] } | null>(null);
+  const [revoked, setRevoked] = useState<{ name: string; seen: RevokedSeen[] } | null>(null);
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const { busy, error, run } = useAction();
@@ -54,6 +55,12 @@ export default function ConnectionsTab({
     void load();
   }, [load]);
 
+  // Fallback when the server does not list them: the vault's own seen-by-AI marks.
+  const seenBy = (connectionId: string): RevokedSeen[] =>
+    items.flatMap((item) => {
+      const last = item.seenByAi?.filter((s) => s.connectionId === connectionId).at(-1);
+      return last ? [{ credentialId: item.id, name: item.name || item.url, at: last.at }] : [];
+    });
   const levelOf = (c: VaultConnection) =>
     c.autonomy.level === 'custom' ? 'Custom' : autonomyLevels[c.autonomy.level];
 
@@ -173,9 +180,9 @@ export default function ConnectionsTab({
             <>
               <p>It had seen these passwords. Change them at the provider soon:</p>
               <ul className="list-disc pl-5">
-                {revoked.seen.map((item) => (
-                  <li key={item.id}>
-                    {item.name || item.url} · {item.username}
+                {revoked.seen.map((seen) => (
+                  <li key={seen.credentialId}>
+                    {seen.name || 'Unnamed login'} · last seen {formatWhen(seen.at)}
                   </li>
                 ))}
               </ul>
@@ -275,14 +282,9 @@ export default function ConnectionsTab({
                             return;
                           }
                           void run(async () => {
-                            await revokeConnection(c.id);
+                            const result = await revokeConnection(c.id);
                             setConfirmRevoke(null);
-                            setRevoked({
-                              name: c.name,
-                              seen: items.filter((item) =>
-                                item.seenByAi?.some((s) => s.connectionId === c.id),
-                              ),
-                            });
+                            setRevoked({ name: c.name, seen: result?.seen ?? seenBy(c.id) });
                             await load();
                           });
                         }}

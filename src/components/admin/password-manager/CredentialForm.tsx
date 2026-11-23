@@ -87,6 +87,7 @@ export default function CredentialForm({
   );
   const [tags, setTags] = useState((draft.tags ?? []).join(', '));
   const [visible, setVisible] = useState(false);
+  const [clearOtp, setClearOtp] = useState(false);
   const { busy, error, run } = useAction();
   const set = (patch: Partial<CredentialInput>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -106,6 +107,7 @@ export default function CredentialForm({
           revision,
           credential,
           !!existing.portal && !credential.portal,
+          clearOtp && !credential.otpSecret,
         );
       else await createCredentials([credential]);
       onSaved();
@@ -216,6 +218,16 @@ export default function CredentialForm({
                 onChange={(e) => set({ otpSecret: e.target.value })}
               />
             </Field>
+            {existing?.hasOtp && (
+              <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={clearOtp}
+                  onChange={(e) => setClearOtp(e.target.checked)}
+                />
+                Remove the saved one-time code key
+              </label>
+            )}
             <Field label="Notes (optional)" className="sm:col-span-2">
               <Textarea
                 maxLength={8192}

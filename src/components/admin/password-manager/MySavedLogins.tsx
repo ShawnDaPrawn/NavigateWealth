@@ -20,17 +20,21 @@ import { ErrorLine, Field, formatDay, hostOf, useAction } from './ui';
  */
 export default function MySavedLogins() {
   const [rows, setRows] = useState<OwnedLogin[] | null>(null);
+  const [owner, setOwner] = useState(false);
   const [replacing, setReplacing] = useState<OwnedLogin | null>(null);
   const [adding, setAdding] = useState(false);
   const [notice, setNotice] = useState('');
   const load = useCallback(() => {
     listMine()
-      .then(setRows)
+      .then((mine) => {
+        setRows(mine.items);
+        setOwner(mine.hasCollection);
+      })
       .catch(() => setRows([]));
   }, []);
   useEffect(load, [load]);
 
-  if (!rows?.length) return null;
+  if (!rows || !owner) return null;
   return (
     <section
       aria-labelledby="my-saved-logins"
@@ -55,6 +59,9 @@ export default function MySavedLogins() {
         <p role="status" className="text-sm">
           {notice}
         </p>
+      )}
+      {!rows.length && (
+        <p className="text-sm text-muted-foreground">No logins saved for you yet.</p>
       )}
       <ul className="grid divide-y">
         {rows.map((row) => (

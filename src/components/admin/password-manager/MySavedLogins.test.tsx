@@ -21,7 +21,7 @@ afterEach(cleanup);
 
 describe('my saved logins', () => {
   it('stays hidden for someone who owns nothing', async () => {
-    vi.mocked(api.get).mockResolvedValue({ items: [] });
+    vi.mocked(api.get).mockResolvedValue({ items: [], hasCollection: false });
     const { container } = render(<MySavedLogins />);
     await waitFor(() =>
       expect(api.get).toHaveBeenCalledWith('/password-vault-mine', expect.anything()),
@@ -30,7 +30,7 @@ describe('my saved logins', () => {
   });
 
   it('replaces a password without ever showing one', async () => {
-    vi.mocked(api.get).mockResolvedValue({ items: [login] });
+    vi.mocked(api.get).mockResolvedValue({ items: [login], hasCollection: true });
     vi.mocked(api.put).mockResolvedValue({});
     render(<MySavedLogins />);
     fireEvent.click(await screen.findByRole('button', { name: 'Replace password' }));

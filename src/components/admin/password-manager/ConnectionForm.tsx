@@ -91,6 +91,7 @@ export default function ConnectionForm({
           onSubmit={(e) => {
             e.preventDefault();
             void run(async () => {
+              if (!draft.collectionIds.length) throw new Error('Choose at least one collection.');
               if (connection) {
                 const { name, collectionIds, tagFilter, level, autonomy, personName } = draft;
                 await updateConnection(connection.id, {
