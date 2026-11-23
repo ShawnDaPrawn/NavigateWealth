@@ -254,6 +254,25 @@ describe('sendCampaign — several groups', () => {
     expect(result.status).toBe('completed');
   });
 
+  it('does not email a client again because they are also an external contact', async () => {
+    getAllClientsMock.mockResolvedValueOnce([
+      { id: 'c1', email: 'Ext@Example.com', firstName: 'Ann' },
+      { id: 'c2', email: 'two@example.com', firstName: 'Ben' },
+      { id: 'c3', email: 'three@example.com', firstName: 'Cara' },
+    ] as never);
+
+    const result = await sendCampaign(seedMultiGroupCampaign(), 'admin-1');
+
+    // c1 is reached through the client loop; ext@ is c1's own address.
+    expect(sendMessageMock.mock.calls.map((call) => call[1].recipients[0]).sort()).toEqual([
+      'c1',
+      'c2',
+      'c3',
+    ]);
+    expect(sendEmailMock.mock.calls.map((call) => call[0].to)).toEqual(['other@example.com']);
+    expect(result.sent).toBe(4);
+  });
+
   it('fails clearly when one of the selected groups no longer exists', async () => {
     const id = seedMultiGroupCampaign();
     kvStore.delete('communication:groups:g2');

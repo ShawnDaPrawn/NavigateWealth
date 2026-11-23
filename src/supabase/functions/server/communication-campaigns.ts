@@ -355,6 +355,20 @@ export async function sendCampaign(
     }
   }
 
+  // A newsletter subscriber can be stored as an external contact AND be a
+  // client (the legacy subscriber backfill adds them without matching
+  // profiles). When the client is already a recipient they get the message —
+  // and their portal copy — through the client loop, so drop the external
+  // duplicate rather than emailing the same address twice.
+  if (externalEmails.length > 0 && recipientIds.length > 0) {
+    const clientEmails = new Set<string>();
+    for (const id of recipientIds) {
+      const email = recipientEmailMap.get(id);
+      if (email) clientEmails.add(email.trim().toLowerCase());
+    }
+    externalEmails = externalEmails.filter((e) => !clientEmails.has(e.trim().toLowerCase()));
+  }
+
   let sent = 0;
   let rejected = 0;
   let firstFailure: string | undefined;
