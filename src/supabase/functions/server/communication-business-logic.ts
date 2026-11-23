@@ -14,6 +14,7 @@ import { logger } from './stderr-logger.ts';
 import { listAllAuthUsers } from './auth-admin-list-users.ts';
 import { resolveClientFirstName, resolveClientLastName } from './client-display-name.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { getCampaignGroups, type CampaignGroupRef } from './communication-group-selection.ts';
 
 // --- Client Resolution ---
 
@@ -320,6 +321,51 @@ export function resolveMergeFields(
   return result;
 }
 
+async function resolveGroupRecipients(
+  groupSelection: CampaignGroupRef,
+  supabase: SupabaseAdminClient,
+): Promise<CommunicationClient[]> {
+  // The "All Clients" system group is literally everyone.
+  if (groupSelection.id === 'sys_all') {
+    return await getAllClients(supabase);
+  }
+
+  // Every other group — custom AND auto/system groups such as the provider
+  // groups (sys_provider_*) and the newsletter group — resolves through its
+  // stored membership / filter rules. This is critical: previously all
+  // non-sys_all *system* groups fell through to "return allClients", so a
+  // scheduled provider-group campaign would have emailed every client.
+
+  // 1. Try cache first
+  const cachedMembers = await repo.getGroupMembersCache(groupSelection.id);
+  if (cachedMembers && Array.isArray(cachedMembers) && cachedMembers.length > 0) {
+    logger.info(`Using cached members for group ${groupSelection.id}`, {
+      count: cachedMembers.length,
+    });
+    return cachedMembers as unknown as CommunicationClient[];
+  }
+
+  // 2. Fallback to fresh calculation from the stored group
+  logger.info(`Cache miss for group ${groupSelection.id}. Recalculating...`);
+  const storedGroup = await repo.getGroup(groupSelection.id);
+  const group = storedGroup || groupSelection;
+
+  const allClients = await getAllClients(supabase);
+  const members = await resolveGroupMembership(group as unknown as Group, allClients);
+
+  // Update cache for next time
+  const cached: CachedRecipient[] = members.map((m) => ({
+    id: m.id,
+    email: m.email,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    phone: m.phone,
+  }));
+  await repo.setGroupMembersCache(group.id, cached);
+
+  return members;
+}
+
 export async function resolveRecipients(
   selection: RecipientSelection,
   supabase: SupabaseAdminClient,
@@ -337,48 +383,19 @@ export async function resolveRecipients(
   }
 
   if (selection.recipientType === 'group') {
-    const groupSelection = selection.selectedGroup;
-    if (!groupSelection) return [];
+    const groups = getCampaignGroups(selection);
+    if (groups.length === 0) return [];
+    if (groups.length === 1) return await resolveGroupRecipients(groups[0], supabase);
 
-    // The "All Clients" system group is literally everyone.
-    if (groupSelection.id === 'sys_all') {
-      return await getAllClients(supabase);
+    // Several groups: union, de-duplicated by client id so a client in two of
+    // the selected groups receives the message once.
+    const byId = new Map<string, CommunicationClient>();
+    for (const group of groups) {
+      for (const member of await resolveGroupRecipients(group, supabase)) {
+        if (!byId.has(member.id)) byId.set(member.id, member);
+      }
     }
-
-    // Every other group — custom AND auto/system groups such as the provider
-    // groups (sys_provider_*) and the newsletter group — resolves through its
-    // stored membership / filter rules. This is critical: previously all
-    // non-sys_all *system* groups fell through to "return allClients", so a
-    // scheduled provider-group campaign would have emailed every client.
-
-    // 1. Try cache first
-    const cachedMembers = await repo.getGroupMembersCache(groupSelection.id);
-    if (cachedMembers && Array.isArray(cachedMembers) && cachedMembers.length > 0) {
-      logger.info(`Using cached members for group ${groupSelection.id}`, {
-        count: cachedMembers.length,
-      });
-      return cachedMembers as unknown as CommunicationClient[];
-    }
-
-    // 2. Fallback to fresh calculation from the stored group
-    logger.info(`Cache miss for group ${groupSelection.id}. Recalculating...`);
-    const storedGroup = await repo.getGroup(groupSelection.id);
-    const group = storedGroup || groupSelection;
-
-    const allClients = await getAllClients(supabase);
-    const members = await resolveGroupMembership(group as unknown as Group, allClients);
-
-    // Update cache for next time
-    const cached: CachedRecipient[] = members.map((m) => ({
-      id: m.id,
-      email: m.email,
-      firstName: m.firstName,
-      lastName: m.lastName,
-      phone: m.phone,
-    }));
-    await repo.setGroupMembersCache(group.id, cached);
-
-    return members;
+    return [...byId.values()];
   }
 
   return [];

@@ -18,6 +18,7 @@ import { resolveAdminDisplayNames, stripHtmlForSearch } from './communication-se
 import { getAllClients, sendMessage } from './communication-messaging.ts';
 import { classifyDeliveryFailure } from './email-delivery-classification.ts';
 import { getErrMsg } from './shared-logger-utils.ts';
+import { getCampaignGroupLabel, getCampaignGroups } from './communication-group-selection.ts';
 
 const log = createModuleLogger('communication-service');
 
@@ -128,8 +129,7 @@ export async function filterCampaignRows(
       const body = stripHtmlForSearch(c.bodyHtml || '');
       const name = (c.createdByName || '').toLowerCase();
       const byId = (c.createdBy || '').toLowerCase();
-      const groupName =
-        typeof c.selectedGroup?.name === 'string' ? c.selectedGroup.name.toLowerCase() : '';
+      const groupName = getCampaignGroupLabel(c).toLowerCase();
       return (
         subj.includes(q) ||
         body.includes(q) ||
@@ -192,6 +192,55 @@ export async function createCampaign(adminUserId: string, data: CampaignCreate):
   return campaign;
 }
 
+/**
+ * A group's members at send time: its client ids and external contact emails.
+ * Dynamic groups (with filter rules) are recalculated first so the campaign
+ * goes to the latest matching clients (§12.3 downstream guards).
+ */
+async function resolveGroupMembersForSend(
+  groupId: string,
+): Promise<{ clientIds: string[]; externalEmails: string[] }> {
+  if (groupId === 'sys_all') {
+    const allClients = await getAllClients();
+    return { clientIds: allClients.map((c) => c.id), externalEmails: [] };
+  }
+
+  const group = await repo.getGroupById(groupId);
+  if (!group) {
+    throw new ValidationError('Group not found');
+  }
+
+  const hasFilters =
+    group.filterConfig &&
+    Object.values(group.filterConfig).some((v) =>
+      Array.isArray(v) ? v.length > 0 : v !== undefined,
+    );
+
+  if (hasFilters) {
+    try {
+      log.info('Recalculating dynamic group before campaign send', { groupId: group.id });
+      const { fetchMatcherClients } = await import('./communication-repo.ts');
+      const { recalculateSingleGroupMembership } = await import('./group-matcher.ts');
+      const matcherClients = await fetchMatcherClients();
+      const recalculated = recalculateSingleGroupMembership(group, matcherClients);
+      group.clientIds = (recalculated.clientIds || []) as string[];
+      group.clientCount = group.clientIds.length + (group.externalContacts?.length || 0);
+      await repo.saveGroup(group);
+      log.success('Dynamic group recalculated for send', {
+        groupId: group.id,
+        memberCount: group.clientCount,
+      });
+    } catch (err) {
+      log.error('Failed to recalculate group before send — using stale membership', err as Error);
+    }
+  }
+
+  return {
+    clientIds: group.clientIds || [],
+    externalEmails: (group.externalContacts || []).map((c) => c.email).filter(Boolean),
+  };
+}
+
 export async function sendCampaign(
   campaignId: string,
   adminUserId: string,
@@ -212,9 +261,11 @@ export async function sendCampaign(
     );
   }
 
+  const campaignGroups = getCampaignGroups(campaign);
+
   log.info('Sending campaign', {
     campaignId,
-    selectedGroup: campaign.selectedGroup?.id,
+    selectedGroups: campaignGroups.map((g) => g.id),
     recipientType: campaign.recipientType,
   });
 
@@ -222,56 +273,27 @@ export async function sendCampaign(
   let recipientIds: string[] = [];
   let externalEmails: string[] = [];
 
-  if (campaign.recipientType === 'group' && campaign.selectedGroup?.id) {
-    if (campaign.selectedGroup.id === 'sys_all') {
-      const allClients = await getAllClients();
-      recipientIds = allClients.map((c) => c.id);
-    } else {
-      const group = await repo.getGroupById(campaign.selectedGroup.id);
-
-      if (!group) {
-        throw new ValidationError('Group not found');
+  if (campaign.recipientType === 'group' && campaignGroups.length > 0) {
+    // Several groups may share members (a client can be in "Allan Gray
+    // Clients" AND "Newsletter Contacts"); the union is de-duplicated so
+    // nobody gets the same message twice.
+    const ids = new Set<string>();
+    const emails = new Map<string, string>();
+    for (const ref of campaignGroups) {
+      const members = await resolveGroupMembersForSend(ref.id);
+      for (const id of members.clientIds) ids.add(id);
+      for (const email of members.externalEmails) {
+        const key = email.trim().toLowerCase();
+        if (key && !emails.has(key)) emails.set(key, email.trim());
       }
+    }
+    recipientIds = [...ids];
+    externalEmails = [...emails.values()];
 
-      // If this is a dynamic group, recalculate membership at send-time
-      // so the campaign goes to the latest matching clients (§12.3 downstream guards).
-      const hasFilters =
-        group.filterConfig &&
-        Object.values(group.filterConfig).some((v) =>
-          Array.isArray(v) ? v.length > 0 : v !== undefined,
-        );
-
-      if (hasFilters) {
-        try {
-          log.info('Recalculating dynamic group before campaign send', { groupId: group.id });
-          const { fetchMatcherClients } = await import('./communication-repo.ts');
-          const { recalculateSingleGroupMembership } = await import('./group-matcher.ts');
-          const matcherClients = await fetchMatcherClients();
-          const recalculated = recalculateSingleGroupMembership(group, matcherClients);
-          group.clientIds = (recalculated.clientIds || []) as string[];
-          group.clientCount = group.clientIds.length + (group.externalContacts?.length || 0);
-          await repo.saveGroup(group);
-          log.success('Dynamic group recalculated for send', {
-            groupId: group.id,
-            memberCount: group.clientCount,
-          });
-        } catch (err) {
-          log.error(
-            'Failed to recalculate group before send — using stale membership',
-            err as Error,
-          );
-        }
-      }
-
-      recipientIds = group.clientIds || [];
-
-      if (group.externalContacts && group.externalContacts.length > 0) {
-        externalEmails = group.externalContacts.map((c) => c.email);
-      }
-
-      if (recipientIds.length === 0 && externalEmails.length === 0) {
-        throw new ValidationError('Group has no members');
-      }
+    if (recipientIds.length === 0 && externalEmails.length === 0) {
+      throw new ValidationError(
+        campaignGroups.length > 1 ? 'Selected groups have no members' : 'Group has no members',
+      );
     }
   } else if (campaign.recipientType === 'multiple' && campaign.selectedRecipients) {
     recipientIds = campaign.selectedRecipients.map((r) => r.id as string);
