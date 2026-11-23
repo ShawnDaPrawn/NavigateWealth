@@ -132,8 +132,8 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
   const { pathname } = useLocation();
   const [openMenu, setOpenMenu] = useState<MenuKey | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  // The board opens the phone menu with Services expanded.
-  const [sheetSection, setSheetSection] = useState<MenuKey | null>('services');
+  // The phone menu opens with every section collapsed.
+  const [sheetSection, setSheetSection] = useState<MenuKey | null>(null);
   const navRef = useRef<HTMLElement>(null);
   const idBase = useId();
 
@@ -141,7 +141,7 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
   useEffect(() => {
     setOpenMenu(null);
     setSheetOpen(false);
-    setSheetSection('services');
+    setSheetSection(null);
   }, [pathname]);
 
   // Escape closes, and so does a click outside the navigation.
@@ -362,13 +362,11 @@ export function NavigatorHeader({ isScrolled = false }: NavigatorHeaderProps) {
               <Link className="nwh-mrow" to="/contact" aria-current={current('/contact')}>
                 Contact
               </Link>
+              {/* Get Started already sits beside the burger, so the sheet offers only Log In. */}
               <div className="nwh-sheet-actions">
                 <Link className="nwh-ghost nwh-sheet-login" to="/login">
                   <LogInIcon size={16} />
                   Log In
-                </Link>
-                <Link className="nwh-primary nwh-sheet-start" to="/signup">
-                  Get Started
                 </Link>
               </div>
               <div className="nwh-sheet-quick">
