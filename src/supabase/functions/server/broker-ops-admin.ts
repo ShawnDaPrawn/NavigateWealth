@@ -16,7 +16,7 @@ import {
   publicRun,
 } from './repositories/broker-ops.ts';
 import { control, startJob, OperationError } from './broker-ops-jobs.ts';
-import { clientInput, issueClient, approve, checkConsent, oauthInput } from './broker-ops-auth.ts';
+import { clientInput, issueClient, approve, consentTarget, oauthInput } from './broker-ops-auth.ts';
 import { jobInput, workflowInput } from './broker-ops-model.ts';
 import { getDefaultPortalFlow } from './portal-default-flows.ts';
 import { providerOrigins } from './broker-ops-origins.ts';
@@ -94,9 +94,10 @@ app.delete('/connections/:id', async (c) => {
   await clients.remove(c.req.param('id'));
   return c.json({ ok: true });
 });
-app.post('/consent/details', validateBody(oauthInput), async (c) =>
-  c.json(clientInfo(await checkConsent(body(c, oauthInput)))),
-);
+app.post('/consent/details', validateBody(oauthInput), async (c) => {
+  const target = await consentTarget(body(c, oauthInput));
+  return c.json({ ...clientInfo(target.row), kind: target.kind });
+});
 app.post('/consent/approve', validateBody(oauthInput), async (c) =>
   c.json({ redirect: await approve(body(c, oauthInput)) }),
 );
