@@ -33,6 +33,7 @@ const db = vi.hoisted(() => {
   const chain = {
     select: (...a: unknown[]) => (state.calls.push(['select', ...a]), chain),
     eq: (...a: unknown[]) => (state.calls.push(['eq', ...a]), chain),
+    or: (...a: unknown[]) => (state.calls.push(['or', ...a]), chain),
     order: (...a: unknown[]) => (state.calls.push(['order', ...a]), chain),
     limit: async (...a: unknown[]) => (state.calls.push(['limit', ...a]), state.selectResult),
   };
@@ -63,7 +64,7 @@ import {
   listDeliveryGroups,
   listDeliveryKinds,
   listGroupDeliveries,
-  listDeliveriesForRecipient,
+  listDeliveriesForClient,
   __resetEmailDeliveryLogForTests,
   type EmailDeliveryRecord,
 } from '../email-delivery-log.ts';
@@ -136,13 +137,24 @@ describe('toDeliveryRow', () => {
     expect(row.preview).toBe('Have a great day. Unsubscribe: [link]');
   });
 
-  it('keeps no preview at all for a sensitive kind', () => {
+  it('keeps neither the preview nor the subject of a sensitive kind', () => {
+    // The sign-in code email puts the live code in its subject line.
     const row = toDeliveryRow({
       ...BASE,
       kind: 'two_factor_code',
-      text: 'Your code is 123456',
+      subject: '482913 — Your Navigate Wealth Verification Code',
+      text: 'Your code is 482913',
     });
     expect(row.preview).toBeNull();
+    expect(row.subject).toBe('Sign-in code');
+    expect(JSON.stringify(row)).not.toContain('482913');
+  });
+
+  it('records the client a send is for, and only a real id', () => {
+    const id = '8af4df44-1eb2-4924-95d8-7643a9b8bfec';
+    expect(toDeliveryRow({ ...BASE, clientId: id }).client_id).toBe(id);
+    expect(toDeliveryRow({ ...BASE, clientId: 'not-an-id' }).client_id).toBeNull();
+    expect(toDeliveryRow(BASE).client_id).toBeNull();
   });
 
   it('caps a long provider error and nulls an empty cc', () => {
@@ -294,11 +306,26 @@ describe('read side', () => {
     expect(db.state.calls).toContainEqual(['eq', 'id', '0e8c1d1e-1111-4a4a-9a9a-222222222222']);
   });
 
-  it("reads one client's emails by their lower-cased address", async () => {
-    await listDeliveriesForRecipient(' Michael@Example.com ');
-    expect(db.state.calls).toContainEqual(['eq', 'recipient', 'michael@example.com']);
+  it("reads a client's own emails: attributed to them, or unattributed to their sign-in address", async () => {
+    const id = '8af4df44-1eb2-4924-95d8-7643a9b8bfec';
+    await listDeliveriesForClient(id, ' Michael@Example.com ');
+    expect(db.state.calls).toContainEqual([
+      'or',
+      `client_id.eq.${id},and(client_id.is.null,recipient.eq.michael@example.com)`,
+    ]);
+  });
+
+  it('reads only attributed rows when there is no usable sign-in address', async () => {
+    const id = '8af4df44-1eb2-4924-95d8-7643a9b8bfec';
+    await listDeliveriesForClient(id, undefined);
+    expect(db.state.calls).toContainEqual(['or', `client_id.eq.${id}`]);
     db.state.calls = [];
-    await expect(listDeliveriesForRecipient('   ')).resolves.toEqual([]);
+    await listDeliveriesForClient(id, 'a,b@example.com');
+    expect(db.state.calls).toContainEqual(['or', `client_id.eq.${id}`]);
+  });
+
+  it('refuses a malformed client id without querying', async () => {
+    await expect(listDeliveriesForClient('x),or(true', 'a@b.co')).resolves.toEqual([]);
     expect(db.state.calls).toEqual([]);
   });
 

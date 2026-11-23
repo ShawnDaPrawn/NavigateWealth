@@ -34,7 +34,7 @@ import {
   resolveClientLastName,
 } from './client-display-name.ts';
 import { mgetBatched } from './kv-batch.ts';
-import { listDeliveriesForRecipient } from './email-delivery-log.ts';
+import { listDeliveriesForClient } from './email-delivery-log.ts';
 import { emailKindLabel, KINDS_IN_CAMPAIGN_HISTORY } from '../../../shared/email/emailKinds.ts';
 
 const log = createModuleLogger('clients-service');
@@ -725,9 +725,7 @@ export class ClientsService {
   private async getClientEmailDeliveries(clientId: string): Promise<CommunicationRecord[]> {
     try {
       const { data } = await createServiceClient().auth.admin.getUserById(clientId);
-      const email = data?.user?.email;
-      if (!email) return [];
-      const rows = await listDeliveriesForRecipient(email);
+      const rows = await listDeliveriesForClient(clientId, data?.user?.email);
       return rows
         .filter((r) => !(KINDS_IN_CAMPAIGN_HISTORY as readonly string[]).includes(r.kind))
         .map((r) => ({

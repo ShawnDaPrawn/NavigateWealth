@@ -65,11 +65,14 @@ const recorded = () =>
 describe('SendGrid', () => {
   it('records an accepted email with its kind, batch and message id', async () => {
     stubFetch({ ok: true, messageId: 'sg-msg-1' });
-    await expect(sendEmail({ ...PARAMS, batchId: 'b-1' })).resolves.toBe(true);
+    await expect(
+      sendEmail({ ...PARAMS, batchId: 'b-1', clientId: '8af4df44-1eb2-4924-95d8-7643a9b8bfec' }),
+    ).resolves.toBe(true);
     expect(recorded()).toEqual([
       expect.objectContaining({
         kind: 'client_birthday',
         batchId: 'b-1',
+        clientId: '8af4df44-1eb2-4924-95d8-7643a9b8bfec',
         to: 'client@example.co.za',
         subject: 'Happy Birthday, Michael!',
         status: 'sent',

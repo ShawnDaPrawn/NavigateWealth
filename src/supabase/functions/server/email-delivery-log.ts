@@ -19,6 +19,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getRequestContext } from './request-context.ts';
 import {
+  emailKindLabel,
   isSensitiveEmailKind,
   KINDS_IN_CAMPAIGN_HISTORY,
   type EmailKind,
@@ -27,6 +28,7 @@ import {
 const log = createModuleLogger('email-delivery-log');
 
 const TABLE = 'email_delivery_log';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PREVIEW_LENGTH = 400;
 
 let _client: ReturnType<typeof createClient> | null | undefined;
@@ -71,6 +73,8 @@ export function buildEmailPreview(text: string | undefined, html: string): strin
 export interface EmailDeliveryRecord {
   kind: EmailKind;
   batchId?: string;
+  /** The client the email is for, when the sender knows it. See listDeliveriesForClient. */
+  clientId?: string;
   to: string;
   cc?: string[];
   subject: string;
@@ -85,14 +89,18 @@ export interface EmailDeliveryRecord {
 /** Build the row exactly as it is stored. Exported for the contract tests. */
 export function toDeliveryRow(record: EmailDeliveryRecord): Record<string, unknown> {
   const ctx = getRequestContext();
+  const sensitive = isSensitiveEmailKind(record.kind);
   return {
     kind: record.kind,
     batch_id: record.batchId ?? null,
+    client_id: record.clientId && UUID_RE.test(record.clientId) ? record.clientId : null,
     recipient: record.to.trim().toLowerCase(),
     cc: record.cc && record.cc.length > 0 ? record.cc.map((a) => a.trim().toLowerCase()) : null,
-    subject: record.subject || '',
     // A one-time code or reset link is the content; keep only that it was sent.
-    preview: isSensitiveEmailKind(record.kind) ? null : buildEmailPreview(record.text, record.html),
+    // The subject goes too: the sign-in code email carries the code in its
+    // subject line, and another sender could do the same tomorrow.
+    subject: sensitive ? emailKindLabel(record.kind) : record.subject || '',
+    preview: sensitive ? null : buildEmailPreview(record.text, record.html),
     status: record.status,
     provider: record.provider,
     provider_message_id: record.providerMessageId ?? null,
@@ -266,8 +274,6 @@ function toDeliveryRowView(r: StoredRow): DeliveryRow {
   };
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
  * Every attempt inside one send, newest first: the recipients of a batch, or
  * the single email (a group key that is not a batch id is the row's own id).
@@ -282,19 +288,33 @@ export async function listGroupDeliveries(groupKey: string): Promise<DeliveryRow
   return ((data ?? []) as StoredRow[]).map(toDeliveryRowView);
 }
 
-/** Every email sent to one address (a client's own history), newest first. */
-export async function listDeliveriesForRecipient(
-  email: string,
+/**
+ * Every email sent to one client, newest first: rows attributed to them, plus
+ * unattributed rows sent to their own sign-in address.
+ *
+ * Not "every row to their contact address": a linked client (a child on a
+ * parent's mailbox, client-email-identity.ts) is mailed at the SHARED address,
+ * so that would show each household member the others' email. Attributed rows
+ * stay with their client; the mailbox owner keeps the unattributed rest.
+ */
+export async function listDeliveriesForClient(
+  clientId: string,
+  signInEmail: string | undefined,
   limit = 200,
 ): Promise<DeliveryRow[]> {
-  const address = email.trim().toLowerCase();
-  if (!address) return [];
+  if (!UUID_RE.test(clientId)) return [];
+  const address = (signInEmail ?? '').trim().toLowerCase();
+  // PostgREST filter grammar: commas and parentheses would break the list.
+  const usableAddress = address && !/[,()"]/.test(address) ? address : '';
+  const filter = usableAddress
+    ? `client_id.eq.${clientId},and(client_id.is.null,recipient.eq.${usableAddress})`
+    : `client_id.eq.${clientId}`;
   const { data, error } = await requireClient()
     .from(TABLE)
     .select(ROW_COLUMNS)
-    .eq('recipient', address)
+    .or(filter)
     .order('created_at', { ascending: false })
     .limit(limit);
-  if (error) throw new Error(`recipient deliveries query failed: ${error.message}`);
+  if (error) throw new Error(`client deliveries query failed: ${error.message}`);
   return ((data ?? []) as StoredRow[]).map(toDeliveryRowView);
 }

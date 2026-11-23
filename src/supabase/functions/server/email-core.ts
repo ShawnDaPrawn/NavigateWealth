@@ -401,6 +401,8 @@ export interface EmailParams {
   kind: EmailKind;
   /** Groups a bulk send's emails into one History row. See EmailMeta. */
   batchId?: string;
+  /** The client this email is for, when known. See EmailMeta. */
+  clientId?: string;
 }
 
 interface SendGridAttachment {
@@ -418,6 +420,12 @@ interface SendGridAttachment {
 export interface EmailMeta {
   kind: EmailKind;
   batchId?: string;
+  /**
+   * The client the email is for. Pass it whenever the send is about one
+   * client: a linked client is mailed at a shared address, so the recipient
+   * alone cannot put the email in the right client's history.
+   */
+  clientId?: string;
 }
 
 /**
@@ -451,7 +459,7 @@ export async function sendEmail(
 ): Promise<boolean | void> {
   const objectParams = typeof paramsOrTo === 'object' ? paramsOrTo : undefined;
   const meta: EmailMeta = objectParams
-    ? { kind: objectParams.kind, batchId: objectParams.batchId }
+    ? { kind: objectParams.kind, batchId: objectParams.batchId, clientId: objectParams.clientId }
     : (legacyMeta as EmailMeta);
   const provider = getEmailProvider();
 
@@ -502,6 +510,7 @@ export async function sendEmail(
     recordEmailDelivery({
       kind: meta?.kind ?? ('unknown' as EmailKind),
       batchId: meta?.batchId,
+      clientId: meta?.clientId,
       to,
       cc,
       subject: finalSubject,
