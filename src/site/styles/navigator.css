@@ -871,14 +871,13 @@
   line-height: 1.3;
   color: var(--nw-ink);
 }
+/* Log In alone, full width: Get Started already sits beside the burger. */
 .nw-site .nwh-sheet-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
   margin-top: 18px;
 }
-.nw-site .nwh-sheet-login,
-.nw-site .nwh-sheet-start {
+.nw-site .nwh-sheet-login {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -886,9 +885,6 @@
   padding: 0;
   font-size: 15px;
   font-weight: 600;
-}
-/* content-box, as drawn: the outlined button is 50px beside a 48px one. */
-.nw-site .nwh-sheet-login {
   border: 1px solid var(--nw-line-strong);
   box-sizing: content-box;
 }
