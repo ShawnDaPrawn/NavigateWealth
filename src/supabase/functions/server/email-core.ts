@@ -12,6 +12,11 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getSesConfig, sendViaSes } from './email-transport-ses.ts';
+import {
+  EMAIL_LAYOUT_FOOTER_DEFAULTS,
+  renderEmailLayout,
+  type EmailLayoutFooter,
+} from '../../../shared/email/emailLayout.ts';
 
 const log = createModuleLogger('email-core');
 
@@ -46,34 +51,12 @@ const FROM_EMAIL = 'info@navigatewealth.co';
 const FROM_NAME = 'Navigate Wealth';
 
 // --- Global Footer Settings ---
-export interface EmailFooterSettings {
-  companyName: string;
-  address: string;
-  contactEmail: string;
-  contactPhone: string;
-  socialLinks: {
-    linkedin?: string;
-    instagram?: string;
-    youtube?: string;
-    facebook?: string;
-    twitter?: string;
-  };
-  copyrightText: string;
-}
+// The shape and the defaults live with the layout that prints them
+// (src/shared/email/emailLayout.ts), so the admin editor, the previews and the
+// sent email all read one definition.
+export type EmailFooterSettings = EmailLayoutFooter;
 
-export const DEFAULT_FOOTER_SETTINGS: EmailFooterSettings = {
-  companyName: 'Navigate Wealth',
-  address:
-    'First Floor, Milestone Place Block A<br />25 Sovereign Drive, Route 21 Business Park<br />Pretoria, 0157',
-  contactEmail: 'info@navigatewealth.co',
-  contactPhone: '',
-  socialLinks: {
-    linkedin: 'https://www.linkedin.com/company/navigatewealth/',
-    instagram: 'https://www.instagram.com/navigate_wealth?igsh=MTh6bTc2emszbXU0MA==',
-    twitter: 'https://x.com/Navigate_ZA',
-  },
-  copyrightText: '© {{Year}} Navigate Wealth. All rights reserved.',
-};
+export const DEFAULT_FOOTER_SETTINGS: EmailFooterSettings = EMAIL_LAYOUT_FOOTER_DEFAULTS;
 
 export const KV_FOOTER_KEY = 'email_footer_settings';
 export const KV_PREFIX_TEMPLATE = 'email_template:';
@@ -604,10 +587,13 @@ export async function sendEmail(
   }
 }
 
-import { BASE_EMAIL_TEMPLATE } from './email_base_html.ts';
-
 /**
- * Create HTML email template with Navigate Wealth branding
+ * Wrap content in the Navigate Wealth email layout (Navigator design).
+ *
+ * The layout itself — markup, light and dark palettes, the footer — is in
+ * src/shared/email/emailLayout.ts, which the admin previews render too.
+ * `footerSettings` is the admin's Global Footer; callers load it with
+ * `getFooterSettings()`. Without it the layout prints the defaults.
  */
 export function createEmailTemplate(
   content: string,
@@ -620,81 +606,28 @@ export function createEmailTemplate(
     unsubscribeLink?: string;
     footerNote?: string;
     footerSettings?: EmailFooterSettings;
+    /** Inbox preview line. Defaults to the subtitle, else the opening words. */
+    preheader?: string;
+    /** Small label over the headline. Defaults to today's date. */
+    eyebrow?: string;
+    /** Print the button's link under it as text. Defaults to true. */
+    buttonFallback?: boolean;
   } = {},
 ): string {
-  const {
-    title = 'Navigate Wealth',
-    subtitle = '',
-    greeting = '',
-    buttonUrl,
-    buttonLabel,
-    unsubscribeLink,
-    footerNote,
-    footerSettings: _footerSettings = DEFAULT_FOOTER_SETTINGS,
-  } = options;
-
-  let template = BASE_EMAIL_TEMPLATE;
-  const year = new Date().getFullYear();
-
-  // Prepare data for replacement
-  const data: Record<string, string | number> = {
-    Title: title,
-    Subtitle: subtitle,
-    Greeting: greeting,
-    BodyHtml: content,
-    Year: year,
-  };
-
-  if (buttonUrl) data.ButtonURL = buttonUrl;
-  if (buttonLabel) data.ButtonLabel = buttonLabel;
-  if (footerNote) data.FooterNote = footerNote;
-
-  // Handle Unsubscribe Link (User template doesn't have a placeholder for this, so we append it if needed, or inject it)
-  // The user template provided DOES NOT have an Unsubscribe slot.
-  // We will respect the standard and NOT add it unless we hack it in, or if the user didn't include it.
-  // Wait, my previous code added it. The user's template does NOT have it.
-  // Strict adherence means I should probably DROP it if it's not in the template.
-  // However, `unsubscribeLink` is passed in options.
-  // If I want to support it, I might need to append it to the body or footer.
-  // User said "adhere to this UI standard". The standard has no unsubscribe link.
-  // I will omit it for now to be safe, OR I could append it to the footer note if present.
-
-  if (unsubscribeLink) {
-    // Append a small, inconspicuous unsubscribe link just before the final closing tags.
-    // Injected after the Go-template rendering to avoid template interference.
-    const unsubHtml = `<tr><td style="padding:8px 32px 16px 32px; text-align:center;"><a href="${unsubscribeLink}" style="font-size:11px; color:#9ca3af; text-decoration:underline;">Unsubscribe</a></td></tr>`;
-    // Insert before the closing </table></body></html>
-    template = template.replace(/(<\/table>\s*<\/body>\s*<\/html>\s*)$/i, `${unsubHtml}$1`);
-    // If the pattern didn't match, try inserting before </body>
-    if (!template.includes(unsubHtml)) {
-      template = template.replace(
-        /(<\/body>)/i,
-        `<div style="text-align:center; padding:8px 0;"><a href="${unsubscribeLink}" style="font-size:11px; color:#9ca3af; text-decoration:underline;">Unsubscribe</a></div>$1`,
-      );
-    }
-  }
-
-  // Helper to render the Go-like template syntax with JS
-
-  // 1. Handle Conditionals: {{ if .Key }} ... {{ end }}
-  // We support nested replacement inside the block, but not nested ifs.
-  template = template.replace(
-    /\{\{ if \.([a-zA-Z0-9_]+) \}\}([\s\S]*?)\{\{ end \}\}/g,
-    (_match, key, blockContent) => {
-      // If data[key] is truthy (and not empty string), return blockContent. Else empty string.
-      if (data[key]) {
-        return blockContent;
-      }
-      return '';
-    },
-  );
-
-  // 2. Handle Simple Replacements: {{ .Key }}
-  template = template.replace(/\{\{ \.([a-zA-Z0-9_]+) \}\}/g, (_match, key) => {
-    return data[key] !== undefined ? String(data[key]) : '';
+  return renderEmailLayout({
+    bodyHtml: content,
+    title: options.title,
+    subtitle: options.subtitle,
+    greeting: options.greeting,
+    buttonUrl: options.buttonUrl,
+    buttonLabel: options.buttonLabel,
+    buttonFallback: options.buttonFallback,
+    footerNote: options.footerNote,
+    preheader: options.preheader,
+    eyebrow: options.eyebrow,
+    unsubscribeUrl: options.unsubscribeLink,
+    footer: options.footerSettings,
   });
-
-  return template;
 }
 
 /**
@@ -710,5 +643,6 @@ ${unsubscribeText}
 ---
 © ${new Date().getFullYear()} Navigate Wealth. All rights reserved.
 Navigate Wealth | South Africa's Independent Financial Advisory Firm
+Wealthfront (Pty) Ltd t/a Navigate Wealth | Authorised Financial Services Provider (FSP No. 54606)
   `.trim();
 }

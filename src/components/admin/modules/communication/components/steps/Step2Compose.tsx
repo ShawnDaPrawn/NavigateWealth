@@ -18,6 +18,12 @@ import {
 } from '../../../../layout/page';
 import { CommunicationDraft } from '../../types';
 import { communicationApi } from '../../api';
+import { renderEmailLayout } from '@/shared/email/emailLayout';
+import {
+  EmailPreviewFrame,
+  EmailSchemeToggle,
+  type EmailPreviewScheme,
+} from '../EmailPreviewFrame';
 import { toast } from 'sonner';
 
 interface Step2Props {
@@ -48,6 +54,7 @@ function sanitizeComposerHtml(html: string): string {
 export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props) {
   // Field errors show once Continue has been pressed.
   const [showErrors, setShowErrors] = useState(false);
+  const [previewScheme, setPreviewScheme] = useState<EmailPreviewScheme>('light');
   const quillRef = useRef<ReactQuill>(null);
 
   const modules = useMemo(
@@ -292,11 +299,14 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
         {/* Live preview beside the editor */}
         <Card className="h-fit xl:sticky xl:top-4">
           <CardContent className="space-y-3 p-4">
-            <div>
-              <h3 className="text-sm font-semibold text-nw-ink">Preview</h3>
-              <p className="text-xs text-nw-text-3">
-                As the recipient will see it. Merge fields show example data.
-              </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-nw-ink">Preview</h3>
+                <p className="text-xs text-nw-text-3">
+                  As the recipient will see it. Merge fields show example data.
+                </p>
+              </div>
+              <EmailSchemeToggle value={previewScheme} onChange={setPreviewScheme} />
             </div>
             <div className="space-y-1 rounded-lg border bg-muted/30 p-3 text-xs">
               <p>
@@ -309,115 +319,19 @@ export function Step2Compose({ draft, updateDraft, onNext, onBack }: Step2Props)
                 </span>
               </p>
             </div>
-            {/* WYSIWYG email template preview — mirrors the actual Navigate Wealth email template */}
-            <div
-              className="overflow-hidden rounded-xl border"
-              style={{ backgroundColor: '#f3f4f6' }}
-            >
-              <div style={{ padding: '16px 8px' }}>
-                <div
-                  style={{
-                    maxWidth: '600px',
-                    margin: '0 auto',
-                    backgroundColor: '#ffffff',
-                    borderRadius: '12px',
-                    border: '1px solid #e5e7eb',
-                    boxShadow: '0 8px 20px rgba(15,23,42,0.10)',
-                    overflow: 'hidden',
-                    fontFamily: 'Arial, sans-serif',
-                  }}
-                >
-                  {/* Purple gradient accent */}
-                  <div
-                    style={{
-                      height: '5px',
-                      background: 'linear-gradient(90deg, #6d28d9, #a855f7, #6d28d9)',
-                      borderRadius: '12px 12px 0 0',
-                    }}
-                  />
-                  {/* Main content */}
-                  <div style={{ padding: '30px 32px 24px 32px', textAlign: 'center' }}>
-                    {/* Logo */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#000000' }}>
-                        Navigate
-                      </span>
-                      <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#6d28d9' }}>
-                        Wealth
-                      </span>
-                    </div>
-                    {/* Title */}
-                    <div
-                      style={{
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        color: '#111827',
-                        marginBottom: '24px',
-                      }}
-                    >
-                      {resolvePreviewMergeFields(draft.subject) || 'Navigate Wealth'}
-                    </div>
-                    {/* Body content */}
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        color: '#374151',
-                        lineHeight: '1.6',
-                        textAlign: 'left',
-                      }}
-                    >
-                      {draft.bodyHtml ? (
-                        <div
-                          dangerouslySetInnerHTML={{
-                            __html: sanitizeComposerHtml(resolvePreviewMergeFields(draft.bodyHtml)),
-                          }}
-                        />
-                      ) : (
-                        <p style={{ color: '#9ca3af', fontStyle: 'italic' }}>No content yet...</p>
-                      )}
-                    </div>
-                  </div>
-                  {/* Divider */}
-                  <div style={{ padding: '0 32px' }}>
-                    <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: 0 }} />
-                  </div>
-                  {/* Footer */}
-                  <div
-                    style={{
-                      padding: '18px 32px 24px 32px',
-                      fontSize: '12px',
-                      color: '#6b7280',
-                      lineHeight: '1.6',
-                      textAlign: 'center',
-                    }}
-                  >
-                    <p style={{ margin: 0 }}>
-                      <strong>Navigate Wealth</strong>
-                      <br />
-                      Independent Financial Advisory Services
-                    </p>
-                    <p style={{ margin: '8px 0 0' }}>
-                      First Floor, Milestone Place Block A<br />
-                      25 Sovereign Drive, Route 21 Business Park
-                      <br />
-                      Pretoria, 0157
-                    </p>
-                    <p style={{ margin: '8px 0 0' }}>
-                      Email: <span style={{ color: '#6d28d9' }}>info@navigatewealth.co</span>
-                    </p>
-                    <p style={{ margin: '12px 0 0' }}>
-                      <strong>Follow us:</strong>
-                      <br />
-                      <span style={{ color: '#6d28d9' }}>LinkedIn</span> |{' '}
-                      <span style={{ color: '#6d28d9' }}>Instagram</span> |{' '}
-                      <span style={{ color: '#6d28d9' }}>X</span>
-                    </p>
-                    <p style={{ margin: '12px 0 0', color: '#9ca3af' }}>
-                      &copy; {new Date().getFullYear()} Navigate Wealth. All rights reserved.
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {/* The real email layout — the same renderer the server sends with. */}
+            <div className="overflow-hidden rounded-xl border">
+              <EmailPreviewFrame
+                html={renderEmailLayout({
+                  title: resolvePreviewMergeFields(draft.subject) || 'Navigate Wealth',
+                  bodyHtml: draft.bodyHtml
+                    ? sanitizeComposerHtml(resolvePreviewMergeFields(draft.bodyHtml))
+                    : '<p style="color:#9ca3af;font-style:italic;">No content yet...</p>',
+                })}
+                scheme={previewScheme}
+                maxHeight={720}
+                title="Email preview"
+              />
             </div>
           </CardContent>
         </Card>

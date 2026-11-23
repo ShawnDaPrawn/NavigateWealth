@@ -17,10 +17,15 @@ const email = vi.hoisted(() => ({
   createEmailTemplate: vi.fn(
     (
       content: string,
-      options?: { unsubscribeLink?: string; buttonUrl?: string; greeting?: string },
+      options?: {
+        unsubscribeLink?: string;
+        buttonUrl?: string;
+        greeting?: string;
+        title?: string;
+      },
     ) =>
       `<wrapped unsub="${options?.unsubscribeLink ?? ''}" button="${options?.buttonUrl ?? ''}">` +
-      `${options?.greeting ?? ''}${content}</wrapped>`,
+      `<title>${options?.title ?? ''}</title>${options?.greeting ?? ''}${content}</wrapped>`,
   ),
   createPlainTextEmail: vi.fn(
     (content: string, unsubscribeLink?: string) => `${content}\n[unsub:${unsubscribeLink ?? ''}]`,
