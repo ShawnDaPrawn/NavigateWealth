@@ -101,6 +101,7 @@ export async function sendNewsletterDraftReviewNotification(
   try {
     const [to, ...cc] = recipients;
     const ok = await sendEmail({
+      kind: 'newsletter_review',
       to,
       cc: cc.length > 0 ? cc : undefined,
       subject: `Newsletter draft ready for review: ${input.title}`,

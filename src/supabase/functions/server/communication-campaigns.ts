@@ -50,9 +50,7 @@ export function buildSenderOptions(rows: Campaign[]): CampaignSenderOption[] {
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-export async function listCampaignsFiltered(options: {
-  page: number;
-  limit: number;
+export interface CampaignFilters {
   search?: string;
   channel?: CommunicationChannel;
   recipientType?: 'single' | 'multiple' | 'group';
@@ -60,7 +58,11 @@ export async function listCampaignsFiltered(options: {
   status?: CampaignStatus;
   /** `direct` = individual client messages, `campaign` = Communication Centre sends. */
   origin?: 'campaign' | 'direct';
-}): Promise<{
+}
+
+export async function listCampaignsFiltered(
+  options: CampaignFilters & { page: number; limit: number },
+): Promise<{
   campaigns: Campaign[];
   total: number;
   page: number;
@@ -70,6 +72,22 @@ export async function listCampaignsFiltered(options: {
   const page = Math.max(1, options.page);
   const limit = Math.min(100, Math.max(1, options.limit));
 
+  const { rows, senderOptions } = await filterCampaignRows(options);
+  const total = rows.length;
+  const offset = (page - 1) * limit;
+  const campaigns = rows.slice(offset, offset + limit);
+
+  return { campaigns, total, page, limit, senderOptions };
+}
+
+/**
+ * Every campaign row matching the filters, newest first, with the sender list
+ * (built before filtering, so the dropdown keeps every sender). Shared by the
+ * campaign list and the unified History (communication-history-unified.ts).
+ */
+export async function filterCampaignRows(
+  options: CampaignFilters,
+): Promise<{ rows: Campaign[]; senderOptions: CampaignSenderOption[] }> {
   const all = await repo.getAllCampaigns();
   let rows = await enrichCampaignsWithCreatorNames(all);
   rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -122,11 +140,7 @@ export async function listCampaignsFiltered(options: {
     });
   }
 
-  const total = rows.length;
-  const offset = (page - 1) * limit;
-  const campaigns = rows.slice(offset, offset + limit);
-
-  return { campaigns, total, page, limit, senderOptions };
+  return { rows, senderOptions };
 }
 
 export async function listCampaigns(options: { page: number; limit: number }): Promise<{
@@ -388,6 +402,8 @@ export async function sendCampaign(
           subject: campaign.subject,
           html,
           throwOnError: true,
+          kind: 'campaign',
+          batchId: campaign.id,
         });
 
         sent++;

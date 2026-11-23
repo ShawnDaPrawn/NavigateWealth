@@ -205,15 +205,6 @@ export function Step2SystemCalculation({
         </Card>
       </div>
 
-      {/* Next Step Preview */}
-      <Alert className="border-blue-200 bg-blue-50">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-sm text-blue-900">
-          <strong>Next Step:</strong> You can apply manual adjustments to assumptions (inflation
-          rate, growth rate) in Step 3 if the standard calculations need to be refined.
-        </AlertDescription>
-      </Alert>
-
       <FNAStepNavigation step={2} onBack={onBack} onNext={onNext} />
     </div>
   );

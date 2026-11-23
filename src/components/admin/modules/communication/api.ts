@@ -8,6 +8,8 @@ import {
   BackendCampaign,
   ActivityLogEntry,
   CampaignHistoryPageResult,
+  DeliveryRecord,
+  HistoryKindOption,
   AttachmentFile,
   CommunicationLog,
   SendMessageResponse,
@@ -134,6 +136,58 @@ function mapCampaignsToActivityLog(campaigns: BackendCampaign[]): ActivityLogEnt
       };
     })
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+}
+
+/** One logged send as the History API returns it. */
+interface BackendDeliveryGroup {
+  groupKey: string;
+  kind: string;
+  kindLabel: string;
+  batchId: string | null;
+  firstAt: string;
+  subject: string;
+  preview: string | null;
+  recipient: string;
+  cc: string[] | null;
+  total: number;
+  sent: number;
+  failed: number;
+  status: string;
+  lastError: string | null;
+  providerMessageId: string | null;
+}
+
+type BackendHistoryItem =
+  | { type: 'campaign'; at: string; campaign: BackendCampaign }
+  | { type: 'delivery'; at: string; delivery: BackendDeliveryGroup };
+
+/** A logged send (newsletter, birthday greeting, e-sign…) as a History row. */
+export function mapDeliveryGroupToActivityLog(group: BackendDeliveryGroup): ActivityLogEntry {
+  const isBatch = group.batchId !== null;
+  return {
+    id: `delivery:${group.groupKey}`,
+    timestamp: new Date(group.firstAt),
+    userId: 'system',
+    userName: 'System',
+    channel: 'email',
+    recipientType: isBatch ? 'multiple' : 'single',
+    recipientCount: group.total,
+    subject: decodePlainHistoryText(group.subject),
+    messagePreview: (group.preview || '').slice(0, 120),
+    messagePreviewFull: group.preview || undefined,
+    attachmentCount: 0,
+    templateUsed: group.kindLabel,
+    status: group.status as ActivityLogEntry['status'],
+    origin: 'automated',
+    kind: group.kind,
+    deliveryGroupKey: group.groupKey,
+    recipientEmail: isBatch ? undefined : group.recipient,
+    providerMessageId: group.providerMessageId || undefined,
+    // Single emails show their outcome in the badge; the count line is for sends.
+    stats: isBatch ? { sent: group.sent, failed: group.failed, total: group.total } : undefined,
+    cc: group.cc || undefined,
+    failureReason: group.lastError || undefined,
+  };
 }
 
 const mapTemplateToBackend = (
@@ -285,7 +339,11 @@ export const communicationApi = {
   },
 
   // History & Logs
-  /** Paginated + filtered campaign history (server-side). */
+  /**
+   * Paginated + filtered History (server-side): campaigns, individual messages
+   * and every email the platform sends on its own, newest first.
+   * `origin` takes campaign | direct | automated | kind:<email kind>.
+   */
   async getHistoryPage(params: {
     page?: number;
     limit?: number;
@@ -308,21 +366,38 @@ export const communicationApi = {
     }
     if (params.createdBy && params.createdBy !== 'all') q.set('createdBy', params.createdBy);
     if (params.status && params.status !== 'all') q.set('status', params.status);
-    if (params.origin && params.origin !== 'all') q.set('origin', params.origin);
+    if (params.origin && params.origin !== 'all') q.set('source', params.origin);
     const response = await api.get<{
-      campaigns: BackendCampaign[];
+      items: BackendHistoryItem[];
       total: number;
       page: number;
       limit: number;
       senderOptions?: { userId: string; label: string }[];
-    }>(`${ENDPOINTS.CAMPAIGNS}?${q.toString()}`);
+      kindOptions?: HistoryKindOption[];
+      deliveryLogUnavailable?: boolean;
+    }>(`${ENDPOINTS.HISTORY_UNIFIED}?${q.toString()}`);
+    const entries = (response.items || []).map((item) =>
+      item.type === 'campaign'
+        ? mapCampaignsToActivityLog([item.campaign])[0]
+        : mapDeliveryGroupToActivityLog(item.delivery),
+    );
     return {
-      entries: mapCampaignsToActivityLog(response.campaigns || []),
+      entries,
       total: response.total ?? 0,
       page: response.page ?? page,
       limit: response.limit ?? limit,
       senderOptions: response.senderOptions ?? [],
+      kindOptions: response.kindOptions ?? [],
+      ...(response.deliveryLogUnavailable ? { deliveryLogUnavailable: true } : {}),
     };
+  },
+
+  /** The individual emails of one logged send, newest first. */
+  async getDeliveries(groupKey: string): Promise<DeliveryRecord[]> {
+    const response = await api.get<{ deliveries: DeliveryRecord[] }>(
+      ENDPOINTS.HISTORY_DELIVERIES(groupKey),
+    );
+    return response.deliveries || [];
   },
 
   /**

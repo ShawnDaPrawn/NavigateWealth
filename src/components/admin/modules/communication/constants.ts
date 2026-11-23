@@ -5,6 +5,9 @@ export const ENDPOINTS = {
   GROUPS: 'communication/groups',
   TEMPLATES: 'communication/templates',
   CAMPAIGNS: 'communication/campaigns',
+  HISTORY_UNIFIED: 'communication/history/unified',
+  HISTORY_DELIVERIES: (groupKey: string) =>
+    `communication/history/deliveries/${encodeURIComponent(groupKey)}`,
   UPLOAD: 'communication/upload',
   SEND_DIRECT: 'communication/send',
   INBOX: 'communication/inbox',

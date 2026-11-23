@@ -287,7 +287,7 @@ describe('communicationApi history and logs', () => {
       status: 'sent',
     };
     mockApiGet.mockResolvedValue({
-      campaigns: [backendCampaign],
+      items: [{ type: 'campaign', at: backendCampaign.createdAt, campaign: backendCampaign }],
       total: 1,
       page: 1,
       limit: 50,
@@ -395,17 +395,131 @@ describe('buildCampaignMessagePreview via getHistoryPage', () => {
       bodyHtml: '<p>Hello &amp; welcome!</p>',
       status: 'sent',
     };
-    mockApiGet.mockResolvedValue({ campaigns: [backendCampaign], total: 1, page: 1, limit: 50 });
+    mockApiGet.mockResolvedValue({
+      items: [{ type: 'campaign', at: backendCampaign.createdAt, campaign: backendCampaign }],
+      total: 1,
+      page: 1,
+      limit: 50,
+    });
     const result = await communicationApi.getHistoryPage({});
     expect(result.entries[0].messagePreview).toContain('Hello');
     expect(result.entries[0].messagePreview).toContain('welcome');
   });
 
   it('getHistoryPage passes search and channel filters to query', async () => {
-    mockApiGet.mockResolvedValue({ campaigns: [], total: 0, page: 1, limit: 50 });
+    mockApiGet.mockResolvedValue({ items: [], total: 0, page: 1, limit: 50 });
     await communicationApi.getHistoryPage({ search: 'newsletter', channel: 'email' });
     expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('search=newsletter'));
     expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('channel=email'));
+  });
+
+  it('asks the unified history for an email type through ?source=', async () => {
+    mockApiGet.mockResolvedValue({ items: [], total: 0, page: 1, limit: 15 });
+    await communicationApi.getHistoryPage({ origin: 'kind:client_birthday' });
+    const url = mockApiGet.mock.calls.at(-1)?.[0] as string;
+    expect(url.startsWith('communication/history/unified?')).toBe(true);
+    expect(url).toContain('source=kind%3Aclient_birthday');
+  });
+
+  it('maps a logged bulk send to one row with its counts and type', async () => {
+    mockApiGet.mockResolvedValue({
+      items: [
+        {
+          type: 'delivery',
+          at: '2026-11-16T10:00:08Z',
+          delivery: {
+            groupKey: 'publication:a1',
+            kind: 'publication_notification',
+            kindLabel: 'New article notification',
+            batchId: 'publication:a1',
+            firstAt: '2026-11-16T10:00:08Z',
+            subject: 'New article: Bonuses',
+            preview: null,
+            recipient: 'a@example.com',
+            cc: null,
+            total: 199,
+            sent: 197,
+            failed: 2,
+            status: 'partial',
+            lastError: 'SendGrid 400: bounced',
+            providerMessageId: null,
+          },
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 15,
+      kindOptions: [
+        {
+          kind: 'publication_notification',
+          label: 'New article notification',
+          audience: 'client',
+          sends: 21,
+        },
+      ],
+    });
+    const result = await communicationApi.getHistoryPage({});
+    expect(result.kindOptions).toHaveLength(1);
+    expect(result.entries[0]).toMatchObject({
+      id: 'delivery:publication:a1',
+      origin: 'automated',
+      kind: 'publication_notification',
+      templateUsed: 'New article notification',
+      recipientType: 'multiple',
+      recipientCount: 199,
+      status: 'partial',
+      stats: { sent: 197, failed: 2, total: 199 },
+      failureReason: 'SendGrid 400: bounced',
+      userName: 'System',
+      deliveryGroupKey: 'publication:a1',
+    });
+    expect(result.entries[0].recipientEmail).toBeUndefined();
+  });
+
+  it('maps a single logged email to its recipient, without a count line', async () => {
+    mockApiGet.mockResolvedValue({
+      items: [
+        {
+          type: 'delivery',
+          at: '2026-11-23T06:00:10Z',
+          delivery: {
+            groupKey: '0e8c1d1e-1111-4a4a-9a9a-222222222222',
+            kind: 'client_birthday',
+            kindLabel: 'Birthday greeting',
+            batchId: null,
+            firstAt: '2026-11-23T06:00:10Z',
+            subject: 'Happy Birthday, Michael!',
+            preview: 'Wishing you a wonderful year ahead',
+            recipient: 'client@example.com',
+            cc: null,
+            total: 1,
+            sent: 1,
+            failed: 0,
+            status: 'sent',
+            lastError: null,
+            providerMessageId: 'sg-123',
+          },
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 15,
+    });
+    const [entry] = (await communicationApi.getHistoryPage({})).entries;
+    expect(entry).toMatchObject({
+      recipientType: 'single',
+      recipientEmail: 'client@example.com',
+      status: 'sent',
+      providerMessageId: 'sg-123',
+      messagePreview: 'Wishing you a wonderful year ahead',
+    });
+    expect(entry.stats).toBeUndefined();
+  });
+
+  it('getDeliveries reads one send and encodes its key', async () => {
+    mockApiGet.mockResolvedValue({ deliveries: [{ id: 'd1' }] });
+    await expect(communicationApi.getDeliveries('newsletter:x/y')).resolves.toEqual([{ id: 'd1' }]);
+    expect(mockApiGet).toHaveBeenCalledWith('communication/history/deliveries/newsletter%3Ax%2Fy');
   });
 });
 
@@ -432,7 +546,7 @@ describe('communicationApi getHistory', () => {
       status: 'sent',
     };
     mockApiGet.mockResolvedValue({
-      campaigns: [backendCampaign],
+      items: [{ type: 'campaign', at: backendCampaign.createdAt, campaign: backendCampaign }],
       total: 1,
       page: 1,
       limit: 20,
@@ -444,7 +558,7 @@ describe('communicationApi getHistory', () => {
   });
 
   it('getHistory uses default page=1 and limit=50', async () => {
-    mockApiGet.mockResolvedValue({ campaigns: [], total: 0, page: 1, limit: 50 });
+    mockApiGet.mockResolvedValue({ items: [], total: 0, page: 1, limit: 50 });
     const result = await communicationApi.getHistory();
     expect(Array.isArray(result)).toBe(true);
     expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('page=1'));

@@ -209,6 +209,7 @@ app.post(
               });
 
               const emailSent = await sendEmail({
+                kind: 'esign_invitation',
                 to: nextSigner.email,
                 subject: `Signature Request: ${envelopeForProgress?.title || 'Document'}`,
                 html: emailContent.html,
@@ -288,6 +289,7 @@ app.post(
 
               if (decision.deliver) {
                 await sendEmail({
+                  kind: 'esign_staff_update',
                   to: senderEmail,
                   subject: progressSubject,
                   html: progressHtml,
@@ -479,6 +481,7 @@ app.post(
 
             if (declineDecision.deliver) {
               await sendEmail({
+                kind: 'esign_staff_update',
                 to: senderEmail,
                 subject: declineSubject,
                 html: declineHtml,

@@ -77,7 +77,7 @@ Review and sign: ${signingUrl}
 ${footerNote}
   `.trim();
 
-  return await sendEmail({ to, subject, html, text });
+  return await sendEmail({ to, subject, html, text, kind: 'esign_invitation' });
 }
 
 /**
@@ -119,6 +119,7 @@ This is an automated reminder from Navigate Wealth's e-signature platform.
   `.trim();
 
   return await sendEmail({
+    kind: 'esign_reminder',
     to,
     subject: `Reminder: Signature Request for ${documentName}`,
     html,
@@ -169,6 +170,7 @@ This notification was sent via Navigate Wealth's e-signature platform.
   `.trim();
 
   return await sendEmail({
+    kind: 'esign_recalled',
     to,
     subject: `Signature Request Recalled: ${documentName}`,
     html,
@@ -215,7 +217,13 @@ View portal: https://www.navigatewealth.co/portal
 This notification was sent via Navigate Wealth's e-signature platform.
   `.trim();
 
-  return await sendEmail({ to, subject: `Document Completed: ${documentName}`, html, text });
+  return await sendEmail({
+    to,
+    subject: `Document Completed: ${documentName}`,
+    html,
+    text,
+    kind: 'esign_completed',
+  });
 }
 
 /**

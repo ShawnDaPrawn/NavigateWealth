@@ -163,21 +163,26 @@ export function CommunicationDetailDialog({
                     {communication.email_status === 'rejected' ? 'Email rejected' : 'Email failed'}
                   </Badge>
                 )}
-                <Badge variant="outline">Portal</Badge>
+                <Badge variant="outline">
+                  {communication.automated ? 'Automated email' : 'Portal'}
+                </Badge>
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => {
-                  onClose();
-                  onDelete(communication.id);
-                }}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
+              {/* Automated emails are the delivery record; nothing to delete. */}
+              {!communication.automated && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => {
+                    onClose();
+                    onDelete(communication.id);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              )}
             </div>
           </div>
         </div>

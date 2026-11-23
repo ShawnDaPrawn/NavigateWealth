@@ -209,11 +209,13 @@ beforeEach(() => {
 
 type Route = { name: string; method: string; path: string; body?: unknown; form?: boolean };
 
-/** The 21 routes only an admin may reach. */
+/** The 23 routes only an admin may reach. */
 const ADMIN_ROUTES: Route[] = [
   { name: 'send message', method: 'POST', path: '/send', body: {} },
   { name: 'upload attachment', method: 'POST', path: '/upload', form: true },
   { name: 'history', method: 'GET', path: '/history' },
+  { name: 'unified history', method: 'GET', path: '/history/unified' },
+  { name: 'send deliveries', method: 'GET', path: '/history/deliveries/newsletter:abc' },
   { name: 'client list', method: 'GET', path: '/clients' },
   { name: 'list groups', method: 'GET', path: '/groups' },
   { name: 'create group', method: 'POST', path: '/groups', body: {} },

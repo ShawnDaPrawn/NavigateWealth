@@ -118,7 +118,14 @@ export async function deliverTrackedNotificationRecord(
         unsubscribeUrl,
       });
 
-      await sendEmail(record.recipientEmail, `New article: ${publishedArticle.title}`, html, text);
+      await sendEmail(
+        record.recipientEmail,
+        `New article: ${publishedArticle.title}`,
+        html,
+        text,
+        undefined,
+        { kind: 'publication_notification', batchId: `publication:${publishedArticle.id}` },
+      );
 
       await markArticleEmailDeliverySent(record.token);
       return;

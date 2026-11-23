@@ -35,6 +35,7 @@ const templates = [
 const api = vi.hoisted(() => ({
   getHistoryPage: vi.fn(),
   findHistoryEntry: vi.fn(),
+  getDeliveries: vi.fn(),
   getAllTemplates: vi.fn(),
   toggleTemplate: vi.fn(),
 }));
@@ -86,7 +87,12 @@ import { BreadcrumbContext } from '../../../layout/page/breadcrumbContext';
 
 beforeEach(() => {
   toastError.mockReset();
-  api.getHistoryPage.mockResolvedValue({ entries: logs, total: 1, senderOptions: [] });
+  api.getHistoryPage.mockResolvedValue({
+    entries: logs,
+    total: 1,
+    senderOptions: [],
+    kindOptions: [],
+  });
   api.findHistoryEntry.mockResolvedValue(null);
   api.getAllTemplates.mockResolvedValue(templates);
 });
@@ -286,5 +292,122 @@ describe('Transactional emails', () => {
         { label: 'Welcome email' },
       ]),
     );
+  });
+});
+
+describe('Automated emails in History', () => {
+  const birthday: ActivityLogEntry = {
+    id: 'delivery:pub-1',
+    timestamp: new Date('2026-11-16T10:00:08Z'),
+    userId: 'system',
+    userName: 'System',
+    channel: 'email',
+    recipientType: 'multiple',
+    recipientCount: 3,
+    subject: 'New article: A bonus is not yours until it is paid',
+    messagePreview: '',
+    attachmentCount: 0,
+    templateUsed: 'New article notification',
+    status: 'partial',
+    origin: 'automated',
+    kind: 'publication_notification',
+    deliveryGroupKey: 'publication:pub-1',
+    stats: { sent: 2, failed: 1, total: 3 },
+  };
+
+  it('marks automated sends and opens one to its recipients, failures first', async () => {
+    api.getHistoryPage.mockResolvedValue({
+      entries: [birthday],
+      total: 1,
+      senderOptions: [],
+      kindOptions: [
+        {
+          kind: 'publication_notification',
+          label: 'New article notification',
+          audience: 'client',
+          sends: 21,
+        },
+      ],
+    });
+    api.getDeliveries.mockResolvedValue([
+      {
+        id: 'r1',
+        createdAt: '2026-11-16T10:00:08Z',
+        kind: 'publication_notification',
+        recipient: 'ok@example.com',
+        subject: 's',
+        status: 'sent',
+        error: null,
+        providerMessageId: null,
+      },
+      {
+        id: 'r2',
+        createdAt: '2026-11-16T10:00:09Z',
+        kind: 'publication_notification',
+        recipient: 'bounced@example.com',
+        subject: 's',
+        status: 'failed',
+        error: 'SendGrid 400: bounced',
+        providerMessageId: null,
+      },
+    ]);
+    renderAt('/admin?module=communication&tab=history');
+
+    const row = await screen.findByRole('button', {
+      name: 'Open details: New article: A bonus is not yours until it is paid',
+    });
+    expect(screen.getByText('Automated')).toBeDefined();
+    expect(screen.getByText('3 recipients')).toBeDefined();
+    expect(screen.getByText('2 delivered · 1 not delivered')).toBeDefined();
+
+    fireEvent.click(row);
+    expect(await screen.findByText('bounced@example.com')).toBeDefined();
+    expect(api.getDeliveries).toHaveBeenCalledWith('publication:pub-1');
+    expect(screen.getByText('Email type')).toBeDefined();
+    const cells = screen.getAllByRole('cell').map((c) => c.textContent);
+    expect(cells.indexOf('bounced@example.com')).toBeLessThan(cells.indexOf('ok@example.com'));
+    expect(screen.getByText('Failed — SendGrid 400: bounced')).toBeDefined();
+  });
+
+  it('asks the server for one email type named in the address', async () => {
+    renderAt('/admin?module=communication&tab=history&source=kind%3Aclient_birthday');
+    await waitFor(() =>
+      expect(api.getHistoryPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ origin: 'kind:client_birthday' }),
+      ),
+    );
+  });
+
+  it('says when automated emails could not be loaded', async () => {
+    api.getHistoryPage.mockResolvedValue({
+      entries: logs,
+      total: 1,
+      senderOptions: [],
+      kindOptions: [],
+      deliveryLogUnavailable: true,
+    });
+    renderAt('/admin?module=communication&tab=history');
+    expect(
+      await screen.findByText(
+        'Automated emails could not be loaded; showing campaigns and individual messages only.',
+      ),
+    ).toBeDefined();
+  });
+
+  it('says so when the recipients of a send cannot be loaded', async () => {
+    api.getHistoryPage.mockResolvedValue({
+      entries: [birthday],
+      total: 1,
+      senderOptions: [],
+      kindOptions: [],
+    });
+    api.getDeliveries.mockRejectedValue(new Error('500'));
+    renderAt('/admin?module=communication&tab=history');
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open details: New article: A bonus is not yours until it is paid',
+      }),
+    );
+    expect(await screen.findByText('Could not load the recipients of this send.')).toBeDefined();
   });
 });

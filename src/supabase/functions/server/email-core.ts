@@ -12,6 +12,8 @@
 import * as kv from './kv_store.tsx';
 import { createModuleLogger } from './stderr-logger.ts';
 import { getSesConfig, sendViaSes } from './email-transport-ses.ts';
+import { recordEmailDelivery } from './email-delivery-log.ts';
+import type { EmailKind } from '../../../shared/email/emailKinds.ts';
 import {
   EMAIL_LAYOUT_FOOTER_DEFAULTS,
   renderEmailLayout,
@@ -395,6 +397,12 @@ export interface EmailParams {
    * (review finding). Aborting surfaces as a normal retryable failure.
    */
   timeoutMs?: number;
+  /** What this email is — required, see EmailMeta. Recorded in the delivery log. */
+  kind: EmailKind;
+  /** Groups a bulk send's emails into one History row. See EmailMeta. */
+  batchId?: string;
+  /** The client this email is for, when known. See EmailMeta. */
+  clientId?: string;
 }
 
 interface SendGridAttachment {
@@ -402,6 +410,22 @@ interface SendGridAttachment {
   filename: string;
   type?: string;
   disposition?: string;
+}
+
+/**
+ * What an email is, for the delivery log. Every send names its kind from the
+ * catalogue in src/shared/email/emailKinds.ts; bulk sends also pass a batchId
+ * (`newsletter:<id>`, `publication:<id>`) so History shows them as one send.
+ */
+export interface EmailMeta {
+  kind: EmailKind;
+  batchId?: string;
+  /**
+   * The client the email is for. Pass it whenever the send is about one
+   * client: a linked client is mailed at a shared address, so the recipient
+   * alone cannot put the email in the right client's history.
+   */
+  clientId?: string;
 }
 
 /**
@@ -415,11 +439,15 @@ export async function sendEmail(
   to: string,
   subject: string,
   html: string,
-  text?: string,
-  attachments?: SendGridAttachment[],
+  text: string | undefined,
+  attachments: SendGridAttachment[] | undefined,
+  meta: EmailMeta,
 ): Promise<void>;
 /**
  * Implementation
+ *
+ * Every attempt is recorded in the delivery log (email-delivery-log.ts),
+ * whichever way it ends, before the caller sees the result.
  */
 export async function sendEmail(
   paramsOrTo: EmailParams | string,
@@ -427,14 +455,13 @@ export async function sendEmail(
   html?: string,
   text?: string,
   attachments?: SendGridAttachment[],
+  legacyMeta?: EmailMeta,
 ): Promise<boolean | void> {
   const objectParams = typeof paramsOrTo === 'object' ? paramsOrTo : undefined;
+  const meta: EmailMeta = objectParams
+    ? { kind: objectParams.kind, batchId: objectParams.batchId, clientId: objectParams.clientId }
+    : (legacyMeta as EmailMeta);
   const provider = getEmailProvider();
-  const sendgridApiKey = provider === 'sendgrid' ? getSendGridApiKey() : undefined;
-  if (provider === 'sendgrid' && !sendgridApiKey) {
-    if (objectParams && !objectParams.throwOnError) return false;
-    throw new Error('SENDGRID_API_KEY not configured');
-  }
 
   // Normalize parameters
   let to: string;
@@ -476,6 +503,32 @@ export async function sendEmail(
     finalAttachments = attachments || [];
   }
 
+  const record = (
+    status: 'sent' | 'failed',
+    extra: { messageId?: string | null; error?: string },
+  ) =>
+    recordEmailDelivery({
+      kind: meta?.kind ?? ('unknown' as EmailKind),
+      batchId: meta?.batchId,
+      clientId: meta?.clientId,
+      to,
+      cc,
+      subject: finalSubject,
+      html: finalHtml,
+      text: finalText,
+      status,
+      provider,
+      providerMessageId: extra.messageId,
+      error: extra.error,
+    });
+
+  const sendgridApiKey = provider === 'sendgrid' ? getSendGridApiKey() : undefined;
+  if (provider === 'sendgrid' && !sendgridApiKey) {
+    await record('failed', { error: 'SENDGRID_API_KEY not configured' });
+    if (objectParams && !objectParams.throwOnError) return false;
+    throw new Error('SENDGRID_API_KEY not configured');
+  }
+
   try {
     if (provider === 'ses') {
       const sesConfig = getSesConfig();
@@ -505,6 +558,7 @@ export async function sendEmail(
         objectParams?.timeoutMs,
       );
       log.info('✅ Email sent successfully via Amazon SES');
+      await record('sent', {});
       if (typeof paramsOrTo === 'object') return true;
       return;
     }
@@ -571,21 +625,30 @@ export async function sendEmail(
     if (!response.ok) {
       const error = await response.text();
       log.error('SendGrid error:', error);
+      await record('failed', { error: `SendGrid ${response.status}: ${error}` });
       if (objectParams && !objectParams.throwOnError) return false;
-      throw new Error(`SendGrid error: ${error}`);
+      throw new ProviderRejection(`SendGrid error: ${error}`);
     }
 
     // Log success details
     const messageId = response.headers.get('x-message-id');
     log.info(`✅ Email sent successfully via SendGrid. MessageID: ${messageId || 'unknown'}`);
+    await record('sent', { messageId });
 
     if (typeof paramsOrTo === 'object') return true;
   } catch (error: unknown) {
     log.error('Failed to send email:', error);
+    // A SendGrid rejection was recorded where it was read, with its status.
+    if (!(error instanceof ProviderRejection)) {
+      await record('failed', { error: error instanceof Error ? error.message : String(error) });
+    }
     if (objectParams && !objectParams.throwOnError) return false;
     throw error;
   }
 }
+
+/** A provider refusal already written to the delivery log; not recorded twice. */
+class ProviderRejection extends Error {}
 
 /**
  * Wrap content in the Navigate Wealth email layout (Navigator design).

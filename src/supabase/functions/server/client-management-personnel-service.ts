@@ -197,6 +197,7 @@ export const PersonnelService = {
       // Send the invite email via SendGrid
       const fullName = [profile.firstName, profile.lastName].filter(Boolean).join(' ');
       const emailSent = await sendEmail({
+        kind: 'personnel_invite',
         to: profile.email,
         subject: "You're invited to Navigate Wealth",
         html: buildInviteEmailHtml(fullName, inviteLink),

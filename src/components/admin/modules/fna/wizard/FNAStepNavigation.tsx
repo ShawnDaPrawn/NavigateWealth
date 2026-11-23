@@ -12,7 +12,12 @@
 import React from 'react';
 import { ArrowLeft, ArrowRight, Loader2, Send } from 'lucide-react';
 import { Button } from '../../../../ui/button';
-import { FNA_WIZARD_NEXT_LABELS, backLabelFor, type FNAWizardStepNumber } from './fnaWizardFlow';
+import {
+  FNA_WIZARD_NEXT_LABELS,
+  FNA_WIZARD_STEP_COUNT,
+  backLabelFor,
+  type FNAWizardStepNumber,
+} from './fnaWizardFlow';
 
 interface FNAStepNavigationProps {
   step: FNAWizardStepNumber;
@@ -41,25 +46,35 @@ export function FNAStepNavigation({
   const isFinal = step === 4;
   const label = nextLabel ?? FNA_WIZARD_NEXT_LABELS[step];
 
+  // Sticks to the bottom of the window while the step scrolls, so the way on
+  // is always in reach. On a phone the actions stack full width, primary on top.
   return (
-    <div className="flex items-center justify-between gap-4 pt-6 border-t">
+    <div className="sticky bottom-0 z-10 -mb-px flex flex-col-reverse gap-2 border-t border-nw-line bg-white/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/85 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       {onBack && backLabel ? (
-        <Button type="button" variant="outline" onClick={onBack} disabled={isBusy}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBack}
+          disabled={isBusy}
+          className="max-sm:h-11 max-sm:w-full"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
           {backLabel}
         </Button>
       ) : (
-        <span aria-hidden="true" />
+        <span className="hidden text-[13px] text-nw-muted sm:inline">
+          Step {step} of {FNA_WIZARD_STEP_COUNT}
+        </span>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center [&>button]:max-sm:h-11 [&>button]:max-sm:w-full">
         {secondaryActions}
         <Button
           type={nextType}
           onClick={onNext}
           size="lg"
           disabled={nextDisabled || isBusy}
-          className={isFinal ? 'bg-green-600 hover:bg-green-700 text-white' : undefined}
+          className="max-sm:h-11 max-sm:w-full"
         >
           {isBusy ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />

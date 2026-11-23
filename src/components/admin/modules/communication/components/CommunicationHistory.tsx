@@ -7,7 +7,10 @@ import { Input } from '../../../../ui/input';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '../../../../ui/select';
@@ -33,13 +36,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Inbox,
+  Bot,
 } from 'lucide-react';
 import {
   ActivityLogEntry,
   CampaignHistorySenderOption,
   CommunicationStatus,
   COMMUNICATION_STATUS_FILTERS,
+  DeliveryRecord,
   HistoryChannel,
+  HistoryKindOption,
   RecipientType,
 } from '../types';
 import { communicationApi } from '../api';
@@ -57,6 +63,10 @@ function displaySenderName(log: ActivityLogEntry): string {
 
 function formatRecipientLine(log: ActivityLogEntry): string {
   const n = log.recipientCount;
+  if (log.origin === 'automated') {
+    if (log.recipientEmail) return log.recipientEmail;
+    return n === 1 ? '1 recipient' : `${n} recipients`;
+  }
   if (log.recipientType === 'group') {
     if (log.groupName?.trim()) {
       return `Group · ${log.groupName.trim()}`;
@@ -81,6 +91,8 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
   const [logs, setLogs] = useState<ActivityLogEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [senderOptions, setSenderOptions] = useState<CampaignHistorySenderOption[]>([]);
+  const [kindOptions, setKindOptions] = useState<HistoryKindOption[]>([]);
+  const [deliveryLogUnavailable, setDeliveryLogUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,6 +166,8 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
         setLogs(result.entries);
         setTotal(result.total);
         setSenderOptions(result.senderOptions);
+        setKindOptions(result.kindOptions ?? []);
+        setDeliveryLogUnavailable(result.deliveryLogUnavailable === true);
       } catch (err) {
         if (cancelled) return;
         console.error('Failed to load history:', err);
@@ -415,13 +429,30 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
               updateFilters({ source: v, page: null });
             }}
           >
-            <SelectTrigger className="w-full sm:w-[180px]" aria-label="Filter by source">
-              <SelectValue placeholder="All sources" />
+            <SelectTrigger className="w-full sm:w-[220px]" aria-label="Filter by email type">
+              <SelectValue placeholder="All emails" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
+              <SelectItem value="all">All emails</SelectItem>
               <SelectItem value="campaign">Campaigns</SelectItem>
               <SelectItem value="direct">Individual messages</SelectItem>
+              <SelectItem value="automated">All automated emails</SelectItem>
+              {kindOptions.length > 0 && <SelectSeparator />}
+              {KIND_AUDIENCE_GROUPS.map(({ audience, label }) => {
+                const options = kindOptions.filter((k) => k.audience === audience);
+                if (options.length === 0) return null;
+                return (
+                  <SelectGroup key={audience}>
+                    <SelectLabel>{label}</SelectLabel>
+                    {options.map((k) => (
+                      <SelectItem key={k.kind} value={`kind:${k.kind}`}>
+                        {k.label}
+                        <span className="ml-1 text-muted-foreground tabular-nums">({k.sends})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                );
+              })}
             </SelectContent>
           </Select>
 
@@ -471,6 +502,11 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
           {!error && (
             <span>
               {total} communication{total !== 1 ? 's' : ''} found
+            </span>
+          )}
+          {deliveryLogUnavailable && (
+            <span className="text-amber-700">
+              Automated emails could not be loaded; showing campaigns and individual messages only.
             </span>
           )}
           {(searchTerm ||
@@ -580,13 +616,24 @@ export function CommunicationHistory({ onRecordPageChange }: CommunicationHistor
                             Individual
                           </Badge>
                         )}
+                        {log.origin === 'automated' && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] py-0 h-5 gap-1 text-slate-700 border-slate-300"
+                          >
+                            <Bot className="h-3 w-3" aria-hidden />
+                            Automated
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
 
                     <TableCell className="align-top">
                       <div className="flex items-start gap-2 min-w-[8rem]">
                         {getRecipientIcon(log.recipientType)}
-                        <span className="text-sm leading-snug">{formatRecipientLine(log)}</span>
+                        <span className="text-sm leading-snug break-all">
+                          {formatRecipientLine(log)}
+                        </span>
                       </div>
                     </TableCell>
 
@@ -744,8 +791,16 @@ function HistoryMessagePage({
               <p className="text-sm text-foreground break-words">{log.cc.join(', ')}</p>
             </DetailSection>
           )}
+          {log.origin === 'automated' && log.deliveryGroupKey && (
+            <DeliveriesSection groupKey={log.deliveryGroupKey} formatTimestamp={formatTimestamp} />
+          )}
+          {log.providerMessageId && (
+            <DetailSection label="Provider message ID">
+              <p className="text-sm font-mono break-all">{log.providerMessageId}</p>
+            </DetailSection>
+          )}
           {log.templateUsed && (
-            <DetailSection label="Template">
+            <DetailSection label={log.origin === 'automated' ? 'Email type' : 'Template'}>
               <Badge variant="outline" className="gap-1">
                 <FileText className="h-3 w-3" aria-hidden />
                 {log.templateUsed}
@@ -769,5 +824,113 @@ function HistoryMessagePage({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Audience headings for the email-type filter, in display order. */
+const KIND_AUDIENCE_GROUPS: ReadonlyArray<{ audience: string; label: string }> = [
+  { audience: 'client', label: 'To clients' },
+  { audience: 'public', label: 'To website visitors' },
+  { audience: 'staff', label: 'To staff' },
+];
+
+/**
+ * The individual emails of one automated send: each recipient of a newsletter
+ * or article notification with its outcome, or the one email with any error.
+ * Failed first, so the people who did not get it are the first thing seen.
+ */
+function DeliveriesSection({
+  groupKey,
+  formatTimestamp,
+}: {
+  groupKey: string;
+  formatTimestamp: (timestamp: Date) => string;
+}) {
+  const [rows, setRows] = useState<DeliveryRecord[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setRows(null);
+    setFailed(false);
+    communicationApi
+      .getDeliveries(groupKey)
+      .then((result) => {
+        if (!cancelled) setRows(result);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [groupKey]);
+
+  const needle = filter.trim().toLowerCase();
+  const visible = (rows ?? [])
+    .filter((r) => !needle || r.recipient.includes(needle))
+    .sort((a, b) => (a.status === b.status ? 0 : a.status === 'failed' ? -1 : 1));
+
+  return (
+    <DetailSection label="Recipients">
+      {failed ? (
+        <p className="text-sm text-red-700">Could not load the recipients of this send.</p>
+      ) : rows === null ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          Loading recipients…
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {rows.length > 8 && (
+            <Input
+              placeholder="Find a recipient…"
+              aria-label="Find a recipient"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="max-w-xs"
+            />
+          )}
+          <div className="max-h-[420px] overflow-auto rounded-lg border">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background">
+                <TableRow>
+                  <TableHead scope="col">Recipient</TableHead>
+                  <TableHead scope="col">Outcome</TableHead>
+                  <TableHead scope="col">Sent</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visible.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-sm break-all">{r.recipient}</TableCell>
+                    <TableCell className="text-sm">
+                      {r.status === 'sent' ? (
+                        <span className="text-green-700">Accepted by provider</span>
+                      ) : (
+                        <span className="text-red-700 break-words">
+                          Failed{r.error ? ` — ${r.error}` : ''}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm whitespace-nowrap tabular-nums">
+                      {formatTimestamp(new Date(r.createdAt))}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {visible.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                      No recipients match.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+    </DetailSection>
   );
 }

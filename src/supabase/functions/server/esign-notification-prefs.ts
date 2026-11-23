@@ -245,6 +245,7 @@ export async function flushDigests(): Promise<{ usersNotified: number; entriesSe
         const html = renderDigestHtml(entries);
         const text = renderDigestText(entries);
         await sendEmail({
+          kind: 'esign_digest',
           to: email,
           subject: `Daily e-signature digest (${entries.length} event${entries.length === 1 ? '' : 's'})`,
           html,

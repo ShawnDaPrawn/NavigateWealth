@@ -37,6 +37,8 @@ import type {
   HistoryFilters,
 } from './communication-types.ts';
 import { validateBody, body } from './validate.ts';
+import { listUnifiedHistory, parseHistorySource } from './communication-history-unified.ts';
+import { listGroupDeliveries } from './email-delivery-log.ts';
 import { z } from 'npm:zod@4.6.5';
 
 /** Accepted values for the history view's `?channel=` filter. */
@@ -156,6 +158,63 @@ app.get(
     } as HistoryFilters);
 
     return c.json({ history });
+  }),
+);
+
+/**
+ * GET /communication/history/unified
+ * Everything sent — campaigns, individual messages and every logged email
+ * (newsletters, article notifications, birthday greetings, e-sign, security,
+ * onboarding, staff digests) — newest first, paginated and filterable.
+ * `?source=` takes campaign | direct | automated | kind:<email kind>.
+ */
+app.get(
+  '/history/unified',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const page = Math.max(1, parseInt(c.req.query('page') || '1', 10) || 1);
+    const limitParsed = parseInt(c.req.query('limit') || '15', 10);
+    const limit = Math.min(100, Math.max(1, Number.isFinite(limitParsed) ? limitParsed : 15));
+    const channelRaw = c.req.query('channel')?.trim();
+    const rtRaw = c.req.query('recipientType')?.trim();
+    const statusRaw = c.req.query('status')?.trim();
+
+    const result = await listUnifiedHistory({
+      page,
+      limit,
+      search: c.req.query('search')?.trim() || undefined,
+      channel: CAMPAIGN_CHANNELS.includes(channelRaw as CommunicationChannel)
+        ? (channelRaw as CommunicationChannel)
+        : undefined,
+      recipientType:
+        rtRaw === 'single' || rtRaw === 'multiple' || rtRaw === 'group' ? rtRaw : undefined,
+      createdBy: c.req.query('createdBy')?.trim() || undefined,
+      status:
+        CAMPAIGN_STATUSES.includes(statusRaw as CampaignStatus) || statusRaw === 'sent'
+          ? statusRaw
+          : undefined,
+      source: parseHistorySource(c.req.query('source')),
+    });
+
+    return c.json(result);
+  }),
+);
+
+/**
+ * GET /communication/history/deliveries/:groupKey
+ * The individual emails inside one logged send: each recipient of a
+ * newsletter or article notification with its outcome, or the one email.
+ */
+app.get(
+  '/history/deliveries/:groupKey',
+  requireAdmin,
+  asyncHandler(async (c) => {
+    const groupKey = c.req.param('groupKey')?.trim();
+    if (!groupKey || groupKey.length > 200) {
+      return c.json({ error: 'Invalid send reference' }, 400);
+    }
+    const deliveries = await listGroupDeliveries(groupKey);
+    return c.json({ deliveries });
   }),
 );
 
