@@ -122,6 +122,9 @@ export const publicSeoRoutes = [
       'financial advisor, wealth management, investment planning, retirement planning, risk management, tax planning, estate planning, South Africa, independent financial advisor',
     ogType: 'website',
     schema: 'home',
+    shareTitle: 'Navigate Wealth | Independent Financial Advice in South Africa',
+    shareDescription:
+      'Financial planning, investments, retirement, risk, tax and estate planning from an independent, founder-led practice in Pretoria (FSP 54606).',
   },
   {
     path: '/services',
@@ -133,6 +136,10 @@ export const publicSeoRoutes = [
       'financial services, wealth management, risk management, retirement planning, investment management, medical aid, estate planning, tax planning, employee benefits, South Africa',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Financial Advice Services | Navigate Wealth',
+    shareDescription:
+      'Independent advice on risk cover, retirement, investments, medical aid, tax, estate planning and employee benefits — compared across the providers we work with.',
+    ogImage: '/brand-assets/share/services.png',
   },
   {
     path: '/resources',
@@ -144,6 +151,10 @@ export const publicSeoRoutes = [
       'financial planning articles, investment insights, retirement planning resources, tax planning guides, market commentary, Navigate Wealth blog, South Africa',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Insights & Resources | Navigate Wealth',
+    shareDescription:
+      'Articles, market news and monthly newsletters on investing, retirement, tax and protecting your wealth in South Africa.',
+    ogImage: '/brand-assets/share/resources.png',
   },
   {
     path: '/about',
@@ -155,6 +166,10 @@ export const publicSeoRoutes = [
       'about navigate wealth, founder-led financial advice, Shawn Francisco, independent financial planning, South Africa wealth management',
     ogType: 'website',
     schema: 'about',
+    shareTitle: 'About Navigate Wealth | Your Trusted Financial Partner',
+    shareDescription:
+      'An independent, founder-led practice that helps individuals and families build, protect and transfer wealth through financial planning and investment management.',
+    ogImage: '/brand-assets/share/about.png',
   },
   {
     path: '/team',
@@ -166,6 +181,10 @@ export const publicSeoRoutes = [
       'Navigate Wealth founder, Shawn Francisco, founder-led financial advice, independent financial advisor, South Africa',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Meet Our Founder, Shawn Francisco | Navigate Wealth',
+    shareDescription:
+      'Navigate Wealth is a founder-led practice. Shawn Francisco founded the firm in 2024 and works with clients directly.',
+    ogImage: '/brand-assets/share/team.png',
   },
   {
     path: '/contact',
@@ -177,6 +196,10 @@ export const publicSeoRoutes = [
       'contact navigate wealth, financial advisor consultation, free consultation, South Africa financial planning',
     ogType: 'website',
     schema: 'contact',
+    shareTitle: 'Contact Navigate Wealth | Financial Advisors in Pretoria',
+    shareDescription:
+      'Book a complimentary consultation — in person at our Pretoria office or online, in English or Afrikaans.',
+    ogImage: '/brand-assets/share/contact.png',
   },
   {
     path: '/schedule-consultation',
@@ -188,6 +211,10 @@ export const publicSeoRoutes = [
       'schedule consultation, financial advisor consultation, Navigate Wealth, financial planning South Africa',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Book a Free Consultation | Navigate Wealth',
+    shareDescription:
+      'Book a complimentary session with an independent financial adviser, in person or online. Choose a time that works for you — no obligation.',
+    ogImage: '/brand-assets/share/consultation.png',
   },
   {
     path: '/contact/consultation',
@@ -201,6 +228,10 @@ export const publicSeoRoutes = [
     canonicalPath: '/schedule-consultation',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Book a Free Consultation | Navigate Wealth',
+    shareDescription:
+      'Book a complimentary session with an independent financial adviser, in person or online. Choose a time that works for you — no obligation.',
+    ogImage: '/brand-assets/share/consultation.png',
   },
   {
     path: '/why-us',
@@ -212,6 +243,10 @@ export const publicSeoRoutes = [
       'why Navigate Wealth, independent financial advisor, founder-led financial advice, personalised financial advice, South Africa',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Why Choose Navigate Wealth?',
+    shareDescription:
+      "We're a truly independent practice: we work for you — not product providers, banks or shareholders. Your financial success is our only measure of success.",
+    ogImage: '/brand-assets/share/why-us.png',
   },
   {
     path: '/risk-management',
@@ -225,6 +260,9 @@ export const publicSeoRoutes = [
     schema: 'service',
     serviceType: 'Risk Management',
     ogImage: '/brand-assets/share/risk-management.png',
+    shareTitle: 'Life Cover & Risk Management | Navigate Wealth',
+    shareDescription:
+      'Comprehensive risk cover for individuals and businesses. We search the market to find you the best protection at the right price — tailored to your life.',
   },
   {
     path: '/retirement-planning',
@@ -238,6 +276,9 @@ export const publicSeoRoutes = [
     schema: 'service',
     serviceType: 'Retirement Planning',
     ogImage: '/brand-assets/share/retirement-planning.png',
+    shareTitle: 'Retirement Planning in South Africa | Navigate Wealth',
+    shareDescription:
+      'Comprehensive retirement planning for individuals and businesses — from retirement annuities to pension funds, tailored to your goals.',
   },
   {
     path: '/investment-management',
@@ -251,6 +292,9 @@ export const publicSeoRoutes = [
     schema: 'service',
     serviceType: 'Investment Management',
     ogImage: '/brand-assets/share/investment-management.png',
+    shareTitle: 'Investment Management in South Africa | Navigate Wealth',
+    shareDescription:
+      "Expert investment management to build and preserve your wealth over time — with access to South Africa's leading fund managers.",
   },
   {
     path: '/tax-planning',
@@ -264,6 +308,9 @@ export const publicSeoRoutes = [
     schema: 'service',
     serviceType: 'Tax Planning',
     ogImage: '/brand-assets/share/tax-planning.png',
+    shareTitle: 'Tax Planning in South Africa | Navigate Wealth',
+    shareDescription:
+      'Expert tax planning strategies to minimise your tax burden and maximise your wealth — for individuals and businesses.',
   },
   {
     path: '/estate-planning',
@@ -277,6 +324,9 @@ export const publicSeoRoutes = [
     schema: 'service',
     serviceType: 'Estate Planning',
     ogImage: '/brand-assets/share/estate-planning.png',
+    shareTitle: 'Estate Planning, Wills & Trusts | Navigate Wealth',
+    shareDescription:
+      'Estate planning for individuals and businesses — wills, trusts, succession planning and business continuity, through our estate planning partners.',
   },
   {
     path: '/financial-planning',
@@ -290,6 +340,9 @@ export const publicSeoRoutes = [
     schema: 'service',
     serviceType: 'Financial Planning',
     ogImage: '/brand-assets/share/financial-planning.png',
+    shareTitle: 'Independent Financial Planning | Navigate Wealth',
+    shareDescription:
+      'Financial planning that aligns your money with your life goals: personalised strategies covering investments, retirement, tax and estate planning.',
   },
   {
     path: '/medical-aid',
@@ -303,6 +356,9 @@ export const publicSeoRoutes = [
     schema: 'service',
     serviceType: 'Medical Aid Advice',
     ogImage: '/brand-assets/share/medical-aid.png',
+    shareTitle: 'Independent Medical Aid Advice | Navigate Wealth',
+    shareDescription:
+      'Medical aid solutions so you and your family receive the right healthcare — tailored to your needs and budget, compared across leading schemes.',
   },
   {
     path: '/employee-benefits',
@@ -316,6 +372,9 @@ export const publicSeoRoutes = [
     schema: 'service',
     serviceType: 'Employee Benefits',
     ogImage: '/brand-assets/share/employee-benefits.png',
+    shareTitle: 'Employee Benefits for Businesses | Navigate Wealth',
+    shareDescription:
+      'Tailored employee benefits — from group risk cover and retirement funds to medical aid and wellness programmes.',
   },
   {
     path: '/get-quote',
@@ -327,6 +386,10 @@ export const publicSeoRoutes = [
       'free financial quote, insurance quote South Africa, investment quote, retirement planning quote, medical aid quote, Navigate Wealth',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Get a Free, Personalised Quote | Navigate Wealth',
+    shareDescription:
+      'Insurance, investments, retirement or medical aid: tell us what you need and we compare options across the providers we work with. Free, no obligation.',
+    ogImage: '/brand-assets/share/get-quote.png',
   },
   {
     path: '/get-quote/medical-aid',
@@ -338,6 +401,10 @@ export const publicSeoRoutes = [
       'medical aid quote South Africa, hospital plan, gap cover, medical scheme comparison, Navigate Wealth',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Get a Medical Aid Quote | Navigate Wealth',
+    shareDescription:
+      'Independent advice on medical schemes, hospital plans and gap cover, compared across the schemes we work with. Free, no obligation.',
+    ogImage: '/brand-assets/share/medical-aid.png',
   },
   {
     path: '/solutions/individuals',
@@ -349,6 +416,10 @@ export const publicSeoRoutes = [
       'personal financial planning, individual wealth management, personal insurance, investment advice, retirement planning individual, South Africa, Navigate Wealth',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Financial Planning for Individuals | Navigate Wealth',
+    shareDescription:
+      "We help you make smart, confident financial decisions — whether you're starting out, growing your career, protecting your family, or planning for retirement.",
+    ogImage: '/brand-assets/share/individuals.png',
   },
   {
     path: '/solutions/businesses',
@@ -360,6 +431,10 @@ export const publicSeoRoutes = [
       'business financial planning, corporate wealth management, employee benefits, group risk cover, business insurance, corporate investments, South Africa, Navigate Wealth',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Financial Solutions for Businesses | Navigate Wealth',
+    shareDescription:
+      'Employee benefits, cash management, risk protection and tax optimisation — financial solutions that drive stability and growth for businesses of all sizes.',
+    ogImage: '/brand-assets/share/businesses.png',
   },
   {
     path: '/solutions/advisers',
@@ -371,6 +446,10 @@ export const publicSeoRoutes = [
       'financial adviser succession planning, practice valuation, sell financial advisory practice, client transitions, legacy planning, Navigate Wealth, South Africa',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Succession Planning for Advisers | Navigate Wealth',
+    shareDescription:
+      "Secure the future of your practice — practice valuation, practice sales and client transitions that preserve the relationships you've built.",
+    ogImage: '/brand-assets/share/advisers.png',
   },
   {
     path: '/ask-vasco',
@@ -382,6 +461,10 @@ export const publicSeoRoutes = [
       'AI financial navigator South Africa, financial planning chatbot, retirement questions, tax planning guidance, Navigate Wealth Vasco',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: "Ask Vasco | Navigate Wealth's AI Financial Navigator",
+    shareDescription:
+      'Explore South African finance — retirement, tax, risk cover, investing and estate planning — with our AI financial navigator. No login required.',
+    ogImage: '/brand-assets/share/ask-vasco.png',
   },
   {
     path: '/careers',
@@ -393,6 +476,10 @@ export const publicSeoRoutes = [
       'Navigate Wealth careers, financial advisor jobs, wealth management careers, financial planning jobs South Africa, independent financial advisor vacancy',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Careers at Navigate Wealth',
+    shareDescription:
+      'Build your career in financial advisory at an independent, founder-led practice that combines modern technology with personalised service.',
+    ogImage: '/brand-assets/share/careers.png',
   },
   {
     path: '/press',
@@ -404,6 +491,10 @@ export const publicSeoRoutes = [
       'Navigate Wealth press, press releases, company announcements, media kit, South Africa financial services news',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Press & Media | Navigate Wealth',
+    shareDescription:
+      'The latest announcements and company news from Navigate Wealth, an independent, founder-led financial advisory practice. Media kit on request.',
+    ogImage: '/brand-assets/share/press.png',
   },
   {
     path: '/legal',
@@ -415,6 +506,10 @@ export const publicSeoRoutes = [
       'Navigate Wealth legal, privacy policy, terms and conditions, POPIA, FAIS disclosure, financial services compliance, South Africa',
     ogType: 'website',
     schema: 'webpage',
+    shareTitle: 'Legal & Compliance | Navigate Wealth',
+    shareDescription:
+      'Our privacy notice, terms, POPIA and PAIA manuals, FAIS disclosures and other regulatory documents, in one place.',
+    ogImage: '/brand-assets/share/legal.png',
   },
 ];
 
@@ -535,6 +630,195 @@ export function buildArticleTitle(rawHeadline) {
   if (withSuffix.length <= SEO_TITLE_MAX) return withSuffix;
   if (headline.length <= SEO_TITLE_MAX) return headline;
   return truncateAtWord(headline, SEO_TITLE_MAX);
+}
+
+// ── Share cards (Open Graph and X) ──────────────────────────────────────────
+//
+// What WhatsApp, LinkedIn, Facebook, X, iMessage, Telegram and Slack show when
+// a page is linked: a picture, a title, a line or two of description and the
+// domain. None of them run JavaScript, so this prerendered head is all they
+// ever see.
+//
+// It is deliberately NOT the search snippet. <title> and the meta description
+// are cut to Google's budget (60 and 160 characters, ending in "…"); in a chat
+// those read as a sentence chopped mid-word, which is how 147 of 194 article
+// headlines looked on WhatsApp before this. A share card carries its own text:
+// the whole headline, whole sentences, and a picture every app will display.
+
+/** Longest share title kept whole. Article headlines run to ~120. */
+export const SHARE_TITLE_MAX = 150;
+/** WhatsApp shows about two lines of description; LinkedIn and Facebook a few more. */
+export const SHARE_DESCRIPTION_MAX = 200;
+/**
+ * Supabase Storage's image endpoint, asked for the share size: 1200×630,
+ * cropped to fill, re-encoded in the original format (`format=origin` stops
+ * it answering WebP, which some apps will not preview). An article hero of
+ * 100–380 KB comes back as a ~100 KB JPEG — under the ~300 KB at which
+ * WhatsApp silently drops a preview picture. 190 of the 194 published heroes
+ * are already 1200×630, so the crop changes nothing on them.
+ */
+export const SHARE_IMAGE_RENDER_QUERY =
+  'width=1200&height=630&resize=cover&quality=80&format=origin';
+
+const SUPABASE_PUBLIC_OBJECT =
+  /^(https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/)object\/public\/([^?#]+)$/i;
+
+const IMAGE_TYPES = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+
+/**
+ * Trim share text at a sentence end when one falls in the back half of the
+ * budget, else at a word, so a card never ends mid-word.
+ */
+export function clampShareText(value, max) {
+  const text = collapseWhitespace(stripHtml(value));
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const sentenceEnd = Math.max(
+    slice.lastIndexOf('. '),
+    slice.lastIndexOf('? '),
+    slice.lastIndexOf('! '),
+  );
+  if (sentenceEnd >= max * 0.5) return slice.slice(0, sentenceEnd + 1);
+  return truncateAtWord(text, max);
+}
+
+/** The card's title: the route's own share title, else its <title>. */
+export function shareTitleForRoute(route) {
+  return clampShareText(route.shareTitle || route.title, SHARE_TITLE_MAX);
+}
+
+/** The card's description: the route's own share text, else its meta description. */
+export function shareDescriptionForRoute(route) {
+  return clampShareText(route.shareDescription || route.description, SHARE_DESCRIPTION_MAX);
+}
+
+function imageTypeFor(url) {
+  const match = /\.([a-z0-9]+)$/i.exec(url.split(/[?#]/)[0]);
+  return match ? IMAGE_TYPES[match[1].toLowerCase()] : undefined;
+}
+
+/**
+ * The share picture for an og:image value: `{ url, type?, width?, height? }`.
+ * Our own share images are 1200×630; a Supabase Storage picture (an article
+ * hero) is sent through the image endpoint at that size; anything else is
+ * used as given, without claiming dimensions we do not know.
+ */
+export function resolveShareImage(siteUrl, value) {
+  const url = resolveImageUrl(siteUrl, value || DEFAULT_OG_IMAGE_PATH);
+  const type = imageTypeFor(url);
+  if (url.startsWith(`${siteUrl}${SHARE_IMAGE_DIR}`)) {
+    return { url, type, width: DEFAULT_OG_IMAGE_WIDTH, height: DEFAULT_OG_IMAGE_HEIGHT };
+  }
+  const supabase = SUPABASE_PUBLIC_OBJECT.exec(url);
+  if (supabase) {
+    return {
+      url: `${supabase[1]}render/image/public/${supabase[2]}?${SHARE_IMAGE_RENDER_QUERY}`,
+      type,
+      width: DEFAULT_OG_IMAGE_WIDTH,
+      height: DEFAULT_OG_IMAGE_HEIGHT,
+    };
+  }
+  return { url, type };
+}
+
+/**
+ * The prerendered head for a route: search tags (title, description,
+ * canonical, robots), the share card (og:*, article:*, twitter:*) and the
+ * JSON-LD graph, between the static-seo markers the build and the edge
+ * middleware both replace.
+ */
+export function createStaticSeoHead(route, siteUrl) {
+  const canonicalUrl = routeCanonicalUrl(route, siteUrl);
+  const shareTitle = shareTitleForRoute(route);
+  const shareDescription = shareDescriptionForRoute(route);
+  const image = resolveShareImage(siteUrl, route.ogImage);
+  const schema =
+    route.schema === 'article'
+      ? createArticleSchema(route, siteUrl)
+      : createRouteSchema(route, siteUrl);
+  const json = JSON.stringify(schema).replace(/<\/script/gi, '<\\/script');
+  const article = route.schema === 'article' ? route.article || {} : null;
+
+  const tag = (attr, key, content) =>
+    content ? `      <meta ${attr}="${key}" content="${escapeHtml(content)}" />\n` : '';
+
+  return `
+      <!-- static-seo:start -->
+      <title>${escapeHtml(route.title)}</title>
+      <meta name="description" content="${escapeHtml(route.description)}" />
+      <meta name="robots" content="index, follow" />
+${tag('name', 'keywords', route.keywords)}      <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
+${tag('property', 'og:title', shareTitle)}${tag('property', 'og:description', shareDescription)}${tag(
+    'property',
+    'og:type',
+    route.ogType || 'website',
+  )}${tag('property', 'og:site_name', DEFAULT_BUSINESS_NAME)}${tag('property', 'og:locale', 'en_ZA')}${tag(
+    'property',
+    'og:url',
+    canonicalUrl,
+  )}${tag('property', 'og:image', image.url)}${tag('property', 'og:image:secure_url', image.url)}${tag(
+    'property',
+    'og:image:type',
+    image.type,
+  )}${tag('property', 'og:image:width', image.width && String(image.width))}${tag(
+    'property',
+    'og:image:height',
+    image.height && String(image.height),
+  )}${tag('property', 'og:image:alt', shareTitle)}${tag(
+    'property',
+    'article:published_time',
+    article?.published_at,
+  )}${tag('property', 'article:modified_time', article?.updated_at)}      <meta name="twitter:card" content="summary_large_image" />
+${tag('name', 'twitter:title', shareTitle)}${tag('name', 'twitter:description', shareDescription)}${tag(
+    'name',
+    'twitter:image',
+    image.url,
+  )}${tag('name', 'twitter:image:alt', shareTitle)}      <meta name="twitter:site" content="@Navigate_ZA" />
+      <script id="seo-structured-data" type="application/ld+json">${json}</script>
+      <!-- static-seo:end -->`;
+}
+
+// ── Newsletter issues ───────────────────────────────────────────────────────
+
+export const NEWSLETTER_PATH_PREFIX = '/resources/newsletter/';
+/** Every issue shares the newsletter's own card; issues carry no picture of their own. */
+export const NEWSLETTER_SHARE_IMAGE_PATH = '/brand-assets/share/newsletter.png';
+
+/**
+ * A prerendered route for a published newsletter issue (the public
+ * /newsletter-site/newsletters payload). Before this, an issue's URL served
+ * the home page's head, so a shared issue previewed as the home page.
+ */
+export function createNewsletterRoute(newsletter) {
+  const slug = typeof newsletter?.slug === 'string' ? newsletter.slug.trim() : '';
+  if (!slug) return null;
+
+  const fullTitle = collapseWhitespace(newsletter.title) || 'Navigate Wealth Newsletter';
+  // "Navigate Wealth | October 2026 | The Wealth Compass: …" — the brand
+  // prefix costs the search title 18 characters it cannot spare.
+  const headline = fullTitle.replace(/^Navigate Wealth\s*\|\s*/i, '') || fullTitle;
+  const description =
+    collapseWhitespace(newsletter.description) || 'The Navigate Wealth monthly newsletter.';
+  const pdfUrl =
+    typeof newsletter.pdfUrl === 'string' && /^https:\/\//i.test(newsletter.pdfUrl)
+      ? newsletter.pdfUrl
+      : '';
+
+  return {
+    path: `${NEWSLETTER_PATH_PREFIX}${encodeURIComponent(slug)}`,
+    lastmod: newsletter.publishedAt,
+    title: buildArticleTitle(headline),
+    description: clampSeoDescription(description),
+    shareTitle: fullTitle,
+    shareDescription: description,
+    heading: headline,
+    ogType: 'website',
+    ogImage: NEWSLETTER_SHARE_IMAGE_PATH,
+    schema: 'webpage',
+    // Not in sitemap.xml (generate-seo-files.mjs lists pages and articles).
+    sitemap: false,
+    ...(pdfUrl ? { pdfUrl } : {}),
+  };
 }
 
 export function createOrganizationSchema(siteUrl) {
@@ -802,8 +1086,9 @@ ${links
  */
 export function createStaticBodyHtml(route, siteUrl) {
   // First title segment only — "Risk Management | Life & Disability Cover"
-  // makes a good <title> but a clumsy <h1>.
-  const pageName = routePageName(route);
+  // makes a good <title> but a clumsy <h1>. A route whose title is not
+  // page-name-first (a newsletter issue) names its heading.
+  const pageName = route.heading || routePageName(route);
   const serviceLine = route.serviceType
     ? `<p><strong>${escapeHtml(route.serviceType)}</strong> advice for individuals and businesses across South Africa — independent, provider-agnostic and tailored to your goals.</p>`
     : '';
@@ -820,6 +1105,7 @@ export function createStaticBodyHtml(route, siteUrl) {
               <p>${escapeHtml(route.description)}</p>
             </header>
             ${serviceLine}
+            ${route.pdfUrl ? `<p><a href="${escapeHtml(route.pdfUrl)}">Read this newsletter (PDF)</a></p>` : ''}
             ${faqBlockHtml(route)}
             ${internalLinksHtml(route, siteUrl)}
         </article>
@@ -916,11 +1202,11 @@ export function createArticleRoute(article, siteUrl) {
   const path = `/resources/article/${encodeURIComponent(slug)}`;
   const canonicalOverride = resolveArticleCanonicalOverride(article, siteUrl);
   const title = buildArticleTitle(article.title);
-  const description = clampSeoDescription(
+  const summary =
     article.excerpt ||
-      article.subtitle ||
-      'Financial planning article from Navigate Wealth with insights on investments, retirement, tax, risk management, and estate planning.',
-  );
+    article.subtitle ||
+    'Financial planning article from Navigate Wealth with insights on investments, retirement, tax, risk management, and estate planning.';
+  const description = clampSeoDescription(summary);
   const image =
     article.hero_image_url ||
     article.featured_image_url ||
@@ -934,6 +1220,9 @@ export function createArticleRoute(article, siteUrl) {
     lastmod: article.updated_at || article.published_at || article.created_at,
     title,
     description,
+    // The share card keeps the whole headline and excerpt (see "Share cards").
+    shareTitle: collapseWhitespace(article.title) || title,
+    shareDescription: summary,
     keywords: Array.isArray(article.tags) ? article.tags.join(', ') : '',
     ogType: 'article',
     ogImage: image,

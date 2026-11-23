@@ -176,6 +176,18 @@ function verifyStaticHtml() {
     ) {
       failures.push(`${route.path} uses the default OG image but omits its dimensions`);
     }
+    // Link previews show this picture; one that 404s leaves the card blank.
+    const ogImage = decodeXml(
+      html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i)?.[1] ?? '',
+    );
+    if (!ogImage) {
+      failures.push(`${route.path} is missing og:image`);
+    } else if (ogImage.startsWith(`${siteUrl}/`)) {
+      const file = path.join(distDir, ...ogImage.slice(siteUrl.length + 1).split('/'));
+      if (!fs.existsSync(file)) {
+        failures.push(`${route.path} names og:image ${ogImage}, which the build does not contain`);
+      }
+    }
     const titleText = decodeXml(html.match(/<title>([^<]+)<\/title>/i)?.[1] ?? '');
     if (titleText.length > SEO_TITLE_MAX) {
       failures.push(

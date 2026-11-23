@@ -222,6 +222,26 @@ stated prerequisite has already caused a production outage once.
   section is hidden while that list is empty. `companyFacts.test.ts` fails if a
   public page reintroduces the removed figures. Navigate Wealth is presented as
   founder-led (Shawn Francisco); do not reintroduce headcounts.
+- **Link previews read only the prerendered head.** WhatsApp, LinkedIn,
+  Facebook, X, iMessage and Slack never run the SPA, so a page's share card is
+  whatever `scripts/seo/seo-static-data.mjs` (`createStaticSeoHead`) wrote at
+  build time. The card has its own text (`shareTitle`, `shareDescription`),
+  separate from the 60/160-character search snippet, which in a chat read as
+  sentences cut off mid-word; articles carry their whole headline and excerpt.
+  Every public page has its own 1200×630 card under 300 KB (WhatsApp drops a
+  bigger picture) in `public/brand-assets/share/`: the service pages' and the
+  brand card come from the redesign canvas, the rest are drawn in the same two
+  layouts by `scripts/seo/generate-share-images.mjs` (manual; re-run it when a
+  page's hero copy changes). Article heroes go through Supabase Storage's image
+  endpoint at 1200×630 (`format=origin`, about 100 KB) — a Pro-plan feature,
+  billed per source image past 100 a month. Newsletter issues are prerendered
+  too. An article or issue published after the last build has no prerender
+  (publishing through the content pipeline does not rebuild the site), so
+  `middleware.ts` gives link-preview user agents its tags from the public API
+  (`src/middleware/share-meta.ts`); browsers are left alone. The edge port and
+  the build must write the same tags: `share-meta-parity.test.ts`. WhatsApp
+  caches a preview per URL, so a link shared before a fix keeps its old card
+  for a while.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.

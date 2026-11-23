@@ -103,6 +103,10 @@ const NOT_FETCHED: Record<string, string> = {
     'RSS feed URL passed to the server-side RSS proxy — the browser fetches ' +
     'RSS_PROXY_URL on our own origin, never investing.com directly',
   'www.reuters.com': 'example URL in a form placeholder for the content-source dialog',
+  'vpjmdsltwrnpefzcgdmz.supabase.co':
+    'the Edge Function base in src/middleware/share-meta.ts — fetched by the ' +
+    'Vercel edge middleware, never the browser (which reaches it through ' +
+    '*.supabase.co, already in the policy)',
 
   // Placeholders and examples in docs, tests fixtures and form hints.
   'example.com': 'placeholder in help text/examples',
