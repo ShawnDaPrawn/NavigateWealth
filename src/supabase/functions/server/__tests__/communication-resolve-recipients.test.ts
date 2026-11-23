@@ -53,6 +53,7 @@ vi.mock('../stderr-logger.ts', () => ({
 vi.mock('../email-service.ts', () => ({
   sendEmail: vi.fn(),
   createEmailTemplate: vi.fn((html: string) => html),
+  getFooterSettings: vi.fn(async () => ({})),
 }));
 
 vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({ createClient: vi.fn() }));

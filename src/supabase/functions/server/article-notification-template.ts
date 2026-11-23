@@ -5,8 +5,9 @@
  * to ensure consistent branding, footer settings, and visual language
  * across all transactional emails (Guidelines §8 — Design System adherence).
  *
- * The footer is NOT hardcoded here — it comes from `BASE_EMAIL_TEMPLATE`
- * via `createEmailTemplate`, which respects admin-configured footer settings.
+ * The footer is NOT hardcoded here — it comes from the shared layout
+ * (src/shared/email/emailLayout.ts) via `createEmailTemplate`, which prints
+ * the admin-configured footer settings passed to it.
  */
 
 import { createEmailTemplate, getFooterSettings } from './email-service.ts';
@@ -55,6 +56,7 @@ export async function createArticleNotificationEmail(data: {
     greeting,
     buttonUrl: articleUrl,
     buttonLabel: 'Read the full article',
+    buttonFallback: false,
     unsubscribeLink: unsubscribeUrl,
     footerSettings,
   });
