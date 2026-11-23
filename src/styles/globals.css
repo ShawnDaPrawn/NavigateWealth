@@ -67,6 +67,9 @@ body.schedule-consultation-modal-open footer.bg-black {
   --nw-line-soft: #ece7de;
   --nw-line-strong: #d3ccbf;
   --nw-line-heavy: #b9b2a4;
+  /* Field and control outlines: the design system's nw-control-border,
+     3.66:1 on white and 3.33:1 on paper (WCAG 1.4.11). */
+  --nw-control-border: #8c8577;
   --nw-text-strong: #2f3747;
   --nw-text: #3d4556;
   --nw-muted: #5e6676;
@@ -241,6 +244,7 @@ body.schedule-consultation-modal-open footer.bg-black {
   --color-nw-line-soft: var(--nw-line-soft);
   --color-nw-line-strong: var(--nw-line-strong);
   --color-nw-line-heavy: var(--nw-line-heavy);
+  --color-nw-control-border: var(--nw-control-border);
   --color-nw-text: var(--nw-text);
   --color-nw-text-strong: var(--nw-text-strong);
   --color-nw-muted: var(--nw-muted);

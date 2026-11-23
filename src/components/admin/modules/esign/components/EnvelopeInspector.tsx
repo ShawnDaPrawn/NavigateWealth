@@ -549,7 +549,7 @@ export function EnvelopeInspector({
                                     ? undefined
                                     : isDeclined
                                       ? { background: '#b91c1c', boxShadow: '0 0 0 4px #fef2f2' }
-                                      : { background: '#d1d5db', boxShadow: '0 0 0 4px #f3f4f6' }
+                                      : { background: '#d3ccbf', boxShadow: '0 0 0 4px #f6f4ef' }
                                 }
                                 aria-hidden="true"
                               />

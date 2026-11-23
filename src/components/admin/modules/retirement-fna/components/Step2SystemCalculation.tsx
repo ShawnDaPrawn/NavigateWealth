@@ -194,7 +194,7 @@ export function Step2SystemCalculation({
               categoryKey="name"
               series={[
                 { key: 'Projected', label: 'Projected Capital', color: 'var(--primary, #6d28d9)' },
-                { key: 'Required', label: 'Required Capital', color: '#9ca3af' },
+                { key: 'Required', label: 'Required Capital', color: '#9aa3b2' },
               ]}
               height={250}
               yAxisFormatter={(value) => `R${(value / 1000000).toFixed(1)}m`}

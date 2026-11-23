@@ -95,17 +95,20 @@ export function AgendaView({
 
     return (
       <li key={key} className="rounded-lg border border-nw-line bg-white">
-        <div className="flex items-start gap-3 px-4 py-3">
+        {/* On a phone the time and the actions share the first line and the
+            title takes the full width below; squeezed between them it ran one
+            word per line. From sm up it is a single row. */}
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-1 px-4 py-3 sm:flex-nowrap">
           <span
             className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${EVENT_TYPE_COLORS[event.event_type]?.split(' ')[0] ?? 'bg-blue-100'}`}
             aria-hidden="true"
           />
-          <span className="w-24 shrink-0 text-xs font-medium tabular-nums text-nw-text-2 pt-0.5">
+          <span className="w-24 flex-1 shrink-0 pt-0.5 text-xs font-medium tabular-nums text-nw-text-2 sm:flex-none">
             {allDay
               ? 'All day'
               : `${format(new Date(event.start_at), 'HH:mm')}–${format(new Date(event.end_at), 'HH:mm')}`}
           </span>
-          <div className="min-w-0 flex-1">
+          <div className="order-last w-full min-w-0 pl-5 sm:order-none sm:w-auto sm:flex-1 sm:pl-0">
             <p
               className={`text-sm font-medium text-nw-ink ${event.status === 'completed' ? 'text-nw-text-3 line-through' : ''}`}
             >

@@ -446,7 +446,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
         <section className="ds-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-[13.5px]">
-              <thead className="border-b border-nw-line bg-[#fafafb]">
+              <thead className="border-b border-nw-line bg-[#fbfaf7]">
                 <tr>
                   <th className="w-10 px-4 py-3">
                     <button
@@ -502,7 +502,7 @@ export function ArticlesListView({ onCreateNew, onEditArticle }: ArticlesListVie
                     key={article.id}
                     className={cn(
                       'group transition-colors cursor-pointer',
-                      selectedIds.has(article.id) ? 'bg-nw-violet-50/60' : 'hover:bg-[#fafafb]',
+                      selectedIds.has(article.id) ? 'bg-nw-violet-50/60' : 'hover:bg-[#fbfaf7]',
                     )}
                     onClick={() => onEditArticle(article)}
                   >

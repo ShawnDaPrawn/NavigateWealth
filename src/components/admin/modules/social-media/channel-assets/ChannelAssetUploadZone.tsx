@@ -58,7 +58,7 @@ export function ChannelAssetUploadZone({
         take(e.dataTransfer?.files ?? null);
       }}
       className={`rounded-xl border border-dashed px-4 py-[18px] text-center text-[13.5px] transition-colors ${
-        isDragging ? 'border-nw-violet bg-nw-violet-50' : 'border-[#c4c8cf] bg-white'
+        isDragging ? 'border-nw-violet bg-nw-violet-50' : 'border-[#b9b2a4] bg-white'
       }`}
     >
       <input

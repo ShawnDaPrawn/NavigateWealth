@@ -383,7 +383,7 @@ export function RichTextEditor({
         .is-editor-empty::before {
           content: attr(data-placeholder);
           float: left;
-          color: #9ca3af;
+          color: #9aa3b2;
           pointer-events: none;
           height: 0;
           font-style: italic;

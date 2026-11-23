@@ -70,7 +70,7 @@ export function PillarTiles({
             {...(onOpen ? { type: 'button' as const, onClick: onOpen } : {})}
             className={cn(
               'ds-card flex flex-col gap-2 p-3.5 text-left',
-              onOpen && 'transition-colors hover:border-[#c4b5fd]',
+              onOpen && 'transition-colors hover:border-[#b9b2a4]',
             )}
           >
             <span className="flex items-center justify-between gap-2">

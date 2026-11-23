@@ -104,7 +104,7 @@ export function SchemaLivePreview({ currentFields, selectedCategoryName }: Schem
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-[13px]">
           <thead>
-            <tr className="border-b border-nw-line bg-[#fafafb]">
+            <tr className="border-b border-nw-line bg-[#fbfaf7]">
               <th className="whitespace-nowrap px-3.5 py-2.5 text-left text-[12px] font-medium text-nw-text-3">
                 Provider
               </th>

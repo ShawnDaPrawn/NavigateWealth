@@ -30,7 +30,7 @@ export function NavTabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        'group/tab -mb-px inline-flex h-11 shrink-0 items-center gap-2 border-b-2 border-transparent px-3 text-[14px] font-medium whitespace-nowrap text-nw-text',
+        'group/tab -mb-px inline-flex h-11 shrink-0 items-center gap-2 border-b-2 border-transparent px-3 text-[14px] font-medium whitespace-nowrap text-nw-text max-sm:px-2',
         'transition-[color,border-color] duration-[250ms] ease-[cubic-bezier(.2,.8,.2,1)]',
         'hover:text-nw-ink data-[state=inactive]:hover:border-nw-line-heavy',
         'data-[state=active]:border-nw-violet data-[state=active]:font-semibold data-[state=active]:text-nw-violet',

@@ -309,7 +309,7 @@ export function CommunicationTab({ client }: CommunicationTabProps) {
         .ql-toolbar {
           border-top-left-radius: 0.5rem;
           border-top-right-radius: 0.5rem;
-          background-color: #f9fafb;
+          background-color: #fbfaf7;
         }
         .ql-editor {
           min-h: 150px;

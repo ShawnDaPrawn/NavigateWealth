@@ -79,7 +79,7 @@ export function ChannelAssetCard({
 
   return (
     <section className="ds-card flex flex-col overflow-hidden">
-      <div className="relative aspect-square bg-[#f3f4f6]">
+      <div className="relative aspect-square bg-[#f6f4ef]">
         {asset.media_type === 'video' ? (
           <video
             src={asset.url}

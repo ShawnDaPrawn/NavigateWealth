@@ -71,7 +71,9 @@ describe('admin Navigator theme', () => {
     expect(css).toMatch(
       /:where\(html\.nw-admin-theme\) :where\([^)]*\.letter-page\) \{[^}]*--color-gray-100: oklch/,
     );
-    expect(css).toMatch(/html\.nw-admin-theme :is\(h1, h2\):not\(:is\([^)]*\.letter-page\) \*\)/);
+    expect(css).toMatch(
+      /html\.nw-admin-theme :is\(h1, \[data-slot='dialog-title'\][^)]*\):not\(:is\([^)]*\.letter-page\) \*\)/,
+    );
   });
 
   it('lets a colour a screen sets on a table cell, heading or card title win', () => {
@@ -103,6 +105,15 @@ describe('admin Navigator theme', () => {
       /:focus-visible:not\(\[aria-invalid='true'\]\)([^{]*)\{ border-color: var\(--nw-violet\)/,
     );
     expect(focus?.[1]).toContain('.letter-page) *)');
+  });
+
+  it('outlines fields and controls at 3:1 with the design system control border', () => {
+    // WCAG 1.4.11: the warm hairline (1.6:1) is for cards and dividers only.
+    expect(readRepoFile('src/styles/globals.css')).toMatch(/--nw-control-border:\s*#8c8577/);
+    const css = readRepoFile('src/styles/admin-navigator.css');
+    expect(css).toMatch(/--input:\s*var\(--nw-control-border\)/);
+    expect(css).toMatch(/--switch-background:\s*var\(--nw-control-border\)/);
+    expect(css).toMatch(/\[data-slot='checkbox'\]/);
   });
 
   it('remaps the colour scales the admin is built from', () => {

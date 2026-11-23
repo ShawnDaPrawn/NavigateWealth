@@ -57,10 +57,10 @@ const PILLAR_ICON_COLORS: Record<string, string> = {
 /** Pillar card top-line strip colours — matched to HEALTH_SUB_SCORE_CONFIG */
 const PILLAR_STRIP_COLORS: Record<string, string> = {
   'risk-planning': 'bg-[#6d28d9]', // brand purple  — Risk
-  'medical-aid': 'bg-[#2563eb]', // blue-600      — Medical Aid
-  retirement: 'bg-[#16a34a]', // green-600     — Retirement
-  investment: 'bg-[#f59e0b]', // amber-500     — Investments
-  estate: 'bg-[#64748b]', // slate-500     — Estate Planning
+  'medical-aid': 'bg-[#1d4ed8]', // blue-600      — Medical Aid
+  retirement: 'bg-[#15803d]', // green-600     — Retirement
+  investment: 'bg-[#b45309]', // amber-500     — Investments
+  estate: 'bg-[#5e6676]', // slate-500     — Estate Planning
 };
 
 const FNA_STATUS_LABELS: Record<string, { label: string; color: string }> = {

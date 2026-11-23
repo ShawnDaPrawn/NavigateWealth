@@ -335,7 +335,7 @@
   .ds-input {
     height: 38px;
     min-width: 240px;
-    border: 1px solid var(--nw-line-strong);
+    border: 1px solid var(--nw-control-border);
     border-radius: var(--nw-r-sm);
     padding: 0 12px 0 34px;
     font: inherit;
@@ -345,6 +345,9 @@
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235E6676' stroke-width='1.75' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m14 14-3.5-3.5'/%3E%3C/svg%3E")
       no-repeat 11px center;
     transition: border-color var(--nw-dur-2) var(--nw-ease);
+  }
+  .ds-input:hover {
+    border-color: var(--nw-muted);
   }
   .ds-input:focus {
     outline: none;
@@ -975,6 +978,10 @@
     }
     .ds-stats > :last-child:nth-child(odd) {
       grid-column: span 2;
+    }
+    /* Two stat cards a row: tighter caps keep a two-word label on one line. */
+    .ds-stat .k {
+      letter-spacing: 0.06em;
     }
     .ds-input {
       min-width: 0;

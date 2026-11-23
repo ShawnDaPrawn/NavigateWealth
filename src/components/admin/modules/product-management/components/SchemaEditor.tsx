@@ -116,7 +116,7 @@ export function SchemaEditor({
       <div className="overflow-x-auto">
         <div className="min-w-[700px]">
           <div
-            className="grid items-center gap-2.5 border-b border-nw-line bg-[#fafafb] px-3.5 py-2.5 text-[12px] font-medium text-nw-text-3"
+            className="grid items-center gap-2.5 border-b border-nw-line bg-[#fbfaf7] px-3.5 py-2.5 text-[12px] font-medium text-nw-text-3"
             style={{ gridTemplateColumns }}
           >
             <div>
@@ -161,7 +161,7 @@ export function SchemaEditor({
                             className={`grid items-center gap-2.5 px-3.5 py-2 transition-colors ${
                               snapshot.isDragging
                                 ? 'z-50 bg-nw-violet-50 shadow-lg'
-                                : 'bg-white hover:bg-[#fafafb]'
+                                : 'bg-white hover:bg-[#fbfaf7]'
                             }`}
                           >
                             <div

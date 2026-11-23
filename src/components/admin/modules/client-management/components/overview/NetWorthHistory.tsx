@@ -220,8 +220,8 @@ export function NetWorthHistory({
   const chartSeries = useMemo(
     () => [
       { key: 'netWorth', label: 'Net Worth', color: '#6d28d9', strokeWidth: 2.5 },
-      { key: 'totalAssets', label: 'Assets', color: '#16a34a', strokeWidth: 1.5 },
-      { key: 'totalLiabilities', label: 'Liabilities', color: '#dc2626', strokeWidth: 1.5 },
+      { key: 'totalAssets', label: 'Assets', color: '#15803d', strokeWidth: 1.5 },
+      { key: 'totalLiabilities', label: 'Liabilities', color: '#b91c1c', strokeWidth: 1.5 },
     ],
     [],
   );

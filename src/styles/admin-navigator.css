@@ -63,9 +63,9 @@ html.nw-admin-theme {
   --destructive: var(--nw-danger);
   --destructive-foreground: #ffffff;
   --border: var(--nw-line);
-  --input: var(--nw-line-strong);
+  --input: var(--nw-control-border);
   --input-background: var(--nw-paper-3);
-  --switch-background: var(--nw-line-strong);
+  --switch-background: var(--nw-control-border);
   --ring: var(--nw-violet);
 
   /* Corners: 4px for controls, 8px for cards and panels, nothing rounder. */
@@ -221,9 +221,17 @@ html.nw-admin-theme {
   text-rendering: optimizeLegibility;
 }
 
-/* ── Base ── */
+/* ── Base ──
+   Newsreader for page titles and dialog titles only. Section and card titles
+   stay Inter: screens mix h2, h3 and plain text for those, so a serif h2 sat
+   beside sans titles of the same rank (caught on the phone check). */
 html.nw-admin-theme
-  :is(h1, h2):not(
+  :is(
+    h1,
+    [data-slot='dialog-title'],
+    [data-slot='alert-dialog-title'],
+    [data-slot='drawer-title']
+  ):not(
     :is(
         [data-pdf-export-root],
         .pdf-preview-container,
@@ -401,7 +409,7 @@ html.nw-admin-theme
       )
       *
   ) {
-  border-color: var(--nw-line-strong);
+  border-color: var(--nw-control-border);
 }
 html.nw-admin-theme
   [data-slot='input'].rounded-lg:not(
@@ -453,7 +461,7 @@ html.nw-admin-theme
       )
       *
   ) {
-  border-color: var(--nw-line-heavy);
+  border-color: var(--nw-muted);
 }
 html.nw-admin-theme
   :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger']):focus-visible:not(
@@ -473,6 +481,25 @@ html.nw-admin-theme
   border-color: var(--nw-violet);
   background-color: #ffffff;
   --tw-ring-color: rgba(13, 22, 38, 0.09);
+}
+
+/* Checkboxes and radios: the same 3:1 edge as fields while unchecked. */
+html.nw-admin-theme
+  :is([data-slot='checkbox'], [data-slot='radio-group-item']):not([data-state='checked']):not(
+    [aria-invalid='true']
+  ):not(
+    :is(
+        [data-pdf-export-root],
+        .pdf-preview-container,
+        .legal-paged-preview-root,
+        [data-legal-pdf-renderer],
+        .pdf-viewport,
+        .pdf-page,
+        .letter-page
+      )
+      *
+  ) {
+  border-color: var(--nw-control-border);
 }
 
 /* ── Tabs: the segmented control. Ivory track, the chosen one in navy ── */

@@ -195,7 +195,7 @@ export function ExtractionQualityDashboard({ children }: { children?: ReactNode 
                 type="button"
                 onClick={() => setShowLowConfidence(!showLowConfidence)}
                 aria-expanded={showLowConfidence}
-                className="flex w-full items-center justify-between px-4 py-2.5 text-left text-[13px] font-medium text-nw-ink hover:bg-[#fafafb]"
+                className="flex w-full items-center justify-between px-4 py-2.5 text-left text-[13px] font-medium text-nw-ink hover:bg-[#fbfaf7]"
               >
                 Low-confidence fields
                 <span className="ds-count">{lowConfidenceFields.length}</span>

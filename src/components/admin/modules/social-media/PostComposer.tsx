@@ -369,7 +369,9 @@ export function PostComposer({
           </p>
         )}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex gap-2">
+          {/* Both groups wrap: on a phone the three send actions are wider
+              than the screen and pushed the footer off its right edge. */}
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" disabled={!canSubmit} onClick={() => submit('draft')}>
               <Save className="h-4 w-4 mr-2" />
               Save as Buffer draft
@@ -379,7 +381,7 @@ export function PostComposer({
               Preview
             </Button>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" disabled={!canSubmit} onClick={() => submit('queue')}>
               Add to queue
             </Button>

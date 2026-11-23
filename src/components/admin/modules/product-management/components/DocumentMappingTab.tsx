@@ -487,7 +487,7 @@ export function DocumentMappingTab() {
                         <li key={provider.id}>
                           <button
                             type="button"
-                            className="ds-todo-row w-full text-left hover:bg-[#fafafb]"
+                            className="ds-todo-row w-full text-left hover:bg-[#fbfaf7]"
                             aria-expanded={isExpanded}
                             onClick={() => handleExpandProvider(provider.id)}
                           >
@@ -515,7 +515,7 @@ export function DocumentMappingTab() {
                           </button>
 
                           {isExpanded && (
-                            <div className="space-y-5 border-t border-nw-line bg-[#fafafb] px-4 py-4">
+                            <div className="space-y-5 border-t border-nw-line bg-[#fbfaf7] px-4 py-4">
                               <MappingTable
                                 title="Benefit terms"
                                 termHeading="Provider term"
@@ -656,7 +656,7 @@ function MappingTable({
       </div>
       <table className="w-full text-[13px]">
         <thead>
-          <tr className="border-b border-nw-line bg-[#fafafb] text-left text-[12px] text-nw-text-3">
+          <tr className="border-b border-nw-line bg-[#fbfaf7] text-left text-[12px] text-nw-text-3">
             <th className="px-3.5 py-2 font-medium">{termHeading}</th>
             <th className="px-3.5 py-2 font-medium">{targetHeading}</th>
             <th className="w-[90px] px-3.5 py-2">

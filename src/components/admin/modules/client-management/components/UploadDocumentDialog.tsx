@@ -772,7 +772,7 @@ export function UploadDocumentDialog({
                     !subcategoryGroups.some((g) => g.files.length > 0))) ||
               (uploadType === 'link' && (!linkTitle || !linkUrl || !productCategory))
             }
-            className="h-10 px-6 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white shadow-sm"
+            className="h-10 px-6 bg-[#6d28d9] hover:bg-[#5b21b6] text-white shadow-sm"
           >
             {uploading ? (
               <div className="contents">
