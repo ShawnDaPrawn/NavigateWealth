@@ -141,7 +141,7 @@ function FeaturedInsights({ loading, articles }: { loading: boolean; articles: A
                       to={articleHref(article)}
                     >
                       <span className="nwrs-media nwrs-si-img">
-                        <Picture src={cardImage(article)} />
+                        <Picture src={heroImage(article)} phoneSrc={cardImage(article)} />
                       </span>
                       <div className="nwrs-si-body">
                         <Meta article={article} withDate />
@@ -159,7 +159,18 @@ function FeaturedInsights({ loading, articles }: { loading: boolean; articles: A
   );
 }
 
-function Picture({ src, eager }: { src: string; eager?: boolean }) {
+/**
+ * Matches resources.css's phone breakpoint, where a side story's frame
+ * shrinks to a 4:3 thumbnail.
+ */
+const PHONE_MEDIA = '(max-width: 640px)';
+
+/**
+ * A story's picture. `phoneSrc` is artwork drawn for the frame the phone
+ * layout gives it, so a cover's headline is never cropped by the wrong
+ * shape.
+ */
+function Picture({ src, phoneSrc, eager }: { src: string; phoneSrc?: string; eager?: boolean }) {
   if (!src) {
     return (
       <span className="nwrs-noimg" aria-hidden="true">
@@ -167,7 +178,14 @@ function Picture({ src, eager }: { src: string; eager?: boolean }) {
       </span>
     );
   }
-  return <img src={src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" />;
+  const img = <img src={src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" />;
+  if (!phoneSrc || phoneSrc === src) return img;
+  return (
+    <picture>
+      <source media={PHONE_MEDIA} srcSet={phoneSrc} />
+      {img}
+    </picture>
+  );
 }
 
 function Meta({

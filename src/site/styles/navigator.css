@@ -98,6 +98,11 @@
 
   --nw-r-sm: 4px;
   --nw-r-md: 8px;
+  /* The publication artwork sizes the article editor asks for: hero
+     1200×630, thumbnail 400×300. Covers carry their headline in the image,
+     so a frame showing one uses its ratio and crops none of the words. */
+  --nw-ratio-hero: 1200 / 630;
+  --nw-ratio-thumb: 4 / 3;
   --nw-shadow-1: 0 1px 2px rgba(13, 22, 38, 0.06);
   --nw-shadow-2: 0 24px 44px -32px rgba(13, 22, 38, 0.55);
   --nw-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
