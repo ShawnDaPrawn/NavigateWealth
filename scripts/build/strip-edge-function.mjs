@@ -50,12 +50,15 @@
  * Verified 2026-08-30 by booting the stripped tree under Deno and confirming
  * /health returns the same 200 payload as the unstripped tree.
  */
-import { transformSync } from 'esbuild';
+import { build, stop, transformSync } from 'esbuild';
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { join, extname, resolve } from 'node:path';
 
 /** Roots the edge import graph can reach. */
 const ROOTS = ['src/supabase/functions', 'src/shared', 'src/utils'];
+
+/** The deployed function's entrypoint: the guard measures what it imports. */
+const ENTRY = 'src/supabase/functions/server/index.tsx';
 
 /** Never shipped (not in the import graph) — skipping keeps the run quick. */
 const SKIP_DIRS = new Set(['__tests__', 'node_modules', '.git']);
@@ -99,8 +102,49 @@ function assertDisposableCheckout() {
   process.exit(1);
 }
 
-function main() {
+/**
+ * The local modules the deployed function actually imports, statically or
+ * through literal dynamic imports (the lazy routers). ROOTS also hold
+ * frontend-only files under src/utils and src/shared that never ship; until
+ * 2026-11-23 the guard counted them too (about 0.4 MB raw), which failed a
+ * deploy whose real payload was under the guard. Package specifiers (npm:,
+ * jsr:, node:, import-map names) are left external. Returns null when the
+ * graph cannot be walked, and the guard then falls back to every file.
+ */
+async function importGraph() {
+  try {
+    const result = await build({
+      entryPoints: [ENTRY],
+      bundle: true,
+      write: false,
+      metafile: true,
+      platform: 'neutral',
+      format: 'esm',
+      logLevel: 'silent',
+      plugins: [
+        {
+          name: 'external-packages',
+          setup(b) {
+            b.onResolve({ filter: /^[^./]/ }, (args) => ({ path: args.path, external: true }));
+          },
+        },
+      ],
+    });
+    return new Set(Object.keys(result.metafile.inputs).map((path) => resolve(path)));
+  } catch (error) {
+    console.warn(
+      'strip-edge-function: could not walk the import graph, measuring every file instead: ' +
+        (error instanceof Error ? error.message.split('\n')[0] : String(error)),
+    );
+    return null;
+  } finally {
+    await stop();
+  }
+}
+
+async function main() {
   assertDisposableCheckout();
+  const graph = await importGraph();
 
   const files = ROOTS.flatMap((root) => walk(root));
   if (files.length === 0) {
@@ -110,6 +154,8 @@ function main() {
 
   let before = 0;
   let after = 0;
+  let shipped = 0;
+  let shippedFiles = 0;
   const failures = [];
 
   for (const file of files) {
@@ -137,6 +183,10 @@ function main() {
       });
       writeFileSync(file, code);
       after += Buffer.byteLength(code);
+      if (!graph || graph.has(resolve(file))) {
+        shipped += Buffer.byteLength(code);
+        shippedFiles++;
+      }
     } catch (error) {
       failures.push(`${file}: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -156,10 +206,16 @@ function main() {
       `${beforeMb.toFixed(2)} MB -> ${afterMb.toFixed(2)} MB ` +
       `(${(100 - (after / before) * 100).toFixed(1)}% smaller)`,
   );
+  const shippedMb = shipped / 1024 / 1024;
+  console.log(
+    `strip-edge-function: the function imports ${shippedFiles} of them, ` +
+      `${shippedMb.toFixed(2)} MB after stripping` +
+      (graph ? '' : ' (import graph unavailable: counting every file)'),
+  );
 
-  if (afterMb > MAX_PAYLOAD_MB) {
+  if (shippedMb > MAX_PAYLOAD_MB) {
     console.error(
-      `::error::Edge Function payload is ${afterMb.toFixed(2)} MB after stripping, over the ` +
+      `::error::Edge Function payload is ${shippedMb.toFixed(2)} MB after stripping, over the ` +
         `${MAX_PAYLOAD_MB} MB guard. Supabase rejects above ~5 MB of measured payload. ` +
         `Split the function (see supabase/config.toml) or remove code before adding more.`,
     );
@@ -167,4 +223,4 @@ function main() {
   }
 }
 
-main();
+await main();
