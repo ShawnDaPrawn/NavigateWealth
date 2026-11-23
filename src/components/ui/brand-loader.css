@@ -16,9 +16,12 @@
  * JavaScript is still being parsed. Do not move any of it into JavaScript.
  */
 
+/* `.nwl-tokens` lends these to another full-screen surface in the same design
+   (the offline screen) without it repeating the palette or the mark colours. */
 .nwl-page,
 .nwl-panel,
-.nwl-inline {
+.nwl-inline,
+.nwl-tokens {
   --nwl-ink: #0d1626;
   --nwl-paper: #f6f4ef;
   --nwl-muted: #5e6676;

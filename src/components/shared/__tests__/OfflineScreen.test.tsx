@@ -93,6 +93,30 @@ describe('OfflineScreen', () => {
     expect(screen.getByRole('alertdialog', { name: "Can't reach Navigate Wealth" })).toBeTruthy();
   });
 
+  it('suggests what to check for each kind of failure', () => {
+    const { rerender } = renderApp();
+    goOffline(rerender, 'offline');
+    let tips = screen.getByRole('list', { name: /things to try/i });
+    expect(tips.textContent).toMatch(/flight mode/i);
+    expect(tips.textContent).not.toMatch(/router/i);
+
+    mockStatus = 'unreachable';
+    rerender(<OfflineScreen />);
+    tips = screen.getByRole('list', { name: /things to try/i });
+    expect(tips.textContent).toMatch(/router/i);
+    expect(tips.textContent).not.toMatch(/flight mode/i);
+  });
+
+  it('tells the user the page behind it, and their work, is kept', () => {
+    const { rerender } = renderApp();
+    goOffline(rerender, 'offline');
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog.textContent).toContain('Your work is safe.');
+    expect(dialog.textContent).toContain('Keep this tab open');
+    expect(screen.getByText(/reconnecting automatically/i)).toBeTruthy();
+  });
+
   it('clears itself and says so once the connection is back', () => {
     const { rerender, root } = renderApp();
     goOffline(rerender, 'offline');
@@ -118,7 +142,9 @@ describe('OfflineScreen', () => {
       await vi.advanceTimersByTimeAsync(1000);
     });
 
-    expect(screen.getByText(/still no connection/i)).toBeTruthy();
+    // Stamped with the time of the check, so a second failed tap visibly did something.
+    const status = screen.getByText(/still no connection at/i);
+    expect(status.querySelector('time')?.getAttribute('dateTime')).toBeTruthy();
     expect(screen.getByRole('button', { name: /try again/i })).toBeTruthy();
   });
 
