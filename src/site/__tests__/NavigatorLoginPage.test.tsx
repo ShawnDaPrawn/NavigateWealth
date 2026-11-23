@@ -482,9 +482,27 @@ describe('Navigator log-in page: redirects', () => {
     }
   });
 
-  it('the installed PWA keeps its app shell whichever design is live', async () => {
+  it('the installed PWA gets the Navigator app shell around the same form', async () => {
     state.standalone = true;
     await renderLogin('navigator');
+    expect(screen.getByRole('heading', { name: 'Log in' }).tagName).toBe('H1');
+    expect(document.querySelector('.nwap')).not.toBeNull();
+    // No website brand panel: the shell carries the mark, wordmark and switch.
+    expect(
+      screen.queryByRole('heading', { name: 'Welcome back to your wealth journey.' }),
+    ).toBeNull();
+    const nav = screen.getByRole('navigation', { name: 'Log in or create an account' });
+    const here = within(nav).getByRole('link', { name: 'Log in' });
+    expect(here.getAttribute('aria-current')).toBe('page');
+    expect(within(nav).getByRole('link', { name: 'Sign up' }).getAttribute('href')).toBe('/signup');
+    // The switch replaces the "Get started" line under the form.
+    expect(screen.queryByRole('link', { name: 'Get started' })).toBeNull();
+    expect(screen.getByText('FSP 54606')).toBeDefined();
+  });
+
+  it('the installed PWA keeps the legacy app shell when the legacy design is live', async () => {
+    state.standalone = true;
+    await renderLogin('legacy');
     expect(screen.getByRole('heading', { name: 'Log in' }).tagName).toBe('H2');
     expect(document.querySelector('.nwli')).toBeNull();
   });

@@ -19,30 +19,50 @@ import {
 } from '../../components/shared/LegalDocumentViewer';
 import { LoginCard } from '../sections/LoginCard';
 import { SignupForm } from '../sections/SignupForm';
+import { NavigatorAppAuthShell } from '../layout/NavigatorAppAuthShell';
 import '../styles/navigator.css';
 import '../styles/sections.css';
 import '../styles/login.css';
 import '../styles/signup.css';
 
-export function NavigatorSignupPage() {
+interface NavigatorSignupPageProps {
+  /**
+   * The installed app: the app's own shell (mark, Log in / Sign up switch,
+   * card) instead of the website's split card. The form is the same.
+   */
+  inApp?: boolean;
+}
+
+export function NavigatorSignupPage({ inApp = false }: NavigatorSignupPageProps = {}) {
   const form = useSignupForm();
   const legalViewer = useLegalDocumentViewer();
 
   return (
     <>
       <div className="nw-site nwli nwsu">
-        <LoginCard
-          headline="Start your wealth journey today."
-          lead="Create your account to begin your personalised financial plan with Navigate Wealth."
-          features={SIGNUP_BRAND_FEATURES}
-          variant="signup"
-        >
-          <SignupForm
-            form={form}
-            openDocument={legalViewer.openDocument}
-            loadingSlug={legalViewer.loadingSlug}
-          />
-        </LoginCard>
+        {inApp ? (
+          <NavigatorAppAuthShell active="signup">
+            <SignupForm
+              form={form}
+              openDocument={legalViewer.openDocument}
+              loadingSlug={legalViewer.loadingSlug}
+              showSwitchLink={false}
+            />
+          </NavigatorAppAuthShell>
+        ) : (
+          <LoginCard
+            headline="Start your wealth journey today."
+            lead="Create your account to begin your personalised financial plan with Navigate Wealth."
+            features={SIGNUP_BRAND_FEATURES}
+            variant="signup"
+          >
+            <SignupForm
+              form={form}
+              openDocument={legalViewer.openDocument}
+              loadingSlug={legalViewer.loadingSlug}
+            />
+          </LoginCard>
+        )}
       </div>
       <LegalDocumentDialog
         open={legalViewer.viewerOpen}

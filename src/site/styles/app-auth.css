@@ -1,0 +1,184 @@
+/*
+ * Log in and Sign up inside the installed app (NavigatorAppAuthShell).
+ *
+ * The forms keep the website's classes (login.css, signup.css); this file
+ * draws only the app's shell around them: paper and chart grid, the mark and
+ * wordmark, the Log in / Sign up switch, the card and the regulatory line.
+ * Scoped to `.nw-site` like the rest of the site; every class is `nwap-`.
+ */
+
+.nw-site .nwap {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: var(--nw-paper);
+}
+.nw-site .nwap-grid {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(13, 22, 38, 0.042) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 22, 38, 0.042) 1px, transparent 1px),
+    linear-gradient(rgba(13, 22, 38, 0.021) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 22, 38, 0.021) 1px, transparent 1px);
+  background-size:
+    80px 80px,
+    80px 80px,
+    16px 16px,
+    16px 16px;
+  background-position: center top;
+  -webkit-mask-image: linear-gradient(#000 0%, #000 55%, transparent 100%);
+  mask-image: linear-gradient(#000 0%, #000 55%, transparent 100%);
+}
+.nw-site .nwap-inner {
+  width: 100%;
+  max-width: 460px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(36px + env(safe-area-inset-top, 0px)) 16px
+    calc(28px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── Brand ── */
+.nw-site .nwap-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.nw-site .nwap-mark {
+  display: block;
+  width: auto;
+  height: 52px;
+}
+.nw-site .nwap-wordmark {
+  margin-top: 14px;
+}
+/* The wordmark artwork is drawn on white; multiply drops the white onto the
+   paper. Nothing between it and .nwap may form a stacking context (an opacity
+   animation would), or it blends against nothing and the white box returns. */
+.nw-site .nwap-wordmark img {
+  mix-blend-mode: multiply;
+}
+.nw-site .nwap-caption {
+  margin: 8px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+
+/* ── Log in / Sign up switch ── */
+.nw-site .nwap-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 28px 0 0;
+  padding: 4px;
+  border: 1px solid var(--nw-line);
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-2);
+}
+.nw-site .nwap-switch-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  border-radius: 3px;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  color: var(--nw-muted);
+  transition:
+    background-color var(--nw-dur-2) var(--nw-ease),
+    color var(--nw-dur-2) var(--nw-ease),
+    box-shadow var(--nw-dur-2) var(--nw-ease);
+}
+.nw-site .nwap-switch-item:hover {
+  color: var(--nw-ink);
+}
+.nw-site .nwap-switch-item[aria-current='page'] {
+  background: var(--nw-white);
+  color: var(--nw-ink);
+  font-weight: 600;
+  box-shadow:
+    var(--nw-shadow-1),
+    0 0 0 1px var(--nw-line);
+}
+.nw-site .nwap-switch-item:focus-visible {
+  outline: 2px solid var(--nw-violet);
+  outline-offset: 2px;
+}
+
+/* ── Card ── */
+.nw-site .nwap-card {
+  margin: 12px 0 0;
+  padding: 32px 28px;
+  border-radius: var(--nw-r-md);
+  background: var(--nw-white);
+  box-shadow:
+    0 40px 90px -50px rgba(17, 24, 39, 0.45),
+    0 0 0 1px rgba(13, 22, 38, 0.08);
+  animation: nwap-rise 0.5s var(--nw-ease) 60ms both;
+}
+.nw-site .nwap-card .nwli-form {
+  max-width: none;
+}
+
+/* ── Regulatory line ── */
+.nw-site .nwap-trust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 0;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nw-muted);
+}
+.nw-site .nwap-trust li + li::before {
+  content: '·';
+  margin: 0 10px;
+  opacity: 0.5;
+}
+.nw-site .nwap-trust li:first-child {
+  color: var(--nw-ink);
+}
+
+@keyframes nwap-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nw-site .nwap-card {
+    animation: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .nw-site .nwap-card {
+    padding: 28px 20px;
+  }
+}
