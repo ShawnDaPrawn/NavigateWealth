@@ -9,6 +9,7 @@ const page = (ids: string[], total: number) => ({
   page: 1,
   limit: 2,
   senderOptions: [],
+  kindOptions: [],
 });
 
 afterEach(() => vi.restoreAllMocks());

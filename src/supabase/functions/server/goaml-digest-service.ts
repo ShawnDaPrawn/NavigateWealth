@@ -315,6 +315,7 @@ export async function processGoamlNotify(incoming: GoamlScanReport): Promise<Goa
 
   if (!report.dryRun) {
     const sent = await sendEmail({
+      kind: 'goaml_digest',
       to: recipients[0],
       cc: recipients.length > 1 ? recipients.slice(1) : undefined,
       subject,

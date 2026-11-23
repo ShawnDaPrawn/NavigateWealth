@@ -399,6 +399,7 @@ app.post(
 
     const emailResults = await Promise.allSettled([
       sendEmail({
+        kind: 'quote_alert',
         to: 'info@navigatewealth.co',
         subject: `${isFullStage ? 'Full Quote Request' : 'New Quote Enquiry'}: ${fullName}${service ? ` — ${productName || service}` : ''}`,
         html: adminHtml,
@@ -414,6 +415,7 @@ app.post(
           : undefined,
       }),
       sendEmail({
+        kind: 'quote_ack',
         to: email,
         subject: isFullStage
           ? 'Quote Request Received — Navigate Wealth'

@@ -456,6 +456,7 @@ async function materialisePacketStep(
         message: plan.message ?? tpl.defaultMessage,
       });
       const sent = await sendEmail({
+        kind: 'esign_invitation',
         to: first.email,
         subject: `Signature Request: ${title}`,
         html: emailContent.html,

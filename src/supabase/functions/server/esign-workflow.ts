@@ -214,6 +214,7 @@ export async function completeEnvelope(
           log.info(`Completion email suppressed for ${senderEmail} (mode=off)`);
         } else {
           await sendEmail({
+            kind: 'esign_staff_update',
             to: senderEmail,
             subject: `Completed: ${envelope.title}`,
             html,
@@ -235,6 +236,7 @@ export async function completeEnvelope(
         });
 
         await sendEmail({
+          kind: 'esign_completed',
           to: signer.email,
           subject: `Completed: ${envelope.title}`,
           html,

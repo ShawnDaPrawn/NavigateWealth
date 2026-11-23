@@ -197,6 +197,7 @@ app.post(
         // and deliverability headers ride email-core's extended EmailParams.
         const messageId = `<${crypto.randomUUID()}@navigatewealth.co>`;
         const confirmationSent = await sendEmail({
+          kind: 'newsletter_confirm',
           to: email,
           subject: 'Please Confirm Your Navigate Wealth Newsletter Subscription',
           text: createPlainTextEmail(
@@ -234,6 +235,7 @@ app.post(
         });
 
         const adminOk = await sendEmail({
+          kind: 'newsletter_admin_notice',
           to: 'info@navigatewealth.co',
           subject: 'New Newsletter Subscription Attempt (Footer Form)',
           html: adminHtml,
@@ -366,6 +368,7 @@ app.get('/confirm', async (c) => {
         // address and List-Unsubscribe compliance headers ride EmailParams.
         const welcomeMessageId = `<${crypto.randomUUID()}@navigatewealth.co>`;
         const welcomeSent = await sendEmail({
+          kind: 'newsletter_welcome',
           to: email,
           subject: "You're in — Welcome to Navigate Wealth.",
           text: createPlainTextEmail(
@@ -416,6 +419,7 @@ app.get('/confirm', async (c) => {
         });
 
         const adminConfirmOk = await sendEmail({
+          kind: 'newsletter_admin_notice',
           to: 'info@navigatewealth.co',
           subject: 'Newsletter Subscription Confirmed (Footer Form)',
           html: adminConfirmHtml,

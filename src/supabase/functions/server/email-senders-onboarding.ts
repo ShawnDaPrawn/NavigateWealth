@@ -64,6 +64,7 @@ Admin Panel: https://www.navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
+    kind: 'admin_application_alert',
     to: 'info@navigatewealth.co',
     subject: `New Application: ${applicationNumber}`,
     html,
@@ -114,6 +115,7 @@ If you have any questions, contact us at info@navigatewealth.co or call (+27) 12
   `.trim();
 
   return await sendEmail({
+    kind: 'application_received',
     to,
     subject: `We received your application — ${applicationNumber}`,
     html,
@@ -165,6 +167,7 @@ If you have any questions, contact us at info@navigatewealth.co or call (+27) 12
   `.trim();
 
   return await sendEmail({
+    kind: 'application_approved',
     to,
     subject: 'Your Navigate Wealth Application Has Been Approved!',
     html,
@@ -218,7 +221,13 @@ Email: info@navigatewealth.co
 Phone: (+27) 12-667-2505
   `.trim();
 
-  return await sendEmail({ to, subject: 'Application Status Update', html, text });
+  return await sendEmail({
+    to,
+    subject: 'Application Status Update',
+    html,
+    text,
+    kind: 'application_declined',
+  });
 }
 
 /**
@@ -265,6 +274,7 @@ View Admin Panel: https://www.navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
+    kind: 'admin_approval_alert',
     to: 'info@navigatewealth.co',
     subject: `Application Approved: ${applicationNumber}`,
     html,
@@ -317,6 +327,7 @@ Admin Panel: https://www.navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
+    kind: 'admin_signup_alert',
     to: 'info@navigatewealth.co',
     subject: 'New User Signup',
     html,
@@ -384,6 +395,7 @@ If you did not expect this email, please contact us at info@navigatewealth.co.
   `.trim();
 
   return await sendEmail({
+    kind: 'onboarded_welcome',
     to,
     subject: 'Welcome to Navigate Wealth — Set Up Your Account',
     html,
@@ -451,5 +463,5 @@ Our team is ready to assist you every step of the way.
 ${footerNote}
   `.trim();
 
-  return await sendEmail({ to, subject, html, text });
+  return await sendEmail({ to, subject, html, text, kind: 'application_invite' });
 }

@@ -36,6 +36,12 @@
 export interface RequestContext {
   requestId: string;
   /**
+   * The request's method and path (`POST /make-server-91ed8379/client-birthdays/send-greetings`).
+   * Recorded against every email sent during the request (email-delivery-log.ts),
+   * so a send can be traced back to the route or scheduled job that made it.
+   */
+  route?: string;
+  /**
    * The exception the shared error handler turned into a 500, handed to the
    * root 5xx observer in create-app.ts so it can be recorded ONCE, with the
    * full request path. Sub-routers see a stripped path (`/documents/1` rather

@@ -113,6 +113,7 @@ async function sendTwoFactorDisabledNotice(userId: string, byAdmin: boolean): Pr
       },
     );
     await sendEmail({
+      kind: 'two_factor_disabled',
       to: email,
       subject: 'Navigate Wealth security notice: two-factor authentication turned off',
       html,
@@ -593,6 +594,7 @@ app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
               },
             );
             await sendEmail({
+              kind: 'account_suspended',
               to: clientEmail,
               subject: 'Security Alert: Your Navigate Wealth Account Has Been Suspended',
               html: clientHtml,
@@ -625,6 +627,7 @@ app.post('/:userId/2fa/verify-code', requirePrimaryAuth, async (c) => {
             },
           );
           await sendEmail({
+            kind: 'account_suspended_alert',
             to: adminEmail,
             subject: `🚨 Security Alert: Account Suspended — ${clientEmail || userId}`,
             html: adminHtml,

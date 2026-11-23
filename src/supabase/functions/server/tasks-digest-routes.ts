@@ -443,6 +443,7 @@ This is an automated daily digest from Navigate Wealth.
 
     // 9. Send
     const sent = await sendEmail({
+      kind: 'tasks_digest',
       to: ADMIN_EMAIL,
       subject: `Overdue Tasks (${overdueTasks.length}) — ${todayFormatted}`,
       html,
