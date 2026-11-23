@@ -98,6 +98,11 @@
 
   --nw-r-sm: 4px;
   --nw-r-md: 8px;
+  /* The publication artwork sizes the article editor asks for: hero
+     1200×630, thumbnail 400×300. Covers carry their headline in the image,
+     so a frame showing one uses its ratio and crops none of the words. */
+  --nw-ratio-hero: 1200 / 630;
+  --nw-ratio-thumb: 4 / 3;
   --nw-shadow-1: 0 1px 2px rgba(13, 22, 38, 0.06);
   --nw-shadow-2: 0 24px 44px -32px rgba(13, 22, 38, 0.55);
   --nw-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -871,14 +876,13 @@
   line-height: 1.3;
   color: var(--nw-ink);
 }
+/* Log In alone, full width: Get Started already sits beside the burger. */
 .nw-site .nwh-sheet-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
   margin-top: 18px;
 }
-.nw-site .nwh-sheet-login,
-.nw-site .nwh-sheet-start {
+.nw-site .nwh-sheet-login {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -886,9 +890,6 @@
   padding: 0;
   font-size: 15px;
   font-weight: 600;
-}
-/* content-box, as drawn: the outlined button is 50px beside a 48px one. */
-.nw-site .nwh-sheet-login {
   border: 1px solid var(--nw-line-strong);
   box-sizing: content-box;
 }

@@ -225,7 +225,7 @@
 }
 .nw-site.nwar .nwar-banner-fig {
   margin: 0;
-  aspect-ratio: 21 / 9;
+  aspect-ratio: var(--nw-ratio-hero);
   border-radius: var(--nw-r-md);
   overflow: hidden;
   background: var(--nw-ink-2);
@@ -1048,7 +1048,7 @@
 .nw-site.nwar .nwar-relimg {
   position: relative;
   display: block;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: var(--nw-ratio-thumb);
   margin-bottom: 18px;
   border-radius: var(--nw-r-sm);
   overflow: hidden;

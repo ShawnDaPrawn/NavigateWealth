@@ -142,8 +142,20 @@ describe('NavigatorHeader', () => {
     const sheet = document.getElementById(burger.getAttribute('aria-controls') ?? '');
     expect(sheet).toBeTruthy();
     const scope = within(sheet as HTMLElement);
-    // The board opens the sheet with Services expanded.
+    // The sheet opens with every section collapsed.
+    for (const label of ['Services', 'Solutions', 'Company']) {
+      expect(scope.getByRole('button', { name: label }).getAttribute('aria-expanded')).toBe(
+        'false',
+      );
+    }
+    for (const item of serviceItems) {
+      expect(scope.queryByRole('link', { name: item.label })).toBeNull();
+    }
+    // Get Started sits beside the burger, so the sheet offers only Log In.
+    expect(scope.getByRole('link', { name: 'Log In' }).getAttribute('href')).toBe('/login');
+    expect(scope.queryByRole('link', { name: 'Get Started' })).toBeNull();
     const services = scope.getByRole('button', { name: 'Services' });
+    fireEvent.click(services);
     expect(services.getAttribute('aria-expanded')).toBe('true');
     for (const item of serviceItems) {
       expect(scope.getByRole('link', { name: item.label }).getAttribute('href')).toBe(item.path);
