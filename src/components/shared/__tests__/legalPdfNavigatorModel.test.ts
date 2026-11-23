@@ -136,6 +136,43 @@ describe('paginateLegalBlocks', () => {
     expect(rest.getAttribute('start')).toBe('3');
   });
 
+  it('keeps breaking a list taller than a page, however many pages it takes', () => {
+    const { bodies, newPage, fits } = pager(3);
+    paginateLegalBlocks(
+      blocksFrom(
+        `<p>intro</p><ul>${['1', '2', '3', '4', '5', '6', '7'].map((n) => `<li>${n}</li>`).join('')}</ul>`,
+      ),
+      newPage,
+      fits,
+    );
+    expect(bodies.map((body) => body.textContent)).toEqual(['intro12', '345', '67']);
+    bodies.forEach((body) => expect(fits(body)).toBe(true));
+  });
+
+  it('breaks a list that starts on an empty page', () => {
+    const { bodies, newPage, fits } = pager(2);
+    paginateLegalBlocks(blocksFrom('<ul><li>a</li><li>b</li><li>c</li></ul>'), newPage, fits);
+    expect(bodies.map((body) => body.textContent)).toEqual(['ab', 'c']);
+  });
+
+  it('splits a plain paragraph taller than a whole page between words', () => {
+    const bodies: HTMLElement[] = [];
+    const words = (body: HTMLElement) => (body.textContent || '').split(/\s+/).filter(Boolean);
+    const longText = Array.from({ length: 25 }, (_, index) => `w${index + 1}`).join(' ');
+    paginateLegalBlocks(
+      blocksFrom(`<p>${longText}</p>`),
+      () => {
+        const body = document.createElement('div');
+        bodies.push(body);
+        return body;
+      },
+      (body) => words(body).length <= 10,
+    );
+    const filled = bodies.filter((body) => body.children.length > 0);
+    expect(filled.map((body) => words(body).length)).toEqual([10, 10, 5]);
+    expect(filled.map((body) => body.textContent).join(' ')).toBe(longText);
+  });
+
   it("starts a new page at an editor's page break, but not on an empty page", () => {
     const { bodies, newPage, fits } = pager(10);
     paginateLegalBlocks(

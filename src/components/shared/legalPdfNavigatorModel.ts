@@ -11,13 +11,15 @@
  * paged.js preview clipped text: it measured pages before the web fonts had
  * arrived and nothing checked the result. The rules now:
  *
- * - a paragraph is never split across pages; it moves to the next page whole;
- * - a list breaks only between items;
+ * - a paragraph is never split across pages; it moves to the next page whole
+ *   (only one taller than a whole page is split, between words);
+ * - a list breaks only between items, wherever it starts;
  * - a heading never ends a page; it moves with what follows it;
  * - every page keeps a few pixels spare, so rounding at another zoom level
  *   cannot clip a last line;
  * - the layout component checks every page afterwards and lays the document
- *   out again if anything overflows (a font that arrived late, say).
+ *   out again if anything overflows (a font that arrived late, say); if a page
+ *   still overflows, it reports an error and the legacy layout takes over.
  */
 import { COMPANY } from '../../config/companyFacts';
 
@@ -109,6 +111,39 @@ const isHeading = (element: Element | null) => Boolean(element && /^H[1-6]$/.tes
 const isList = (element: Element) => element.tagName === 'UL' || element.tagName === 'OL';
 
 /**
+ * Puts as much of a paragraph taller than a page as fits into the empty
+ * `body`, breaking between words, and returns the rest as a new paragraph.
+ * Only a paragraph of plain text is split; one holding links or emphasis, or
+ * one where not even a few words fit, returns null.
+ */
+function splitParagraphToFit(
+  paragraph: HTMLElement,
+  body: HTMLElement,
+  fits: (body: HTMLElement) => boolean,
+): HTMLElement | null {
+  if (paragraph.children.length > 0) return null;
+  const words = (paragraph.textContent || '').split(/\s+/).filter(Boolean);
+  const head = paragraph.cloneNode(false) as HTMLElement;
+  body.appendChild(head);
+  let low = 0;
+  let high = words.length - 1;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    head.textContent = words.slice(0, middle).join(' ');
+    if (fits(body)) low = middle;
+    else high = middle - 1;
+  }
+  if (low < 3) {
+    body.removeChild(head);
+    return null;
+  }
+  head.textContent = words.slice(0, low).join(' ');
+  const rest = paragraph.cloneNode(false) as HTMLElement;
+  rest.textContent = words.slice(low).join(' ');
+  return rest;
+}
+
+/**
  * Pours blocks into pages. `newPage` makes a page and returns the element the
  * blocks go into; `fits` says whether that element still holds everything.
  * Returns the page bodies in order.
@@ -138,14 +173,8 @@ export function paginateLegalBlocks(
     if (fits(body)) continue;
     body.removeChild(block);
 
-    // A block taller than a whole page goes on a page of its own: there is
-    // nowhere better for it, and moving it on would loop for ever.
-    if (body.children.length === 0) {
-      body.appendChild(block);
-      breakPage();
-      continue;
-    }
-
+    // Lists split between items wherever they start, an empty page included:
+    // a list taller than a page has to break somewhere.
     if (isList(block) && block.children.length > 1) {
       const part = block.cloneNode(false) as HTMLElement;
       body.appendChild(part);
@@ -172,6 +201,21 @@ export function paginateLegalBlocks(
       }
       body.removeChild(part);
       items.forEach((item) => block.appendChild(item));
+    }
+
+    // Nothing else fits on an empty page either: the block is taller than a
+    // whole page. A plain paragraph is split between words, as the only place
+    // left to break it; anything else goes on a page of its own, where the
+    // layout's final check reports the overflow rather than clip it quietly.
+    if (body.children.length === 0) {
+      const rest = block.tagName === 'P' ? splitParagraphToFit(block, body, fits) : null;
+      if (rest) {
+        queue.unshift(rest);
+      } else {
+        body.appendChild(block);
+      }
+      breakPage();
+      continue;
     }
 
     // Keep a heading with what follows it.

@@ -284,12 +284,25 @@ export function LegalPdfNavigatorLayout({
       if (!cancelled) onStateRef.current?.(state);
     };
 
+    // Throws when a page still overflows after the retries, so the caller
+    // falls back to the legacy layout instead of offering clipped pages.
     const layout = () => {
       let fits = layoutDocument(host, document);
       for (let attempt = 0; !fits && attempt < MAX_RELAYOUTS; attempt += 1) {
         fits = layoutDocument(host, document);
       }
-      if (!fits) console.warn('[LegalPdfNavigatorLayout] A page still overflows after relayout.');
+      if (!fits) throw new Error('Part of the document did not fit on its page.');
+    };
+
+    const fail = (error: unknown) => {
+      if (cancelled) return;
+      console.error('[LegalPdfNavigatorLayout] Layout failed:', error);
+      host.classList.remove('nwlp-measuring');
+      report({
+        ready: true,
+        error: error instanceof Error ? error.message : 'The PDF pages could not be laid out.',
+        activeRenderer: 'legacy',
+      });
     };
 
     // A face that arrives after the first layout changes every measurement:
@@ -301,7 +314,12 @@ export function LegalPdfNavigatorLayout({
         const overflowing = Array.from(host.querySelectorAll<HTMLElement>('.nwlp-body')).some(
           (body) => !legalPdfPageFits(body),
         );
-        if (overflowing) layout();
+        if (!overflowing) return;
+        try {
+          layout();
+        } catch (error) {
+          fail(error);
+        }
       }, 120);
     };
 
@@ -317,14 +335,7 @@ export function LegalPdfNavigatorLayout({
         window.document.fonts?.addEventListener?.('loadingdone', onFontsLoaded);
         report({ ready: true, error: null, activeRenderer: 'navigator' });
       } catch (error) {
-        if (cancelled) return;
-        console.error('[LegalPdfNavigatorLayout] Layout failed:', error);
-        host.classList.remove('nwlp-measuring');
-        report({
-          ready: true,
-          error: error instanceof Error ? error.message : 'The PDF pages could not be laid out.',
-          activeRenderer: 'legacy',
-        });
+        fail(error);
       }
     })();
 
