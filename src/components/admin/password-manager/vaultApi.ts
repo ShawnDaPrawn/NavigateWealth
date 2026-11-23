@@ -172,8 +172,13 @@ export const trustSuggestions = async (connectionId: string) =>
 
 // ── Approvals, runs and activity ────────────────────────────────────────────
 
-export const listApprovals = async (state: 'pending' | 'all') =>
-  listOf(await get<Listed<VaultApproval>>('/approvals' + query({ state })));
+/** `background` marks polling, which must not keep an idle vault open. */
+export const listApprovals = async (state: 'pending' | 'all', background = false) =>
+  listOf(
+    await get<Listed<VaultApproval>>(
+      '/approvals' + query({ state, background: background ? '1' : undefined }),
+    ),
+  );
 export const approve = (approvalId: string) =>
   post<unknown>('/approvals' + id(approvalId) + '/approve');
 export const deny = (approvalId: string) => post<unknown>('/approvals' + id(approvalId) + '/deny');

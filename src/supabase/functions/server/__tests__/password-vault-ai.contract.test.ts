@@ -326,6 +326,82 @@ describe('password vault — workflows and skills', () => {
   });
 });
 
+describe('password vault — review fixes', () => {
+  const base = {
+    description: '',
+    automatedWorkflowId: null,
+    guardrails: { allowedOrigins: [], checkpointLabels: [], never: [], stopIf: [] },
+    returns: '',
+  };
+
+  it('rejects invalid amounts and fails closed when a set limit cannot be checked', async () => {
+    const s = await seed();
+    const wf = (
+      await admin('/' + s.alpha + '/workflows', 'POST', {
+        ...base,
+        name: 'Switch',
+        kind: 'skill',
+        risk: 'money',
+        inputs: [{ name: 'amount', type: 'amount', required: false, description: '' }],
+        steps: [{ text: 'Submit', checkpoint: true }],
+      })
+    ).json;
+    await admin('/workflows/' + wf.id + '/publish', 'POST');
+    const policy = autonomyPreset('full');
+    const conn = await connect('use', 'full', ['brokerage']);
+    await admin('/connections/' + conn.id, 'PUT', {
+      autonomy: {
+        ...policy,
+        level: 'custom',
+        checks: { ...policy.checks, per_instruction_limit: 'block' },
+        limits: { ...policy.limits, perInstruction: 1000 },
+      },
+    });
+    const start = (inputs: Record<string, unknown>) =>
+      tool(conn.token, 'start_workflow', {
+        workflow_id: wf.id,
+        inputs,
+        request_id: crypto.randomUUID(),
+      });
+    expect((await start({ amount: 'not-a-number' })).text).toContain('must be a number');
+    expect((await start({ amount: -5 })).text).toContain('must be a number');
+    expect((await start({})).value.run.state).toBe('blocked');
+    expect((await start({ amount: 5000 })).value.run.state).toBe('blocked');
+  });
+
+  it('resumes the version that was approved, not a newer one', async () => {
+    const s = await seed();
+    const draft = {
+      ...base,
+      name: 'Update',
+      kind: 'skill',
+      risk: 'change',
+      inputs: [],
+      steps: [{ text: 'Do it', checkpoint: false }],
+    };
+    const wf = (await admin('/' + s.alpha + '/workflows', 'POST', draft)).json;
+    await admin('/workflows/' + wf.id + '/publish', 'POST');
+    const conn = await connect('use', 'supervised', ['brokerage']);
+    const started = await tool(conn.token, 'start_workflow', {
+      workflow_id: wf.id,
+      inputs: {},
+      request_id: crypto.randomUUID(),
+    });
+    expect(started.value.run.state).toBe('waiting_for_approval');
+    const current = (await admin('/workflows?credential=' + s.alpha)).json.items[0];
+    await admin('/workflows/' + wf.id, 'PUT', {
+      revision: current.revision,
+      workflow: { ...draft, kind: 'automated', automatedWorkflowId: 'reporting-workflow' },
+    });
+    await admin('/workflows/' + wf.id + '/publish', 'POST');
+    await admin('/approvals/' + started.value.run.approvalId + '/approve', 'POST');
+    const run = (await admin('/runs/' + started.value.run.id)).json;
+    expect(run.workflowVersion).toBe(1);
+    // Version 1 is a skill, so it asks for the browser host; version 2 would have queued a report.
+    expect(run.message).toContain('browser host');
+  });
+});
+
 describe('password vault — collection owners', () => {
   it('lets an owner replace a password without ever reading one', async () => {
     const s = await seed();

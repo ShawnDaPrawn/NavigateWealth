@@ -49,6 +49,11 @@ describe('vault unlock', () => {
     expect((await call(app, '/secret')).status).toBe(200);
     vi.useFakeTimers();
     try {
+      // Background polling is answered but does not keep the vault open.
+      vi.setSystemTime(Date.now() + IDLE_MS - 60_000);
+      expect((await call(app, '/secret?background=1')).status).toBe(200);
+      vi.setSystemTime(Date.now() + 2 * 60_000);
+      expect((await call(app, '/secret?background=1')).status).toBe(423);
       vi.setSystemTime(Date.now() + IDLE_MS + 1000);
       expect((await call(app, '/secret')).status).toBe(423);
       expect((await (await call(app, '/state')).json()).unlocked).toBe(false);

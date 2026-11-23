@@ -76,7 +76,7 @@ export default function PasswordManager({
   );
 
   const refreshPending = useCallback(() => {
-    listApprovals('pending')
+    listApprovals('pending', true)
       .then((rows) => setPending(rows.length))
       .catch(() => {});
   }, []);

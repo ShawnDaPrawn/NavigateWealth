@@ -57,7 +57,10 @@ function authorised(req) {
 async function view(page) {
   const controls = await page.evaluate(() => {
     const out = [];
-    let n = 0;
+    // Ids persist on the page and never repeat, even when controls appear
+    // between reads or a cloned element carries a copy of another's id.
+    const seen = new Set();
+    window.__nwSeq = window.__nwSeq || 0;
     for (const el of document.querySelectorAll(
       'a[href], button, input, select, textarea, [role="button"], [role="link"]',
     )) {
@@ -66,7 +69,9 @@ async function view(page) {
       const type = (el.getAttribute('type') || '').toLowerCase();
       const kind = el.tagName === 'INPUT' ? type || 'text' : el.tagName.toLowerCase();
       if (kind === 'hidden') continue;
-      const id = el.dataset.nwId || 'c' + ++n;
+      let id = el.dataset.nwId;
+      if (!id || seen.has(id)) id = 'c' + ++window.__nwSeq;
+      seen.add(id);
       el.dataset.nwId = id;
       const labelled = el.id && document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
       const label = (

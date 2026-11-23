@@ -44,7 +44,7 @@ import {
   type PageControl,
 } from './vault-browser-host.ts';
 import { jobInput } from './broker-ops-model.ts';
-import { startJob } from './broker-ops-jobs.ts';
+import { control, startJob } from './broker-ops-jobs.ts';
 import {
   batches,
   runs as portalRuns,
@@ -133,22 +133,37 @@ async function computeChecks(
       null,
       'Checked in the session against the skill’s stop rules',
     ),
-    w.risk === 'money' && amount !== null && limits.perInstruction !== null
-      ? check(
-          'per_instruction_limit',
-          modes.per_instruction_limit,
-          amount <= limits.perInstruction,
-          'R ' + amount + ' against a limit of R ' + limits.perInstruction,
-        )
-      : check('per_instruction_limit', modes.per_instruction_limit, null, 'No limit set'),
-    w.risk === 'money' && amount !== null && limits.perDay !== null
-      ? check(
-          'daily_limit',
-          modes.daily_limit,
-          spentToday + amount <= limits.perDay,
-          'R ' + (spentToday + amount) + ' today against R ' + limits.perDay,
-        )
-      : check('daily_limit', modes.daily_limit, null, 'No limit set'),
+    // A limit that is set but cannot be evaluated fails closed.
+    w.risk !== 'money' || limits.perInstruction === null
+      ? check('per_instruction_limit', modes.per_instruction_limit, null, 'No limit set')
+      : amount === null
+        ? check(
+            'per_instruction_limit',
+            modes.per_instruction_limit,
+            false,
+            'No amount given, so the limit cannot be checked',
+          )
+        : check(
+            'per_instruction_limit',
+            modes.per_instruction_limit,
+            amount <= limits.perInstruction,
+            'R ' + amount + ' against a limit of R ' + limits.perInstruction,
+          ),
+    w.risk !== 'money' || limits.perDay === null
+      ? check('daily_limit', modes.daily_limit, null, 'No limit set')
+      : amount === null
+        ? check(
+            'daily_limit',
+            modes.daily_limit,
+            false,
+            'No amount given, so the daily limit cannot be checked',
+          )
+        : check(
+            'daily_limit',
+            modes.daily_limit,
+            spentToday + amount <= limits.perDay,
+            'R ' + (spentToday + amount) + ' today against R ' + limits.perDay,
+          ),
     changes
       ? check(
           'duplicate_24h',
@@ -192,10 +207,11 @@ export async function startRun(
     if (field.required && (args.inputs[field.name] === undefined || args.inputs[field.name] === ''))
       throw new RunError('Missing input: ' + field.name);
   const amountField = snap.inputs.find((i) => i.type === 'amount');
-  const amount =
-    amountField && Number.isFinite(Number(args.inputs[amountField.name]))
-      ? Number(args.inputs[amountField.name])
-      : null;
+  const rawAmount = amountField ? args.inputs[amountField.name] : undefined;
+  const hasAmount = rawAmount !== undefined && rawAmount !== null && rawAmount !== '';
+  const amount = hasAmount ? Number(rawAmount) : null;
+  if (hasAmount && (!Number.isFinite(amount) || amount! < 0))
+    throw new RunError('Input ' + amountField!.name + ' must be a number of zero or more.');
   const signature = await sha256Hex(wf.id + '|' + JSON.stringify(args.inputs));
   const mode = modeFor(conn, riskAction(snap.risk), item, wf.id);
   const checks = await computeChecks(conn, snap, args.inputs, amount, signature, id);
@@ -572,9 +588,12 @@ export async function afterDecision(runId: string, approved: boolean) {
     });
     return;
   }
-  const wf = await workflows.get(run.workflowId);
-  const snap = wf && (await liveSnapshot(wf));
-  if (!snap) return;
+  // Resume exactly the version that was checked and approved, not a newer one.
+  const snap = await workflowVersions.get(versionKey(run.workflowId, run.workflowVersion));
+  if (!snap) {
+    await save(run, { state: 'failed', message: 'The approved workflow version is missing.' });
+    return;
+  }
   await launch(await save(run, { state: 'running', message: 'Approved' }), snap);
 }
 
@@ -582,6 +601,13 @@ export async function cancelRun(runId: string) {
   const run = (await runs.get(runId)) as Run | null;
   if (!run) return null;
   if (['completed', 'failed', 'cancelled', 'blocked'].includes(run.state)) return publicRun(run);
+  if (run.portalJobId) {
+    // Stop the reporting jobs too; finished ones refuse, which is fine.
+    const batch = await batches.get(run.portalJobId);
+    await Promise.all(
+      (batch?.ids ?? []).map((jobId) => control(jobId, 'cancel').catch(() => undefined)),
+    );
+  }
   return publicRun(await endSession(run, 'cancelled', 'Cancelled by a super admin.'));
 }
 

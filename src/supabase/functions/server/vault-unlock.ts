@@ -48,13 +48,17 @@ export async function lock(c: Context) {
   if (id) await unlocks.remove(id.key);
 }
 
-/** Middleware: 423 until the vault is unlocked; keeps an open vault alive while used. */
+/**
+ * Middleware: 423 until the vault is unlocked; keeps an open vault alive while
+ * a person uses it. Background polling (`?background=1`) is answered but does
+ * not count as activity, so an unattended vault still locks.
+ */
 export async function requireUnlocked(c: Context, next: Next) {
   const id = identity(c);
   const record = id ? await unlocks.get(id.key) : null;
   if (!id || !record || Date.now() - record.lastActive >= IDLE_MS)
     return c.json({ error: 'The password manager is locked.', code: 'VAULT_LOCKED' }, 423);
-  if (Date.now() - record.lastActive > 60_000)
+  if (c.req.query('background') !== '1' && Date.now() - record.lastActive > 60_000)
     await unlocks.put(id.key, { lastActive: Date.now() });
   await next();
 }
