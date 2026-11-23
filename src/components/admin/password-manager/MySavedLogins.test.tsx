@@ -9,7 +9,7 @@ vi.mock('../../../utils/api/client', () => ({
 const login = {
   id: 'l1',
   name: 'Bank',
-  url: 'https://bank.example',
+  url: 'https://example.com',
   username: 'amy',
   passwordChangedAt: null,
   due: true,

@@ -29,7 +29,7 @@ const summary = (over: Partial<VaultSummary>): VaultSummary => ({
 });
 const items = [
   summary({}),
-  summary({ id: 'pid', name: 'Personal bank', url: 'https://bank.example', collectionId: 'amy' }),
+  summary({ id: 'pid', name: 'Personal bank', url: 'https://example.com', collectionId: 'amy' }),
 ];
 const collections: Collection[] = [
   {

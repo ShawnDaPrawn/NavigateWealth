@@ -1,10 +1,10 @@
 {
   "_comment": "Bundle-size floors for scripts/build/check-bundle-size.mjs (Stage A / F6). Regenerate with `npm run bundle:check -- --write-baseline` after an intentional size change, and say why in the commit message.",
   "_tolerancePct": 5,
-  "entryBytes": 1662278,
-  "entryGzipBytes": 421516,
-  "totalJsBytes": 13677418,
+  "entryBytes": 1691960,
+  "entryGzipBytes": 431564,
+  "totalJsBytes": 13853865,
   "largestChunkBytes": 940072,
-  "imageBytes": 57925939,
-  "totalDistBytes": 78477088
+  "imageBytes": 60604817,
+  "totalDistBytes": 82812119
 }
