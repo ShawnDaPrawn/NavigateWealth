@@ -17,11 +17,20 @@ import { TwoFactorModal } from '../../components/auth/TwoFactorModal';
 import { PageLoader } from '../../components/ui/page-loader';
 import { LoginCard } from '../sections/LoginCard';
 import { LoginForm } from '../sections/LoginForm';
+import { NavigatorAppAuthShell } from '../layout/NavigatorAppAuthShell';
 import '../styles/navigator.css';
 import '../styles/sections.css';
 import '../styles/login.css';
 
-export function NavigatorLoginPage() {
+interface NavigatorLoginPageProps {
+  /**
+   * The installed app: the app's own shell (mark, Log in / Sign up switch,
+   * card) instead of the website's split card. The form is the same.
+   */
+  inApp?: boolean;
+}
+
+export function NavigatorLoginPage({ inApp = false }: NavigatorLoginPageProps = {}) {
   const form = useLoginForm();
 
   // As on the live page: once signed in, a loader holds the screen while the
@@ -34,13 +43,19 @@ export function NavigatorLoginPage() {
     <>
       {form.twoFactor ? <TwoFactorModal {...form.twoFactor} /> : null}
       <div className="nw-site nwli">
-        <LoginCard
-          headline="Welcome back to your wealth journey."
-          lead="Sign in to manage your financial plan, documents and adviser communication."
-          features={LOGIN_BRAND_FEATURES}
-        >
-          <LoginForm form={form} />
-        </LoginCard>
+        {inApp ? (
+          <NavigatorAppAuthShell active="login">
+            <LoginForm form={form} showSwitchLink={false} />
+          </NavigatorAppAuthShell>
+        ) : (
+          <LoginCard
+            headline="Welcome back to your wealth journey."
+            lead="Sign in to manage your financial plan, documents and adviser communication."
+            features={LOGIN_BRAND_FEATURES}
+          >
+            <LoginForm form={form} />
+          </LoginCard>
+        )}
       </div>
     </>
   );

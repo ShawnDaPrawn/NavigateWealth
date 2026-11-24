@@ -61,9 +61,16 @@ interface SignupFormProps {
   /** The live page's legal-document viewer. */
   openDocument: (slug: string) => void;
   loadingSlug: string | null;
+  /** The installed app has a Log in / Sign up switch above the card instead. */
+  showSwitchLink?: boolean;
 }
 
-export function SignupForm({ form, openDocument, loadingSlug }: SignupFormProps) {
+export function SignupForm({
+  form,
+  openDocument,
+  loadingSlug,
+  showSwitchLink = true,
+}: SignupFormProps) {
   const {
     firstName,
     setFirstName,
@@ -328,12 +335,14 @@ export function SignupForm({ form, openDocument, loadingSlug }: SignupFormProps)
         )}
       </button>
 
-      <p className="nwli-alt">
-        Already have an account?{' '}
-        <Link to="/login" className="nwli-link">
-          Sign in
-        </Link>
-      </p>
+      {showSwitchLink && (
+        <p className="nwli-alt">
+          Already have an account?{' '}
+          <Link to="/login" className="nwli-link">
+            Sign in
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

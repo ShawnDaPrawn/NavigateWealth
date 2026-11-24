@@ -39,12 +39,18 @@ interface MainLayoutProps {
    * to be logged in from another tab.
    */
   forcePublicLayout?: boolean;
+  /**
+   * In the installed PWA, render the page full-screen without the website's
+   * header and footer, as the auth screens are (the 404 uses this).
+   */
+  bareInInstalledApp?: boolean;
 }
 
 export function MainLayout({
   children,
   showNavAndFooter = true,
   forcePublicLayout = false,
+  bareInInstalledApp = false,
 }: MainLayoutProps) {
   const { isAuthenticated, user, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -56,7 +62,9 @@ export function MainLayout({
 
   // In the installed PWA, render the auth screens (login / signup / forgot
   // password) as a focused, app-like view without the marketing chrome or footer.
-  const isAppAuthScreen = isStandalone && APP_AUTH_ROUTES.includes(window.location.pathname);
+  // The 404 asks for the same bare view through `bareInInstalledApp`.
+  const isAppAuthScreen =
+    isStandalone && (bareInInstalledApp || APP_AUTH_ROUTES.includes(window.location.pathname));
 
   // When forcePublicLayout is on, treat as unauthenticated for layout decisions
   const effectivelyAuthenticated = forcePublicLayout ? false : isAuthenticated;
@@ -124,12 +132,12 @@ export function MainLayout({
     );
   }
 
-  // Installed-PWA auth screens: strip the marketing chrome (no TopBar/nav/footer)
-  // and let each auth page render its branded MobileAuthLayout shell, which owns
-  // the full-height centring and device safe areas.
+  // Installed-PWA auth screens (and the app's 404): strip the marketing chrome
+  // (no TopBar/nav/footer) and let each page render its own full-screen app
+  // shell, which owns the full-height centring and device safe areas.
   if (isAppAuthScreen) {
     return (
-      <div className="min-h-[100dvh] bg-white">
+      <div className="min-h-[100dvh] bg-[#f6f4ef]">
         <main id="main-content">
           <ErrorBoundary inline fallbackTitle="Page Error">
             {children}

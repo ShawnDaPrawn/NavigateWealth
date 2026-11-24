@@ -42,16 +42,16 @@ const NavigatorSignupPage = React.lazy(() =>
 /**
  * The sign-up page. The build's design switch picks the layout; both create
  * the account through useSignupForm, so they validate, send and hand off to
- * /verify-email exactly alike. The installed PWA keeps its app shell
- * (MobileAuthLayout) whichever design is live: there is no Navigator board
- * for it.
+ * /verify-email exactly alike. The installed PWA gets the Navigator app
+ * shell (NavigatorAppAuthShell) around the same form; the legacy design keeps
+ * its MobileAuthLayout there.
  */
 export function SignupPage() {
   const isStandalone = useIsStandalone();
-  if (SITE_DESIGN === 'navigator' && !isStandalone) {
+  if (SITE_DESIGN === 'navigator') {
     return (
       <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
-        <NavigatorSignupPage />
+        <NavigatorSignupPage inApp={isStandalone} />
       </Suspense>
     );
   }
