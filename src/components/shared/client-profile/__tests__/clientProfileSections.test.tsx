@@ -5,14 +5,13 @@ import {
   ComplianceReviewCard,
   EmployerBenefitsFields,
   EmployerBenefitsSummary,
-  GoalsPlanningSection,
+  PlanningSection,
   PostalAddressFields,
   SmokingAlcoholFields,
 } from '..';
 import {
   defaultProfileExtensionFields,
   emptyPlanningProfile,
-  createProfileGoal,
   emptyEmployerBenefits,
 } from '../../../../shared/client-profile';
 import {
@@ -114,38 +113,32 @@ describe('ComplianceReviewCard', () => {
   });
 });
 
-describe('GoalsPlanningSection', () => {
-  const renderSection = (props: Partial<Parameters<typeof GoalsPlanningSection>[0]> = {}) => {
-    const onGoalsChange = vi.fn();
+describe('PlanningSection', () => {
+  const renderSection = (props: Partial<Parameters<typeof PlanningSection>[0]> = {}) => {
     const onPlanningChange = vi.fn();
     render(
-      <GoalsPlanningSection
-        goals={[]}
-        onGoalsChange={onGoalsChange}
+      <PlanningSection
         planning={emptyPlanningProfile()}
         onPlanningChange={onPlanningChange}
         audience="client"
         {...props}
       />,
     );
-    return { onGoalsChange, onPlanningChange };
+    return { onPlanningChange };
   };
 
-  it('shows the goals from the application and adds a goal', () => {
-    const { onGoalsChange } = renderSection({ applicationGoals: 'Retire early' });
+  it('shows the goals from the application and keeps no goals list of its own', () => {
+    renderSection({ applicationGoals: 'Retire early' });
     expect(screen.getByText('Retire early')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /add goal/i }));
-    expect(onGoalsChange.mock.calls[0][0]).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /add goal/i })).toBeNull();
   });
 
-  it('removes a goal and shows its progress', () => {
-    const goal = { ...createProfileGoal('g1'), name: 'House', targetAmount: 100, amountSaved: 40 };
-    const { onGoalsChange } = renderSection({ goals: [goal] });
+  it('points the adviser to Goals on the Investments tab', () => {
+    renderSection({ audience: 'adviser' });
     expect(
-      screen.getByRole('progressbar', { name: 'House progress' }).getAttribute('aria-valuenow'),
-    ).toBe('40');
-    fireEvent.click(screen.getByRole('button', { name: 'Remove goal House' }));
-    expect(onGoalsChange).toHaveBeenCalledWith([]);
+      screen.getByText('Investment goals are captured in Goals on the Investments tab'),
+    ).toBeTruthy();
+    expect(screen.getByText('No goals were noted on the application.')).toBeTruthy();
   });
 
   it('records capacity for loss and works out the years to retirement', () => {

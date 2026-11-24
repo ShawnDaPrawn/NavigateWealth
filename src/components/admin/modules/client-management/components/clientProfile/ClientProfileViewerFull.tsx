@@ -57,7 +57,7 @@ import {
   ComplianceDeclarationsCard,
   ComplianceIndicatorList,
   ComplianceReviewCard,
-  GoalsPlanningSection,
+  PlanningSection,
 } from '../../../../../shared/client-profile';
 import {
   applicationHints,
@@ -78,7 +78,7 @@ import {
   contactGroups,
   employmentView,
   familyTable,
-  goalsView,
+  planningView,
   healthView,
   kycTable,
   personalGroups,
@@ -96,7 +96,7 @@ const PROFILE_SECTIONS = [
   'health',
   'family',
   'banking',
-  'goals',
+  'planning',
   'risk',
   'assets',
   'budgeting',
@@ -108,7 +108,7 @@ const VIEW_EDIT_SECTIONS: ReadonlySet<ProfileSection> = new Set([
   'contact',
   'kyc',
   'compliance',
-  'goals',
+  'planning',
   'address',
   'employment',
   'health',
@@ -226,12 +226,12 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
     { id: 'health', label: 'Health info', icon: Heart },
     { id: 'family', label: 'Family', icon: Users },
     { id: 'banking', label: 'Banking', icon: CreditCard },
-    { id: 'goals', label: 'Goals & planning', icon: Flag },
+    { id: 'planning', label: 'Planning', icon: Flag },
     { id: 'risk', label: 'Risk profile', icon: Target },
     { id: 'assets', label: 'Assets & liabilities', icon: PieChart },
     { id: 'budgeting', label: 'Budgeting', icon: Wallet },
   ];
-  // What the application and first-sign-in terms recorded, for the Goals and
+  // What the application and first-sign-in terms recorded, for the Planning and
   // Compliance sections (stored on the record; ProfileData does not type them).
   const storedRecord = state.profileData as unknown as Record<string, unknown>;
   const fromApplication = applicationHints(storedRecord);
@@ -353,10 +353,10 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               onEdit={startEditing}
             />
           )}
-          {viewOnly && activeSection === 'goals' && (
+          {viewOnly && activeSection === 'planning' && (
             <ProfileSectionView
-              title="Goals & planning"
-              {...goalsView(state.profileData)}
+              title="Planning"
+              {...planningView(state.profileData)}
               onEdit={startEditing}
             />
           )}
@@ -484,11 +484,9 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
             </div>
           )}
 
-          {/* Goals & Planning Section */}
-          {activeSection === 'goals' && !viewOnly && (
-            <GoalsPlanningSection
-              goals={extension.profileGoals}
-              onGoalsChange={(next) => handleInputChangeLoose('profileGoals', next)}
+          {/* Planning Section */}
+          {activeSection === 'planning' && !viewOnly && (
+            <PlanningSection
               planning={extension.planningProfile}
               onPlanningChange={(next) => handleInputChangeLoose('planningProfile', next)}
               audience="adviser"

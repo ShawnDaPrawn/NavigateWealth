@@ -13,13 +13,7 @@ import {
   emptyComplianceDeclarations,
   normalizeComplianceDeclarations,
 } from '../compliance/clientCompliance';
-import {
-  type PlanningProfile,
-  type ProfileGoal,
-  emptyPlanningProfile,
-  normalizePlanningProfile,
-  normalizeProfileGoals,
-} from './planning';
+import { type PlanningProfile, emptyPlanningProfile, normalizePlanningProfile } from './planning';
 
 export const ALCOHOL_CONSUMPTION_OPTIONS = [
   { value: 'never', label: 'Never' },
@@ -48,7 +42,6 @@ export interface ProfileExtensionFields extends PostalAddressFields {
   alcoholConsumption: string;
 
   complianceDeclarations: ComplianceDeclarations;
-  profileGoals: ProfileGoal[];
   planningProfile: PlanningProfile;
 }
 
@@ -66,7 +59,6 @@ export function defaultProfileExtensionFields(): ProfileExtensionFields {
     quitSmokingYear: '',
     alcoholConsumption: '',
     complianceDeclarations: emptyComplianceDeclarations(),
-    profileGoals: [],
     planningProfile: emptyPlanningProfile(),
   };
 }
@@ -95,7 +87,6 @@ export function normalizeProfileExtensionFields(
     quitSmokingYear: str(r.quitSmokingYear),
     alcoholConsumption: str(r.alcoholConsumption),
     complianceDeclarations: normalizeComplianceDeclarations(r.complianceDeclarations),
-    profileGoals: normalizeProfileGoals(r.profileGoals),
     planningProfile: normalizePlanningProfile(r.planningProfile),
   };
 }

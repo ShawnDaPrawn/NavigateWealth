@@ -7,7 +7,7 @@ import { BudgetingPage } from './BudgetingPage';
 import { useProfileManager } from './profile/hooks/useProfileManager';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { derivePolicyAssetsFromProductHoldings } from '../../utils/derivedPolicyAssets';
-import { ComplianceDeclarationsCard, GoalsPlanningSection } from '../shared/client-profile';
+import { ComplianceDeclarationsCard, PlanningSection } from '../shared/client-profile';
 import { applicationHints } from '../../shared/client-profile';
 import { legacyConsentEvidence } from '../../shared/compliance';
 
@@ -68,7 +68,7 @@ const NAV_ITEMS = [
   { id: 'health', label: 'Health Info', icon: Heart },
   { id: 'family', label: 'Family', icon: Users },
   { id: 'banking', label: 'Banking', icon: CreditCard },
-  { id: 'goals', label: 'Goals & Planning', icon: Flag },
+  { id: 'planning', label: 'Planning', icon: Flag },
   { id: 'risk', label: 'Risk Profile', icon: Target },
   { id: 'assets', label: 'Assets & Liabilities', icon: PieChart },
   { id: 'budgeting', label: 'Budgeting', icon: Wallet },
@@ -99,7 +99,7 @@ export function ProfilePage() {
     portfolioSummaryQuery.error instanceof Error ? portfolioSummaryQuery.error.message : null;
 
   // What the application and first-sign-in terms recorded, for the new
-  // Goals and Compliance sections (the server returns these keys on the
+  // Planning and Compliance sections (the server returns these keys on the
   // record; ProfileData does not type them).
   const storedRecord = pm.profileData as unknown as Record<string, unknown>;
   const fromApplication = applicationHints(storedRecord);
@@ -407,10 +407,8 @@ export function ProfilePage() {
               />
             )}
 
-            {activeSection === 'goals' && (
-              <GoalsPlanningSection
-                goals={pm.profileData.profileGoals}
-                onGoalsChange={(next) => pm.handleInputChange('profileGoals', next)}
+            {activeSection === 'planning' && (
+              <PlanningSection
                 planning={pm.profileData.planningProfile}
                 onPlanningChange={(next) => pm.handleInputChange('planningProfile', next)}
                 audience="client"

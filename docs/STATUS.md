@@ -284,14 +284,13 @@ stated prerequisite has already caused a production outage once.
   intervals (12/24/36 months for high/medium/low) are defaults, not the RMCP;
   the engine is expected to own them. The sanctions result is typed in by
   staff: nothing screens automatically.
-- **Profile goals are not the Goal Planner.** The Goals & Planning section's
-  `profileGoals` are the client's own stated goals, editable in the portal.
-  The adviser's Goal Planner (`client_goals:{id}`, `/goals`, admin-only)
-  projects investment goals against linked policies. They share name, target
-  amount, target date and priority so one can be taken into the other later;
-  nothing links them yet. `planningProfile` holds retirement age and income
-  target, emergency fund, investment knowledge and capacity for loss. No FNA
-  wizard reads any of it yet.
+- **The profile keeps planning inputs, not goals.** The profile's Planning
+  section stores `planningProfile` (retirement age and income target,
+  emergency fund, investment knowledge and experience, capacity for loss) on
+  the profile record. It deliberately keeps no goals list, because Goals (the
+  Investment INA) is the single goal store (see above). It shows the goals the
+  client wrote on the application (`_applicationMeta.financialGoals`) and
+  points to Goals. No FNA wizard reads `planningProfile` yet.
 
 ## Open operator items
 

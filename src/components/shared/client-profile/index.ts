@@ -7,7 +7,7 @@
  */
 export { ComplianceDeclarationsCard } from './ComplianceDeclarationsCard';
 export { ComplianceIndicatorList, ComplianceReviewCard } from './ComplianceReviewCard';
-export { GoalsPlanningSection } from './GoalsPlanningSection';
+export { PlanningSection } from './PlanningSection';
 export { PostalAddressFields } from './PostalAddressFields';
 export { SmokingAlcoholFields, type SmokingAlcoholValue } from './SmokingAlcoholFields';
 export { EmployerBenefitsFields, EmployerBenefitsSummary } from './EmployerBenefitsFields';

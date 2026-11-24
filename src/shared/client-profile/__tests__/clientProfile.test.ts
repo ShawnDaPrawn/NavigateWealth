@@ -1,19 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   applicationHints,
-  createProfileGoal,
   defaultProfileExtensionFields,
   emergencyFundTarget,
   emptyEmployerBenefits,
   emptyPlanningProfile,
   employerBenefitLines,
   formatPostalAddress,
-  goalProgressPercent,
   hasEmployerBenefits,
   normalizeEmployerBenefits,
   normalizePlanningProfile,
   normalizeProfileExtensionFields,
-  normalizeProfileGoals,
   yearsToRetirement,
 } from '..';
 
@@ -75,34 +72,6 @@ describe('applicationHints', () => {
     ).toEqual({ goals: 'Retire at 60', saTaxResident: true });
     expect(applicationHints({})).toEqual({ goals: '', saTaxResident: false });
     expect(applicationHints(undefined)).toEqual({ goals: '', saTaxResident: false });
-  });
-});
-
-describe('goals', () => {
-  it('normalises stored goals and drops unknown categories to "other"', () => {
-    expect(
-      normalizeProfileGoals([
-        { id: 'g1', category: 'education', name: 'Uni', targetAmount: 400000, priority: 'high' },
-        { category: 'yacht', targetAmount: -5, priority: 'urgent' },
-      ]),
-    ).toEqual([
-      {
-        ...createProfileGoal('g1'),
-        category: 'education',
-        name: 'Uni',
-        targetAmount: 400000,
-        priority: 'high',
-      },
-      { ...createProfileGoal('goal-2'), category: 'other' },
-    ]);
-    expect(normalizeProfileGoals('nope')).toEqual([]);
-  });
-
-  it('works out progress against the target', () => {
-    const goal = { ...createProfileGoal('g'), targetAmount: 200000, amountSaved: 50000 };
-    expect(goalProgressPercent(goal)).toBe(25);
-    expect(goalProgressPercent({ ...goal, amountSaved: 500000 })).toBe(100);
-    expect(goalProgressPercent({ ...goal, targetAmount: 0 })).toBeNull();
   });
 });
 

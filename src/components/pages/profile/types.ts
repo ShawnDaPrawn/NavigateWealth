@@ -29,7 +29,7 @@ export type ProfileSection =
   | 'family'
   | 'banking'
   | 'risk'
-  | 'goals'
+  | 'planning'
   | 'compliance'
   | 'assets'
   | 'budgeting';

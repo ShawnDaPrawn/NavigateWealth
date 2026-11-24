@@ -304,7 +304,7 @@ describe('useProfileManager', () => {
 
   it('loads an old record with the new fields complete, and saves a patch as a merge', async () => {
     mockGetSession.mockResolvedValue({ access_token: 't', user: { id: 'u-1' } });
-    // A record saved before compliance, goals and the postal address existed.
+    // A record saved before compliance, planning and the postal address existed.
     mockApiGet.mockResolvedValue({
       success: true,
       data: { firstName: 'Alice', lastName: 'Smith', email: 'test@example.com' },
@@ -314,7 +314,7 @@ describe('useProfileManager', () => {
     await waitFor(() => expect(result.current.initialLoading).toBe(false));
 
     expect(result.current.profileData.complianceDeclarations.isPep).toBe('');
-    expect(result.current.profileData.profileGoals).toEqual([]);
+    expect(result.current.profileData.planningProfile.plannedRetirementAge).toBe(0);
     expect(result.current.profileData.postalSameAsResidential).toBe(true);
     expect(result.current.isDirty).toBe(false);
 

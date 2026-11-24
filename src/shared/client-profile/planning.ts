@@ -1,92 +1,18 @@
 /**
- * Client goals and planning preferences, kept on the client's profile record.
+ * Planning preferences, kept on the client's profile record under
+ * `planningProfile`: the planning inputs a financial plan needs and the
+ * suitability facts FAIS asks for — retirement age and income target,
+ * emergency fund, investment knowledge and experience, capacity for loss.
  *
- * Two top-level profile keys:
- * - `profileGoals` — the client's own stated goals (retire at 60, the
- *   children's university, a deposit on a house). The client keeps them in the
- *   portal; the adviser sees and edits the same list.
- * - `planningProfile` — the planning inputs a financial plan needs and the
- *   suitability facts FAIS asks for: retirement age and income target,
- *   emergency fund, investment knowledge and experience, capacity for loss.
- *
- * Not the Goal Planner. The adviser's Goal Planner (`src/shared/goals`, KV
- * `client_goals:{id}`) projects investment goals against linked policies with
- * growth and inflation assumptions; it is admin-only and saved as a whole list.
- * These goals are what the client says they want. The two share their core
- * fields (name, target amount, target date, priority) so a profile goal can be
- * taken into the planner later without translation.
+ * Goals are deliberately NOT here. Investments have one goals model: "Goals",
+ * which is the Investment INA (`docs/STATUS.md`, standing constraints). The
+ * profile shows what the client wrote about their goals on the application and
+ * points to Goals; it keeps no list of its own.
  */
 
 export interface Option<T extends string = string> {
   value: T;
   label: string;
-}
-
-// ============================================================================
-// Goals
-// ============================================================================
-
-export type ProfileGoalCategory =
-  | 'retirement'
-  | 'education'
-  | 'property'
-  | 'emergency-fund'
-  | 'debt-freedom'
-  | 'wealth-creation'
-  | 'vehicle'
-  | 'travel'
-  | 'business'
-  | 'legacy'
-  | 'other';
-
-export const PROFILE_GOAL_CATEGORY_OPTIONS: Option<ProfileGoalCategory>[] = [
-  { value: 'retirement', label: 'Retirement' },
-  { value: 'education', label: 'Education' },
-  { value: 'property', label: 'Buying property' },
-  { value: 'emergency-fund', label: 'Emergency fund' },
-  { value: 'debt-freedom', label: 'Paying off debt' },
-  { value: 'wealth-creation', label: 'Building wealth' },
-  { value: 'vehicle', label: 'Vehicle' },
-  { value: 'travel', label: 'Travel' },
-  { value: 'business', label: 'Starting or growing a business' },
-  { value: 'legacy', label: 'Leaving a legacy' },
-  { value: 'other', label: 'Other' },
-];
-
-export type GoalPriority = 'high' | 'medium' | 'low';
-export const GOAL_PRIORITY_OPTIONS: Option<GoalPriority>[] = [
-  { value: 'high', label: 'High' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'low', label: 'Low' },
-];
-
-export interface ProfileGoal {
-  id: string;
-  category: ProfileGoalCategory;
-  name: string;
-  /** Rand amount in today's money. 0 = not set. */
-  targetAmount: number;
-  /** YYYY-MM-DD */
-  targetDate: string;
-  priority: GoalPriority;
-  /** Already put aside for this goal. */
-  amountSaved: number;
-  monthlyContribution: number;
-  notes: string;
-}
-
-export function createProfileGoal(id: string): ProfileGoal {
-  return {
-    id,
-    category: 'wealth-creation',
-    name: '',
-    targetAmount: 0,
-    targetDate: '',
-    priority: 'medium',
-    amountSaved: 0,
-    monthlyContribution: 0,
-    notes: '',
-  };
 }
 
 // ============================================================================
@@ -192,26 +118,6 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback
     : fallback;
 }
 
-const CATEGORIES = PROFILE_GOAL_CATEGORY_OPTIONS.map((o) => o.value);
-
-export function normalizeProfileGoals(raw: unknown): ProfileGoal[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.map((g, i) => {
-    const r = asRecord(g);
-    return {
-      id: str(r.id) || `goal-${i + 1}`,
-      category: oneOf(r.category, CATEGORIES, 'other'),
-      name: str(r.name),
-      targetAmount: num(r.targetAmount),
-      targetDate: str(r.targetDate),
-      priority: oneOf<GoalPriority>(r.priority, ['high', 'medium', 'low'], 'medium'),
-      amountSaved: num(r.amountSaved),
-      monthlyContribution: num(r.monthlyContribution),
-      notes: str(r.notes),
-    };
-  });
-}
-
 export function normalizePlanningProfile(raw: unknown): PlanningProfile {
   const r = asRecord(raw);
   return {
@@ -257,10 +163,4 @@ export function yearsToRetirement(
 /** The rand target of an emergency fund of `months` × `monthlyBase`. */
 export function emergencyFundTarget(months: number, monthlyBase: number): number {
   return months > 0 && monthlyBase > 0 ? Math.round(months * monthlyBase) : 0;
-}
-
-/** Share of a goal already saved, 0–100, or null when the goal has no target. */
-export function goalProgressPercent(goal: ProfileGoal): number | null {
-  if (!goal.targetAmount) return null;
-  return Math.min(100, Math.round((goal.amountSaved / goal.targetAmount) * 100));
 }

@@ -3,10 +3,8 @@ import type { ClientProfileHook } from './clientProfileHook';
 import {
   ALCOHOL_CONSUMPTION_OPTIONS,
   CAPACITY_FOR_LOSS_OPTIONS,
-  GOAL_PRIORITY_OPTIONS,
   INVESTMENT_KNOWLEDGE_OPTIONS,
   INVESTMENT_PRODUCT_OPTIONS,
-  PROFILE_GOAL_CATEGORY_OPTIONS,
   applicationHints,
   employerBenefitLines,
   normalizeProfileExtensionFields,
@@ -483,10 +481,11 @@ export function complianceView(p: Profile): { groups: RowGroup[]; tables: TableS
 }
 
 // ============================================================================
-// Goals and planning
+// Planning
 // ============================================================================
 
-export function goalsView(p: Profile): { groups: RowGroup[]; tables: TableSpec[] } {
+/** Goals themselves live in Goals (the Investment INA); see planning.ts. */
+export function planningView(p: Profile): { groups: RowGroup[] } {
   const ext = normalizeProfileExtensionFields(p as unknown as Record<string, unknown>);
   const plan = ext.planningProfile;
   const fromApplication = applicationHints(p as unknown as Record<string, unknown>);
@@ -536,22 +535,6 @@ export function goalsView(p: Profile): { groups: RowGroup[]; tables: TableSpec[]
             ? [{ label: 'Goals noted on application', value: fromApplication.goals }]
             : []),
         ],
-      },
-    ],
-    tables: [
-      {
-        title: 'Goals',
-        columns: ['Goal', 'Type', 'Priority', 'Target', 'Target date', 'Saved', 'Monthly'],
-        rows: ext.profileGoals.map((g) => [
-          g.name,
-          labelOf(PROFILE_GOAL_CATEGORY_OPTIONS, g.category),
-          labelOf(GOAL_PRIORITY_OPTIONS, g.priority),
-          money(g.targetAmount),
-          date(g.targetDate),
-          money(g.amountSaved),
-          money(g.monthlyContribution),
-        ]),
-        emptyText: 'No goals recorded.',
       },
     ],
   };

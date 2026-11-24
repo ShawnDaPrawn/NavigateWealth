@@ -202,12 +202,13 @@ describe('ClientProfileViewerFull', () => {
     expect(screen.getByText('Compliance declarations')).toBeTruthy();
   }, 30000);
 
-  it('shows goals and planning for a client with nothing recorded yet', async () => {
-    renderClientProfileViewer('/?psec=goals');
-    const card = await screen.findByRole('region', { name: 'Goals & planning' });
-    expect(within(card).getByText('No goals recorded.')).toBeTruthy();
+  it('shows planning for a client with nothing recorded yet', async () => {
+    renderClientProfileViewer('/?psec=planning');
+    const card = await screen.findByRole('region', { name: 'Planning' });
+    expect(within(card).getByText('Planning profile')).toBeTruthy();
     fireEvent.click(within(card).getByRole('button', { name: 'Edit' }));
-    expect(await screen.findByText('Client goals')).toBeTruthy();
-    expect(screen.getByText('Planning profile')).toBeTruthy();
+    expect(
+      await screen.findByText('Investment goals are captured in Goals on the Investments tab'),
+    ).toBeTruthy();
   }, 30000);
 });
