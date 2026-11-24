@@ -49,11 +49,27 @@ const SERVER_CONTROLLED_PROFILE_FIELDS = [
  */
 const STAFF_ONLY_PROFILE_FIELDS = [COMPLIANCE_REVIEW_PROFILE_KEY] as const;
 
+type RouteContext = Parameters<typeof requireClientAccess>[0];
+
 /** The caller is the client whose record this is, and not a platform admin. */
-function isClientSelf(c: Parameters<typeof requireClientAccess>[0], key: string): boolean {
-  return (
-    c.get('userId') === extractUserIdFromProfileKey(key) && !isPlatformAdminRole(c.get('userRole'))
-  );
+function isClientSelfFor(c: RouteContext, userId: string | null | undefined): boolean {
+  return !!userId && c.get('userId') === userId && !isPlatformAdminRole(c.get('userRole'));
+}
+
+function isClientSelf(c: RouteContext, key: string): boolean {
+  return isClientSelfFor(c, extractUserIdFromProfileKey(key));
+}
+
+/**
+ * The record as this caller may see it: without the staff-only fields when the
+ * caller is the client. Every response in this file that carries a stored
+ * profile goes through here, so a new route cannot forget one of them.
+ */
+function profileForCaller<T>(c: RouteContext, userId: string | null | undefined, profile: T): T {
+  if (!profile || typeof profile !== 'object' || !isClientSelfFor(c, userId)) return profile;
+  const copy = { ...(profile as Record<string, unknown>) };
+  for (const field of STAFF_ONLY_PROFILE_FIELDS) delete copy[field];
+  return copy as T;
 }
 
 async function requireProfileKeyAccess(c: Parameters<typeof requireClientAccess>[0], key: string) {
@@ -104,13 +120,9 @@ app.get(
         isSuperAdmin,
       });
 
-      if (isClientSelf(c, key)) {
-        for (const field of STAFF_ONLY_PROFILE_FIELDS) delete profile[field];
-      }
-
       return c.json({
         success: true,
-        data: profile,
+        data: profileForCaller(c, extractUserIdFromProfileKey(key), profile),
       });
     }
 
@@ -294,14 +306,9 @@ app.post(
           });
       }
 
-      const responseProfile = { ...(finalProfile as Record<string, unknown>) };
-      if (callerIsClientSelf) {
-        for (const field of STAFF_ONLY_PROFILE_FIELDS) delete responseProfile[field];
-      }
-
       return c.json({
         success: true,
-        data: responseProfile,
+        data: profileForCaller(c, extractUserIdFromProfileKey(key), finalProfile),
       });
     } catch (error) {
       log.error('Error in POST /personal-info', error);
@@ -373,7 +380,7 @@ app.put(
 
     return c.json({
       success: true,
-      data: updatedProfile,
+      data: profileForCaller(c, userId, updatedProfile),
     });
   }),
 );
@@ -414,7 +421,7 @@ app.post(
       return c.json({
         success: true,
         message: 'Profile already exists',
-        data: existingProfile,
+        data: profileForCaller(c, userId, existingProfile),
       });
     }
 

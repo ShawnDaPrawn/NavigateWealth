@@ -170,6 +170,7 @@ vi.mock('../auth-mw.ts', () => ({
     c.set('user', { id: userId, email: 'admin@test.co' });
     c.set('userId', userId);
     c.set('userRole', c.req.header('x-test-role') ?? 'admin');
+    c.set('userEmail', c.req.header('x-test-email') ?? 'admin@test.co');
     await next();
   },
   requireAdmin: async (c: any, next: any) => {
@@ -600,6 +601,47 @@ describe('client-management-profile-routes.ts route contracts', () => {
       const res = await save({ complianceDeclarations: declarations }, AS_CLIENT, 'merge');
       expect(res.status).toBe(200);
       expect(stored().complianceDeclarations).toEqual(declarations);
+    });
+
+    // Every route in the file that answers with the stored record must leave
+    // the review out for the client, not only /personal-info.
+    it('does not return the review from the legacy PUT /', async () => {
+      const res = await profileRouter.request('/', {
+        method: 'PUT',
+        body: JSON.stringify({ userId: TEST_UUID, firstName: 'Jane' }),
+        headers: { ...AS_CLIENT, 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: Record<string, unknown> };
+      expect(body.data.firstName).toBe('Jane');
+      expect(body.data).not.toHaveProperty('complianceReview');
+      expect(stored().complianceReview).toEqual(REVIEW);
+    });
+
+    it('does not return the review from create-default for an existing profile', async () => {
+      const res = await profileRouter.request('/create-default', {
+        method: 'POST',
+        body: JSON.stringify({ userId: TEST_UUID, email: 'john@test.co', displayName: 'John' }),
+        headers: {
+          ...AS_CLIENT,
+          'x-test-email': 'john@test.co',
+          'Content-Type': 'application/json',
+        },
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: Record<string, unknown> };
+      expect(body.data.firstName).toBe('John');
+      expect(body.data).not.toHaveProperty('complianceReview');
+    });
+
+    it('still returns the review to staff from create-default', async () => {
+      const res = await profileRouter.request('/create-default', {
+        method: 'POST',
+        body: JSON.stringify({ userId: TEST_UUID, email: 'john@test.co', displayName: 'John' }),
+        headers: { ...AUTH, 'Content-Type': 'application/json' },
+      });
+      const body = (await res.json()) as { data: Record<string, unknown> };
+      expect(body.data.complianceReview).toEqual(REVIEW);
     });
 
     it('lets staff write the review', async () => {
