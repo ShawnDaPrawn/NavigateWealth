@@ -59,7 +59,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   window.history.replaceState(null, '', '/admin');
   sessionStorage.clear();
-  status = { unlocked: true, twoFactorEnabled: true, expiresAt: null };
+  status = { unlocked: true, twoFactorEnabled: true, twoFactorRequired: true, expiresAt: null };
   listFails = false;
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === '/password-vault/status') return status;
@@ -80,7 +80,7 @@ const button = (name: string) => screen.getByRole('button', { name });
 
 describe('unlock gate', () => {
   it('asks for two-factor when the account has none', async () => {
-    status = { unlocked: false, twoFactorEnabled: false, expiresAt: null };
+    status = { unlocked: false, twoFactorEnabled: false, twoFactorRequired: true, expiresAt: null };
     render(<PasswordManager onClose={vi.fn()} userId="u1" />);
     const link = await screen.findByRole('link', { name: 'Open security settings' });
     expect(link.getAttribute('href')).toBe('/security');
@@ -88,10 +88,10 @@ describe('unlock gate', () => {
   });
 
   it('sends a code, verifies it and unlocks', async () => {
-    status = { unlocked: false, twoFactorEnabled: true, expiresAt: null };
+    status = { unlocked: false, twoFactorEnabled: true, twoFactorRequired: true, expiresAt: null };
     vi.mocked(api.post).mockImplementation(async (path: string) =>
       path === '/password-vault/unlock'
-        ? { unlocked: true, twoFactorEnabled: true, expiresAt: null }
+        ? { unlocked: true, twoFactorEnabled: true, twoFactorRequired: true, expiresAt: null }
         : { success: true },
     );
     render(<PasswordManager onClose={vi.fn()} userId="u1" />);
@@ -115,6 +115,19 @@ describe('unlock gate', () => {
     render(<PasswordManager onClose={vi.fn()} userId="u1" />);
     await screen.findByRole('heading', { name: 'Unlock the vault' });
     expect(screen.queryByRole('tablist', { name: 'Password manager' })).toBeNull();
+  });
+
+  it('opens straight away for a super admin, with no code and no Lock button', async () => {
+    status = { unlocked: true, twoFactorEnabled: false, twoFactorRequired: false, expiresAt: null };
+    render(<PasswordManager onClose={vi.fn()} userId="u1" />);
+    await screen.findByText('Personal bank');
+    expect(screen.queryByRole('heading', { name: /two-factor|Unlock the vault/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Lock' })).toBeNull();
+    expect(api.post).not.toHaveBeenCalledWith(
+      '/security/u1/2fa/send-code',
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('locks on request', async () => {

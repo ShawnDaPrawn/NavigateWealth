@@ -17,8 +17,18 @@ vi.mock('../auth-mw.ts', async () => {
 vi.mock('../admin-audit-service.ts', () => ({ AdminAuditService: { record: vi.fn() } }));
 vi.mock('../vault-unlock.ts', () => ({
   requireUnlocked: (_c: unknown, next: () => Promise<void>) => next(),
-  lockState: async () => ({ unlocked: true, twoFactorEnabled: true, expiresAt: null }),
-  unlock: async () => ({ unlocked: true, twoFactorEnabled: true, expiresAt: null }),
+  lockState: async () => ({
+    unlocked: true,
+    twoFactorEnabled: true,
+    twoFactorRequired: true,
+    expiresAt: null,
+  }),
+  unlock: async () => ({
+    unlocked: true,
+    twoFactorEnabled: true,
+    twoFactorRequired: true,
+    expiresAt: null,
+  }),
   lock: async () => undefined,
 }));
 const keyRpc = vi.hoisted(() => vi.fn());

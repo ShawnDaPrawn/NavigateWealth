@@ -13,10 +13,11 @@ vi.mock('../repositories/two-factor-session-repository.ts', () => ({
 vi.mock('../jwt-claims.ts', () => ({ readTokenSessionId: () => 'session-1' }));
 import { lockState, requireUnlocked, unlock, IDLE_MS } from '../vault-unlock.ts';
 
-function appFor() {
+function appFor(role = 'admin') {
   const app = new Hono();
   app.use('*', async (c, next) => {
     c.set('userId' as never, 'user-1' as never);
+    c.set('userRole' as never, role as never);
     await next();
   });
   app.get('/state', async (c) => c.json(await lockState(c)));
@@ -36,6 +37,34 @@ describe('vault unlock', () => {
   it('refuses accounts without two-factor', async () => {
     const app = appFor();
     expect((await (await call(app, '/unlock', 'POST')).json()).result).toBe('no2fa');
+    expect((await call(app, '/secret')).status).toBe(423);
+  });
+
+  it.each(['super_admin', 'super-admin'])(
+    'lets a %s in without two-factor and never idles them out',
+    async (role) => {
+      const app = appFor(role);
+      expect(await (await call(app, '/state')).json()).toEqual({
+        unlocked: true,
+        twoFactorEnabled: false,
+        twoFactorRequired: false,
+        expiresAt: null,
+      });
+      expect((await (await call(app, '/unlock', 'POST')).json()).result.unlocked).toBe(true);
+      expect(verifiedAt).not.toHaveBeenCalled();
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(Date.now() + IDLE_MS * 4);
+        expect((await call(app, '/secret')).status).toBe(200);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it('still requires two-factor for a role that is not super admin', async () => {
+    const app = appFor('admin');
+    expect((await (await call(app, '/state')).json()).twoFactorRequired).toBe(true);
     expect((await call(app, '/secret')).status).toBe(423);
   });
 
