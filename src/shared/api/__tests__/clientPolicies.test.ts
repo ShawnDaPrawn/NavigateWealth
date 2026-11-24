@@ -11,15 +11,13 @@ import {
   fetchClientPolicies,
   fetchPolicySchemas,
   filterPoliciesForCategory,
-  clientGoalsQueryOptions,
   invalidateAllClientPolicies,
-  invalidateClientGoals,
   invalidateClientPolicies,
   invalidatePolicySchemas,
   policySchemasQueryOptions,
   POLICIES_FRESH_MS,
 } from '../clientPolicies';
-import { clientGoalKeys, clientPolicyKeys, policySchemaKeys } from '@/utils/queryKeys';
+import { clientPolicyKeys, policySchemaKeys } from '@/utils/queryKeys';
 
 beforeEach(() => {
   mockGet.mockReset();
@@ -136,23 +134,6 @@ describe('fetchPolicySchemas', () => {
   });
 });
 
-describe('client goals', () => {
-  it('asks for that client only, and treats a missing list as empty', async () => {
-    mockGet.mockResolvedValue({ goals: [{ id: 'g1' }] });
-    const options = clientGoalsQueryOptions<{ id: string }>('client/1');
-    await expect(options.queryFn()).resolves.toEqual([{ id: 'g1' }]);
-    expect(mockGet).toHaveBeenCalledWith('/goals/client%2F1');
-    expect(options.queryKey).toEqual(clientGoalKeys.client('client/1'));
-    // Unlike policies, a goals screen refetches on every open.
-    expect(options.staleTime).toBe(0);
-  });
-
-  it('treats a missing goals payload as an empty list', async () => {
-    mockGet.mockResolvedValue(null);
-    await expect(clientGoalsQueryOptions('c1').queryFn()).resolves.toEqual([]);
-  });
-});
-
 describe('invalidation', () => {
   function seeded() {
     const queryClient = new QueryClient();
@@ -177,15 +158,6 @@ describe('invalidation', () => {
     await invalidateAllClientPolicies(queryClient);
     expect(invalidated('c1', false)).toBe(true);
     expect(invalidated('c2', false)).toBe(true);
-  });
-
-  it("a goal edit invalidates that client's goals and no one else's", async () => {
-    const queryClient = new QueryClient();
-    queryClient.setQueryData(clientGoalKeys.client('c1'), []);
-    queryClient.setQueryData(clientGoalKeys.client('c2'), []);
-    await invalidateClientGoals(queryClient, 'c1');
-    expect(queryClient.getQueryState(clientGoalKeys.client('c1'))?.isInvalidated).toBe(true);
-    expect(queryClient.getQueryState(clientGoalKeys.client('c2'))?.isInvalidated).toBe(false);
   });
 
   it('a schema edit invalidates the shared schema batch', async () => {

@@ -16,7 +16,7 @@ export const WIZARD_STEPS = buildFNAWizardSteps({
   1: 'Client profile, investments and goals',
   2: 'Goal funding projections',
   3: 'Override risk profile or assumptions',
-  4: 'Review and publish the INA',
+  4: 'Review and publish the goals analysis',
 });
 
 // ==================== DEFAULT ECONOMIC ASSUMPTIONS ====================

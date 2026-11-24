@@ -6,6 +6,12 @@ Planning) are built, and the rules that keep them looking, behaving and reading
 the client the same way. Read it before changing any of them or adding a
 seventh.
 
+The Investment Needs Analysis is shown to advisers and clients as **Goals**
+(a goals analysis of the client's discretionary needs). Its registry entry
+carries `labels` so the list, button and wording read "Goals" / "goals
+analysis" instead of "FNA"; the module, routes and stored keys keep the INA
+name. It is the only goals store: the old standalone Goal Planner was removed.
+
 ## One shell, one flow
 
 Every wizard runs the same four steps, defined once in

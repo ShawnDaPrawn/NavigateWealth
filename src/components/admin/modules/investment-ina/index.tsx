@@ -12,10 +12,11 @@ import { lazy } from 'react';
  */
 /* eslint-disable react-refresh/only-export-components */
 /**
- * Investment INA Module
+ * Investment goals module (internally "investment-ina")
  *
- * Central export point for all Investment Needs Analysis functionality.
- * Goal-based investment planning for Navigate Wealth Admin Portal.
+ * The client's discretionary investment goals: the goals analysis wizard, its
+ * results, and the goal status shown against linked policies. Advisers and
+ * clients see it as "Goals"; the code and stored keys keep the INA name.
  */
 
 // ==================== TYPES ====================
@@ -26,6 +27,10 @@ export * from './constants';
 
 // ==================== API ====================
 export { InvestmentINAApiService } from './api';
+
+// ==================== GOAL LINKS (policy tables) ====================
+export { goalLinksByPolicyId } from './linkedGoalStatus';
+export type { InvestmentGoalLink } from './linkedGoalStatus';
 
 // ==================== COMPONENTS ====================
 export const InvestmentINAWizard = lazy(() =>

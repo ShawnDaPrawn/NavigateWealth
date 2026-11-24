@@ -77,7 +77,7 @@ export const FNA_WIZARD_TITLES = {
   medical: 'Medical Aid FNA',
   retirement: 'Retirement Planning FNA',
   tax: 'Tax Planning FNA',
-  investment: 'Investment Needs Analysis',
+  investment: 'Investment Goals',
   estate: 'Estate Planning FNA',
 } as const satisfies Record<FNAConfig['type'], string>;
 

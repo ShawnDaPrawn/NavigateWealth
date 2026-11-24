@@ -31,8 +31,8 @@
  * barrel that also exports its module component transitively reaches most of
  * the app, so routing through one usually closes a cycle instead. What worked
  * was moving things to where they belong: shared data and contracts into
- * src/shared (the product key registry, the goals domain, the client
- * directory, the PDF page shell), a feature's UI into the module that renders
+ * src/shared (the product key registry, the client directory, the PDF page
+ * shell), a feature's UI into the module that renders
  * it, and a cross-cutting domain into its own module (client-keys). Each such
  * move was checked for cycle safety by reachability on the resolved graph
  * before being applied.

@@ -20,7 +20,7 @@ const DOMAIN_OPTIONS: { label: string; formId: FormPrefillId }[] = [
   { label: 'Medical FNA', formId: 'medical-fna-step1' },
   { label: 'Tax Planning FNA', formId: 'tax-fna-step1' },
   { label: 'Estate Planning FNA', formId: 'estate-fna-step1' },
-  { label: 'Investment INA', formId: 'investment-ina-step1' },
+  { label: 'Investment Goals', formId: 'investment-ina-step1' },
 ];
 
 interface PrefillDomainPickerProps {

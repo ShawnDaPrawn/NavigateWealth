@@ -462,12 +462,6 @@ export const policySchemaKeys = {
   batch: () => [...policySchemaKeys.all, 'batch'] as const,
 } as const;
 
-/** A client's financial goals (`/goals/:clientId`). */
-export const clientGoalKeys = {
-  all: ['client-goals'] as const,
-  client: (clientId: string) => [...clientGoalKeys.all, clientId] as const,
-} as const;
-
 // ============================================================================
 // FNA — FINANCIAL NEEDS ANALYSIS (all sub-types)
 // ============================================================================
