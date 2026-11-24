@@ -118,11 +118,12 @@ export function NavigatorLegalDocumentPage() {
       effectiveDate: legalDocument.effectiveDate,
       updatedAt: legalDocument.updatedAt,
       sectionLabel,
+      slug: slug ?? null,
       html: normalizedDocumentContent.html,
       toc,
       pdfConfig: legalDocument.pdfConfig,
     };
-  }, [legalDocument, normalizedDocumentContent.html, sectionLabel, toc]);
+  }, [legalDocument, normalizedDocumentContent.html, sectionLabel, slug, toc]);
 
   // ── Reading progress, back to top, and the contents entry in view ──
   useEffect(() => {

@@ -273,6 +273,7 @@ export function LegalDocumentDialog({ open, onOpenChange, document }: LegalDocum
       effectiveDate: document.effectiveDate || null,
       updatedAt: document.updatedAt,
       sectionLabel,
+      slug: document.slug ?? null,
       html: normalizedDocumentContent.html,
       toc,
       pdfConfig: document.pdfConfig,

@@ -179,7 +179,10 @@ export interface CommunicationDraft {
   channel: CommunicationChannel;
   recipientType: RecipientType;
   selectedRecipients: Client[];
+  /** First selected group; kept for older readers. Use `getDraftGroups`. */
   selectedGroup?: ClientGroup;
+  /** Every selected group when sending to client groups (multi-select). */
+  selectedGroups?: ClientGroup[];
   subject: string;
   title?: string;
   bodyHtml: string;
@@ -227,6 +230,14 @@ export interface BackendCampaign {
     clientCount?: number;
     [key: string]: unknown;
   };
+  /** Every group a multi-group campaign went to (newer campaigns only). */
+  selectedGroups?: Array<{
+    id: string;
+    name: string;
+    type?: string;
+    clientCount?: number;
+    [key: string]: unknown;
+  }>;
   status: CommunicationStatus;
   attachments?: Array<{ id: string; name: string; path: string; type: string; size: number }>;
   stats?: { sent: number; failed: number; total: number };
@@ -311,7 +322,7 @@ export interface ActivityLogEntry {
   channel: HistoryChannel;
   recipientType: RecipientType;
   recipientCount: number;
-  /** Group name when recipientType is `group` (from campaign.selectedGroup). */
+  /** Group name(s) when recipientType is `group`, comma-separated for several groups. */
   groupName?: string;
   subject?: string;
   messagePreview: string;

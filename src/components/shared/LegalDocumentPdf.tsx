@@ -2,9 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BasePdfLayout, getPdfDimensions } from './pdf';
 import { exportPdfFromPreview } from './pdf';
 import {
+  legalPdfPageSelector,
+  legalPdfRendererLaysOutAsync,
   resolveActiveLegalPdfRenderer,
   type LegalPdfRendererVersion,
 } from './legalPdfRendererConfig';
+import { LegalPdfNavigatorLayout } from './LegalPdfNavigatorLayout';
 import {
   buildLegalPagedPrintSource,
   DEFAULT_LEGAL_PDF_CONFIG,
@@ -32,6 +35,8 @@ export type LegalPdfDocumentData = {
   effectiveDate?: string | null;
   updatedAt?: string | null;
   sectionLabel?: string | null;
+  /** The document's slug, for the "version in force" address on the cover. */
+  slug?: string | null;
   html: string;
   toc?: LegalPdfTocItem[];
   pdfConfig?: LegalPdfConfig;
@@ -786,6 +791,48 @@ function PagedLegalDocumentPdfLayout({
   );
 }
 
+type RendererState = {
+  ready: boolean;
+  error: string | null;
+  activeRenderer: LegalPdfRendererVersion;
+};
+
+/** The Navigator layout, falling back to the legacy one if it cannot lay out. */
+function NavigatorLegalDocumentPdfLayout({
+  document,
+  onRenderStateChange,
+}: {
+  document: LegalPdfDocumentData;
+  onRenderStateChange?: (state: RendererState) => void;
+}) {
+  const [failed, setFailed] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFailed(null);
+  }, [document]);
+
+  if (failed !== null) {
+    return (
+      <>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          The PDF fell back to the previous layout in this session. {failed}
+        </div>
+        <LegacyLegalDocumentPdfLayout document={document} />
+      </>
+    );
+  }
+
+  return (
+    <LegalPdfNavigatorLayout
+      document={document}
+      onRenderStateChange={(state) => {
+        if (state.error !== null) setFailed(state.error);
+        onRenderStateChange?.(state);
+      }}
+    />
+  );
+}
+
 export function LegalDocumentPdfLayout({
   document,
   rendererVersion,
@@ -808,6 +855,15 @@ export function LegalDocumentPdfLayout({
         pagedAvailable: true,
       }
     : resolveActiveLegalPdfRenderer();
+
+  if (resolution.effectiveVersion === 'navigator') {
+    return (
+      <NavigatorLegalDocumentPdfLayout
+        document={document}
+        onRenderStateChange={onPagedRendererStateChange}
+      />
+    );
+  }
 
   if (resolution.effectiveVersion === 'paged') {
     return (
@@ -838,14 +894,14 @@ export function LegalDocumentPdfDownloadSurface({
     error: string | null;
     activeRenderer: LegalPdfRendererVersion;
   }>({
-    ready: rendererResolution.effectiveVersion !== 'paged',
+    ready: !legalPdfRendererLaysOutAsync(rendererResolution.effectiveVersion),
     error: null,
     activeRenderer: rendererResolution.effectiveVersion,
   });
 
   useEffect(() => {
     setPagedRenderState({
-      ready: rendererResolution.effectiveVersion !== 'paged',
+      ready: !legalPdfRendererLaysOutAsync(rendererResolution.effectiveVersion),
       error: null,
       activeRenderer: rendererResolution.effectiveVersion,
     });
@@ -857,10 +913,10 @@ export function LegalDocumentPdfDownloadSurface({
     }
 
     const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
-    const activePageSelector =
-      rendererResolution.effectiveVersion === 'paged' ? '.pagedjs_page' : '.pdf-page';
-    const previewReady =
-      rendererResolution.effectiveVersion === 'paged' ? pagedRenderState.ready : true;
+    const activePageSelector = legalPdfPageSelector(pagedRenderState.activeRenderer);
+    const previewReady = legalPdfRendererLaysOutAsync(pagedRenderState.activeRenderer)
+      ? pagedRenderState.ready
+      : true;
 
     if (!previewReady || !previewRootRef.current) {
       return;
@@ -905,6 +961,7 @@ export function LegalDocumentPdfDownloadSurface({
     document,
     onDownloadStateChange,
     pagedRenderState.ready,
+    pagedRenderState.activeRenderer,
     rendererResolution.effectiveVersion,
     requestId,
   ]);
