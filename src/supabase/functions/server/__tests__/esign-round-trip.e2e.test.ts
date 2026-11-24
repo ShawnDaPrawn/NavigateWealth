@@ -50,6 +50,7 @@ vi.mock('../esign-storage.ts', () => ({
 const io = vi.hoisted(() => ({
   emails: [] as Array<{ to: string; subject: string }>,
   completions: [] as string[],
+  drainKicks: 0,
   authUsers: new Map<string, Record<string, unknown>>(),
 }));
 vi.mock('../email-service.ts', async (importOriginal) => ({
@@ -65,6 +66,9 @@ vi.mock('../sms-service.ts', () => ({ sendInviteSms: vi.fn(async () => true) }))
 vi.mock('../esign-completion-queue.ts', () => ({
   enqueueCompletion: vi.fn(async (id: string) => {
     io.completions.push(id);
+  }),
+  kickCompletionDrain: vi.fn(() => {
+    io.drainKicks += 1;
   }),
 }));
 vi.mock('../webhook-service.ts', () => ({ emitWebhookEvent: vi.fn(async () => undefined) }));
@@ -369,7 +373,11 @@ describe('e-sign round trip', () => {
       // A device clock in the wrong zone; the server's date must win.
       { field_id: autoDate.id, type: 'auto_date', value: '1 Jan 1999, 03:00' },
     ]);
-    expect(r1).toEqual({ success: true }); // was a 400 for every signer
+    // was a 400 for every signer
+    expect(r1).toMatchObject({ success: true, envelope_complete: false });
+    // The signing token is rotated on submit, so the completion screen gets a
+    // download-only grant in its place.
+    expect(r1.download_token).toMatch(/^dl_/);
     expect(io.completions).toEqual([]); // spouse still to sign; CC never blocks
 
     // The next signer sees what the first one completed (read-only). Their
@@ -397,9 +405,12 @@ describe('e-sign round trip', () => {
     const r2 = await submitAsSigner(spouse.access_token, [
       { field_id: sigSpouse.id, type: 'signature', value: SIGNATURE_PNG },
     ]);
-    expect(r2).toEqual({ success: true });
+    expect(r2).toMatchObject({ success: true, envelope_complete: true });
     // Both signers done; the CC recipient does not hold up completion.
     expect(io.completions).toEqual([ENV_ID]);
+    // …and the drain is started inside the request, not left to a timer tick
+    // the runtime may never let fire (incident 2026-11-23).
+    expect(io.drainKicks).toBe(1);
 
     const done = (await getEnvelopeDetails(ENV_ID))!;
     const doneSigners = done.signers as unknown as EsignSigner[];

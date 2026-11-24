@@ -11,16 +11,31 @@
  * Instead, the sign route now:
  *   1. Flips the envelope status to `completing`.
  *   2. Enqueues the envelope id into a KV-backed work queue.
- *   3. Returns immediately.
+ *   3. Kicks a drain with `kickCompletionDrain()`, which registers the
+ *      work with `EdgeRuntime.waitUntil` so the runtime keeps the
+ *      isolate alive until it settles.
+ *   4. Returns immediately.
  *
- * The scheduler calls `drainCompletionQueue()` every ~15 seconds.
- * Each item is processed exactly once (delete-then-work) with a
- * retry count and a dead-letter status for permanent failures.
+ * Step 3 is load-bearing (incident 2026-11-23). The queue used to be
+ * drained only by a `setInterval` tick. A tick that fires after the last
+ * request has returned runs in an isolate the runtime considers idle, and
+ * Supabase drops idle isolates (`EarlyDrop`) without warning. The job died
+ * two seconds in — after the envelope was marked completed, before the
+ * signed PDF was built or any email was sent — and because the queue
+ * deleted each job BEFORE working on it, nothing ever retried it. The
+ * signer, the client and the adviser all got silence.
  *
- * The design is intentionally simple: we target one edge-function
- * instance and favour correctness over throughput. Enqueue is
- * idempotent — enqueueing the same envelope twice while the first
- * job is still in flight leaves the queue unchanged.
+ * So jobs are now LEASED, not deleted, while they run. A job stays in the
+ * queue with a `leasedUntil` stamp; success removes it, failure clears the
+ * lease for a retry, and a job whose isolate vanished simply has its lease
+ * expire and is picked up by the next drain. `attempts` is counted when the
+ * lease is taken, so a job that keeps killing its isolate still reaches
+ * MAX_ATTEMPTS and is dead-lettered rather than retried forever.
+ *
+ * The interval tick in esign-scheduler.ts stays as a backstop for warm
+ * isolates. KV has no compare-and-set, so two isolates draining at the same
+ * instant can both take one job; `completeEnvelope` tolerates a second run,
+ * so the cost of that race is duplicate work, not lost work.
  */
 
 import * as kv from './kv_store.tsx';
@@ -32,14 +47,22 @@ import { getErrMsg } from './shared-logger-utils.ts';
 const log = createModuleLogger('esign-completion-queue');
 
 const QUEUE_KEY = 'esign:completion-queue:pending';
-const IN_FLIGHT_KEY = (envelopeId: string) => `esign:completion-queue:inflight:${envelopeId}`;
 /** Max attempts before a job is dead-lettered. */
 const MAX_ATTEMPTS = 3;
+/**
+ * How long a drain holds a job before another drain may take it over.
+ * Comfortably longer than the edge runtime's wall-clock limit, so a live job
+ * is never taken over; short enough that a job whose isolate was dropped is
+ * retried within minutes.
+ */
+export const COMPLETION_LEASE_MS = 7 * 60 * 1000;
 
 export interface CompletionJob {
   envelopeId: string;
   enqueuedAt: string;
   attempts: number;
+  /** ISO time until which a drain owns this job. Absent = available. */
+  leasedUntil?: string;
   lastError?: string;
 }
 
@@ -50,20 +73,47 @@ export interface DrainResult {
   remaining: number;
 }
 
+async function loadQueue(): Promise<CompletionJob[]> {
+  const raw = await kv.get(QUEUE_KEY);
+  return Array.isArray(raw) ? (raw as CompletionJob[]) : [];
+}
+
+async function saveQueue(queue: CompletionJob[]): Promise<void> {
+  await kv.set(QUEUE_KEY, queue);
+}
+
+/** Re-read the queue and apply `change` to one envelope's job. */
+async function updateJob(
+  envelopeId: string,
+  change: (job: CompletionJob) => CompletionJob | null,
+): Promise<void> {
+  const queue = await loadQueue();
+  const next: CompletionJob[] = [];
+  for (const job of queue) {
+    if (job.envelopeId !== envelopeId) {
+      next.push(job);
+      continue;
+    }
+    const changed = change(job);
+    if (changed) next.push(changed);
+  }
+  await saveQueue(next);
+}
+
+function isAvailable(job: CompletionJob, now: number): boolean {
+  if (!job.leasedUntil) return true;
+  const until = Date.parse(job.leasedUntil);
+  return Number.isNaN(until) || until <= now;
+}
+
 /**
  * Enqueue an envelope for background completion. Idempotent: if the
- * envelope is already pending OR in flight, this is a no-op.
+ * envelope is already in the queue (waiting or leased), this is a no-op.
  */
 export async function enqueueCompletion(envelopeId: string): Promise<void> {
-  const raw = await kv.get(QUEUE_KEY);
-  const queue: CompletionJob[] = Array.isArray(raw) ? raw : [];
+  const queue = await loadQueue();
   if (queue.some((j) => j.envelopeId === envelopeId)) {
     log.info(`Completion already queued for envelope ${envelopeId}`);
-    return;
-  }
-  const inFlight = await kv.get(IN_FLIGHT_KEY(envelopeId));
-  if (inFlight) {
-    log.info(`Completion already in flight for envelope ${envelopeId}`);
     return;
   }
 
@@ -72,7 +122,7 @@ export async function enqueueCompletion(envelopeId: string): Promise<void> {
     enqueuedAt: new Date().toISOString(),
     attempts: 0,
   });
-  await kv.set(QUEUE_KEY, queue);
+  await saveQueue(queue);
 
   // Best-effort status flip. If the envelope is already completed (e.g.
   // a race with the drain loop) we skip the transition.
@@ -98,87 +148,105 @@ export async function enqueueCompletion(envelopeId: string): Promise<void> {
 }
 
 /**
- * Drain up to `maxJobs` items from the queue. Each job runs through
- * `completeEnvelope`; failures retry up to `MAX_ATTEMPTS` before
+ * Drain up to `maxJobs` available items from the queue. Each job runs
+ * through `completeEnvelope`; failures retry up to `MAX_ATTEMPTS` before
  * being dead-lettered (envelope is moved back to `partially_signed`
- * with a `completion_failed` audit event so an operator can retry
+ * with a `completion_dead_lettered` audit event so an operator can retry
  * manually).
  */
 export async function drainCompletionQueue(maxJobs = 5): Promise<DrainResult> {
-  const raw = await kv.get(QUEUE_KEY);
-  const queue: CompletionJob[] = Array.isArray(raw) ? raw : [];
+  const now = Date.now();
+  const queue = await loadQueue();
   if (!queue.length) return { processed: 0, failed: 0, deadLettered: 0, remaining: 0 };
 
-  const batch = queue.slice(0, maxJobs);
-  const remaining = queue.slice(batch.length);
-  // Persist the shorter queue first so we don't redo finished jobs
-  // if this instance is torn down mid-drain.
-  await kv.set(QUEUE_KEY, remaining);
+  // Take the lease BEFORE working, and persist it, so a dropped isolate
+  // leaves the job in the queue for the next drain instead of losing it.
+  const leasedUntil = new Date(now + COMPLETION_LEASE_MS).toISOString();
+  const batch: CompletionJob[] = [];
+  const leased = queue.map((job) => {
+    if (batch.length >= maxJobs || !isAvailable(job, now)) return job;
+    const taken = { ...job, attempts: job.attempts + 1, leasedUntil };
+    batch.push(taken);
+    return taken;
+  });
+  if (!batch.length) {
+    return { processed: 0, failed: 0, deadLettered: 0, remaining: queue.length };
+  }
+  await saveQueue(leased);
 
   let processed = 0;
   let failed = 0;
   let deadLettered = 0;
-  const retryBucket: CompletionJob[] = [];
 
   for (const job of batch) {
-    await kv.set(IN_FLIGHT_KEY(job.envelopeId), {
-      startedAt: new Date().toISOString(),
-      attempts: job.attempts + 1,
-    });
-
+    let error: string | null = null;
     try {
       const result = await completeEnvelope(job.envelopeId);
-      if (result.success) {
-        processed += 1;
-      } else {
-        throw new Error(result.error || 'Unknown completion failure');
-      }
+      if (!result.success) error = result.error || 'Unknown completion failure';
     } catch (err) {
-      const msg = getErrMsg(err);
-      log.error(
-        `Completion job failed for envelope ${job.envelopeId} (attempt ${job.attempts + 1}): ${msg}`,
-      );
-      if (job.attempts + 1 >= MAX_ATTEMPTS) {
-        deadLettered += 1;
-        try {
-          await updateEnvelopeStatus(job.envelopeId, 'partially_signed');
-          await logAuditEvent({
-            envelopeId: job.envelopeId,
-            actorType: 'system',
-            action: 'completion_dead_lettered',
-            metadata: { attempts: job.attempts + 1, error: msg },
-          });
-        } catch (logErr) {
-          log.error(`Dead-letter audit write failed for ${job.envelopeId}: ${String(logErr)}`);
-        }
-      } else {
-        failed += 1;
-        retryBucket.push({
+      error = getErrMsg(err);
+    }
+
+    if (error === null) {
+      processed += 1;
+      await updateJob(job.envelopeId, () => null);
+      continue;
+    }
+
+    log.error(
+      `Completion job failed for envelope ${job.envelopeId} (attempt ${job.attempts}): ${error}`,
+    );
+    if (job.attempts >= MAX_ATTEMPTS) {
+      deadLettered += 1;
+      await updateJob(job.envelopeId, () => null);
+      try {
+        await updateEnvelopeStatus(job.envelopeId, 'partially_signed');
+        await logAuditEvent({
           envelopeId: job.envelopeId,
-          enqueuedAt: job.enqueuedAt,
-          attempts: job.attempts + 1,
-          lastError: msg,
+          actorType: 'system',
+          action: 'completion_dead_lettered',
+          metadata: { attempts: job.attempts, error },
         });
+      } catch (logErr) {
+        log.error(`Dead-letter audit write failed for ${job.envelopeId}: ${String(logErr)}`);
       }
-    } finally {
-      await kv.del(IN_FLIGHT_KEY(job.envelopeId));
+    } else {
+      failed += 1;
+      const lastError = error;
+      await updateJob(job.envelopeId, (j) => ({ ...j, leasedUntil: undefined, lastError }));
     }
   }
 
-  if (retryBucket.length) {
-    const currentRaw = await kv.get(QUEUE_KEY);
-    const current: CompletionJob[] = Array.isArray(currentRaw) ? currentRaw : [];
-    await kv.set(QUEUE_KEY, [...current, ...retryBucket]);
+  return { processed, failed, deadLettered, remaining: (await loadQueue()).length };
+}
+
+/** One drain per isolate at a time; a second kick joins the running one. */
+let activeDrain: Promise<DrainResult | void> | null = null;
+
+/**
+ * Start a drain that the runtime will not drop mid-way.
+ *
+ * Call from a request handler: the drain is registered with
+ * `EdgeRuntime.waitUntil`, which holds the isolate open past the response
+ * until the drain settles. Outside the edge runtime (tests, local dev) the
+ * drain simply runs detached. Never throws.
+ */
+export function kickCompletionDrain(): void {
+  if (!activeDrain) {
+    activeDrain = drainCompletionQueue()
+      .catch((err) => log.error(`Completion drain failed: ${getErrMsg(err)}`))
+      .finally(() => {
+        activeDrain = null;
+      });
   }
-
-  const finalRaw = await kv.get(QUEUE_KEY);
-  const finalQueue: CompletionJob[] = Array.isArray(finalRaw) ? finalRaw : [];
-
-  return { processed, failed, deadLettered, remaining: finalQueue.length };
+  const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } })
+    .EdgeRuntime;
+  if (typeof runtime?.waitUntil === 'function') {
+    runtime.waitUntil(activeDrain);
+  }
 }
 
 /** Diagnostic helper used by the dashboard and synthetic probe. */
 export async function getQueueDepth(): Promise<number> {
-  const raw = await kv.get(QUEUE_KEY);
-  return Array.isArray(raw) ? raw.length : 0;
+  return (await loadQueue()).length;
 }

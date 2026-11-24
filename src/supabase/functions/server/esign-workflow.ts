@@ -64,6 +64,17 @@ export async function completeEnvelope(
     const envelope = await getEnvelopeDetails(envelopeId);
     if (!envelope) throw new Error('Envelope not found');
 
+    // A retried job (its isolate dropped after the work was done but before
+    // the queue was told) must not seal and mail everything a second time.
+    if (
+      envelope.status === 'completed' &&
+      envelope.signed_document_path &&
+      envelope.completion_notified_at
+    ) {
+      log.info(`Envelope ${envelopeId} already completed and notified — nothing to do`);
+      return { success: true };
+    }
+
     if (envelope.status !== 'completed') {
       await updateEnvelopeStatus(envelopeId, 'completed', {
         completed_at: new Date().toISOString(),
@@ -135,6 +146,18 @@ export async function completeEnvelope(
       signed_document_path: signedDocPath,
       signed_document_hash: sealedHash,
     });
+
+    // Index the sealed hash so the public /verify page answers with a single
+    // read instead of scanning every envelope. Best-effort: verification
+    // falls back to the scan (and backfills this) if the write is lost.
+    try {
+      await kv.set(EsignKeys.verifyHashIndex(sealedHash), {
+        envelope_id: envelopeId,
+        match_type: 'signed',
+      });
+    } catch (indexErr) {
+      log.warn(`Verify index write failed for ${envelopeId}: ${getErrMsg(indexErr)}`);
+    }
 
     log.success(`Envelope ${envelopeId} completion workflow finished. Artifact: ${signedDocPath}`);
 
@@ -246,6 +269,9 @@ export async function completeEnvelope(
       }
 
       log.success(`Completion emails sent for envelope ${envelopeId}`);
+      await updateEnvelopeStatus(envelopeId, 'completed', {
+        completion_notified_at: new Date().toISOString(),
+      });
 
       // P5.4 — fan-out envelope.completed to firm webhooks.
       void emitWebhookEvent({

@@ -195,7 +195,15 @@ class EsignSignerService {
         };
       }
 
-      return { success: true };
+      const data = (await response.json().catch(() => ({}))) as {
+        download_token?: string | null;
+        envelope_complete?: boolean;
+      };
+      return {
+        success: true,
+        download_token: data.download_token ?? null,
+        envelope_complete: data.envelope_complete === true,
+      };
     } catch (error) {
       console.error('Error submitting signature:', error);
       return {

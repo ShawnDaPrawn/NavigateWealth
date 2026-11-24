@@ -689,6 +689,54 @@ export async function getSignerByToken(token: string): Promise<EsignSigner | nul
   }
 }
 
+/** How long the completion screen's download grant stays usable. */
+export const SIGNER_DOWNLOAD_GRANT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+interface SignerDownloadGrant {
+  signer_id: string;
+  envelope_id: string;
+  expires_at: string;
+}
+
+/**
+ * Mint a download-only grant for a signer who has just submitted.
+ *
+ * Submitting rotates the signer's access token (single-use links), which
+ * left the "Download copy" button on the completion screen holding a dead
+ * token: every press answered 404 and the page swallowed it. The grant is
+ * returned in the submit response and is accepted ONLY by
+ * GET /signer/download/:token — it cannot reopen the signing UI.
+ */
+export async function issueSignerDownloadGrant(
+  signerId: string,
+  envelopeId: string,
+): Promise<string> {
+  const grant = `dl_${crypto.randomUUID()}`;
+  const record: SignerDownloadGrant = {
+    signer_id: signerId,
+    envelope_id: envelopeId,
+    expires_at: new Date(Date.now() + SIGNER_DOWNLOAD_GRANT_TTL_MS).toISOString(),
+  };
+  await kv.set(EsignKeys.signerDownloadGrant(grant), record);
+  return grant;
+}
+
+/** The signer a live download grant belongs to, or null. */
+export async function getSignerByDownloadGrant(grant: string): Promise<EsignSigner | null> {
+  if (!grant.startsWith('dl_')) return null;
+  try {
+    const record = (await kv.get(
+      EsignKeys.signerDownloadGrant(grant),
+    )) as SignerDownloadGrant | null;
+    if (!record || Date.parse(record.expires_at) <= Date.now()) return null;
+    const signer = (await kv.get(EsignKeys.PREFIX_SIGNER + record.signer_id)) as EsignSigner | null;
+    return signer && signer.envelope_id === record.envelope_id ? signer : null;
+  } catch (error: unknown) {
+    log.error('Failed to resolve signer download grant:', error);
+    return null;
+  }
+}
+
 /**
  * P5.6 — Rotate a signer's access token.
  *

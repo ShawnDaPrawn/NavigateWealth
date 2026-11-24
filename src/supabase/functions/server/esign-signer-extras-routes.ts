@@ -18,6 +18,7 @@ import {
   getEnvelopeDetails,
   getEnvelopeSigners,
   getSignerByToken,
+  getSignerByDownloadGrant,
   updateFieldValue,
   logAuditEvent,
 } from './esign-services.ts';
@@ -29,6 +30,7 @@ import {
 } from './esign-storage.ts';
 import { generateCompletionCertificate } from './esign-certificates.ts';
 import { authErrorResponse } from './esign-auth-error-response.ts';
+import { kickCompletionDrain } from './esign-completion-queue.ts';
 
 const log = createModuleLogger('esign-signer-extras-routes');
 
@@ -42,8 +44,9 @@ app.get('/signer/download/:token', async (c) => {
   try {
     const token = c.req.param('token')!;
 
-    // Get signer by token
-    const signer = await getSignerByToken(token);
+    // A live signing token, or the download-only grant the submit response
+    // hands the completion screen (the signing token is rotated on submit).
+    const signer = (await getSignerByToken(token)) ?? (await getSignerByDownloadGrant(token));
 
     if (!signer) {
       return c.json({ error: 'Invalid or expired signing link' }, 404);
@@ -57,9 +60,23 @@ app.get('/signer/download/:token', async (c) => {
       return c.json({ error: 'Envelope not found' }, 404);
     }
 
-    // Only allow download if completed
+    // Only allow download if completed. While the signed copy is still being
+    // sealed (`completing`) answer 409 with `retryable` so the completion
+    // screen can wait for it, and nudge the drain in case the job that was
+    // meant to build it has stalled.
     if (envelope.status !== 'completed') {
-      return c.json({ error: 'Document not completed yet' }, 400);
+      const preparing = envelope.status === 'completing';
+      if (preparing) kickCompletionDrain();
+      return c.json(
+        {
+          error: preparing
+            ? 'Your signed copy is still being prepared.'
+            : 'The signed copy will be available once everyone has signed.',
+          code: preparing ? 'preparing' : 'not_complete',
+          retryable: preparing,
+        },
+        409,
+      );
     }
 
     // Check if we have a pre-generated signed document

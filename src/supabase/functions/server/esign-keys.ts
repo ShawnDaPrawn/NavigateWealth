@@ -30,6 +30,13 @@ export const EsignKeys = {
 
   // Signer related keys
   signerToken: (token: string) => `esign:token:${token}`, // Maps token to signer ID
+  // Public verification: document SHA-256 → the envelope it belongs to, so
+  // /verify answers from one read instead of scanning every envelope.
+  verifyHashIndex: (hash: string) => `esign:verify-index:${hash}`,
+  // Download-only grant handed to a signer on submit. The signing token is
+  // rotated at that moment, so the completion screen needs its own key to
+  // fetch the signed copy; this one opens nothing but the download route.
+  signerDownloadGrant: (grant: string) => `esign:signer-download:${grant}`,
   signerOtp: (id: string) => `esign:signer:${id}:otp`,
 
   // Template related keys

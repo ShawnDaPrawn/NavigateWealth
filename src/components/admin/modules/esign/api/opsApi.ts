@@ -224,6 +224,7 @@ export const opsApi = {
   async verifyDocumentHash(hash: string): Promise<{
     verified: boolean;
     matchType?: 'original' | 'signed';
+    sealed?: boolean;
     envelope?: {
       id: string;
       title: string;

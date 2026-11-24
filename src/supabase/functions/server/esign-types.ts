@@ -74,6 +74,12 @@ export interface EsignEnvelope {
   request_id?: string;
   product_id?: string;
   signed_document_path?: string;
+  /**
+   * Set once the completion emails (signers + sender) have gone out with the
+   * signed copy. A completion job that is retried after this point returns
+   * early instead of mailing everyone a second time.
+   */
+  completion_notified_at?: string;
   // P4.1 / P4.2 — pinned template provenance. Stamped at create-time
   // when the envelope is materialised from a saved template so the
   // exact template snapshot can always be retrieved.

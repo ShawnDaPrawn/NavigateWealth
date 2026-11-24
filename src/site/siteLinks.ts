@@ -35,6 +35,9 @@ export const FOOTER_LINKS: Record<'company' | 'services' | 'resources' | 'legal'
     { label: 'Sitemap', path: '/sitemap' },
     { label: 'Market Updates', path: '/resources?section=market-updates' },
     { label: 'Newsletters', path: '/resources?section=newsletters' },
+    // The public authenticity check for documents signed through the platform.
+    // Nothing linked to it, so clients holding a signed copy could not find it.
+    { label: 'Verify a Document', path: '/verify' },
   ],
   legal: [
     { label: 'Privacy and Data', path: '/legal?section=privacy-data-protection' },

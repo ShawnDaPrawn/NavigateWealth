@@ -46,76 +46,119 @@ const log = createModuleLogger('esign-envelopes-routes');
 
 const envelopesRoutes = new Hono();
 
-envelopesRoutes.post('/verify-hash', async (c) => {
+type VerifyMatch = 'original' | 'signed';
+interface VerifyIndexEntry {
+  envelope_id: string;
+  match_type: VerifyMatch;
+}
+
+const isLiveEnvelope = (item: unknown): item is Record<string, unknown> =>
+  !!item &&
+  typeof item === 'object' &&
+  !Array.isArray(item) &&
+  !!(item as Record<string, unknown>).id &&
+  !!(item as Record<string, unknown>).status &&
+  // P6.8 — soft-deleted envelopes don't take part in verify-hash lookups.
+  // The document still exists in storage but is logically gone.
+  !(item as Record<string, unknown>).deleted_at;
+
+/**
+ * Find the envelope a document hash belongs to.
+ *
+ * Fast path: the hash index written when an envelope completes (one read).
+ * Slow path, for envelopes completed before the index existed: scan the
+ * envelopes — sealed hashes first, then the original uploads with ONE batched
+ * read rather than one sequential read per envelope — and backfill the index
+ * so the next check of the same file is a single read.
+ */
+async function findEnvelopeByHash(
+  hash: string,
+): Promise<{ envelope: Record<string, unknown>; matchType: VerifyMatch } | null> {
+  const indexed = (await kv.get(EsignKeys.verifyHashIndex(hash))) as VerifyIndexEntry | null;
+  if (indexed?.envelope_id) {
+    const envelope = await kv.get(EsignKeys.envelope(indexed.envelope_id));
+    // Re-check against the record: a soft delete, or a re-seal that replaced
+    // the signed copy, must not keep verifying through a stale index row.
+    if (
+      isLiveEnvelope(envelope) &&
+      (indexed.match_type === 'original' || envelope.signed_document_hash === hash)
+    ) {
+      return { envelope, matchType: indexed.match_type };
+    }
+  }
+
+  const allValues = await kv.getByPrefix(EsignKeys.PREFIX_ENVELOPE);
+  const envelopes = allValues.filter(isLiveEnvelope);
+
+  let found: { envelope: Record<string, unknown>; matchType: VerifyMatch } | null = null;
+  const sealed = envelopes.find((env) => env.signed_document_hash === hash);
+  if (sealed) {
+    found = { envelope: sealed, matchType: 'signed' };
+  } else {
+    const withDocs = envelopes.filter((env) => typeof env.document_id === 'string');
+    const docs = withDocs.length
+      ? await kv.mget(withDocs.map((env) => EsignKeys.PREFIX_DOCUMENT + env.document_id))
+      : [];
+    const i = docs.findIndex((doc: { hash?: unknown } | null) => doc?.hash === hash);
+    if (i >= 0) found = { envelope: withDocs[i], matchType: 'original' };
+  }
+
+  if (found) {
+    const entry: VerifyIndexEntry = {
+      envelope_id: found.envelope.id as string,
+      match_type: found.matchType,
+    };
+    try {
+      await kv.set(EsignKeys.verifyHashIndex(hash), entry);
+    } catch (err) {
+      log.warn('Verify index backfill failed (non-fatal)', { error: getErrMsg(err) });
+    }
+  }
+  return found;
+}
+
+/**
+ * POST /verify-hash — the public authenticity check behind /verify.
+ *
+ * The browser hashes the PDF locally and sends only the SHA-256; the file
+ * never leaves the person's device. Public by design, so it is rate limited.
+ */
+envelopesRoutes.post('/verify-hash', rateLimit('VERIFY_DOCUMENT'), async (c) => {
   try {
-    const { hash } = await c.req.json();
-    if (!hash || typeof hash !== 'string') {
+    const body = (await c.req.json().catch(() => ({}))) as { hash?: unknown };
+    const hash = typeof body.hash === 'string' ? body.hash.trim().toLowerCase() : '';
+    if (!hash || hash.length > 128) {
       return c.json({ error: 'hash is required' }, 400);
     }
 
-    // Search all envelopes for a matching document hash.
-    // We check two possible locations:
-    //   1. envelope.signed_document_hash — the sealed final PDF hash (most common for verification)
-    //   2. document.hash — the original uploaded PDF hash
-    const allValues = await kv.getByPrefix(EsignKeys.PREFIX_ENVELOPE);
-    const envelopes = allValues.filter(
-      (item: Record<string, unknown>) =>
-        item &&
-        typeof item === 'object' &&
-        !Array.isArray(item) &&
-        item.id &&
-        item.status &&
-        // P6.8 — soft-deleted envelopes don't take part in verify-hash
-        // lookups. The document still exists in storage but is logically
-        // gone from the user's perspective.
-        !item.deleted_at,
-    );
-
-    let matchedEnvelope: Record<string, unknown> | null = null;
-    let matchType: 'original' | 'signed' | null = null;
-
-    // Pass 1: Check sealed document hash on envelope record (fast — no extra KV read)
-    for (const env of envelopes) {
-      if (env.signed_document_hash === hash) {
-        matchedEnvelope = env;
-        matchType = 'signed';
-        break;
-      }
-    }
-
-    // Pass 2: Check original document hash (requires reading document record)
-    if (!matchedEnvelope) {
-      for (const env of envelopes) {
-        if (env.document_id) {
-          const doc = await kv.get(EsignKeys.PREFIX_DOCUMENT + env.document_id);
-          if (doc?.hash === hash) {
-            matchedEnvelope = env;
-            matchType = 'original';
-            break;
-          }
-        }
-      }
-    }
-
-    if (!matchedEnvelope) {
+    const match = await findEnvelopeByHash(hash);
+    if (!match) {
       return c.json({
         verified: false,
         message:
           'No matching document found. The file may have been modified after signing, or it was not signed through this platform.',
       });
     }
+    const { envelope: matchedEnvelope, matchType } = match;
 
     // Fetch signers
     const rawSIds = await kv.get(EsignKeys.envelopeSigners(matchedEnvelope.id as string));
     const signerIds = Array.isArray(rawSIds) ? rawSIds : [];
-    const signers = await Promise.all(
-      signerIds.map((id: string) => kv.get(EsignKeys.PREFIX_SIGNER + id)),
+    const signers = signerIds.length
+      ? await kv.mget(signerIds.map((id: string) => EsignKeys.PREFIX_SIGNER + id))
+      : [];
+    const validSigners = signers.filter(
+      // A copy-only recipient never signed anything; listing them as a
+      // signatory of the document would be wrong.
+      (s: Record<string, unknown> | null) => !!s && s.kind !== 'cc',
     );
-    const validSigners = signers.filter(Boolean);
 
     return c.json({
       verified: true,
       matchType,
+      // The sealed copy carries the platform's PKCS#7 signature; the original
+      // upload does not.
+      sealed: matchType === 'signed',
       envelope: {
         id: matchedEnvelope.id,
         title: matchedEnvelope.title,

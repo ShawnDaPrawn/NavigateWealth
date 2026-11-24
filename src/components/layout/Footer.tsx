@@ -93,6 +93,7 @@ export function Footer() {
       { label: 'Sitemap', path: '/sitemap' },
       { label: 'Market Updates', path: '/resources?section=market-updates' },
       { label: 'Newsletters', path: '/resources?section=newsletters' },
+      { label: 'Verify a Document', path: '/verify' },
     ],
     legal: [
       { label: 'Privacy and Data', path: '/legal?section=privacy-data-protection' },

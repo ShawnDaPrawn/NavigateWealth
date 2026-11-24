@@ -318,6 +318,51 @@ describe('POST /verify-hash', () => {
     expect(res.status).toBe(200);
     expect(((await json(res)) as unknown as { verified: boolean }).verified).toBe(true);
   });
+
+  it('backfills the hash index from a scan, then answers from the index alone', async () => {
+    seedEnvelope('e1', { firmId: FIRM_A, status: 'completed', signedHash: 'sha256:sealed' });
+    const verify = () =>
+      req('/verify-hash', { as: null, method: 'POST', body: { hash: 'sha256:sealed' } });
+
+    expect(((await json(await verify())) as unknown as { verified: boolean }).verified).toBe(true);
+    expect(kvStore.get(EsignKeys.verifyHashIndex('sha256:sealed'))).toEqual({
+      envelope_id: 'e1',
+      match_type: 'signed',
+    });
+
+    // With the index in place the scan is not needed: a check no longer
+    // reads every envelope in the store.
+    const kv = await import('../kv_store.tsx');
+    vi.mocked(kv.getByPrefix).mockClear();
+    const body = (await json(await verify())) as unknown as { verified: boolean; sealed: boolean };
+    expect(body).toMatchObject({ verified: true, sealed: true });
+    expect(kv.getByPrefix).not.toHaveBeenCalled();
+  });
+
+  it('does not trust an index row the envelope no longer backs', async () => {
+    seedEnvelope('e1', {
+      firmId: FIRM_A,
+      status: 'completed',
+      signedHash: 'sha256:sealed',
+      deletedAt: '2026-03-05T00:00:00.000Z',
+    });
+    kvStore.set(EsignKeys.verifyHashIndex('sha256:sealed'), {
+      envelope_id: 'e1',
+      match_type: 'signed',
+    });
+    const res = await req('/verify-hash', {
+      as: null,
+      method: 'POST',
+      body: { hash: 'sha256:sealed' },
+    });
+    expect(((await json(res)) as unknown as { verified: boolean }).verified).toBe(false);
+  });
+
+  it('matches a hash regardless of letter case', async () => {
+    seedEnvelope('e1', { firmId: FIRM_A, status: 'completed', signedHash: 'abc123' });
+    const res = await req('/verify-hash', { as: null, method: 'POST', body: { hash: ' ABC123 ' } });
+    expect(((await json(res)) as unknown as { verified: boolean }).verified).toBe(true);
+  });
 });
 
 // ============================================================================
