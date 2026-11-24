@@ -16,22 +16,28 @@ const hex = (h: string): RGB =>
     parseInt(h.slice(5, 7), 16) / 255,
   );
 
-/** Navigate Wealth design-system colours used on the certificate. */
+/**
+ * Navigate Wealth design-system colours used on the certificate — the
+ * Navigator restyle's tokens (src/site/styles/navigator.css): ink on warm
+ * paper, warm lines, violet kept for the single accent. The key names are the
+ * certificate's own roles, so the renderer did not change with the palette.
+ */
 export const CERT_COLORS = {
-  violet: hex('#6d28d9'),
-  violet600: hex('#5b21b6'),
-  violet100: hex('#ede9fe'),
-  ink: hex('#111827'),
-  ink2: hex('#1f2937'),
-  ink3: hex('#374151'),
-  text2: hex('#4b5563'),
-  text3: hex('#6b7280'),
-  line: hex('#e5e7eb'),
-  line2: hex('#f1f2f4'),
-  subtle: hex('#fafafb'),
-  bg: hex('#f6f7f9'),
-  green: hex('#047857'),
-  green50: hex('#ecfdf5'),
+  violet: hex('#6d28d9'), // --nw-violet
+  violet600: hex('#5b21b6'), // --nw-violet-hover
+  violet100: hex('#f4f1fb'), // --nw-violet-tint
+  ink: hex('#0d1626'), // --nw-ink
+  ink2: hex('#1c2638'), // --nw-ink-3
+  ink3: hex('#2f3747'), // --nw-text-strong
+  text2: hex('#3d4556'), // --nw-text
+  text3: hex('#5e6676'), // --nw-muted
+  line: hex('#e2ddd3'), // --nw-line
+  line2: hex('#ece7de'), // --nw-line-soft
+  lineStrong: hex('#d3ccbf'), // --nw-line-strong
+  subtle: hex('#fbfaf7'), // --nw-paper-3
+  bg: hex('#f6f4ef'), // --nw-paper
+  green: hex('#15803d'), // --nw-success
+  green50: hex('#f0fdf4'),
   white: rgb(1, 1, 1),
 };
 
@@ -507,4 +513,33 @@ export function signerIdentityRows(s: {
   );
   if (s.signing_reason) rows.push(['Signing capacity', s.signing_reason]);
   return rows;
+}
+
+/**
+ * SVG path for a w × h rectangle with radius r, origin top-left. `corners`
+ * picks which corners are rounded (top-left, top-right, bottom-right,
+ * bottom-left).
+ */
+export function roundedRectPath(
+  w: number,
+  h: number,
+  r: number,
+  corners: [boolean, boolean, boolean, boolean] = [true, true, true, true],
+): string {
+  const [tl, tr, br, bl] = corners;
+  const k = 0.5523 * r;
+  return [
+    `M ${tl ? r : 0} 0`,
+    `L ${tr ? w - r : w} 0`,
+    tr ? `C ${w - r + k} 0 ${w} ${r - k} ${w} ${r}` : '',
+    `L ${w} ${br ? h - r : h}`,
+    br ? `C ${w} ${h - r + k} ${w - r + k} ${h} ${w - r} ${h}` : '',
+    `L ${bl ? r : 0} ${h}`,
+    bl ? `C ${r - k} ${h} 0 ${h - r + k} 0 ${h - r}` : '',
+    `L 0 ${tl ? r : 0}`,
+    tl ? `C 0 ${r - k} ${r - k} 0 ${r} 0` : '',
+    'Z',
+  ]
+    .filter(Boolean)
+    .join(' ');
 }

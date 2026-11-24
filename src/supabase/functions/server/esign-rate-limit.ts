@@ -48,6 +48,16 @@ export const ESIGN_RATE_LIMITS = {
     windowMs: 5 * 60 * 1000,
     blockDurationMs: 5 * 60 * 1000,
   },
+  /**
+   * Anyone checks a document on the public /verify page. Generous for a
+   * person checking a handful of files; tight enough that the endpoint is
+   * not a free way to make the server read every envelope.
+   */
+  VERIFY_DOCUMENT: {
+    maxAttempts: 30,
+    windowMs: 10 * 60 * 1000,
+    blockDurationMs: 15 * 60 * 1000,
+  },
   /** Signer tries to submit signed fields. */
   SIGNER_SUBMIT: {
     maxAttempts: 10,

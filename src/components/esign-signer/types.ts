@@ -4,6 +4,14 @@
 
 export interface SignerSessionData {
   envelope_id: string;
+  /**
+   * Download-only key for the signed copy, set from the submit response. The
+   * signing token is rotated on submit, so the completion screen downloads
+   * with this instead.
+   */
+  download_token?: string | null;
+  /** From the submit response: every required signer has now signed. */
+  envelope_complete?: boolean;
   envelope_title: string;
   envelope_message?: string;
   envelope_status?: string;
@@ -129,6 +137,9 @@ export interface KbaVerificationResult {
 export interface SignatureSubmissionResult {
   success: boolean;
   error?: string;
+  /** Present on a successful submit; see SignerSessionData.download_token. */
+  download_token?: string | null;
+  envelope_complete?: boolean;
 }
 
 /** Non-sensitive summary of a signer for the waiting/progress UI */

@@ -8,11 +8,14 @@ import { getRequestMetadata, FieldRecord } from './esign-route-helpers.ts';
 import { checkRateLimit } from './rateLimiter.ts';
 import { getEnvelopeDetails, getSignerByToken, logAuditEvent } from './esign-services.ts';
 import { getDocumentUrl } from './esign-storage.ts';
-import { generateAndStoreOTP } from './esign-otp.ts';
+import { generateAndStoreOTP, hasRecentOTP, OTP_VALID_MINUTES } from './esign-otp.ts';
 import { createOTPEmail } from './esign-email-templates.ts';
 import { getConsentByVersion } from './esign-consent-registry.ts';
 import { getFirmBranding, toPublicBranding } from './esign-branding-service.ts';
 import { sendEmail } from './email-service.ts';
+import { sendOtpSms } from './sms-service.ts';
+import type { Context } from 'npm:hono';
+import type { EsignEnvelope, EsignSigner } from './esign-types.ts';
 import {
   assertActiveSigningState,
   getMissingSignerFactors,
@@ -118,6 +121,71 @@ app.get('/sign-by-token/:token', async (c) => {
 
 // ==================== SIGNER PUBLIC ENDPOINTS (No Auth Required) ====================
 
+/** A code issued this recently is reused rather than replaced on re-open. */
+const AUTO_OTP_REUSE_MS = 60 * 1000;
+
+/**
+ * Email (and, for opted-in signers, text) a fresh verification code when the
+ * signer opens their link. Best-effort: a failure is logged and the signer can
+ * still press "resend".
+ */
+async function autoSendSignerOtp(
+  c: Context,
+  envelope: Pick<EsignEnvelope, 'id' | 'title'>,
+  signer: Pick<EsignSigner, 'id' | 'name' | 'email' | 'phone' | 'sms_opt_in'>,
+): Promise<void> {
+  try {
+    if (await hasRecentOTP(signer.id, AUTO_OTP_REUSE_MS)) return;
+
+    const { otp, error: otpError } = await generateAndStoreOTP(signer.id);
+    if (otpError || !otp) {
+      log.warn('Failed to generate auto-sent OTP:', { error: String(otpError) });
+      return;
+    }
+
+    const emailContent = createOTPEmail({
+      signerName: signer.name,
+      otp,
+      envelopeTitle: envelope.title,
+      expiresInMinutes: OTP_VALID_MINUTES,
+    });
+    const emailSent = await sendEmail({
+      kind: 'esign_code',
+      to: signer.email,
+      subject: `Verification Code: ${envelope.title}`,
+      html: emailContent.html,
+      text: emailContent.text,
+    });
+
+    let smsDelivered = false;
+    if (signer.sms_opt_in && signer.phone) {
+      try {
+        smsDelivered = (await sendOtpSms({ to: signer.phone, otp, envelopeTitle: envelope.title }))
+          .delivered;
+      } catch (smsErr) {
+        log.warn('Auto-sent OTP SMS failed:', { error: String(smsErr) });
+      }
+    }
+
+    const { ip, userAgent } = getRequestMetadata(c);
+    await logAuditEvent({
+      envelopeId: envelope.id,
+      actorType: 'system',
+      action: 'otp_sent',
+      email: signer.email,
+      ip,
+      userAgent,
+      metadata: {
+        signerId: signer.id,
+        note: 'Auto-sent on access',
+        channels: { email: !!emailSent, sms: smsDelivered },
+      },
+    });
+  } catch (err) {
+    log.warn('Failed to auto-send OTP:', { error: String(err) });
+  }
+}
+
 /**
  * POST /signer/validate
  * Validate access token and get signer session data (public endpoint)
@@ -178,6 +246,13 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       is_current: s.id === signer.id,
     }));
     const missingFactors = getMissingSignerFactors(envelope, signer);
+    // Opening the link sends the code — the signer should never have to ask
+    // for one. This used to sit at the end of the handler, AFTER the early
+    // return below, so for exactly the signers who needed a code it never ran
+    // and every signer had to press "resend".
+    if (missingFactors.includes('otp') && isTurn) {
+      await autoSendSignerOtp(c, envelope, signer);
+    }
     if (missingFactors.length > 0) {
       return c.json({
         envelope_id: envelope.id,
@@ -260,49 +335,6 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
       }
     } catch (profileErr) {
       log.warn('Failed to load signer profile (non-critical):', { error: String(profileErr) });
-    }
-
-    // Auto-send OTP if required and not verified
-    if (signer.requires_otp && !signer.otp_verified) {
-      try {
-        // Generate OTP
-        const { otp, error: otpError } = await generateAndStoreOTP(signer.id);
-
-        if (!otpError && otp) {
-          // Send OTP Email
-          const emailContent = createOTPEmail({
-            signerName: signer.name,
-            otp,
-            envelopeTitle: envelope.title,
-            expiresInMinutes: 15,
-          });
-
-          await sendEmail({
-            kind: 'esign_code',
-            to: signer.email,
-            subject: `Verification Code: ${envelope.title}`,
-            html: emailContent.html,
-            text: emailContent.text,
-          });
-
-          // Log audit event
-          const { ip: auditIp, userAgent } = getRequestMetadata(c);
-          await logAuditEvent({
-            envelopeId: envelope.id,
-            actorType: 'system',
-            action: 'otp_sent',
-            email: signer.email,
-            ip: auditIp,
-            userAgent,
-            metadata: { signerId: signer.id, note: 'Auto-sent on access' },
-          });
-
-          log.info(`✅ Auto-sent OTP to ${signer.email} for signer ${signer.id}`);
-        }
-      } catch (err) {
-        log.warn('❌ Failed to auto-send OTP:', { error: String(err) });
-        // We don't block the response, but we log the error
-      }
     }
 
     // P8.6 — Pull firm branding (logo + accent colour) so the signer

@@ -923,6 +923,32 @@
   font-size: 12.5px;
   color: var(--nw-muted);
 }
+.nw-site .nwes-done-verify {
+  margin: -8px 0 0;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--nw-muted);
+}
+.nw-site .nwes-done-verify a {
+  color: var(--nw-violet);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.nw-site .nwes-done-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--nw-line);
+  border-radius: var(--nw-r-sm);
+  background: var(--nw-paper-3);
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--nw-text);
+}
+.nw-site .nwes-done-notice--error {
+  border-color: var(--nw-danger-line, #fecaca);
+  background: var(--nw-danger-bg, #fef2f2);
+  color: var(--nw-danger, #b91c1c);
+}
 
 /* ═══════════ Signing workspace ═══════════ */
 .nw-site .nwes-bar {
