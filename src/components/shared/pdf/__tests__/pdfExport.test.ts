@@ -130,6 +130,66 @@ describe('exportPdfFromPreview', () => {
     expect(addImage.mock.calls[0][0]).toMatch(/^data:image\/jpeg/);
     expect(addImage.mock.calls[0][1]).toBe('JPEG');
   });
+
+  // html2canvas measures font baselines in a scratch element on <body>; with
+  // the body's 1.5 line height the legal cover title was drawn onto the line
+  // below it. The body is set to a normal line height only while pages render.
+  it('captures with a normal body line height and restores the old one', async () => {
+    const root = buildScaledPreview(2);
+    document.body.style.setProperty('line-height', '1.5');
+    const seen: string[] = [];
+    html2canvasMock.mockImplementation(async () => {
+      seen.push(document.body.style.getPropertyValue('line-height'));
+      return fakeCanvas();
+    });
+
+    await exportPdfFromPreview({ root, title: 'Notice', pageSize: 'A4', orientation: 'portrait' });
+
+    expect(seen).toEqual(['normal', 'normal']);
+    expect(document.body.style.getPropertyValue('line-height')).toBe('1.5');
+    document.body.style.removeProperty('line-height');
+  });
+
+  it('restores the body line height when a page fails to render', async () => {
+    const root = buildScaledPreview(1);
+    html2canvasMock.mockRejectedValue(new Error('canvas too large'));
+
+    await expect(
+      exportPdfFromPreview({ root, title: 'Notice', pageSize: 'A4', orientation: 'portrait' }),
+    ).rejects.toThrow('canvas too large');
+
+    expect(document.body.style.getPropertyValue('line-height')).toBe('');
+  });
+
+  it('loads the fonts a page uses in the cloned document before drawing it', async () => {
+    const root = buildScaledPreview(1);
+    let onclone: ((doc: Document, element: HTMLElement) => Promise<void>) | undefined;
+    html2canvasMock.mockImplementation(async (_element: HTMLElement, options) => {
+      onclone = (options as { onclone: typeof onclone }).onclone;
+      return fakeCanvas();
+    });
+    await exportPdfFromPreview({ root, title: 'Notice', pageSize: 'A4', orientation: 'portrait' });
+
+    const load = vi.fn(async () => []);
+    const clonedDocument = {
+      fonts: { load },
+      defaultView: {
+        getComputedStyle: () => ({
+          fontStyle: 'normal',
+          fontWeight: '500',
+          fontFamily: "'NWLP Newsreader', serif",
+        }),
+      },
+    } as unknown as Document;
+    const element = document.createElement('div');
+    element.appendChild(document.createElement('span'));
+
+    await onclone?.(clonedDocument, element);
+
+    // Two elements with the same face: asked for once.
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(load).toHaveBeenCalledWith("normal 500 16px 'NWLP Newsreader', serif");
+  });
 });
 
 describe('resolvePageCounterContent', () => {

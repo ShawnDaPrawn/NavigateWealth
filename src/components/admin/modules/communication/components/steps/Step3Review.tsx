@@ -14,9 +14,10 @@ import { Badge } from '../../../../../ui/badge';
 import { Alert, AlertDescription } from '../../../../../ui/alert';
 import { Separator } from '../../../../../ui/separator';
 import { toast } from 'sonner';
-import { CommunicationDraft, SchedulingConfig } from '../../types';
+import { ClientGroup, CommunicationDraft, SchedulingConfig } from '../../types';
 import { SchedulingOptions } from '../SchedulingOptions';
 import { communicationApi } from '../../api';
+import { estimateGroupRecipients, getDraftGroups } from '../../groupSelection';
 import DOMPurify from 'dompurify';
 import { renderEmailLayout } from '@/shared/email/emailLayout';
 import {
@@ -34,6 +35,10 @@ interface Step3Props {
   onViewHistory?: () => void;
   /** Whether the current user has 'send' capability. Defaults to true for backwards compat. */
   canSend?: boolean;
+}
+
+function toGroupRef(group: ClientGroup) {
+  return { id: group.id, name: group.name, type: group.type, clientCount: group.clientCount };
 }
 
 /** "Send now", "Schedule for 16 Nov, 08:00" or "Schedule repeating send". */
@@ -56,6 +61,9 @@ export function Step3Review({
   const [isSending, setIsSending] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [previewScheme, setPreviewScheme] = useState<EmailPreviewScheme>('light');
+  const selectedGroups = getDraftGroups(draft);
+  const isGroupSend = draft.recipientType === 'group' && selectedGroups.length > 0;
+  const hasCustomGroup = selectedGroups.some((g) => g.type === 'custom');
 
   const handleSend = async () => {
     setIsSending(true);
@@ -74,14 +82,14 @@ export function Step3Review({
           name: r.firstName ? `${r.firstName} ${r.surname || r.lastName || ''}`.trim() : r.email,
           phone: r.phone || '',
         })),
-        selectedGroup: draft.selectedGroup
+        // `selectedGroups` is what the server sends to; `selectedGroup` (the
+        // first) is kept for older readers of the campaign record.
+        ...(draft.recipientType === 'group' && selectedGroups.length > 0
           ? {
-              id: draft.selectedGroup.id,
-              name: draft.selectedGroup.name,
-              type: draft.selectedGroup.type,
-              clientCount: draft.selectedGroup.clientCount,
+              selectedGroup: toGroupRef(selectedGroups[0]),
+              selectedGroups: selectedGroups.map(toGroupRef),
             }
-          : undefined,
+          : {}),
         scheduling: {
           type: draft.scheduling.type,
           startDate: draft.scheduling.startDate
@@ -158,23 +166,44 @@ export function Step3Review({
                   <Users className="h-4 w-4" /> Recipients
                 </h3>
                 <div className="bg-muted/30 p-4 rounded-lg border">
-                  {draft.recipientType === 'group' && draft.selectedGroup ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-lg">{draft.selectedGroup.name}</span>
-                        <Badge>{draft.selectedGroup.type}</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {draft.selectedGroup.description}
+                  {isGroupSend ? (
+                    <div className="space-y-3">
+                      <p className="font-medium text-lg">
+                        {selectedGroups.length === 1
+                          ? selectedGroups[0].name
+                          : `${selectedGroups.length} groups`}
                       </p>
+                      <ul className="space-y-2" aria-label="Selected groups">
+                        {selectedGroups.map((group) => (
+                          <li key={group.id} className="rounded-md border bg-white px-3 py-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium">{group.name}</span>
+                              <span className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
+                                {group.clientCount} {group.clientCount === 1 ? 'client' : 'clients'}
+                                <Badge className="capitalize">{group.type}</Badge>
+                              </span>
+                            </div>
+                            {group.description && (
+                              <p className="mt-0.5 text-sm text-muted-foreground">
+                                {group.description}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      {selectedGroups.length > 1 && (
+                        <p className="text-sm text-muted-foreground">
+                          A client in more than one of these groups gets the message once.
+                        </p>
+                      )}
 
-                      {draft.selectedGroup.type === 'custom' && (
+                      {hasCustomGroup && (
                         <Alert className="bg-blue-50 border-blue-200 mt-2">
                           <AlertTriangle className="h-4 w-4 text-blue-600" />
                           <AlertDescription className="text-blue-700 text-xs">
-                            This is a custom group with {draft.selectedGroup.clientCount}{' '}
-                            recipients. Any changes to this group before the send date will
-                            automatically update the recipient list.
+                            Custom group membership is read when the message is sent. Any changes to
+                            a group before the send date will automatically update the recipient
+                            list.
                           </AlertDescription>
                         </Alert>
                       )}
@@ -277,7 +306,7 @@ export function Step3Review({
                   <span className="text-muted-foreground">Estimated recipients</span>
                   <span className="font-medium">
                     {draft.recipientType === 'group'
-                      ? draft.selectedGroup?.clientCount
+                      ? estimateGroupRecipients(selectedGroups)
                       : draft.selectedRecipients.length}
                   </span>
                 </div>

@@ -118,6 +118,12 @@ export interface Campaign {
   recipientType: 'single' | 'multiple' | 'group';
   selectedRecipients: { id: string; email?: string; [key: string]: unknown }[];
   selectedGroup?: { id: string; type: string; [key: string]: unknown };
+  /**
+   * Every group a multi-group campaign targets. `selectedGroup` is still
+   * written (as the first group) for older readers; resolve recipients through
+   * `getCampaignGroups` in communication-group-selection.ts, never either field.
+   */
+  selectedGroups?: { id: string; type: string; [key: string]: unknown }[];
   status: CampaignStatus;
   attachments?: {
     id: string;
@@ -168,6 +174,13 @@ export interface CampaignCreate {
     clientCount?: number;
     [key: string]: unknown;
   };
+  selectedGroups?: {
+    id: string;
+    name?: string;
+    type?: string;
+    clientCount?: number;
+    [key: string]: unknown;
+  }[];
   scheduling?: {
     type: 'immediate' | 'scheduled';
     startDate?: string;
@@ -355,6 +368,7 @@ export interface RecipientSelection {
   recipientType: 'single' | 'multiple' | 'group';
   selectedRecipients: Array<{ id: string; [key: string]: unknown }>;
   selectedGroup?: { id: string; type: string; [key: string]: unknown };
+  selectedGroups?: Array<{ id: string; type: string; [key: string]: unknown }>;
 }
 
 // Attachment reference (for processAttachments)

@@ -5,6 +5,8 @@ import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { ArrowLeft, Home, FileText, BookOpen, MessageCircle, ArrowRight } from 'lucide-react';
 import { SITE_DESIGN } from '../../site/design';
+import { useIsStandalone } from '../../hooks/useIsStandalone';
+import { AppNotFoundPage } from '../pwa/AppNotFoundPage';
 
 const NavigatorNotFoundPage = React.lazy(() =>
   import('../../site/pages/NavigatorNotFoundPage').then((m) => ({
@@ -14,9 +16,15 @@ const NavigatorNotFoundPage = React.lazy(() =>
 
 /**
  * The page for any URL the app has no route for. The build's design switch
- * picks the layout; both set the same title and noindex robots tag.
+ * picks the layout; both set the same title and noindex robots tag. The
+ * installed app has its own, portal-facing 404 whichever design is live
+ * (MainLayout drops the website's chrome around it).
  */
 export function NotFoundPage() {
+  const isStandalone = useIsStandalone();
+  if (isStandalone) {
+    return <AppNotFoundPage />;
+  }
   if (SITE_DESIGN === 'navigator') {
     return (
       <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>

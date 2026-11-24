@@ -1,9 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertCircle, RefreshCw, Home, ShieldAlert } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { RefreshCw, Home, ShieldCheck } from 'lucide-react';
+import { StatusScreen } from './StatusScreen';
 import { logger } from '../../utils/logger';
 import {
   markErrorReported,
@@ -154,149 +152,90 @@ export class ErrorBoundary extends Component<Props, State> {
 
     if (hasError) {
       const showTechDetails = this.isDevelopment() || showDetails;
-      const isDynamicImportError = this.isDynamicImportError(error);
-      const message = isDynamicImportError
-        ? 'A new version is available. Refresh the page to load the latest application files.'
-        : fallbackMessage || error?.message || 'An unexpected error occurred. Please try again.';
+      const isStale = this.isDynamicImportError(error);
+      const layout = inline ? 'inline' : 'page';
 
-      // Inline variant: renders within a layout's content area, preserving nav/footer
-      if (inline) {
+      // A deploy has replaced the files this tab was built from. Nothing is
+      // broken: the page just has to load the new version.
+      if (isStale) {
         return (
-          <div className="flex items-center justify-center p-8 py-16" role="alert">
-            <Card className="max-w-xl w-full border-red-100 shadow-lg">
-              <CardHeader className="space-y-1">
-                <div className="flex items-center gap-2 text-red-600 mb-2">
-                  <ShieldAlert className="h-5 w-5" />
-                  <span className="font-semibold uppercase tracking-wider text-xs">
-                    Section Error
-                  </span>
-                </div>
-                <CardTitle className="text-lg">
-                  {fallbackTitle || 'Unable to load this section'}
-                </CardTitle>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-900">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error Detected</AlertTitle>
-                  <AlertDescription>{message}</AlertDescription>
-                </Alert>
-
-                {showTechDetails && error && (
-                  <div className="space-y-2">
-                    <div className="text-xs font-mono bg-slate-950 text-slate-50 p-3 rounded-md overflow-auto max-h-[200px]">
-                      <div className="mb-2 font-bold text-red-400">
-                        {error.name}: {error.message}
-                      </div>
-                      <div className="opacity-70 whitespace-pre-wrap">{error.stack}</div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="text-sm text-muted-foreground">
-                  <p>
-                    {isDynamicImportError
-                      ? 'Your session is still intact.'
-                      : 'You can try refreshing this section. The rest of the site remains available.'}
-                  </p>
-                </div>
-              </CardContent>
-
-              <CardFooter className="flex gap-3 justify-end border-t bg-gray-50/50 p-4">
-                <Button onClick={this.handleGoHome} variant="outline" size="sm" className="gap-2">
-                  <Home className="h-4 w-4" />
-                  Return Home
-                </Button>
-                <Button
-                  onClick={isDynamicImportError ? this.handleReload : this.handleReset}
-                  variant="default"
-                  size="sm"
-                  className="gap-2"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  {isDynamicImportError ? 'Refresh Page' : 'Try Again'}
-                </Button>
-              </CardFooter>
-            </Card>
-          </div>
+          <StatusScreen
+            variant="update"
+            layout={layout}
+            role="alert"
+            focusPrimary={!inline}
+            eyebrow="Update available"
+            title="A new version is ready"
+            lead={
+              <p>
+                Navigate Wealth was updated after this page was opened. Refresh to load the latest
+                version.
+              </p>
+            }
+            actions={[{ label: 'Refresh now', icon: RefreshCw, onClick: this.handleReload }]}
+            note={
+              <>
+                <ShieldCheck aria-hidden="true" />
+                <span>
+                  <strong>You&apos;ll stay signed in.</strong> Anything you hadn&apos;t saved on
+                  this page may need to be entered again.
+                </span>
+              </>
+            }
+          />
         );
       }
 
-      // Full-page variant (default): replaces entire viewport
+      // The error's own text is for support, not the headline: it is often a
+      // raw engine message. It sits in the folded technical details, with the
+      // stacks only in development or where a boundary asks for them.
+      const details =
+        error && (error.message || showTechDetails) ? (
+          <>
+            <strong>
+              {error.name}: {error.message}
+            </strong>
+            {showTechDetails && error.stack ? <div>{error.stack}</div> : null}
+            {showTechDetails && errorInfo?.componentStack ? (
+              <div>
+                <strong>Component stack</strong>
+                <div>{errorInfo.componentStack}</div>
+              </div>
+            ) : null}
+          </>
+        ) : undefined;
+
       return (
-        <div
-          className="min-h-screen flex items-center justify-center p-4 bg-gray-50/50"
+        <StatusScreen
+          variant="error"
+          layout={layout}
           role="alert"
-        >
-          <Card className="max-w-xl w-full border-red-100 shadow-lg">
-            <CardHeader className="space-y-1">
-              <div className="flex items-center gap-2 text-red-600 mb-2">
-                <ShieldAlert className="h-6 w-6" />
-                <span className="font-semibold uppercase tracking-wider text-xs">System Error</span>
-              </div>
-              <CardTitle className="text-xl">
-                {fallbackTitle || 'Unable to load this section'}
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent className="space-y-6">
-              <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-900">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error Detected</AlertTitle>
-                <AlertDescription>
-                  {isDynamicImportError
-                    ? message
-                    : fallbackMessage ||
-                      error?.message ||
-                      'An unexpected error occurred. We have been notified.'}
-                </AlertDescription>
-              </Alert>
-
-              {showTechDetails && error && (
-                <div className="space-y-2">
-                  <div className="text-xs font-mono bg-slate-950 text-slate-50 p-4 rounded-md overflow-auto max-h-[300px]">
-                    <div className="mb-2 font-bold text-red-400">
-                      {error.name}: {error.message}
-                    </div>
-                    <div className="opacity-70 whitespace-pre-wrap">{error.stack}</div>
-                    {errorInfo && (
-                      <div className="contents">
-                        <div className="mt-4 font-bold text-yellow-400">Component Stack:</div>
-                        <div className="opacity-70 whitespace-pre-wrap">
-                          {errorInfo.componentStack}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="text-sm text-muted-foreground">
-                <p>
-                  {isDynamicImportError
-                    ? 'Your browser may have an older application shell after a deployment.'
-                    : 'Please try refreshing the page. If the problem persists, contact support.'}
-                </p>
-              </div>
-            </CardContent>
-
-            <CardFooter className="flex gap-3 justify-end border-t bg-gray-50/50 p-6">
-              <Button onClick={this.handleGoHome} variant="outline" className="gap-2">
-                <Home className="h-4 w-4" />
-                Return Home
-              </Button>
-              <Button
-                onClick={isDynamicImportError ? this.handleReload : this.handleReset}
-                variant="default"
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                {isDynamicImportError ? 'Refresh Page' : 'Try Again'}
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+          focusPrimary={!inline}
+          eyebrow={fallbackTitle || (inline ? 'Page error' : 'Application error')}
+          title={inline ? "This page didn't load" : 'Something went wrong'}
+          lead={
+            <p>
+              {fallbackMessage ||
+                (inline
+                  ? 'Something went wrong while showing this page. Try again, or head back home — the rest of Navigate Wealth is still working.'
+                  : 'Navigate Wealth ran into an unexpected problem. Try again, or refresh the page.')}
+            </p>
+          }
+          actions={[
+            { label: 'Try again', icon: RefreshCw, onClick: this.handleReset },
+            { label: 'Return home', icon: Home, onClick: this.handleGoHome },
+          ]}
+          note={
+            <>
+              <ShieldCheck aria-hidden="true" />
+              <span>
+                <strong>We&apos;ve been notified.</strong> If it keeps happening, contact your
+                adviser or our team and we&apos;ll help.
+              </span>
+            </>
+          }
+          details={details}
+        />
       );
     }
 

@@ -210,6 +210,7 @@ export function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse })
         detail.currentPublishedVersion?.updatedAt ||
         new Date().toISOString(),
       sectionLabel: LEGAL_SECTION_LABELS[detail.definition.section],
+      slug: detail.definition.slug,
       html: sourceHtml || '<p></p>',
       toc: detail.currentDraftVersion?.toc || detail.currentPublishedVersion?.toc || [],
       pdfConfig: {
@@ -226,6 +227,7 @@ export function DraftEditor({ detail }: { detail: LegalDocumentDetailResponse })
       detail.currentPublishedVersion?.versionNumber,
       detail.definition.description,
       detail.definition.section,
+      detail.definition.slug,
       detail.definition.title,
       effectiveDate,
       orientation,

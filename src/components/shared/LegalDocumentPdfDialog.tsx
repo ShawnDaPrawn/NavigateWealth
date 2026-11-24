@@ -34,6 +34,8 @@ import { cn } from '../ui/utils';
 import { LegalDocumentPdfLayout, type LegalPdfDocumentData } from './LegalDocumentPdf';
 import { DEFAULT_LEGAL_PDF_CONFIG, LEGAL_PDF_EXPORT_IMAGE } from './legalPdfPrintDocument';
 import {
+  legalPdfPageSelector,
+  legalPdfRendererLaysOutAsync,
   resolveActiveLegalPdfRenderer,
   type LegalPdfRendererVersion,
 } from './legalPdfRendererConfig';
@@ -129,13 +131,15 @@ function LegalPdfViewerBody({
   const pdfConfig = document.pdfConfig || DEFAULT_LEGAL_PDF_CONFIG;
   const [rendererVersion] = useState(() => resolveActiveLegalPdfRenderer().effectiveVersion);
   const [renderState, setRenderState] = useState<PagedRenderState>(() => ({
-    ready: rendererVersion !== 'paged',
+    ready: !legalPdfRendererLaysOutAsync(rendererVersion),
     error: null,
     activeRenderer: rendererVersion,
   }));
-  // A failed paged render reports itself ready on the legacy renderer.
-  const previewReady = renderState.activeRenderer === 'paged' ? renderState.ready : true;
-  const pageSelector = renderState.activeRenderer === 'paged' ? '.pagedjs_page' : '.pdf-page';
+  // A layout that fails reports itself ready on the legacy renderer.
+  const previewReady = legalPdfRendererLaysOutAsync(renderState.activeRenderer)
+    ? renderState.ready
+    : true;
+  const pageSelector = legalPdfPageSelector(renderState.activeRenderer);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const [viewportWidth, setViewportWidth] = useState(0);
