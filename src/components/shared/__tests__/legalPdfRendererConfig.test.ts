@@ -6,6 +6,8 @@ import {
   getStoredLegalPdfRendererOverride,
   setStoredLegalPdfRendererOverride,
   clearStoredLegalPdfRendererOverride,
+  legalPdfPageSelector,
+  legalPdfRendererLaysOutAsync,
   resolveLegalPdfRendererVersion,
 } from '../legalPdfRendererConfig';
 
@@ -14,8 +16,8 @@ describe('legalPdfRendererConfig', () => {
     localStorage.clear();
   });
 
-  it('DEFAULT_LEGAL_PDF_RENDERER_VERSION is paged', () => {
-    expect(DEFAULT_LEGAL_PDF_RENDERER_VERSION).toBe('paged');
+  it('DEFAULT_LEGAL_PDF_RENDERER_VERSION is the Navigator layout', () => {
+    expect(DEFAULT_LEGAL_PDF_RENDERER_VERSION).toBe('navigator');
   });
 
   it('LEGAL_PDF_RENDERER_QUERY_PARAM and STORAGE_KEY are non-empty strings', () => {
@@ -44,16 +46,44 @@ describe('legalPdfRendererConfig', () => {
     expect(getStoredLegalPdfRendererOverride()).toBeNull();
   });
 
-  it('resolveLegalPdfRendererVersion returns legacy when pagedAvailable is false', () => {
+  it('resolveLegalPdfRendererVersion keeps the default when paged.js is unavailable', () => {
     const result = resolveLegalPdfRendererVersion({ pagedAvailable: false });
-    expect(result.effectiveVersion).toBe('legacy');
+    expect(result.effectiveVersion).toBe('navigator');
     expect(result.pagedAvailable).toBe(false);
   });
 
-  it('resolveLegalPdfRendererVersion returns paged when pagedAvailable is true', () => {
+  it('resolveLegalPdfRendererVersion uses the Navigator layout by default', () => {
     const result = resolveLegalPdfRendererVersion({ pagedAvailable: true });
-    expect(result.effectiveVersion).toBe('paged');
-    expect(result.defaultVersion).toBe('paged');
+    expect(result.effectiveVersion).toBe('navigator');
+    expect(result.defaultVersion).toBe('navigator');
+  });
+
+  it('resolveLegalPdfRendererVersion still reaches paged.js as a rollback', () => {
+    setStoredLegalPdfRendererOverride('paged');
+    expect(resolveLegalPdfRendererVersion({ pagedAvailable: true }).effectiveVersion).toBe('paged');
+    expect(resolveLegalPdfRendererVersion({ pagedAvailable: false }).effectiveVersion).toBe(
+      'legacy',
+    );
+  });
+
+  it('resolveLegalPdfRendererVersion reads the query parameter', () => {
+    window.history.replaceState(null, '', `/?${LEGAL_PDF_RENDERER_QUERY_PARAM}=legacy`);
+    const result = resolveLegalPdfRendererVersion({ pagedAvailable: true });
+    window.history.replaceState(null, '', '/');
+    expect(result.effectiveVersion).toBe('legacy');
+    expect(result.source).toBe('query');
+  });
+
+  it("legalPdfPageSelector names each layout's page", () => {
+    expect(legalPdfPageSelector('navigator')).toBe('.nwlp-page');
+    expect(legalPdfPageSelector('paged')).toBe('.pagedjs_page');
+    expect(legalPdfPageSelector('legacy')).toBe('.pdf-page');
+  });
+
+  it('legalPdfRendererLaysOutAsync is false only for the legacy layout', () => {
+    expect(legalPdfRendererLaysOutAsync('navigator')).toBe(true);
+    expect(legalPdfRendererLaysOutAsync('paged')).toBe(true);
+    expect(legalPdfRendererLaysOutAsync('legacy')).toBe(false);
   });
 
   it('resolveLegalPdfRendererVersion uses storage override', () => {

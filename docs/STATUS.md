@@ -566,6 +566,28 @@ is work not yet done, not budget.
 
 ## Known debt, tracked not blocking
 
+- **Legal PDFs use the Navigator layout (2026-11-23); the download is still
+  an image of each page.** The owner approved a redesign from a mock-up of
+  the Privacy Notice: a dark ink cover with the official reversed logo, the
+  document page's fact cards and contents card, then the text in
+  `.nwld-prose`'s own rules at print scale, with the site's own font files.
+  It is `LegalPdfNavigatorLayout` (rules and pagination in
+  `legalPdfNavigatorModel.ts`, styles in `legalPdfNavigatorStyles.ts`), the
+  default in `legalPdfRendererConfig.ts`. paged.js stays for one release as a
+  rollback (`?legalPdfRenderer=paged`); remove it, `legalPdfQa.ts` and
+  `LegalPdfQaPage` once nobody needs it. Pagination never splits a
+  paragraph, breaks lists only between items, never ends a page on a
+  heading, and checks every page after layout, because the paged.js preview
+  measured before the fonts loaded and clipped last lines. The download still
+  goes through html2canvas: `exportPdfFromPreview` now loads each page's
+  fonts in html2canvas's clone and sets the body to a normal line height
+  while it captures (html2canvas measured baselines in a scratch element that
+  inherited the body's 1.5, which drew large text one line low). Next step,
+  per the redesign proposal: generate a text PDF once at publish and store it
+  with the version. Open: the owner said the postal code is **0178**;
+  `companyFacts.ts` records 0157 as owner-confirmed in October. The PDF footer
+  leaves the postal code off until that is settled site-wide.
+
 - **Company facts live in one place; the copies outside the code were
   reconciled on 2026-10-18.** Address (First Floor, Milestone Place Block A,
   25 Sovereign Drive, Route 21 Business Park, Pretoria, 0157), phone, `info@` as

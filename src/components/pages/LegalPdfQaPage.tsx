@@ -139,7 +139,7 @@ export function LegalPdfQaPage() {
   const [renderState, setRenderState] = useState<{
     ready: boolean;
     error: string | null;
-    activeRenderer: 'legacy' | 'paged';
+    activeRenderer: LegalPdfRendererVersion;
   }>({
     ready: false,
     error: null,
