@@ -137,6 +137,13 @@ function TabPanelFallback() {
 type DrawerTab = ClientTab;
 
 /**
+ * Tabs that edit the client in place and register unsaved changes. Leaving
+ * one, for another tab or by closing the client, asks first when anything is
+ * unsaved.
+ */
+const EDITABLE_TABS: ReadonlySet<DrawerTab> = new Set<DrawerTab>(['personal', 'compliance']);
+
+/**
  * The client record, shown as a full page in place of the client list
  * (design system: records are pages, never side panels). It used to be a
  * Radix Sheet; inner dialogs (will wizard, FNA wizards, PDF viewer) now trap
@@ -164,7 +171,7 @@ function ClientDrawerInner({
 
   const handleTabChange = (value: string) => {
     const nextTab = value as DrawerTab;
-    if (activeTab === 'personal' && nextTab !== 'personal') {
+    if (EDITABLE_TABS.has(activeTab) && nextTab !== activeTab) {
       const switchTab = () => setActiveTab(nextTab);
       if (unsavedChangesRegistry?.getDirtyEntries().length) {
         unsavedChangesRegistry.tryLeaveAny(switchTab);
@@ -188,7 +195,7 @@ function ClientDrawerInner({
         );
         onOpenChange(false);
       };
-      if (activeTab === 'personal' && unsavedChangesRegistry?.getDirtyEntries().length) {
+      if (EDITABLE_TABS.has(activeTab) && unsavedChangesRegistry?.getDirtyEntries().length) {
         unsavedChangesRegistry.tryLeaveAny(closeDrawer);
         return;
       }
