@@ -213,6 +213,17 @@ stated prerequisite has already caused a production outage once.
   "View" to routes that do not exist, so their published FNAs answered 404.
   The rules, and the tests that hold them, are in
   [`architecture/fna-wizards.md`](architecture/fna-wizards.md).
+- **Investments have one goals model: "Goals", which is the Investment INA.**
+  Advisers and clients see the investment analysis as "Goals" / "Investment
+  Goals" (a goals analysis of discretionary needs, not a full FNA); the code,
+  routes and KV keys keep the `investment-ina` name. The standalone Goal
+  Planner (the old "Goals" dialog, `/goals` routes, `client_goals:` KV) was
+  retired on 2026-11-24 because it kept a second list of goals with different
+  maths. The "linked goal" marks on investment policies now come from the
+  latest published goals analysis (`goalLinksByPolicyId`). Do not reintroduce
+  a second goal store. The one planner goal left in production
+  (`client_goals:8c4158a6-…`, "Education Fund") was not migrated; the KV row
+  is kept, unread, until an adviser re-captures it in Goals.
 - **The public site states only checkable facts about the firm.** In October
   2026 a directory listing was declined because the About, Press and Careers
   pages carried unbacked, contradictory figures (55+/25+/15+ years, 200+ vs

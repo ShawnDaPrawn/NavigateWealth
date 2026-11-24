@@ -123,9 +123,12 @@ export const FNA_CONFIGS: Record<string, FNAConfig> = {
     resultsPropsKey: 'fna',
   },
 
+  // Investments are "Goals": a goals analysis of the client's discretionary
+  // goals, not a full FNA. The module and its stored keys keep the INA name.
   investments: {
     type: 'investment',
-    name: 'Investment INA',
+    name: 'Goals analysis',
+    labels: { list: 'Goals', item: 'goals analysis', items: 'goals analyses' },
     Wizard: LazyInvestmentINAWizard,
     ResultsView: LazyInvestmentINAResultsView,
     listForClient: (clientId) => asRecords(InvestmentINAApiService.getAllSessions(clientId)),

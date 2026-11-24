@@ -87,7 +87,7 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
               <DollarSign className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-gray-900 mb-2">Investment Needs Analysis Summary</h3>
+              <h3 className="text-gray-900 mb-2">Investment Goals Summary</h3>
               <p className="text-sm text-gray-700 mb-4">
                 Goal-based investment strategy analysis with portfolio recommendations tailored to
                 your financial goals, risk tolerance, and investment time horizon.

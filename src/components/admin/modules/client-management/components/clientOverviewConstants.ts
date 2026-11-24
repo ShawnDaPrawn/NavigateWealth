@@ -102,7 +102,7 @@ export const FNA_MODULES: Array<{
   { key: 'risk', name: 'Risk Planning FNA', icon: Shield },
   { key: 'medical', name: 'Medical Aid FNA', icon: Heart },
   { key: 'retirement', name: 'Retirement FNA', icon: PiggyBank },
-  { key: 'investment', name: 'Investment INA', icon: TrendingUp },
+  { key: 'investment', name: 'Investment Goals', icon: TrendingUp },
   { key: 'tax', name: 'Tax Planning FNA', icon: FileText },
   { key: 'estate', name: 'Estate Planning FNA', icon: Landmark },
 ];

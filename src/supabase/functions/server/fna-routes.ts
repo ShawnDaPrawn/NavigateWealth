@@ -72,8 +72,8 @@ const FNA_TYPES = [
   },
   {
     id: 'investment',
-    name: 'Investment INA',
-    description: 'Asset allocation, risk profile, and portfolio analysis',
+    name: 'Investment Goals',
+    description: 'Discretionary investment goals: funding gap and required contributions',
     endpoint: '/make-server-91ed8379/ina/investment',
     status: 'active',
     routeFile: 'investment-ina-routes.ts',

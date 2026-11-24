@@ -68,7 +68,7 @@ export const KEY_MODULES = {
   RISK_FNA: 'Risk Planning FNA',
   MEDICAL_FNA: 'Medical FNA',
   RETIREMENT_FNA: 'Retirement FNA',
-  INVESTMENT_INA: 'Investment INA',
+  INVESTMENT_INA: 'Investment Goals',
   EMPLOYEE_BENEFITS: 'Employee Benefits',
   ESTATE_PLANNING_FNA: 'Estate Planning FNA',
   TAX_PLANNING_FNA: 'Tax Planning FNA',

@@ -101,7 +101,7 @@ export function ClientFNAView({ clientId, fnaType }: ClientFNAViewProps) {
         description: 'Retirement income projection and planning',
       },
       investment: {
-        title: 'Investment Needs Analysis',
+        title: 'Investment Goals',
         icon: DollarSign,
         color: 'text-purple-600',
         bgColor: 'bg-purple-50',

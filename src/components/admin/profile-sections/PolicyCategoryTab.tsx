@@ -3,7 +3,7 @@
  * Displays and manages policies for a specific category with dynamic forms
  */
 
-import React, { useState, useEffect, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Plus, Loader2, FileBarChart, EyeOff, History, Target, Calculator } from 'lucide-react';
@@ -11,7 +11,7 @@ import { PolicyFormDialog } from './PolicyFormDialog';
 import { ErrorState, usePageTakeover } from '../layout/page';
 import { ArchivePolicyDialog } from './ArchivePolicyDialog';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../utils/api';
 import { invalidateClientPolicies } from '../../../shared/api/clientPolicies';
 import { DEFAULT_SCHEMAS } from './default-schemas';
@@ -41,13 +41,8 @@ import type { PolicyRecord, SchemaField, LinkedGoalStatus } from './PolicyTable'
 
 import { renderPolicyTables as renderPolicyTablesView } from './policyTables';
 
-// The goal dashboard is a heavy tree opened from a dialog, so it stays lazy.
-const GoalDashboard = React.lazy(() =>
-  import('./goals/GoalDashboard').then((m) => ({ default: m.GoalDashboard })),
-);
-
-import { calculateGoalStatus } from '../../../shared/goals';
-import type { Goal } from '../../../shared/goals';
+import { InvestmentINAApiService, goalLinksByPolicyId } from '../modules/investment-ina';
+import { fnaKeys } from '../../../utils/queryKeys';
 import { FNAManagementView as FNAManagementView } from '../modules/risk-planning-fna';
 import { WillManagementView as WillManagementView } from '../modules/estate-planning-fna';
 import { WillDraftingWizard as WillDraftingWizard } from '../modules/estate-planning-fna';
@@ -94,10 +89,6 @@ export function PolicyCategoryTab({
   const [tableStructure, setTableStructure] = useState<SchemaField[]>([]);
   const [subCategorySchemas, setSubCategorySchemas] = useState<Record<string, SchemaField[]>>({});
 
-  // Goal State (for Investments category)
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [linkedGoalsMap, setLinkedGoalsMap] = useState<Record<string, LinkedGoalStatus>>({});
-
   // Archiving State
   const [archivingPolicy, setArchivingPolicy] = useState<PolicyRecord | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
@@ -126,8 +117,6 @@ export function PolicyCategoryTab({
     'last_will',
   );
 
-  const [isGoalDashboardOpen, setIsGoalDashboardOpen] = useState(false);
-
   // FNA Configuration and Management
   const fnaConfig = getFNAConfig(categorySubtabId);
   const hasFNA = hasFNASupport(categorySubtabId);
@@ -151,12 +140,28 @@ export function PolicyCategoryTab({
 
   const categoryId = categoryIdMap[categorySubtabId];
 
-  const fnaListTitle = `${categoryName} FNAs`;
+  const fnaListTitle = fnaConfig?.labels?.list ?? `${categoryName} FNAs`;
+
+  // Investments: the goals each policy funds, from the latest published goals
+  // analysis (the one the client sees). Refetched whenever this tab opens.
+  const goalLinksQuery = useQuery({
+    queryKey: [...fnaKeys.latestPublished(clientId), 'investments', 'goal-links'],
+    queryFn: () => InvestmentINAApiService.getLatestPublished(clientId),
+    enabled: categorySubtabId === 'investments',
+    staleTime: 0,
+  });
+  const linkedGoalsMap = useMemo<Record<string, LinkedGoalStatus>>(
+    () => (categorySubtabId === 'investments' ? goalLinksByPolicyId(goalLinksQuery.data) : {}),
+    [categorySubtabId, goalLinksQuery.data],
+  );
+  const refreshPublishedFNA = () =>
+    void queryClient.invalidateQueries({ queryKey: fnaKeys.latestPublished(clientId) });
 
   // A publish lands on this category's FNA list with the new FNA highlighted.
   const handleFNAPublished = (fnaId: string) => {
     fnaManagement.handleFNAComplete(fnaId);
     invalidateFnaBatchStatus(clientId);
+    refreshPublishedFNA();
     setHighlightedFnaId(fnaId);
     setShowWillManagement(false);
     setShowFNAManagement(true);
@@ -248,33 +253,6 @@ export function PolicyCategoryTab({
     loadPolicies();
     loadTableStructure();
   }, [categoryId, clientId, showArchived, loadPolicies, loadTableStructure]);
-
-  // Update Linked Goals Map when policies or goals change
-  useEffect(() => {
-    if (categorySubtabId === 'investments' && goals.length > 0 && policies.length > 0) {
-      const map: Record<string, LinkedGoalStatus> = {};
-
-      policies.forEach((policy) => {
-        // Find if policy is linked to any goal
-        const linkedGoal = goals.find((g) => g.linkedInvestmentIds?.includes(policy.id));
-
-        if (linkedGoal) {
-          const calc = calculateGoalStatus(linkedGoal, policies);
-          map[policy.id] = {
-            name: linkedGoal.name,
-            status: calc.status,
-            targetAmount: linkedGoal.targetAmount,
-            requiredMonthly: calc.requiredMonthlyContribution,
-            targetDate: linkedGoal.targetDate,
-          };
-        }
-      });
-
-      setLinkedGoalsMap(map);
-    } else {
-      setLinkedGoalsMap({});
-    }
-  }, [goals, policies, categorySubtabId]);
 
   const handleAddPolicy = () => {
     setEditingPolicy(null);
@@ -532,6 +510,8 @@ export function PolicyCategoryTab({
             clientName={clientDisplayName || categoryName}
             title={fnaListTitle}
             fnaName={fnaConfig.name}
+            itemNoun={fnaConfig.labels?.item}
+            itemNounPlural={fnaConfig.labels?.items}
             loadFNAs={() => fnaConfig.listForClient(clientId)}
             highlightFnaId={highlightedFnaId}
             onCreateNew={() => {
@@ -572,17 +552,6 @@ export function PolicyCategoryTab({
                     Assumptions
                   </Button>
                 )}
-                {categorySubtabId === 'investments' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsGoalDashboardOpen(true)}
-                    className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                  >
-                    <Target className="h-4 w-4 mr-2" />
-                    Goals
-                  </Button>
-                )}
                 {categorySubtabId === 'estate-planning' && (
                   <Button variant="outline" size="sm" onClick={() => setShowWillManagement(true)}>
                     <FileBarChart className="h-4 w-4 mr-2" />
@@ -591,8 +560,12 @@ export function PolicyCategoryTab({
                 )}
                 {hasFNA && (
                   <Button variant="outline" size="sm" onClick={() => setShowFNAManagement(true)}>
-                    <FileBarChart className="h-4 w-4 mr-2" />
-                    All FNAs
+                    {categorySubtabId === 'investments' ? (
+                      <Target className="h-4 w-4 mr-2" />
+                    ) : (
+                      <FileBarChart className="h-4 w-4 mr-2" />
+                    )}
+                    {fnaConfig?.labels?.list ?? 'All FNAs'}
                   </Button>
                 )}
                 <Button
@@ -625,7 +598,6 @@ export function PolicyCategoryTab({
             </div>
 
             {/* Policies List */}
-            {/* Goal Dashboard moved to Dialog */}
 
             {policiesError && !isLoading ? (
               <ErrorState
@@ -740,32 +712,6 @@ export function PolicyCategoryTab({
               </li>
             ))}
           </ul>
-        </DialogContent>
-      </Dialog>
-
-      {/* Goal Dashboard Dialog */}
-      <Dialog open={isGoalDashboardOpen} onOpenChange={setIsGoalDashboardOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-50">
-          <DialogHeader>
-            <DialogTitle>Investment Goals</DialogTitle>
-          </DialogHeader>
-          <Suspense fallback={<div>Loading...</div>}>
-            <GoalDashboard
-              clientId={clientId}
-              policies={policies}
-              onGoalsUpdate={setGoals}
-              schemas={
-                subCategorySchemas as unknown as React.ComponentProps<
-                  typeof GoalDashboard
-                >['schemas']
-              }
-              mainSchema={
-                tableStructure as unknown as React.ComponentProps<
-                  typeof GoalDashboard
-                >['mainSchema']
-              }
-            />
-          </Suspense>
         </DialogContent>
       </Dialog>
 
@@ -893,11 +839,13 @@ export function PolicyCategoryTab({
           deleteFn={(fnaId) => fnaConfig.deleteFNA(fnaId, clientId)}
           unpublishFn={(fnaId) => fnaConfig.unpublishFNA(fnaId, clientId)}
           onUnpublished={() => {
+            refreshPublishedFNA();
             setRefreshFNAManagementTrigger((prev) => prev + 1);
             fnaManagement.loadFNA();
           }}
           backLabel={fnaListTitle}
           onDeleted={() => {
+            refreshPublishedFNA();
             // Refresh the FNA management view
             setRefreshFNAManagementTrigger((prev) => prev + 1);
             // Reload the current FNA

@@ -253,6 +253,19 @@ export interface FNAConfig {
   unpublishFNA: (fnaId: string, clientId: string) => Promise<Record<string, unknown>>;
   // Results props mapping
   resultsPropsKey?: string;
+  /**
+   * What advisers call this type where "FNA" would be wrong. Investments are
+   * "Goals": a goals analysis per client, not a full FNA. Absent → the FNA
+   * wording ("Risk Planning FNAs", "Run new FNA").
+   */
+  labels?: {
+    /** The list and its button, e.g. "Goals". */
+    list: string;
+    /** One run, e.g. "goals analysis". */
+    item: string;
+    /** Several runs, e.g. "goals analyses". */
+    items: string;
+  };
 }
 
 /**
