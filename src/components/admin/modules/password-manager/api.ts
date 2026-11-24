@@ -98,29 +98,7 @@ export const vaultApi = {
 // authorize page stores the request in session storage and sends the person
 // here to approve it.
 
-const CONSENT_KEY = 'nw-broker-consent';
-
-export function pendingConsent(): Record<string, string> | null {
-  try {
-    const raw = sessionStorage.getItem(CONSENT_KEY);
-    if (!raw) return null;
-    const value = JSON.parse(raw);
-    if (value.expires > Date.now() && typeof value.params?.client_id === 'string')
-      return value.params;
-    sessionStorage.removeItem(CONSENT_KEY);
-  } catch {
-    /* Storage may be unavailable; there is then nothing to approve. */
-  }
-  return null;
-}
-
-export function clearConsent() {
-  try {
-    sessionStorage.removeItem(CONSENT_KEY);
-  } catch {
-    /* ignore */
-  }
-}
+export { clearConsent, pendingConsent } from '../../layout/pendingConsent';
 
 export const consentApi = {
   details: (params: Record<string, string>) =>

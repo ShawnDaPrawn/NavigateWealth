@@ -56,6 +56,7 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
     }),
   }),
 }));
+import type { Skill } from '../../../../shared/password-manager.ts';
 import vault from '../password-vault-routes.ts';
 import mcp from '../password-vault-mcp.ts';
 
@@ -203,6 +204,30 @@ describe('password manager — services and skills', () => {
       skill: skill('Changed', s.ag, s.b2),
     });
     expect(stale.status).toBe(409);
+  });
+});
+
+describe('password manager — moving a login', () => {
+  it('moves the login’s own skills with it, so deleting the old service keeps them', async () => {
+    const s = await seed();
+    const b1 = ((await admin('/')).json.items as { id: string; revision: string }[]).find(
+      (i) => i.id === s.b1,
+    )!;
+    const moved = await admin('/' + s.b1, 'PUT', {
+      revision: b1.revision,
+      credential: { ...login('Broker 1', s.goaml, 'allowed'), password: '' },
+    });
+    expect(moved.status).toBe(200);
+    const own = ((await admin('/skills')).json.items as Skill[]).find(
+      (k) => k.name === 'Broker 1 quirks',
+    )!;
+    expect(own.serviceId).toBe(s.goaml);
+    await admin('/' + s.b2, 'DELETE');
+    await admin('/' + s.hidden, 'DELETE');
+    expect((await admin('/services/' + s.ag, 'DELETE')).status).toBe(200);
+    const names = ((await admin('/skills')).json.items as Skill[]).map((k) => k.name);
+    expect(names).toContain('Broker 1 quirks');
+    expect(names).not.toContain('Download a statement');
   });
 });
 

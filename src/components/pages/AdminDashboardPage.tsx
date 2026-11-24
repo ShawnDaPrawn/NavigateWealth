@@ -26,6 +26,7 @@ import { useOptionalUnsavedChangesRegistry } from '../shared/unsaved-changes';
 import { SocialMediaModule } from '../admin/modules/social-media/shell';
 import { IssuesModule } from '../admin/modules/issues/shell';
 import { EsignModule } from '../admin/modules/esign/shell';
+import { CONSENT_ADDRESS, pendingConsent } from '../admin/layout/pendingConsent';
 
 // ============================================================================
 // LAZY-LOADED MODULE CHUNKS
@@ -144,6 +145,15 @@ export function AdminDashboardPage() {
     },
     [setSearchParams, unsavedChangesRegistry],
   );
+
+  // ── Waiting AI sign-in ──────────────────────────────────────────────────
+  // Claude or ChatGPT sent the person to approve a connection, but they had to
+  // log in first and the login page brought them back to plain /admin. Open
+  // the Password Manager's AI agents tab, where the request is approved.
+  React.useEffect(() => {
+    if (moduleFromUrl !== CONSENT_ADDRESS.module && pendingConsent())
+      setSearchParams(CONSENT_ADDRESS, { replace: true });
+  }, [moduleFromUrl, setSearchParams]);
 
   // ── No background jobs here ──
   // Scheduled publishing, auto-content, article and newsletter delivery, the

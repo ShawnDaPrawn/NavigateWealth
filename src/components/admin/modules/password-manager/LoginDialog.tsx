@@ -87,6 +87,9 @@ export function LoginDialog({
           description: '',
         });
         sid = created.id;
+        // Keep it chosen, so a retry after a failed save reuses this service.
+        setServiceId(sid);
+        setNewService('');
       }
       const fields = {
         serviceId: sid,

@@ -231,6 +231,16 @@ app.put('/:id', validateBody(edit), async (c) => {
     revision: crypto.randomUUID(),
   };
   if (!(await replace(updated, input.revision))) return conflict(c);
+  // A login's own skills live under its service: move them with it, so they
+  // are listed in the right place and deleting the old service cannot take them.
+  if (input.credential.serviceId !== before.serviceId) {
+    const own = (await skills.listAll('password vault: skills of a moved login')).filter(
+      (k) => k.credentialId === entry.id,
+    );
+    await Promise.all(
+      own.map((k) => skills.put(k.id, { ...k, serviceId: input.credential.serviceId })),
+    );
+  }
   await recordEvent({
     ...me(c),
     action: changedPassword ? 'Changed password' : 'Edited login',
