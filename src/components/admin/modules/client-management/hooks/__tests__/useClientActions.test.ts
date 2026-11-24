@@ -21,12 +21,10 @@ vi.mock('sonner', () => ({
 }));
 
 const mockUpdateClientMetadata = vi.fn();
-const mockRunSanctionsScreening = vi.fn();
 
 vi.mock('../../api', () => ({
   clientApi: {
     updateClientMetadata: (...args: unknown[]) => mockUpdateClientMetadata(...args),
-    runSanctionsScreening: (...args: unknown[]) => mockRunSanctionsScreening(...args),
   },
 }));
 
@@ -126,77 +124,5 @@ describe('useClientActions — updateClientMetadata', () => {
     });
 
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Unknown error'));
-  });
-});
-
-describe('useClientActions — runSanctionsScreening', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('returns true on success', async () => {
-    mockRunSanctionsScreening.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useClientActions());
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.runSanctionsScreening('user-1');
-    });
-
-    expect(returnValue).toBe(true);
-  });
-
-  it('calls toast.success on success', async () => {
-    mockRunSanctionsScreening.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useClientActions());
-
-    await act(async () => {
-      await result.current.runSanctionsScreening('user-1');
-    });
-
-    expect(toast.success).toHaveBeenCalledWith('Sanctions screening completed. No matches found.');
-  });
-
-  it('returns false on failure', async () => {
-    mockRunSanctionsScreening.mockRejectedValue(new Error('screening error'));
-    const { result } = renderHook(() => useClientActions());
-
-    let returnValue: boolean | undefined;
-    await act(async () => {
-      returnValue = await result.current.runSanctionsScreening('user-1');
-    });
-
-    expect(returnValue).toBe(false);
-  });
-
-  it('calls toast.error on failure', async () => {
-    mockRunSanctionsScreening.mockRejectedValue(new Error('screening error'));
-    const { result } = renderHook(() => useClientActions());
-
-    await act(async () => {
-      await result.current.runSanctionsScreening('user-1');
-    });
-
-    expect(toast.error).toHaveBeenCalledWith('Sanctions screening failed');
-  });
-
-  it('updating is false after call completes (success)', async () => {
-    mockRunSanctionsScreening.mockResolvedValue(undefined);
-    const { result } = renderHook(() => useClientActions());
-
-    await act(async () => {
-      await result.current.runSanctionsScreening('user-1');
-    });
-
-    expect(result.current.updating).toBe(false);
-  });
-
-  it('updating is false after call completes (failure)', async () => {
-    mockRunSanctionsScreening.mockRejectedValue(new Error('fail'));
-    const { result } = renderHook(() => useClientActions());
-
-    await act(async () => {
-      await result.current.runSanctionsScreening('user-1');
-    });
-
-    expect(result.current.updating).toBe(false);
   });
 });

@@ -18,8 +18,8 @@ import {
   SANCTIONS_RESULT_OPTIONS,
   SOURCE_OF_FUNDS_OPTIONS,
   SOURCE_OF_WEALTH_OPTIONS,
-  normalizeComplianceDeclarations,
-  normalizeComplianceReview,
+  type ComplianceDeclarations,
+  type ComplianceReview,
 } from '../../../../../../shared/compliance';
 
 type Profile = ClientProfileHook['state']['profileData'];
@@ -398,9 +398,49 @@ export function assetsView(p: Profile): { groups: RowGroup[]; tables: TableSpec[
 // Compliance
 // ============================================================================
 
-export function complianceView(p: Profile): { groups: RowGroup[]; tables: TableSpec[] } {
-  const d = normalizeComplianceDeclarations(p.complianceDeclarations);
-  const r = normalizeComplianceReview(p.complianceReview);
+/**
+ * The firm's own review of the client, read-only. Shown in the client's
+ * Compliance tab; `review` is the normalised `complianceReview`.
+ */
+export function complianceReviewView(r: ComplianceReview): { groups: RowGroup[] } {
+  return {
+    groups: [
+      {
+        title: 'Client risk rating',
+        rows: [
+          { label: 'Risk rating', value: labelOf(CLIENT_RISK_RATING_OPTIONS, r.riskRating) },
+          { label: 'Rated on', value: date(r.riskRatedAt) },
+          { label: 'Reason', value: r.riskRatingReason },
+        ],
+      },
+      {
+        title: 'Sanctions screening',
+        rows: [
+          { label: 'Result', value: labelOf(SANCTIONS_RESULT_OPTIONS, r.sanctionsResult) },
+          { label: 'Screened on', value: date(r.sanctionsScreenedAt) },
+          { label: 'Reference', value: r.sanctionsReference, copy: true },
+        ],
+      },
+      {
+        title: 'KYC review',
+        rows: [
+          { label: 'Last KYC review', value: date(r.lastKycReviewDate) },
+          { label: 'Next KYC review due', value: date(r.nextKycReviewDate) },
+          { label: 'Notes', value: r.notes },
+        ],
+      },
+    ],
+  };
+}
+
+/**
+ * What the client declared, read-only. Shown in the client's Compliance tab;
+ * `d` is the normalised `complianceDeclarations`.
+ */
+export function complianceDeclarationsView(d: ComplianceDeclarations): {
+  groups: RowGroup[];
+  tables: TableSpec[];
+} {
   const pep =
     d.isPep === 'yes'
       ? [labelOf(PEP_CATEGORY_OPTIONS, d.pepCategory), d.pepPosition].filter(Boolean).join(' — ') ||
@@ -425,27 +465,15 @@ export function complianceView(p: Profile): { groups: RowGroup[]; tables: TableS
   return {
     groups: [
       {
-        title: 'Client review',
+        title: 'Politically exposed person',
         rows: [
-          { label: 'Risk rating', value: labelOf(CLIENT_RISK_RATING_OPTIONS, r.riskRating) },
-          { label: 'Rated on', value: date(r.riskRatedAt) },
-          { label: 'Reason', value: r.riskRatingReason },
-          {
-            label: 'Sanctions screening',
-            value: labelOf(SANCTIONS_RESULT_OPTIONS, r.sanctionsResult),
-          },
-          { label: 'Screened on', value: date(r.sanctionsScreenedAt) },
-          { label: 'Screening reference', value: r.sanctionsReference, copy: true },
-          { label: 'Last KYC review', value: date(r.lastKycReviewDate) },
-          { label: 'Next KYC review due', value: date(r.nextKycReviewDate) },
-          { label: 'Notes', value: r.notes },
+          { label: 'Client is a PEP', value: pep },
+          { label: 'PEP family member or associate', value: pepRelated },
         ],
       },
       {
-        title: 'Client declarations',
+        title: 'Source of funds and wealth',
         rows: [
-          { label: 'Politically exposed person', value: pep },
-          { label: 'PEP family member or associate', value: pepRelated },
           { label: 'Source of funds', value: labelsOf(SOURCE_OF_FUNDS_OPTIONS, d.sourceOfFunds) },
           { label: 'Source of funds details', value: d.sourceOfFundsDetails },
           {
@@ -453,17 +481,25 @@ export function complianceView(p: Profile): { groups: RowGroup[]; tables: TableS
             value: labelsOf(SOURCE_OF_WEALTH_OPTIONS, d.sourceOfWealth),
           },
           { label: 'Source of wealth details', value: d.sourceOfWealthDetails },
+        ],
+      },
+      {
+        title: 'FATCA',
+        rows: [
           {
-            label: 'US person (FATCA)',
+            label: 'US person',
             value:
               d.isUsPerson === 'yes' && d.usTin ? `Yes — TIN ${d.usTin}` : yesNoText(d.isUsPerson),
           },
-          { label: 'Confirmed by client', value: date(d.confirmedAt) },
         ],
       },
       {
         title: 'Consents',
         rows: CONSENT_DEFINITIONS.map((c) => ({ label: c.label, value: consentText(c.key) })),
+      },
+      {
+        title: 'Confirmation',
+        rows: [{ label: 'Confirmed by client', value: date(d.confirmedAt) }],
       },
     ],
     tables: [

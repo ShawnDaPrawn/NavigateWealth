@@ -17,8 +17,8 @@
  *   2. Path-scoped middleware — `app.use('/links', requireAdmin)` or
  *      `app.use('/links/*', …)`, matched against the route path.
  *   3. Parent inheritance — the file is mounted with `parent.route('/', child)`
- *      by a parent that applied `use('*', <auth>)` first (how the honeycomb and
- *      client-portal families are guarded).
+ *      by a parent that applied `use('*', <auth>)` first (how the client-portal
+ *      family is guarded).
  *   4. In-handler checks — an auth marker inside the handler body, e.g.
  *      `const ctx = await getAuthContext(c)`.
  *

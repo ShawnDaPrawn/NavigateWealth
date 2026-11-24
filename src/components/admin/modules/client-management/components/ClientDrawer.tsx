@@ -150,7 +150,6 @@ function ClientDrawerInner({
   fnaFocus,
 }: ClientDrawerInnerProps) {
   const unsavedChangesRegistry = useOptionalUnsavedChangesRegistry();
-  const [sanctionsScreeningRunning, setSanctionsScreeningRunning] = useState(false);
   // The open tab lives in the address (?ctab=), next to ?client=.
   const [activeTab, setActiveTab] = useUrlState<DrawerTab>('ctab', 'overview', CLIENT_TABS);
   const [, setSearchParams] = useSearchParams();
@@ -197,14 +196,6 @@ function ClientDrawerInner({
       return;
     }
     onOpenChange(true);
-  };
-
-  const handleSanctionsScreening = () => {
-    setSanctionsScreeningRunning(true);
-    // Simulate API call
-    setTimeout(() => {
-      setSanctionsScreeningRunning(false);
-    }, 3000);
   };
 
   // Keep the profile on screen while the drawer animates closed. A new open
@@ -276,8 +267,6 @@ function ClientDrawerInner({
               fnaFocus={fnaFocus}
               activeTab={activeTab}
               onTabChange={handleTabChange}
-              sanctionsScreeningRunning={sanctionsScreeningRunning}
-              onRunSanctionsScreening={handleSanctionsScreening}
             />
           </ClientSubCrumbContext.Provider>
         </PageTakeoverContext.Provider>
@@ -353,8 +342,6 @@ interface ClientWorkspaceProps {
   fnaFocus?: FNAListFocus;
   activeTab: DrawerTab;
   onTabChange: (value: string) => void;
-  sanctionsScreeningRunning: boolean;
-  onRunSanctionsScreening: () => void;
 }
 
 /** The profile itself. Mounted only with the record fetched by this open. */
@@ -365,13 +352,9 @@ function ClientWorkspace({
   fnaFocus,
   activeTab,
   onTabChange,
-  sanctionsScreeningRunning,
-  onRunSanctionsScreening,
 }: ClientWorkspaceProps) {
   const queryClient = useQueryClient();
   const pageTakeover = usePageTakeoverActive() === 'page';
-  // Hardcoded for now as in original file
-  const lastSanctionsCheck = '2024-01-15 14:30:00';
 
   const { data: communications = [] } = useQuery({
     queryKey: clientKeys.communicationLogs(client.id),
@@ -712,12 +695,7 @@ function ClientWorkspace({
         {/* 7. Compliance Section */}
         <TabsContent value="compliance" className="space-y-4">
           <Suspense fallback={<TabPanelFallback />}>
-            <ComplianceTab
-              selectedClient={client}
-              sanctionsScreeningRunning={sanctionsScreeningRunning}
-              onRunSanctionsScreening={onRunSanctionsScreening}
-              lastSanctionsCheck={lastSanctionsCheck}
-            />
+            <ComplianceTab selectedClient={client} />
           </Suspense>
         </TabsContent>
 

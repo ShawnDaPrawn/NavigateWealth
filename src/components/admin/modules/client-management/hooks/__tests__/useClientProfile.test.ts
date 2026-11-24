@@ -395,6 +395,48 @@ describe('useClientProfile', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['clients'] });
   });
 
+  // The Compliance tab saves the compliance record on its own. This editor
+  // sends the whole profile, so it must write back what is stored at save
+  // time, not the copy it loaded when it opened.
+  it('handleSave writes back the compliance record as stored now, not as loaded', async () => {
+    mockFetchQuery.mockResolvedValue({
+      firstName: 'Aaron',
+      complianceReview: { schemaVersion: 1, riskRating: 'low' },
+    });
+    mockFetchClientProfile.mockResolvedValue({
+      success: true,
+      data: {
+        firstName: 'Aaron',
+        complianceReview: { schemaVersion: 1, riskRating: 'high' },
+        complianceDeclarations: { schemaVersion: 1, isPep: 'yes' },
+      },
+    });
+    mockUpdateClientProfile.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useClientProfile(MINIMAL_CLIENT));
+    await waitFor(() => expect(result.current.state.profileData.firstName).toBe('Aaron'));
+    expect(result.current.state.profileData.complianceReview.riskRating).toBe('low');
+
+    await act(async () => {
+      await result.current.actions.handleSave();
+    });
+
+    const payload = mockUpdateClientProfile.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(payload.complianceReview).toEqual({ schemaVersion: 1, riskRating: 'high' });
+    expect(payload.complianceDeclarations).toEqual({ schemaVersion: 1, isPep: 'yes' });
+  });
+
+  it('handleSave leaves the compliance record out when none is stored', async () => {
+    mockFetchClientProfile.mockResolvedValue({ success: false, data: null });
+    mockUpdateClientProfile.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useClientProfile(MINIMAL_CLIENT));
+    await act(async () => {
+      await result.current.actions.handleSave();
+    });
+    const payload = mockUpdateClientProfile.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty('complianceReview');
+    expect(payload).not.toHaveProperty('complianceDeclarations');
+  });
+
   it('handleSave does not write a legacy nested personalInformation back', async () => {
     mockFetchQuery.mockResolvedValue({
       firstName: 'Aaron',
