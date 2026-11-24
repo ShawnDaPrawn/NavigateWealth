@@ -26,57 +26,12 @@ interface EstateDep {
   specialNeeds?: boolean;
   [key: string]: unknown;
 }
-interface EstateAsset {
-  type?: string;
-  description?: string;
-  owner?: string;
-  ownershipPercentage?: number;
-  estimatedValue?: number;
-  location?: string;
-  ownership?: string;
-  [key: string]: unknown;
-}
-interface EstateLiability {
-  type?: string;
-  description?: string;
-  creditor?: string;
-  amountOwing?: number;
-  [key: string]: unknown;
-}
-interface EstatePolicy {
-  type?: string;
-  category?: string;
-  product_category?: string;
-  productCategory?: string;
-  provider?: string;
-  name?: string;
-  coverAmount?: number;
-  currentValue?: number;
-  beneficiaryDesignation?: string;
-  policyNumber?: string;
-  status?: string;
-  [key: string]: unknown;
-}
 interface VersionedSession {
   version: number;
   status?: string;
   createdAt?: string;
   publishedAt?: string;
   [key: string]: unknown;
-}
-
-function determineAssetLiquidity(
-  type: string,
-  subType: string,
-): 'liquid' | 'semi_liquid' | 'illiquid' {
-  if (type === 'financial') {
-    if (['bank_account', 'cash', 'money_market'].includes(subType)) return 'liquid';
-    if (['unit_trust', 'shares'].includes(subType)) return 'liquid';
-    if (subType === 'endowment') return 'semi_liquid';
-  }
-  if (type === 'property' || type === 'business') return 'illiquid';
-  if (type === 'personal') return 'illiquid';
-  return 'semi_liquid';
 }
 
 app.get('/', (c) => c.json({ service: 'estate-planning-fna', status: 'active' }));
@@ -102,71 +57,10 @@ app.get('/client/:clientId/auto-populate', async (c) => {
       willNeedsUpdate: false,
     };
 
-    // Fetch assets
-    const assetRecords = await kv.getByPrefix(`asset:${clientId}:`);
-    const assets = (assetRecords || []).map((asset: EstateAsset) => {
-      const assetType = String(asset.assetType || 'personal');
-      const subType = String(asset.subType || 'other');
-
-      return {
-        id: asset.id || `asset-${Math.random()}`,
-        type: assetType,
-        subType: subType,
-        description: asset.description || asset.name || 'Asset',
-        currentValue: asset.value || asset.currentValue || 0,
-        ownership: asset.ownership || 'sole',
-        ownershipPercentage: asset.ownershipPercentage || 100,
-        location: asset.location || 'south_africa',
-        liquidity: determineAssetLiquidity(assetType, subType),
-        includeInEstate: asset.ownership !== 'trust',
-        // Property-specific
-        purchasePrice: asset.purchasePrice || 0,
-        unrealisedGain: asset.unrealisedGain || 0,
-        bondedAmount: asset.bondAmount || asset.bondedAmount || 0,
-        // Business-specific
-        hasBuyAndSellAgreement: asset.hasBuyAndSellAgreement || false,
-        buyAndSellFunded: asset.buyAndSellFunded || false,
-        // Retirement-specific
-        beneficiaryNominated: asset.beneficiaryNominated || false,
-        beneficiaryDetails: asset.beneficiaryDetails || '',
-      };
-    });
-
-    // Fetch liabilities
-    const liabilityRecords = await kv.getByPrefix(`liability:${clientId}:`);
-    const liabilities = (liabilityRecords || []).map((liability: EstateLiability) => ({
-      id: liability.id || `liability-${Math.random()}`,
-      type: liability.liabilityType || liability.type || 'other',
-      description: liability.description || liability.name || 'Liability',
-      outstandingBalance: liability.balance || liability.outstandingBalance || 0,
-      securedAgainst: liability.securedAgainst || '',
-      lifeCoverCeded: liability.lifeCoverCeded || false,
-      creditorName: liability.creditorName || liability.institution || '',
-    }));
-
-    // Fetch life policies
-    const policyRecords = await kv.getByPrefix(`policy:${clientId}:`);
-    const lifePolicies = (policyRecords || [])
-      .filter(
-        (policy: EstatePolicy) =>
-          policy.category === 'risk_planning' &&
-          ['life_cover', 'group_life', 'funeral'].includes(String(policy.policyType)),
-      )
-      .map((policy: EstatePolicy) => {
-        const beneficiaryType = policy.beneficiaryType || 'estate';
-
-        return {
-          id: policy.id || `policy-${Math.random()}`,
-          policyType: policy.policyType || 'life_cover',
-          sumAssured: policy.coverAmount || policy.sumAssured || 0,
-          ownership: policy.ownership || 'client',
-          beneficiaryType: beneficiaryType,
-          beneficiaries: policy.beneficiaries || [],
-          cededTo: policy.cededTo || '',
-          payableToEstate: beneficiaryType === 'estate',
-          isBuyAndSellPolicy: policy.isBuyAndSellPolicy === true,
-        };
-      });
+    // The client's assets and liabilities (Assets & liabilities) and their
+    // policy register (Policy details) — see estate-client-records.ts.
+    const { loadEstateClientRecords } = await import('./estate-client-records.ts');
+    const { assets, liabilities, lifePolicies } = await loadEstateClientRecords(clientId);
 
     // Default assumptions. The executor's fee excludes VAT, which the
     // calculation adds; estate duty is 20% to R30m and 25% above it.

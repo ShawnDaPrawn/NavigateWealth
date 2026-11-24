@@ -112,11 +112,23 @@ export function EmailSignatureGenerator() {
     [template, data, logoSrc],
   );
 
+  // The "Copied" tick resets after 2s; the timer is cleared on unmount so it
+  // never sets state on a page that has gone (it failed CI as an unhandled
+  // error after the test environment was torn down).
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
+
   const handleCopyHtml = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(signatureHtml);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimer.current) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied(false), 2000);
       toast.success('HTML signature copied to clipboard');
     } catch {
       toast.error('Failed to copy — check browser permissions');

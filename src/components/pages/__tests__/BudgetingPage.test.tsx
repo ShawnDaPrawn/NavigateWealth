@@ -97,3 +97,59 @@ describe('BudgetingPage', () => {
     ]);
   });
 });
+
+describe('BudgetingPage known expenses', () => {
+  it('fills in liability repayments and policy premiums without saving them as expenses', () => {
+    const handleInputChange = vi.fn();
+    render(
+      <MemoryRouter>
+        <BudgetingPage
+          netIncome={60000}
+          grossIncome={80000}
+          profileData={{
+            budgetExpenses: [],
+            liabilities: [
+              { id: 'l1', name: 'Credit Card', type: 'Credit Card', monthlyPayment: 5000 },
+            ],
+          }}
+          handleInputChange={handleInputChange}
+          policyExpenses={[
+            {
+              id: 'policy-expense:p1',
+              description: 'Brightrock',
+              detail: 'Life cover premium',
+              amount: 1450,
+              category: 'needs',
+              source: 'policy',
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('No Expenses Yet')).toBeNull();
+    expect(screen.getByText('Credit Card')).toBeDefined();
+    expect(screen.getByText('Brightrock')).toBeDefined();
+    expect(screen.getByText(/2 filled in from liabilities and policies/)).toBeDefined();
+    expect(screen.getAllByText(/R\s?6[\s,]?450/).length).toBeGreaterThan(0);
+    expect(handleInputChange).not.toHaveBeenCalled();
+  });
+
+  it('flags a typed-in expense with the same amount as a known one', () => {
+    render(
+      <MemoryRouter>
+        <BudgetingPage
+          netIncome={60000}
+          profileData={{
+            budgetExpenses: [
+              { id: '1', description: 'Card payment', amount: 5000, category: 'needs' },
+            ],
+            liabilities: [{ id: 'l1', name: 'Credit Card', monthlyPayment: 5000 }],
+          }}
+          handleInputChange={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/Same amount as Credit Card/)).toBeDefined();
+  });
+});

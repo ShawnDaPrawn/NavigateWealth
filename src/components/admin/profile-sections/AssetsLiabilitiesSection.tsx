@@ -1,4 +1,3 @@
-import { Card, CardContent } from '../../ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,14 +8,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../ui/alert-dialog';
-import { PieChart } from 'lucide-react';
 import {
   findPossiblePolicyAssetMatches,
   type DerivedPolicyAsset,
 } from '../../../utils/derivedPolicyAssets';
 import { useInlineEditDialogClose } from '../../shared/unsaved-changes';
 
-import { SummaryMetric } from './assetsLiabilitiesShared';
+import { NetWorthStrip } from './assetsLiabilitiesShared';
 import { AssetsPanel } from './AssetsPanel';
 import { LiabilitiesPanel } from './LiabilitiesPanel';
 import type { Asset, Liability } from '../../../shared/types';
@@ -48,6 +46,8 @@ interface AssetsLiabilitiesSectionProps {
   setAssetToDelete: (value: string | null) => void;
   setLiabilityToDelete: (value: string | null) => void;
   formatCurrency: (value: number) => string;
+  /** Opens the client's Policy details tab from a policy row. */
+  onOpenPolicies?: () => void;
 }
 
 export function AssetsLiabilitiesSection({
@@ -77,6 +77,7 @@ export function AssetsLiabilitiesSection({
   setAssetToDelete,
   setLiabilityToDelete,
   formatCurrency,
+  onOpenPolicies,
 }: AssetsLiabilitiesSectionProps) {
   const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
   const linkedPolicyAssetTotal = derivedPolicyAssets.reduce((sum, asset) => sum + asset.value, 0);
@@ -88,8 +89,21 @@ export function AssetsLiabilitiesSection({
   const netWorth = combinedAssets - totalLiabilities;
   const possibleDuplicateMatches = findPossiblePolicyAssetMatches(assets, derivedPolicyAssets);
   const possibleDuplicateCount = Object.keys(possibleDuplicateMatches).length;
+  const assetCount = assets.length + derivedPolicyAssets.length;
+  const assetsMeta =
+    `${assetCount} ${assetCount === 1 ? 'asset' : 'assets'}` +
+    (derivedPolicyAssets.length > 0 ? `, ${derivedPolicyAssets.length} from policies` : '');
+  const liabilitiesMeta =
+    liabilities.length === 0
+      ? 'None added'
+      : `${liabilities.length} ${liabilities.length === 1 ? 'liability' : 'liabilities'}`;
   const hasBalanceSheetData =
     assets.length > 0 || liabilities.length > 0 || derivedPolicyAssets.length > 0;
+
+  const assetToDeleteName =
+    assets.find((asset) => asset.id === assetToDelete)?.name || 'this asset';
+  const liabilityToDeleteName =
+    liabilities.find((liability) => liability.id === liabilityToDelete)?.name || 'this liability';
 
   const assetEditGuard = useInlineEditDialogClose({
     getItem: (id) => assets.find((asset) => asset.id === id),
@@ -106,29 +120,14 @@ export function AssetsLiabilitiesSection({
   return (
     <div className="space-y-5">
       {hasBalanceSheetData && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <SummaryMetric
-            label="Manual Assets"
-            value={formatCurrency(totalAssets)}
-            tone="positive"
-          />
-          <SummaryMetric
-            label="Linked Policy Assets"
-            value={formatCurrency(linkedPolicyAssetTotal)}
-            tone="accent"
-          />
-          <SummaryMetric
-            label="Combined Assets"
-            value={formatCurrency(combinedAssets)}
-            tone="positive"
-          />
-          <SummaryMetric
-            label="Total Liabilities"
-            value={formatCurrency(totalLiabilities)}
-            tone="negative"
-          />
-          <SummaryMetric label="Net Worth" value={formatCurrency(netWorth)} tone="accent" />
-        </div>
+        <NetWorthStrip
+          assets={formatCurrency(combinedAssets)}
+          assetsMeta={assetsMeta}
+          liabilities={formatCurrency(totalLiabilities)}
+          liabilitiesMeta={liabilitiesMeta}
+          netWorth={formatCurrency(netWorth)}
+          netWorthNegative={netWorth < 0}
+        />
       )}
 
       <AssetsPanel
@@ -136,10 +135,9 @@ export function AssetsLiabilitiesSection({
         derivedPolicyAssets={derivedPolicyAssets}
         linkedPolicyAssetsLoading={linkedPolicyAssetsLoading}
         linkedPolicyAssetsError={linkedPolicyAssetsError}
-        linkedPolicyAssetTotal={linkedPolicyAssetTotal}
         possibleDuplicateMatches={possibleDuplicateMatches}
         possibleDuplicateCount={possibleDuplicateCount}
-        totalAssets={totalAssets}
+        combinedAssets={combinedAssets}
         assetsInEditMode={assetsInEditMode}
         assetEditGuard={assetEditGuard}
         formatCurrency={formatCurrency}
@@ -148,6 +146,7 @@ export function AssetsLiabilitiesSection({
         saveAsset={saveAsset}
         editAsset={editAsset}
         confirmDeleteAsset={confirmDeleteAsset}
+        onOpenPolicies={onOpenPolicies}
       />
 
       <LiabilitiesPanel
@@ -163,39 +162,21 @@ export function AssetsLiabilitiesSection({
         confirmDeleteLiability={confirmDeleteLiability}
       />
 
-      {hasBalanceSheetData && (
-        <Card className="border-[#6d28d9]/20 bg-gradient-to-br from-[#6d28d9]/5 via-white to-white shadow-sm">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#6d28d9]/10">
-              <PieChart className="h-5 w-5 text-[#6d28d9]" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Net Worth Snapshot</p>
-              <p
-                className={`text-xl font-semibold ${netWorth >= 0 ? 'text-[#4c1d95]' : 'text-red-600'}`}
-              >
-                {formatCurrency(netWorth)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <AlertDialog
         open={assetToDelete !== null}
         onOpenChange={(open) => !open && setAssetToDelete(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Asset</AlertDialogTitle>
+            <AlertDialogTitle>Delete {assetToDeleteName}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this asset? This action cannot be undone.
+              It comes off this client's assets and net worth. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setAssetToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={removeAsset} className="bg-red-600 hover:bg-red-700">
-              Delete
+              Delete asset
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -207,15 +188,15 @@ export function AssetsLiabilitiesSection({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Liability</AlertDialogTitle>
+            <AlertDialogTitle>Delete {liabilityToDeleteName}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this liability? This action cannot be undone.
+              It comes off this client's liabilities and net worth. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setLiabilityToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={removeLiability} className="bg-red-600 hover:bg-red-700">
-              Delete
+              Delete liability
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
