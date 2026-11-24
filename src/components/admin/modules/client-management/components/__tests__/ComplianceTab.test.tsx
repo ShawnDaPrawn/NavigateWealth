@@ -1,41 +1,32 @@
 /**
- * ComplianceTab — Render / Characterization Test (Phase 4)
- * =========================================================
- *
- * Locks the registration-gate screen (shown when a client is not yet
- * registered with Beeswax/Honeycomb) and the basic sub-tab structure (shown
- * once registered) for ComplianceTab — a 1,723-line Phase 6 decomposition
- * target. A regression introduced during the extraction (dropped api call,
- * missing sub-tab registration, broken gate) fails CI.
+ * ComplianceTab — the client's compliance record (declarations and the firm's
+ * review), kept on the profile. Replaced the Honeycomb/Beeswax checks on
+ * 2026-11-24.
  *
  * Mocks:
- *   • @/utils/api — prevents real HTTP; drives the registration state.
- *   • @/components/admin/modules/client-management/api — makes
- *     getClientProfileQueryOptions resolvable with a null profile.
- *   • The nine heavy compliance sub-panels (IdentityVerificationPanel, etc.)
- *     are NOT mocked: they don't mount in the unregistered state so their
- *     imports are evaluated but no component renders. If a future import-time
- *     side-effect breaks this, add stubs then.
+ *   • @/utils/api — captures the save.
+ *   • the client-management api — serves the stored profile record.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, screen, waitFor, renderWithQueryClient } from '@/test/utils';
-import { MemoryRouter, useLocation } from 'react-router';
+import { fireEvent, screen, waitFor, within, renderWithQueryClient } from '@/test/utils';
+import { createMemoryRouter, RouterProvider } from 'react-router';
+import { UnsavedChangesRegistryProvider } from '@/components/shared/unsaved-changes/UnsavedChangesRegistry';
 import type { Client } from '@/components/admin/modules/client-management/types';
 
-// ── Hoist mock factories before any imports execute ──────────────────────────
-const { mockApiGet } = vi.hoisted(() => ({
-  mockApiGet: vi.fn(),
+const { mockApiPost, mockProfile } = vi.hoisted(() => ({
+  mockApiPost: vi.fn(),
+  mockProfile: vi.fn(),
 }));
 
 vi.mock('@/utils/api', () => ({
-  api: { get: mockApiGet, post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+  api: { get: vi.fn(), post: mockApiPost, patch: vi.fn(), delete: vi.fn() },
   APIError: class APIError extends Error {},
 }));
 
 vi.mock('@/components/admin/modules/client-management/api', () => ({
   getClientProfileQueryOptions: (clientId: string) => ({
     queryKey: ['client-profile', clientId],
-    queryFn: async () => null,
+    queryFn: () => mockProfile(clientId),
   }),
 }));
 
@@ -44,8 +35,6 @@ vi.mock('sonner', () => ({
 }));
 
 import { ComplianceTab } from '../ComplianceTab';
-
-// ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const selectedClient: Client = {
   id: 'client-1',
@@ -61,116 +50,93 @@ const selectedClient: Client = {
   suspended: false,
 };
 
-function Location() {
-  return <output data-testid="search">{useLocation().search}</output>;
-}
-
 function renderCompliance(url = '/') {
-  return renderWithQueryClient(
-    <MemoryRouter initialEntries={[url]}>
-      <ComplianceTab
-        selectedClient={selectedClient}
-        sanctionsScreeningRunning={false}
-        onRunSanctionsScreening={vi.fn()}
-        lastSanctionsCheck=""
-      />
-      <Location />
-    </MemoryRouter>,
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/',
+        element: (
+          <UnsavedChangesRegistryProvider>
+            <ComplianceTab selectedClient={selectedClient} />
+          </UnsavedChangesRegistryProvider>
+        ),
+      },
+    ],
+    { initialEntries: [url] },
   );
+  return { router, ...renderWithQueryClient(<RouterProvider router={router} />) };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default: registration check returns unregistered client.
-  mockApiGet.mockResolvedValue({ registered: false });
+  // A record saved before the compliance record existed.
+  mockProfile.mockResolvedValue({ firstName: 'Test', lastName: 'Client' });
+  mockApiPost.mockResolvedValue({ success: true });
 });
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-describe('ComplianceTab — unregistered state', () => {
-  it('shows the registration gate once the status check resolves as unregistered', async () => {
+describe('ComplianceTab', () => {
+  it('opens on the overview with what needs attention', async () => {
     renderCompliance();
-
-    await waitFor(() => {
-      expect(screen.getByText('Registration required')).toBeTruthy();
-    });
+    const card = await screen.findByRole('region', { name: 'Compliance overview' });
+    expect(within(card).getByText('Client risk rating not set.')).toBeTruthy();
+    expect(within(card).getByText('Sanctions screening not recorded.')).toBeTruthy();
+    expect(within(card).getByText('8 still to answer')).toBeTruthy();
   });
 
-  it('renders the Register client button', async () => {
+  it('has no Honeycomb registration gate or checks', async () => {
     renderCompliance();
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /^Register client$/i })).toBeTruthy();
-    });
-  });
-
-  it('calls the correct registration-status endpoint for the selected client', async () => {
-    renderCompliance();
-
-    await waitFor(() => {
-      expect(mockApiGet).toHaveBeenCalledWith(
-        expect.stringContaining('/integrations/honeycomb/status/client-1'),
-      );
-    });
-  });
-});
-
-describe('ComplianceTab — registered state', () => {
-  beforeEach(() => {
-    // Override: client is already registered.
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('/status/'))
-        return Promise.resolve({ registered: true, honeycombId: 'hc-123' });
-      if (url.includes('/activity/')) return Promise.resolve({ activity: [] });
-      return Promise.resolve({});
-    });
-  });
-
-  it('renders the sub-tab navigation once the client is registered', async () => {
-    renderCompliance();
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /overview/i })).toBeTruthy();
-    });
-  });
-
-  it('shows the Identity Verification sub-tab button', async () => {
-    renderCompliance();
-
-    // The sub-tab navigation AND the Overview quick-action card both render
-    // "Identity Verification" buttons; use getAllByRole (not getByRole) so
-    // the assertion doesn't fail when both are present simultaneously.
-    await waitFor(() => {
-      const buttons = screen.getAllByRole('button', { name: /identity verification/i });
-      expect(buttons.length).toBeGreaterThan(0);
-    });
-  });
-
-  it('shows the sections as a rail, the open one kept in the address', async () => {
-    renderCompliance();
-    const rail = await screen.findByRole('navigation', { name: 'Compliance sections' });
-    expect(rail.textContent).toContain('Checks');
-    expect(rail.textContent).toContain('Outcome');
-    fireEvent.click(screen.getByRole('button', { name: 'Reports' }));
-    await waitFor(() =>
-      expect(screen.getByTestId('search').textContent).toBe('?ksec=activity-log'),
-    );
-  });
-
-  it('heads each section with its description and Export compliance dossier', async () => {
-    renderCompliance('/?ksec=identity-verification');
-    expect(await screen.findByRole('heading', { name: 'Identity verification' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Export compliance dossier' })).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'Client identification' })).toBeTruthy();
-  });
-
-  it('shows an error, not the registration gate, when the status check fails', async () => {
-    mockApiGet.mockImplementation((url: string) => {
-      if (url.includes('/status/')) return Promise.reject(new Error('400'));
-      return Promise.resolve({});
-    });
-    renderCompliance();
-    expect(await screen.findByText("Couldn't load compliance")).toBeTruthy();
+    await screen.findByRole('region', { name: 'Compliance overview' });
     expect(screen.queryByText('Registration required')).toBeNull();
+    expect(screen.queryByText(/Beeswax/)).toBeNull();
+  });
+
+  it('keeps the open section in the address', async () => {
+    const { router } = renderCompliance();
+    const rail = await screen.findByRole('navigation', { name: 'Compliance sections' });
+    fireEvent.click(within(rail).getByRole('button', { name: 'Compliance review' }));
+    await waitFor(() => expect(router.state.location.search).toBe('?ksec=review'));
+    expect(await screen.findByRole('region', { name: 'Compliance review' })).toBeTruthy();
+  });
+
+  it('shows what the client declared', async () => {
+    mockProfile.mockResolvedValue({
+      complianceDeclarations: {
+        schemaVersion: 1,
+        isPep: 'no',
+        taxResidencies: [{ id: 't', country: 'South Africa', taxNumber: '0123456789' }],
+      },
+    });
+    renderCompliance('/?ksec=declarations');
+    const card = await screen.findByRole('region', { name: 'Client declarations' });
+    expect(within(card).getByText('South Africa')).toBeTruthy();
+    expect(within(card).getByText('0123456789')).toBeTruthy();
+  });
+
+  it('saves the review alone, merged over the stored record', async () => {
+    renderCompliance('/?ksec=review');
+    const card = await screen.findByRole('region', { name: 'Compliance review' });
+    fireEvent.click(within(card).getByRole('button', { name: 'Edit' }));
+
+    fireEvent.change(await screen.findByLabelText('Last review'), {
+      target: { value: '2026-11-24' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(mockApiPost).toHaveBeenCalledTimes(1));
+    const [url, body] = mockApiPost.mock.calls[0] as [string, Record<string, unknown>];
+    expect(url).toBe('/profile/personal-info');
+    expect(body.key).toBe('user_profile:client-1:personal_info');
+    expect(body.mode).toBe('merge');
+    expect(Object.keys(body.data as object)).toEqual(['complianceReview']);
+    expect(
+      (body.data as { complianceReview: { lastKycReviewDate: string } }).complianceReview
+        .lastKycReviewDate,
+    ).toBe('2026-11-24');
+  });
+
+  it('shows an error when the record cannot be loaded', async () => {
+    mockProfile.mockRejectedValue(new Error('503'));
+    renderCompliance();
+    expect(await screen.findByText("Couldn't load compliance", {}, { timeout: 5000 })).toBeTruthy();
   });
 });

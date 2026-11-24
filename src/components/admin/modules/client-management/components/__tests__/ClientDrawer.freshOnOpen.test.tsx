@@ -17,6 +17,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeTestQueryClient } from '@/test/utils';
 
 const mockGet = vi.fn();
+const { complianceDirty, complianceTryAction } = vi.hoisted(() => ({
+  complianceDirty: { value: false },
+  complianceTryAction: vi.fn(),
+}));
 vi.mock('@/utils/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/utils/api/client')>();
   return {
@@ -81,12 +85,33 @@ vi.mock('../../../../profile-sections/PolicyDetailsSection', async () => {
 });
 vi.mock('../DocumentsTab', () => ({ DocumentsTab: Empty }));
 vi.mock('../SecurityTab', () => ({ SecurityTab: Empty }));
-vi.mock('../ComplianceTab', () => ({ ComplianceTab: Empty }));
+// A Compliance tab holding an unsaved edit when `complianceDirty.value` is set.
+vi.mock('../ComplianceTab', async () => {
+  const { useEffect } = await import('react');
+  const { useOptionalUnsavedChangesRegistry } =
+    await import('@/components/shared/unsaved-changes/UnsavedChangesRegistry');
+  return {
+    ComplianceTab: () => {
+      const registry = useOptionalUnsavedChangesRegistry();
+      useEffect(() => {
+        if (!registry || !complianceDirty.value) return;
+        registry.register({
+          id: 'compliance-test',
+          isDirty: true,
+          tryAction: complianceTryAction,
+        });
+        return () => registry.unregister('compliance-test');
+      }, [registry]);
+      return <div>compliance tab</div>;
+    },
+  };
+});
 vi.mock('../CommunicationTab', () => ({ CommunicationTab: Empty }));
 vi.mock('../EsignTab', () => ({ EsignTab: Empty }));
 vi.mock('../ClientNotesTab', () => ({ ClientNotesTab: Empty }));
 
 import { MemoryRouter, useLocation } from 'react-router';
+import { UnsavedChangesRegistryProvider } from '@/components/shared/unsaved-changes/UnsavedChangesRegistry';
 import { ClientDrawer } from '../ClientDrawer';
 import { BreadcrumbContext, type Crumb } from '../../../../layout/page';
 import { clientKeys } from '@/utils/queryKeys';
@@ -125,6 +150,8 @@ function respond(url: string) {
 beforeEach(() => {
   mockGet.mockReset();
   mockGet.mockImplementation(respond);
+  complianceDirty.value = false;
+  complianceTryAction.mockReset();
 });
 
 describe('ClientDrawer opens on fresh data only', () => {
@@ -265,5 +292,43 @@ describe('Client page', () => {
     expect(screen.queryByRole('tab', { name: 'Security' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Close wizard' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Aaron Teng' })).toBeTruthy();
+  });
+});
+
+// The Compliance tab edits the client's compliance record in place. Leaving it
+// with an unsaved edit, by closing the client or by switching tabs, must ask
+// first, as Personal details does.
+describe('Client page with an unsaved Compliance edit', () => {
+  function renderGuarded(onOpenChange = vi.fn()) {
+    complianceDirty.value = true;
+    render(
+      <QueryClientProvider client={makeTestQueryClient()}>
+        <MemoryRouter initialEntries={['/admin?module=clients&client=c-aaron&ctab=compliance']}>
+          <UnsavedChangesRegistryProvider>
+            <ClientDrawer client={STALE_ROW} open onOpenChange={onOpenChange} />
+          </UnsavedChangesRegistryProvider>
+          <Location />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    return onOpenChange;
+  }
+
+  it('asks before closing the client', async () => {
+    const onOpenChange = renderGuarded();
+    await screen.findByText('compliance tab');
+    fireEvent.click(screen.getByRole('button', { name: 'Personal clients' }));
+    expect(complianceTryAction).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('asks before switching to another tab', async () => {
+    renderGuarded();
+    await screen.findByText('compliance tab');
+    // Radix fires the change on mouse-down and again on the focus that
+    // follows; the guard's dialog holds one pending action either way.
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Notes' }));
+    expect(complianceTryAction).toHaveBeenCalled();
+    expect(screen.getByTestId('search').textContent).toContain('ctab=compliance');
   });
 });

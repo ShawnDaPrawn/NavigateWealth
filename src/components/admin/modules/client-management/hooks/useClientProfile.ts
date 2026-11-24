@@ -14,7 +14,16 @@ import { createRiskAssessmentHandlers } from './clientProfile/riskAssessmentHand
 import { createAssetHandlers } from './clientProfile/assetHandlers';
 import { createLiabilityHandlers } from './clientProfile/liabilityHandlers';
 import { normalizeProfileExtensionFields } from '../../../../../shared/client-profile';
-import { normalizeComplianceReview } from '../../../../../shared/compliance';
+import {
+  COMPLIANCE_DECLARATIONS_PROFILE_KEY,
+  COMPLIANCE_REVIEW_PROFILE_KEY,
+  normalizeComplianceReview,
+} from '../../../../../shared/compliance';
+
+const COMPLIANCE_PROFILE_KEYS = [
+  COMPLIANCE_DECLARATIONS_PROFILE_KEY,
+  COMPLIANCE_REVIEW_PROFILE_KEY,
+] as const;
 
 /**
  * The fields added in 2026-11 (postal address, smoking history, alcohol,
@@ -366,6 +375,18 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
       // can leave stale nested first/last names in KV that override root edits elsewhere.
       const dirty = profileData as ProfileData & { personalInformation?: unknown };
       const { personalInformation: _legacyNestedRemoved, ...profilePayload } = dirty;
+
+      // The Compliance tab owns the compliance record and saves it on its own.
+      // This editor sends the whole profile, so write back what is stored now,
+      // never the copy loaded when this editor opened — otherwise a save here
+      // would undo a compliance change made since.
+      const current = await clientApi.fetchClientProfile(userId);
+      const storedNow = (current?.data ?? {}) as unknown as Record<string, unknown>;
+      const payloadRecord = profilePayload as unknown as Record<string, unknown>;
+      for (const key of COMPLIANCE_PROFILE_KEYS) {
+        if (key in storedNow) payloadRecord[key] = storedNow[key];
+        else delete payloadRecord[key];
+      }
 
       await clientApi.updateClientProfile(userId, profilePayload as ProfileData);
       queryClient.setQueryData(

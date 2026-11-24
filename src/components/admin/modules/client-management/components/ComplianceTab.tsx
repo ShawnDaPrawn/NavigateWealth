@@ -1,523 +1,346 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useUrlState } from '../../../layout/page';
-import { ErrorState, useClientSubCrumbs } from '../../../layout/page';
-import { Button } from '../../../../ui/button';
-import { exportComplianceDossier } from './compliance/exportDossier';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  Shield,
-  UserCheck,
-  Loader2,
-  History,
-  Landmark,
-  Search,
-  ClipboardList,
-  Building2,
-  MapPin,
-  FileCheck,
-  Download,
-} from 'lucide-react';
+/**
+ * The client's Compliance tab: the compliance record kept on their profile.
+ *
+ * Three sections, the open one in the address (?ksec=):
+ * - Overview — what needs attention (`complianceIndicators`) and the headline
+ *   facts.
+ * - Client declarations — what the client declared (PEP, source of funds and
+ *   wealth, tax residency, FATCA, consents). The client fills these in from
+ *   the portal (Profile → Compliance & Consent); staff can complete or correct
+ *   them here.
+ * - Compliance review — the firm's own assessment (risk rating, sanctions
+ *   outcome, KYC review dates). Staff only; never returned to the client.
+ *
+ * Data and rules live in `src/shared/compliance/clientCompliance.ts`, built to
+ * be lifted into the self-built compliance engine. A save sends only the key it
+ * edits, merged over the stored record, so it can never overwrite another part
+ * of the profile.
+ *
+ * This replaced the Honeycomb/Beeswax checks (removed 2026-11-24). Records those
+ * checks wrote are still in the KV store, unread.
+ */
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ClipboardCheck, FileText, Loader2, Save, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '../../../../ui/button';
+import { ErrorState, useClientSubCrumbs, useUrlState } from '../../../layout/page';
+import {
+  UnsavedChangesDialog,
+  useUnsavedChangesGuard,
+  useUnsavedChangesRegistry,
+} from '../../../../shared/unsaved-changes';
+import {
+  ComplianceDeclarationsCard,
+  ComplianceIndicatorList,
+  ComplianceReviewCard,
+} from '../../../../shared/client-profile';
+import { applicationHints } from '../../../../../shared/client-profile';
+import {
+  COMPLIANCE_DECLARATIONS_PROFILE_KEY,
+  COMPLIANCE_REVIEW_PROFILE_KEY,
+  CLIENT_RISK_RATING_OPTIONS,
+  SANCTIONS_RESULT_OPTIONS,
+  complianceIndicators,
+  legacyConsentEvidence,
+  normalizeComplianceDeclarations,
+  normalizeComplianceReview,
+  outstandingDeclarations,
+  type ComplianceDeclarations,
+  type ComplianceReview,
+} from '../../../../../shared/compliance';
 import { api } from '../../../../../utils/api';
-
-import { Client } from '../types';
+import type { Client } from '../types';
 import { getClientProfileQueryOptions } from '../api';
-import { RiskAssessmentPanel } from './RiskAssessmentPanel';
-import { IdentityVerificationPanel } from './compliance/IdentityVerificationPanel';
-import { FinancialIntelligencePanel } from './compliance/FinancialIntelligencePanel';
-import { SanctionsScreeningPanel } from './compliance/SanctionsScreeningPanel';
-import { CorporateGovernancePanel } from './compliance/CorporateGovernancePanel';
-import { AddressReportsPanel } from './compliance/AddressReportsPanel';
-import { CDDPanel } from './compliance/CDDPanel';
-import { OverviewContent } from './compliance/OverviewContent';
-import { ActivityLogContent } from './compliance/ActivityLogContent';
-import { ComplianceRegistrationGate } from './compliance/ComplianceRegistrationGate';
-import { ComplianceActivity, ComplianceSubTab } from './compliance/complianceTypes';
+import { ProfileSectionView } from './clientProfile/ProfileSectionView';
+import {
+  complianceDeclarationsView,
+  complianceReviewView,
+} from './clientProfile/profileSectionRows';
+
+type ComplianceSection = 'overview' | 'declarations' | 'review';
+
+const SECTIONS: Array<{
+  id: ComplianceSection;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: 'overview', label: 'Overview', icon: Shield },
+  { id: 'declarations', label: 'Client declarations', icon: FileText },
+  { id: 'review', label: 'Compliance review', icon: ClipboardCheck },
+];
+const SECTION_IDS = SECTIONS.map((s) => s.id);
+
+const REGISTRY_ID = 'admin-client-compliance';
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatDate(value: string): string {
+  if (!value) return '';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime())
+    ? value
+    : d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 interface ComplianceTabProps {
   selectedClient: Client;
-  sanctionsScreeningRunning: boolean;
-  onRunSanctionsScreening: () => void;
-  lastSanctionsCheck: string;
 }
 
-const SUB_TABS: {
-  id: ComplianceSubTab;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  { id: 'overview', label: 'Overview', icon: Shield },
-  { id: 'identity-verification', label: 'Identity verification', icon: UserCheck },
-  { id: 'cdd', label: 'CDD', icon: FileCheck },
-  { id: 'financial-intelligence', label: 'Financial intelligence', icon: Landmark },
-  { id: 'corporate-governance', label: 'Corporate & governance', icon: Building2 },
-  { id: 'screening-sanctions', label: 'Screening & sanctions', icon: Search },
-  { id: 'address-reports', label: 'Address', icon: MapPin },
-  { id: 'risk-assessment', label: 'Risk assessment', icon: ClipboardList },
-  { id: 'activity-log', label: 'Reports', icon: History },
-];
-const COMPLIANCE_SECTIONS = SUB_TABS.map((t) => t.id);
-/** Each section's heading and one-line description (design: CM 43–54). */
-const SECTION_COPY: Record<ComplianceSubTab, { title: string; description: string }> = {
-  overview: {
-    title: 'Compliance overview',
-    description: 'Run checks, see the latest result of each, and export the dossier.',
-  },
-  'identity-verification': {
-    title: 'Identity verification',
-    description: "Verify the client's identity using their SA ID number or passport via Honeycomb.",
-  },
-  cdd: {
-    title: 'Customer due diligence',
-    description:
-      'Run a CDD report for this client. Data provided by Honeycomb Information Services (Beeswax).',
-  },
-  'financial-intelligence': {
-    title: 'Financial intelligence',
-    description: 'Bank account verification and credit bureau checks. Client consent is required.',
-  },
-  'corporate-governance': {
-    title: 'Corporate & governance',
-    description:
-      "Company registrations, directorships and government tenders linked to the client's ID.",
-  },
-  'screening-sanctions': {
-    title: 'Screening & sanctions',
-    description: 'Search sanctions lists, enforcement actions and court records.',
-  },
-  'address-reports': {
-    title: 'Address',
-    description: 'Look up the best known address for the client from bureau records.',
-  },
-  'risk-assessment': {
-    title: 'Risk assessments',
-    description: 'Templates are configured in the Beeswax platform and pulled automatically.',
-  },
-  'activity-log': {
-    title: 'Reports',
-    description: 'Compliance readiness and the full log of checks run for this client.',
-  },
-};
-/** Sections that show the client identification card above their checks. */
-const IDENTIFICATION_SECTIONS: ReadonlySet<ComplianceSubTab> = new Set([
-  'identity-verification',
-  'cdd',
-  'address-reports',
-]);
-/** Rail groups (design: CM 12 — Overview, then Checks, then Outcome). */
-const RAIL_GROUPS: { title?: string; ids: ComplianceSubTab[] }[] = [
-  { ids: ['overview'] },
-  {
-    title: 'Checks',
-    ids: [
-      'identity-verification',
-      'cdd',
-      'financial-intelligence',
-      'corporate-governance',
-      'screening-sanctions',
-      'address-reports',
-    ],
-  },
-  { title: 'Outcome', ids: ['risk-assessment', 'activity-log'] },
-];
-
-const isValidIdNumber = (val: unknown): val is string =>
-  typeof val === 'string' &&
-  val.trim().length > 0 &&
-  !['not provided', 'n/a', 'undefined', 'null', 'none', '-'].includes(val.trim().toLowerCase());
-
 export function ComplianceTab({ selectedClient }: ComplianceTabProps) {
+  const clientId = selectedClient.id;
   const queryClient = useQueryClient();
-  const [registrationStatus, setRegistrationStatus] = useState<
-    'loading' | 'registered' | 'unregistered' | 'error'
-  >('loading');
-  const [registrationError, setRegistrationError] = useState<string | null>(null);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [honeycombId, setHoneycombId] = useState<string | null>(null);
-
-  const [activities, setActivities] = useState<ComplianceActivity[]>([]);
-  const [isLoadingActivity, setIsLoadingActivity] = useState(false);
-
-  const [kvProfileIdNumber, setKvProfileIdNumber] = useState<string | null>(null);
-  const [kvProfilePassport, setKvProfilePassport] = useState<string | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
-
-  // The open section is in the address (?ksec=).
-  const [activeSubTab, setActiveSubTab] = useUrlState<ComplianceSubTab>(
-    'ksec',
-    'overview',
-    COMPLIANCE_SECTIONS,
+  const profileQuery = useQuery(getClientProfileQueryOptions(clientId));
+  const record = useMemo(
+    () => (profileQuery.data ?? {}) as unknown as Record<string, unknown>,
+    [profileQuery.data],
   );
-  const [exporting, setExporting] = useState(false);
-  const sectionLabel = SUB_TABS.find((t) => t.id === activeSubTab)?.label ?? '';
+  const stored = useMemo(
+    () => ({
+      declarations: normalizeComplianceDeclarations(record[COMPLIANCE_DECLARATIONS_PROFILE_KEY]),
+      review: normalizeComplianceReview(record[COMPLIANCE_REVIEW_PROFILE_KEY]),
+    }),
+    [record],
+  );
+
+  const [section, setSection] = useUrlState<ComplianceSection>('ksec', 'overview', SECTION_IDS);
+  const sectionLabel = SECTIONS.find((s) => s.id === section)?.label ?? '';
   useClientSubCrumbs(sectionLabel ? [{ label: sectionLabel }] : []);
 
-  useEffect(() => {
-    const loadProfileForCompliance = async () => {
-      setProfileLoading(true);
-      try {
-        const profile = await queryClient.fetchQuery(
-          getClientProfileQueryOptions(selectedClient.id),
-        );
-        if (profile) {
-          setKvProfileIdNumber(isValidIdNumber(profile.idNumber) ? profile.idNumber : null);
-          setKvProfilePassport(
-            isValidIdNumber(profile.passportNumber) ? profile.passportNumber : null,
-          );
-        } else {
-          setKvProfileIdNumber(null);
-          setKvProfilePassport(null);
-        }
-      } catch (err) {
-        console.warn('[ComplianceTab] Could not fetch KV profile:', err);
-        setKvProfileIdNumber(null);
-        setKvProfilePassport(null);
-      } finally {
-        setProfileLoading(false);
-      }
-    };
+  // Edit state: a draft of the one part being edited, or null in view mode.
+  const [draftDeclarations, setDraftDeclarations] = useState<ComplianceDeclarations | null>(null);
+  const [draftReview, setDraftReview] = useState<ComplianceReview | null>(null);
+  const [saving, setSaving] = useState(false);
+  const editing = draftDeclarations !== null || draftReview !== null;
+  const isDirty =
+    (draftDeclarations !== null &&
+      JSON.stringify(draftDeclarations) !== JSON.stringify(stored.declarations)) ||
+    (draftReview !== null && JSON.stringify(draftReview) !== JSON.stringify(stored.review));
 
-    if (selectedClient.id) {
-      loadProfileForCompliance();
-    }
-  }, [selectedClient.id, queryClient]);
+  const cancel = useCallback(() => {
+    setDraftDeclarations(null);
+    setDraftReview(null);
+  }, []);
 
-  const resolvedIdNumber =
-    [
-      kvProfileIdNumber,
-      selectedClient.profile?.personalInformation?.idNumber,
-      (selectedClient.profile as Record<string, unknown>)?.profile_id_number,
-      selectedClient.idNumber,
-      (selectedClient as unknown as Record<string, unknown>).profile_id_number,
-    ].find(isValidIdNumber) || null;
-
-  const resolvedPassport =
-    [
-      kvProfilePassport,
-      selectedClient.profile?.personalInformation?.passportNumber,
-      (selectedClient.profile as Record<string, unknown>)?.passportNumber,
-    ].find(isValidIdNumber) || null;
-
-  const hasIdentification = !!resolvedIdNumber || !!resolvedPassport;
-
-  const checkRegistration = useCallback(async () => {
+  const save = useCallback(async (): Promise<boolean> => {
+    const data: Record<string, unknown> = {};
+    if (draftDeclarations) data[COMPLIANCE_DECLARATIONS_PROFILE_KEY] = draftDeclarations;
+    if (draftReview) data[COMPLIANCE_REVIEW_PROFILE_KEY] = draftReview;
+    if (Object.keys(data).length === 0) return true;
+    setSaving(true);
     try {
-      setRegistrationStatus('loading');
-      const data = await api.get<{ registered?: boolean; honeycombId?: string }>(
-        `/integrations/honeycomb/status/${selectedClient.id}`,
-      );
-      if (data.registered) {
-        setRegistrationStatus('registered');
-        setHoneycombId(data.honeycombId ?? null);
-      } else {
-        setRegistrationStatus('unregistered');
-      }
-    } catch (error) {
-      console.error('Error checking registration:', error);
-      // A failed check is not "not registered": say it failed.
-      setRegistrationError(error instanceof Error ? error.message : String(error));
-      setRegistrationStatus('error');
-    }
-  }, [selectedClient.id]);
-
-  const fetchActivityLog = useCallback(async () => {
-    try {
-      setIsLoadingActivity(true);
-      const data = await api.get<{ activity?: ComplianceActivity[] }>(
-        `/integrations/honeycomb/activity/${selectedClient.id}`,
-      );
-      setActivities(data.activity || []);
-    } catch (error) {
-      console.error('Error fetching activity:', error);
-    } finally {
-      setIsLoadingActivity(false);
-    }
-  }, [selectedClient.id]);
-
-  useEffect(() => {
-    checkRegistration();
-  }, [selectedClient.id, checkRegistration]);
-
-  useEffect(() => {
-    if (registrationStatus === 'registered') {
-      fetchActivityLog();
-    }
-  }, [registrationStatus, selectedClient.id, fetchActivityLog]);
-
-  const handleRegister = async () => {
-    setIsRegistering(true);
-    const toastId = toast.loading('Registering client with Honeycomb/Beeswax...');
-
-    try {
-      const data = await api.post<{ honeycombId?: string }>(
-        `/integrations/honeycomb/register-client`,
-        {
-          clientId: selectedClient.id,
-          firstName: selectedClient.firstName,
-          lastName: selectedClient.lastName,
-          idNumber: resolvedIdNumber,
-          passport: resolvedPassport,
-          email: selectedClient.email,
-        },
-      );
-
-      toast.success('Client registered successfully!', { id: toastId });
-      setHoneycombId(data.honeycombId ?? null);
-      setRegistrationStatus('registered');
-    } catch (error: unknown) {
-      console.error('Registration error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to register client', {
-        id: toastId,
+      await api.post('/profile/personal-info', {
+        key: `user_profile:${clientId}:personal_info`,
+        data,
+        // Only these keys: merge them over the stored record.
+        mode: 'merge',
       });
+      const queryKey = getClientProfileQueryOptions(clientId).queryKey;
+      queryClient.setQueryData(queryKey, (old: unknown) =>
+        old && typeof old === 'object' ? { ...(old as object), ...data } : old,
+      );
+      await queryClient.invalidateQueries({ queryKey });
+      toast.success('Compliance record saved');
+      cancel();
+      return true;
+    } catch (error) {
+      toast.error(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
     } finally {
-      setIsRegistering(false);
+      setSaving(false);
     }
+  }, [cancel, clientId, draftDeclarations, draftReview, queryClient]);
+
+  const guard = useUnsavedChangesGuard({
+    isDirty,
+    onSave: save,
+    onDiscard: cancel,
+    message: "You have unsaved changes to this client's compliance record.",
+  });
+  const registry = useUnsavedChangesRegistry();
+  useEffect(() => {
+    registry.register({ id: REGISTRY_ID, isDirty, tryAction: guard.tryAction });
+    return () => registry.unregister(REGISTRY_ID);
+  }, [registry, isDirty, guard.tryAction]);
+
+  const changeSection = (next: ComplianceSection) => {
+    if (next === section) return;
+    guard.tryAction(() => {
+      cancel();
+      setSection(next);
+    });
   };
 
-  if (registrationStatus === 'loading' || profileLoading) {
+  if (profileQuery.isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-nw-violet" aria-label="Loading compliance" />
       </div>
     );
   }
 
-  if (registrationStatus === 'error') {
+  if (profileQuery.isError) {
     return (
       <ErrorState
         title="Couldn't load compliance"
-        description="The compliance registration for this client could not be checked."
-        onRetry={() => {
-          setRegistrationStatus('loading');
-          void checkRegistration();
-        }}
-        details={registrationError ?? undefined}
+        description="The client's compliance record could not be loaded."
+        onRetry={() => void profileQuery.refetch()}
+        details={profileQuery.error instanceof Error ? profileQuery.error.message : undefined}
       />
     );
   }
 
-  if (registrationStatus === 'unregistered') {
-    return (
-      <ComplianceRegistrationGate
-        clientFirstName={selectedClient.firstName}
-        clientLastName={selectedClient.lastName}
-        resolvedIdNumber={resolvedIdNumber}
-        hasIdentification={hasIdentification}
-        isRegistering={isRegistering}
-        onRegister={handleRegister}
-      />
-    );
-  }
-
-  // ─── Registered State (Sub-tab Navigation) ────────────────────────────
+  const indicators = complianceIndicators(stored.declarations, stored.review, todayIso());
+  const outstanding = outstandingDeclarations(stored.declarations);
+  const fromApplication = applicationHints(record);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
       <nav aria-label="Compliance sections" className="lg:sticky lg:top-4 lg:self-start">
-        {RAIL_GROUPS.map((group, gi) => (
-          <div key={gi}>
-            {group.title && (
-              <p className="mb-1 mt-4 hidden px-3 text-xs font-medium text-nw-text-3 lg:block">
-                {group.title}
-              </p>
-            )}
-            <ul className="flex gap-1 overflow-x-auto lg:flex-col">
-              {group.ids.map((id) => {
-                const tab = SUB_TABS.find((t) => t.id === id)!;
-                const Icon = tab.icon;
-                const active = activeSubTab === id;
-                return (
-                  <li key={id}>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSubTab(id)}
-                      aria-current={active ? 'page' : undefined}
-                      className={`flex w-full items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 ${
-                        active
-                          ? 'bg-nw-violet-50 font-medium text-nw-violet-600'
-                          : 'text-nw-text-2 hover:bg-gray-50 hover:text-nw-ink'
-                      }`}
-                    >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      {tab.label}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-        <p className="mt-4 hidden px-3 text-xs text-nw-text-3 lg:block">
-          Beeswax ID{' '}
-          <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono">{honeycombId}</span>
-        </p>
+        <ul className="flex gap-1 overflow-x-auto lg:flex-col">
+          {SECTIONS.map((s) => {
+            const Icon = s.icon;
+            const active = section === s.id;
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => changeSection(s.id)}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex w-full items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nw-violet/60 ${
+                    active
+                      ? 'bg-nw-violet-50 font-medium text-nw-violet-600'
+                      : 'text-nw-text-2 hover:bg-gray-50 hover:text-nw-ink'
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {s.label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </nav>
 
-      <div className="min-w-0 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-[15px] font-semibold text-nw-ink">
-              {SECTION_COPY[activeSubTab].title}
-            </h2>
-            <p className="text-sm text-nw-text-3">{SECTION_COPY[activeSubTab].description}</p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={exporting}
-            onClick={async () => {
-              setExporting(true);
-              try {
-                await exportComplianceDossier(
-                  selectedClient.id,
-                  `${selectedClient.firstName} ${selectedClient.lastName}`,
-                );
-              } finally {
-                setExporting(false);
+      <div className="flex min-w-0 flex-col gap-4">
+        {section === 'overview' && (
+          <ProfileSectionView
+            title="Compliance overview"
+            canEdit={false}
+            onEdit={() => undefined}
+            banner={
+              indicators.length > 0 ? (
+                <ComplianceIndicatorList indicators={indicators} />
+              ) : (
+                <p className="text-sm text-nw-text-2">Nothing needs attention.</p>
+              )
+            }
+            groups={[
+              {
+                rows: [
+                  {
+                    label: 'Risk rating',
+                    value:
+                      CLIENT_RISK_RATING_OPTIONS.find((o) => o.value === stored.review.riskRating)
+                        ?.label ?? '',
+                  },
+                  {
+                    label: 'Sanctions screening',
+                    value:
+                      SANCTIONS_RESULT_OPTIONS.find(
+                        (o) => o.value === stored.review.sanctionsResult,
+                      )?.label ?? '',
+                  },
+                  {
+                    label: 'Next KYC review due',
+                    value: formatDate(stored.review.nextKycReviewDate),
+                  },
+                  {
+                    label: 'Client declarations',
+                    value:
+                      outstanding.length === 0
+                        ? stored.declarations.confirmedAt
+                          ? `Complete, confirmed ${formatDate(stored.declarations.confirmedAt)}`
+                          : 'Complete, not yet confirmed by the client'
+                        : `${outstanding.length} still to answer`,
+                  },
+                ],
+              },
+            ]}
+          />
+        )}
+
+        {section === 'declarations' &&
+          (draftDeclarations ? (
+            <ComplianceDeclarationsCard
+              value={draftDeclarations}
+              onChange={setDraftDeclarations}
+              audience="adviser"
+              legacyConsent={legacyConsentEvidence(record)}
+              applicationSaysSaTaxResident={fromApplication.saTaxResident}
+              saTaxNumber={typeof record.taxNumber === 'string' ? record.taxNumber : ''}
+            />
+          ) : (
+            <ProfileSectionView
+              title="Client declarations"
+              {...complianceDeclarationsView(stored.declarations)}
+              banner={
+                <p className="text-sm text-nw-text-2">
+                  The client completes these in their portal under Profile → Compliance &amp;
+                  Consent. Edit here to complete or correct them on the client&apos;s behalf.
+                </p>
               }
-            }}
+              onEdit={() => setDraftDeclarations(stored.declarations)}
+            />
+          ))}
+
+        {section === 'review' &&
+          (draftReview ? (
+            <ComplianceReviewCard
+              value={draftReview}
+              onChange={setDraftReview}
+              declarations={stored.declarations}
+            />
+          ) : (
+            <ProfileSectionView
+              title="Compliance review"
+              {...complianceReviewView(stored.review)}
+              banner={
+                indicators.length > 0 ? <ComplianceIndicatorList indicators={indicators} /> : null
+              }
+              onEdit={() => setDraftReview(stored.review)}
+            />
+          ))}
+
+        {editing && (
+          <div
+            className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-nw-line bg-white px-5 py-3 shadow-sm"
+            role="region"
+            aria-label="Unsaved changes"
           >
-            {exporting ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Download className="h-4 w-4" aria-hidden="true" />
-            )}
-            Export compliance dossier
-          </Button>
-        </div>
-
-        {IDENTIFICATION_SECTIONS.has(activeSubTab) && (
-          <section
-            aria-label="Client identification"
-            className="grid grid-cols-1 gap-3 rounded-xl border border-nw-line bg-white px-5 py-3 text-sm sm:grid-cols-3"
-          >
-            <div>
-              <p className="text-xs text-nw-text-3">SA ID</p>
-              <p className="font-mono text-nw-ink">
-                {resolvedIdNumber
-                  ? `${resolvedIdNumber.slice(0, 6)}•••••${resolvedIdNumber.slice(-2)}`
-                  : 'Not set'}
-              </p>
+            <span className="flex items-center gap-2 text-sm text-nw-text-2">
+              {isDirty && <span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />}
+              {isDirty ? 'You have unsaved changes' : 'Editing'}
+            </span>
+            <div className="ml-auto flex gap-2">
+              <Button variant="outline" onClick={cancel} disabled={saving}>
+                Cancel
+              </Button>
+              <Button onClick={() => void save()} disabled={saving || !isDirty}>
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                )}
+                {saving ? 'Saving…' : 'Save changes'}
+              </Button>
             </div>
-            <div>
-              <p className="text-xs text-nw-text-3">Passport</p>
-              <p className="font-mono text-nw-ink">
-                {resolvedPassport ? `${resolvedPassport.slice(0, 3)}•••` : 'Not set'}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-nw-text-3">Beeswax ID</p>
-              <p className="font-mono text-nw-ink">{honeycombId || '—'}</p>
-            </div>
-          </section>
-        )}
-        {/* ──── Sub-tab Content ──── */}
-
-        {activeSubTab === 'overview' && (
-          <OverviewContent
-            selectedClient={selectedClient}
-            honeycombId={honeycombId}
-            resolvedIdNumber={resolvedIdNumber}
-            resolvedPassport={resolvedPassport}
-            hasIdentification={hasIdentification}
-            activities={activities}
-            isLoadingActivity={isLoadingActivity}
-            onNavigate={setActiveSubTab}
-          />
-        )}
-
-        {activeSubTab === 'identity-verification' && (
-          <IdentityVerificationPanel
-            clientId={selectedClient.id}
-            firstName={selectedClient.firstName}
-            lastName={selectedClient.lastName}
-            idNumber={resolvedIdNumber}
-            passport={resolvedPassport}
-            hasIdentification={hasIdentification}
-            onCheckComplete={fetchActivityLog}
-          />
-        )}
-
-        {activeSubTab === 'cdd' && (
-          <CDDPanel
-            clientId={selectedClient.id}
-            firstName={selectedClient.firstName}
-            lastName={selectedClient.lastName}
-            idNumber={resolvedIdNumber}
-            passport={resolvedPassport}
-            hasIdentification={hasIdentification}
-            onCheckComplete={fetchActivityLog}
-          />
-        )}
-
-        {activeSubTab === 'financial-intelligence' && (
-          <FinancialIntelligencePanel
-            clientId={selectedClient.id}
-            firstName={selectedClient.firstName}
-            lastName={selectedClient.lastName}
-            idNumber={resolvedIdNumber}
-            passport={resolvedPassport}
-            hasIdentification={hasIdentification}
-            onCheckComplete={fetchActivityLog}
-          />
-        )}
-
-        {activeSubTab === 'screening-sanctions' && (
-          <SanctionsScreeningPanel
-            clientId={selectedClient.id}
-            firstName={selectedClient.firstName}
-            lastName={selectedClient.lastName}
-            idNumber={resolvedIdNumber}
-            passport={resolvedPassport}
-            onCheckComplete={fetchActivityLog}
-          />
-        )}
-
-        {activeSubTab === 'corporate-governance' && (
-          <CorporateGovernancePanel
-            clientId={selectedClient.id}
-            firstName={selectedClient.firstName}
-            lastName={selectedClient.lastName}
-            idNumber={resolvedIdNumber}
-            passport={resolvedPassport}
-            hasIdentification={hasIdentification}
-            onCheckComplete={fetchActivityLog}
-          />
-        )}
-
-        {activeSubTab === 'address-reports' && (
-          <AddressReportsPanel
-            clientId={selectedClient.id}
-            firstName={selectedClient.firstName}
-            lastName={selectedClient.lastName}
-            idNumber={resolvedIdNumber}
-            passport={resolvedPassport}
-            hasIdentification={hasIdentification}
-            onCheckComplete={fetchActivityLog}
-          />
-        )}
-
-        {activeSubTab === 'risk-assessment' && (
-          <RiskAssessmentPanel
-            clientId={selectedClient.id}
-            clientFirstName={selectedClient.firstName}
-            clientLastName={selectedClient.lastName}
-            idNumber={resolvedIdNumber}
-            passport={resolvedPassport}
-            hasIdentification={hasIdentification}
-          />
-        )}
-
-        {activeSubTab === 'activity-log' && (
-          <ActivityLogContent
-            activities={activities}
-            isLoading={isLoadingActivity}
-            onRefresh={fetchActivityLog}
-            clientId={selectedClient.id}
-            clientName={`${selectedClient.firstName} ${selectedClient.lastName}`}
-          />
+          </div>
         )}
       </div>
+      <UnsavedChangesDialog {...guard.dialogProps} />
     </div>
   );
 }

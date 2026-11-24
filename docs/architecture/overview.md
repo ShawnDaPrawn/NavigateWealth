@@ -79,7 +79,7 @@ supabase/functions/make-server-91ed8379/index.ts
 
 The server uses Hono and lazy route mounting:
 
-- `mount-core.ts` registers core auth, profile, security, setup, sitemap, RSS, integration, Honeycomb, and KV routes.
+- `mount-core.ts` registers core auth, profile, security, setup, sitemap, RSS, integration and KV routes.
 - `mount-fna.ts` registers FNA, FNA intake, batch status, retirement, estate, tax, medical, investment, and risk-planning routes.
 - `mount-modules.ts` registers the larger operational surface: requests, e-sign, resources, reporting, publications, auto-content, clients, communication, product management, social marketing, calendar, compliance, advice engine, applications, newsletter, documents, AI advisor/intelligence, tasks, goals, quality issues, LinkedIn, Vasco, OpenClaw, form prefill, form templates, and related modules.
 

@@ -118,16 +118,6 @@ export const clientApi = {
   },
 
   /**
-   * Run sanctions screening (mock)
-   */
-  runSanctionsScreening: async (userId: string): Promise<boolean> => {
-    logger.info('Running sanctions screening...', { userId });
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    return true;
-  },
-
-  /**
    * Run client data cleanup / maintenance job.
    * Reconciles orphaned profiles, backfills missing accountStatus values.
    */
@@ -175,7 +165,6 @@ export const {
   fetchClientProfile,
   updateClientProfile,
   updateClientMetadata,
-  runSanctionsScreening,
   runCleanup,
   runKvCleanup,
 } = clientApi;

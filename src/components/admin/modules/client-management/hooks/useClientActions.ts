@@ -21,24 +21,8 @@ export function useClientActions() {
     }
   };
 
-  const runSanctionsScreening = async (userId: string) => {
-    try {
-      setUpdating(true);
-      await clientApi.runSanctionsScreening(userId);
-      toast.success('Sanctions screening completed. No matches found.');
-      return true;
-    } catch (error: unknown) {
-      console.error('Error running sanctions screening:', error);
-      toast.error('Sanctions screening failed');
-      return false;
-    } finally {
-      setUpdating(false);
-    }
-  };
-
   return {
     updating,
     updateClientMetadata,
-    runSanctionsScreening,
   };
 }
