@@ -97,6 +97,21 @@ function decodePlainHistoryText(text: string | undefined): string | undefined {
   return t;
 }
 
+/** "Allan Gray Clients, Newsletter Contacts" — every group a campaign went to. */
+function campaignGroupLabel(campaign: BackendCampaign): string | undefined {
+  const groups =
+    campaign.selectedGroups && campaign.selectedGroups.length > 0
+      ? campaign.selectedGroups
+      : campaign.selectedGroup
+        ? [campaign.selectedGroup]
+        : [];
+  const label = groups
+    .map((g) => (typeof g.name === 'string' ? g.name : ''))
+    .filter(Boolean)
+    .join(', ');
+  return label || undefined;
+}
+
 function mapCampaignsToActivityLog(campaigns: BackendCampaign[]): ActivityLogEntry[] {
   return campaigns
     .map((campaign): ActivityLogEntry => {
@@ -104,8 +119,7 @@ function mapCampaignsToActivityLog(campaigns: BackendCampaign[]): ActivityLogEnt
       const userName =
         campaign.createdByName ||
         (createdBy === 'admin' ? 'Administrator' : createdBy === 'system' ? 'System' : createdBy);
-      const groupName =
-        typeof campaign.selectedGroup?.name === 'string' ? campaign.selectedGroup.name : undefined;
+      const groupName = campaignGroupLabel(campaign);
 
       return {
         id: campaign.id,
