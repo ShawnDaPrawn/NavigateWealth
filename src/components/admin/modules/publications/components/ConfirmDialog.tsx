@@ -171,14 +171,32 @@ export function useConfirmDialog() {
     onConfirm: () => void;
   } | null>(null);
 
+  // The config is cleared 200ms after close so the closing animation still has
+  // text to show. Hold that timer so it can be cancelled: otherwise it fires
+  // after unmount (in tests, after the DOM is torn down: "window is not
+  // defined"), and reopening within 200ms would wipe the new dialog's config.
+  const clearTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClear = () => {
+    if (clearTimer.current !== null) {
+      clearTimeout(clearTimer.current);
+      clearTimer.current = null;
+    }
+  };
+  useEffect(() => cancelClear, []);
+
   const open = (cfg: { title: string; description: string; onConfirm: () => void }) => {
+    cancelClear();
     setConfig(cfg);
     setIsOpen(true);
   };
 
   const close = () => {
     setIsOpen(false);
-    setTimeout(() => setConfig(null), 200); // Clear after animation
+    cancelClear();
+    clearTimer.current = setTimeout(() => {
+      clearTimer.current = null;
+      setConfig(null);
+    }, 200); // Clear after animation
   };
 
   const confirm = () => {

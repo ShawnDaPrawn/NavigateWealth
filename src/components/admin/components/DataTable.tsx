@@ -60,6 +60,11 @@ export interface DataTableProps<T = Record<string, unknown>> {
   className?: string;
   /** When false, all rows render in one scrollable list (document scroll). Defaults to true. */
   paginate?: boolean;
+  /**
+   * Draw the table's own rounded border. Pass false when the table already sits
+   * inside a bordered card, so the two borders do not stack.
+   */
+  bordered?: boolean;
 }
 
 export function DataTable<T extends Record<string, unknown>>({
@@ -77,6 +82,7 @@ export function DataTable<T extends Record<string, unknown>>({
   emptyState,
   className,
   paginate = true,
+  bordered = true,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -186,41 +192,45 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Table Controls */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        {/* Search */}
-        {searchable && (
-          <div className="relative w-full max-w-md">
-            <Search
-              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <Input
-              placeholder={searchPlaceholder}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-10"
-              aria-label={searchPlaceholder}
-            />
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          {/* Export */}
-          {exportable && (
-            <Button variant="outline" size="sm" onClick={exportToCSV}>
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
+      {/* Table Controls — skipped entirely when there is nothing to show, so it
+          does not leave an empty gap above the table. */}
+      {(searchable || exportable) && (
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          {/* Search */}
+          {searchable && (
+            <div className="relative w-full max-w-md">
+              <Search
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-10"
+                aria-label={searchPlaceholder}
+              />
+            </div>
           )}
-        </div>
-      </div>
 
-      {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
+          <div className="flex items-center gap-2">
+            {/* Export */}
+            {exportable && (
+              <Button variant="outline" size="sm" onClick={exportToCSV}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Table, with the pagination footer inside the same box so it always
+          has padding and never sits flush against a parent card's edge. */}
+      <div className={cn('overflow-hidden', bordered && 'rounded-lg border')}>
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
@@ -319,92 +329,93 @@ export function DataTable<T extends Record<string, unknown>>({
             )}
           </TableBody>
         </Table>
-      </div>
 
-      {/* Pagination */}
-      {!loading && sortedData.length > 0 && paginate && (
-        <nav
-          className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
-          aria-label="Table pagination"
-        >
-          <div className="text-sm text-muted-foreground" aria-live="polite">
-            Showing {(currentPage - 1) * rowsPerPage + 1} to{' '}
-            {Math.min(currentPage * rowsPerPage, sortedData.length)} of {sortedData.length} results
-          </div>
+        {/* Pagination */}
+        {!loading && sortedData.length > 0 && paginate && (
+          <nav
+            className="flex flex-col items-start gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            aria-label="Table pagination"
+          >
+            <div className="text-sm text-muted-foreground" aria-live="polite">
+              Showing {(currentPage - 1) * rowsPerPage + 1} to{' '}
+              {Math.min(currentPage * rowsPerPage, sortedData.length)} of {sortedData.length}{' '}
+              results
+            </div>
 
-          <div className="flex flex-wrap items-center gap-3 justify-end">
-            {rowSizeOptions && rowSizeOptions.length > 0 ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                  Rows per page
-                </span>
-                <Select
-                  value={String(rowsPerPage)}
-                  onValueChange={(v) => {
-                    const n = Number(v);
-                    if (!Number.isFinite(n)) return;
-                    setRowsPerPage(n);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-[72px]" aria-label="Rows per page">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rowSizeOptions.map((opt) => (
-                      <SelectItem key={opt} value={String(opt)}>
-                        {opt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-
-            {totalPages > 1 ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  aria-label="Previous page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-
-                <div className="flex items-center gap-1">
-                  {getPaginationButtonPages(currentPage, totalPages, 7).map((pageNum) => (
-                    <Button
-                      key={pageNum}
-                      variant={pageNum === currentPage ? 'default' : 'outline'}
-                      size="sm"
-                      className="min-w-9 px-2"
-                      onClick={() => setCurrentPage(pageNum)}
-                      aria-label={`Go to page ${pageNum}`}
-                      aria-current={pageNum === currentPage ? 'page' : undefined}
-                    >
-                      {pageNum}
-                    </Button>
-                  ))}
+            <div className="flex flex-wrap items-center gap-3 justify-end">
+              {rowSizeOptions && rowSizeOptions.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                    Rows per page
+                  </span>
+                  <Select
+                    value={String(rowsPerPage)}
+                    onValueChange={(v) => {
+                      const n = Number(v);
+                      if (!Number.isFinite(n)) return;
+                      setRowsPerPage(n);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-[72px]" aria-label="Rows per page">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rowSizeOptions.map((opt) => (
+                        <SelectItem key={opt} value={String(opt)}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              ) : null}
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  aria-label="Next page"
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        </nav>
-      )}
+              {totalPages > 1 ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+
+                  <div className="flex items-center gap-1">
+                    {getPaginationButtonPages(currentPage, totalPages, 7).map((pageNum) => (
+                      <Button
+                        key={pageNum}
+                        variant={pageNum === currentPage ? 'default' : 'outline'}
+                        size="sm"
+                        className="min-w-9 px-2"
+                        onClick={() => setCurrentPage(pageNum)}
+                        aria-label={`Go to page ${pageNum}`}
+                        aria-current={pageNum === currentPage ? 'page' : undefined}
+                      >
+                        {pageNum}
+                      </Button>
+                    ))}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    aria-label="Next page"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          </nav>
+        )}
+      </div>
     </div>
   );
 }
