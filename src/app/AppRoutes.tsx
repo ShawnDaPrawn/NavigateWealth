@@ -975,7 +975,7 @@ export function AppRoutes() {
           path="*"
           element={
             <FlexibleRoute>
-              <AppLayout forcePublicLayout>
+              <AppLayout forcePublicLayout bareInInstalledApp>
                 <NotFoundPage />
               </AppLayout>
             </FlexibleRoute>

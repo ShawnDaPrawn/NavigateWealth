@@ -34,7 +34,13 @@ const LOGIN_FIELD_ERRORS: Record<string, Field> = {
 
 const ERROR_ID = 'nwli-error';
 
-export function LoginForm({ form }: { form: LoginFormState }) {
+interface LoginFormProps {
+  form: LoginFormState;
+  /** The installed app has a Log in / Sign up switch above the card instead. */
+  showSwitchLink?: boolean;
+}
+
+export function LoginForm({ form, showSwitchLink = true }: LoginFormProps) {
   const {
     email,
     setEmail,
@@ -165,12 +171,14 @@ export function LoginForm({ form }: { form: LoginFormState }) {
         )}
       </button>
 
-      <p className="nwli-alt">
-        New to Navigate Wealth?{' '}
-        <Link to="/signup" className="nwli-link">
-          Get started
-        </Link>
-      </p>
+      {showSwitchLink && (
+        <p className="nwli-alt">
+          New to Navigate Wealth?{' '}
+          <Link to="/signup" className="nwli-link">
+            Get started
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

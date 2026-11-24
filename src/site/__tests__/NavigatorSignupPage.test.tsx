@@ -481,9 +481,24 @@ describe('Navigator sign-up page: the board', () => {
     expect(success.closest('[aria-live="polite"]')).not.toBeNull();
   });
 
-  it('the installed PWA keeps its app shell whichever design is live', async () => {
+  it('the installed PWA gets the Navigator app shell around the same form', async () => {
     state.standalone = true;
     await renderSignup('navigator');
+    expect(screen.getByRole('heading', { name: 'Create your account' }).tagName).toBe('H1');
+    expect(document.querySelector('.nwsu .nwap')).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Start your wealth journey today.' })).toBeNull();
+    const nav = screen.getByRole('navigation', { name: 'Log in or create an account' });
+    expect(within(nav).getByRole('link', { name: 'Sign up' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    expect(within(nav).getByRole('link', { name: 'Log in' }).getAttribute('href')).toBe('/login');
+    // The switch replaces the "Already have an account?" line under the form.
+    expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull();
+  });
+
+  it('the installed PWA keeps the legacy app shell when the legacy design is live', async () => {
+    state.standalone = true;
+    await renderSignup('legacy');
     expect(screen.getByRole('heading', { name: 'Create your account' }).tagName).toBe('H2');
     expect(document.querySelector('.nwsu')).toBeNull();
   });

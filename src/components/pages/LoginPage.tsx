@@ -27,15 +27,16 @@ const NavigatorLoginPage = React.lazy(() =>
 /**
  * The log-in page. The build's design switch picks the layout; both run the
  * same sign-in flow from useLoginForm, so they check, call and redirect
- * exactly alike. The installed PWA keeps its app shell (MobileAuthLayout)
- * whichever design is live: there is no Navigator board for it.
+ * exactly alike. The installed PWA gets the Navigator app shell
+ * (NavigatorAppAuthShell) around the same form; the legacy design keeps its
+ * MobileAuthLayout there.
  */
 export function LoginPage() {
   const isStandalone = useIsStandalone();
-  if (SITE_DESIGN === 'navigator' && !isStandalone) {
+  if (SITE_DESIGN === 'navigator') {
     return (
       <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
-        <NavigatorLoginPage />
+        <NavigatorLoginPage inApp={isStandalone} />
       </Suspense>
     );
   }

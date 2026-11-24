@@ -1,0 +1,472 @@
+/*
+ * StatusScreen, in the Navigator design: the error screen, the "new version is
+ * ready" screen and the installed app's 404.
+ *
+ * Same family as the offline screen (offline-screen.css): paper and chart
+ * grid, the sail mark in range rings, a serif title, violet only on the main
+ * action. It renders in the public site, the portal, the admin and the
+ * installed app, none of which can be relied on for `.nw-site`, so the ink,
+ * paper, violet, mark colours and type stacks come from brand-loader.css
+ * (`.nwl-tokens` on the root) and the rest are set below under `--nws-`. Keep
+ * both in step with src/site/styles/navigator.css.
+ *
+ * Every rule hangs off `.nws`, and the root resets the font, colour and line
+ * height it inherits, so the admin and portal themes cannot reach in.
+ * Motion is transforms and opacity only.
+ */
+
+.nws {
+  --nws-white: #ffffff;
+  --nws-paper-3: #fbfaf7;
+  --nws-line: #e2ddd3;
+  --nws-line-soft: #ece7de;
+  --nws-text: #3d4556;
+  --nws-violet-hover: #5b21b6;
+  --nws-violet-tint: #f4f1fb;
+  --nws-success: #15803d;
+  --nws-danger: #b91c1c;
+  --nws-plot: 124px;
+  --nws-accent: var(--nwl-violet);
+
+  color: var(--nwl-ink);
+  font-family: var(--nwl-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: center;
+  -webkit-font-smoothing: antialiased;
+}
+.nws--error {
+  --nws-accent: var(--nws-danger);
+}
+.nws *,
+.nws *::before,
+.nws *::after {
+  box-sizing: border-box;
+}
+
+/* ── Full page: paper and chart grid, safe areas respected ── */
+.nws--page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--nwl-paper);
+}
+.nws-grid {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--nwl-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--nwl-grid) 1px, transparent 1px),
+    linear-gradient(var(--nwl-grid-fine) 1px, transparent 1px),
+    linear-gradient(90deg, var(--nwl-grid-fine) 1px, transparent 1px);
+  background-size:
+    80px 80px,
+    80px 80px,
+    16px 16px,
+    16px 16px;
+  background-position: center;
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 46%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 46%, #000 0%, transparent 100%);
+}
+.nws-center {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(32px + env(safe-area-inset-top, 0px)) 16px
+    calc(32px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ── In a layout's content area: the card alone ── */
+.nws--inline {
+  display: flex;
+  justify-content: center;
+  padding: 56px 16px 72px;
+}
+
+/* ── Card ── */
+.nws-card {
+  width: 100%;
+  max-width: 460px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--nws-white);
+  box-shadow:
+    0 40px 90px -50px rgba(17, 24, 39, 0.45),
+    0 0 0 1px rgba(13, 22, 38, 0.08);
+  animation: nws-rise 0.5s var(--nwl-ease) 60ms both;
+}
+.nws-body {
+  padding: 40px 36px 32px;
+}
+
+/* ── Plot: the sail mark in range rings ── */
+.nws-plot {
+  position: relative;
+  width: var(--nws-plot);
+  height: var(--nws-plot);
+  margin: 0 auto;
+}
+.nws-rings {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.nws-rings circle {
+  fill: none;
+  stroke: var(--nwl-ink);
+}
+.nws-rings .nws-ring-outer {
+  stroke-opacity: 0.22;
+  stroke-dasharray: 1.5 4.5;
+}
+.nws-rings .nws-ring-inner {
+  stroke-opacity: 0.1;
+}
+.nws-rings line {
+  stroke: var(--nwl-ink);
+  stroke-opacity: 0.3;
+  stroke-width: 1;
+}
+.nws-rings line.nws-cardinal {
+  stroke-opacity: 0.6;
+}
+.nws-rings .nws-lubber {
+  fill: var(--nwl-violet);
+}
+/* Off course: north is no longer where we are heading, so it greys out. */
+.nws-plot--lost .nws-lubber {
+  fill: var(--nwl-ink);
+  fill-opacity: 0.35;
+}
+.nws-plot--error .nws-lubber {
+  fill: var(--nws-danger);
+}
+
+.nws-halo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 58%;
+  height: 58%;
+  margin: -29% 0 0 -29%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--nws-violet-tint) 0%, rgba(244, 241, 251, 0) 70%);
+}
+.nws-mark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: auto;
+  height: 44%;
+  transform: translate(-50%, -54%);
+}
+
+/* Update: a refresh arc riding the inner ring, turning slowly. */
+.nws-arc {
+  transform-box: view-box;
+  transform-origin: 66px 66px;
+  animation: nws-turn 6s linear infinite;
+}
+.nws-arc-line {
+  fill: none;
+  stroke: var(--nwl-violet);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.nws-arc-head {
+  fill: var(--nwl-violet);
+}
+
+/* Lost: the heading needle, swung off north, still searching. */
+.nws-needle {
+  transform-box: view-box;
+  transform-origin: 66px 66px;
+  transform: rotate(38deg);
+  animation: nws-swing 4.8s ease-in-out infinite;
+}
+.nws-needle-line {
+  stroke: var(--nwl-violet);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 2 3;
+}
+.nws-needle-head {
+  fill: var(--nwl-violet);
+}
+
+/* Error: a small red badge on the ring. */
+.nws-badge {
+  position: absolute;
+  right: 10%;
+  bottom: 10%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--nws-danger);
+  box-shadow: 0 0 0 4px var(--nws-white);
+}
+.nws-badge svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+/* ── Words ── */
+.nws-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 26px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nwl-muted);
+}
+.nws-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--nws-accent);
+}
+.nws .nws-title {
+  margin: 10px 0 0;
+  font-family: var(--nwl-serif);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.012em;
+  color: var(--nwl-ink);
+  text-wrap: balance;
+}
+.nws-lead {
+  max-width: 36ch;
+  margin: 12px auto 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--nwl-muted);
+  text-wrap: pretty;
+}
+.nws-lead p {
+  margin: 0;
+}
+.nws-lead p + p {
+  margin-top: 8px;
+}
+
+/* ── Actions: violet for the one that matters, outlined for the rest ── */
+.nws-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 28px 0 0;
+}
+.nws .nws-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  margin: 0;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--nwl-violet);
+  color: #ffffff;
+  font-family: var(--nwl-sans);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  transition:
+    background-color 0.25s var(--nwl-ease),
+    border-color 0.25s var(--nwl-ease),
+    transform 0.15s var(--nwl-ease);
+}
+.nws .nws-btn:hover {
+  background: var(--nws-violet-hover);
+}
+.nws .nws-btn--quiet {
+  background: var(--nws-white);
+  color: var(--nwl-ink);
+  box-shadow: inset 0 0 0 1px var(--nws-line);
+}
+.nws .nws-btn--quiet:hover {
+  background: var(--nws-paper-3);
+  box-shadow: inset 0 0 0 1px var(--nwl-ink);
+}
+.nws .nws-btn:active {
+  transform: translateY(1px);
+}
+.nws .nws-btn:focus-visible {
+  outline: 2px solid var(--nwl-violet);
+  outline-offset: 2px;
+}
+.nws .nws-btn svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+}
+
+/* ── Technical details, folded away ── */
+.nws-details {
+  margin: 20px 0 0;
+  text-align: left;
+  font-size: 13px;
+  color: var(--nwl-muted);
+}
+.nws-details summary {
+  display: inline-block;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--nws-text);
+  text-decoration: underline;
+  text-decoration-color: var(--nws-line);
+  text-underline-offset: 3px;
+}
+.nws-details summary:focus-visible {
+  outline: 2px solid var(--nwl-violet);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.nws-details-body {
+  margin-top: 10px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--nws-line);
+  border-radius: 4px;
+  background: var(--nws-paper-3);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--nws-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.nws-details-body strong {
+  display: block;
+  color: var(--nwl-ink);
+}
+.nws-details-body strong + * {
+  margin-top: 6px;
+}
+
+/* ── Reassurance ── */
+.nws-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 36px 18px;
+  border-top: 1px solid var(--nws-line-soft);
+  background: var(--nws-paper-3);
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--nwl-muted);
+}
+.nws-note svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--nws-success);
+}
+.nws-note strong {
+  font-weight: 600;
+  color: var(--nwl-ink);
+}
+
+.nws-sig {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 24px 0 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--nwl-muted);
+}
+.nws-sig-name {
+  color: var(--nwl-ink);
+}
+.nws-sig-dot {
+  opacity: 0.5;
+}
+
+@keyframes nws-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes nws-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes nws-swing {
+  0%,
+  100% {
+    transform: rotate(38deg);
+  }
+  50% {
+    transform: rotate(26deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nws-card {
+    animation: none;
+  }
+  .nws-arc,
+  .nws-needle {
+    animation: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .nws {
+    --nws-plot: 108px;
+  }
+  .nws-body {
+    padding: 32px 22px 24px;
+  }
+  .nws .nws-title {
+    font-size: 26px;
+  }
+  .nws-lead {
+    font-size: 14.5px;
+  }
+  .nws-note {
+    padding: 14px 22px 16px;
+  }
+  .nws--inline {
+    padding: 32px 16px 48px;
+  }
+}
