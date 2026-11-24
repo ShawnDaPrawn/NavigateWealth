@@ -21,8 +21,7 @@
  * The rest pin the behaviour of the fix:
  *   - an unguarded sub-router gets the shared handler (structured JSON 500 with
  *     telemetry, instead of Hono's bare "Internal Server Error" text);
- *   - a sub-router that set its OWN handler keeps it (honeycomb-routes.ts is
- *     the one such router today) — silently clobbering another module's
+ *   - a sub-router that set its OWN handler keeps it — silently clobbering another module's
  *     explicit choice is the class of bug this work exists to remove;
  *   - the private-field sentinel that distinguishes those two cases still works
  *     against the installed Hono, so a Hono upgrade that renames `errorHandler`

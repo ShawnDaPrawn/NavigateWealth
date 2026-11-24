@@ -189,17 +189,11 @@ describe('ClientProfileViewerFull', () => {
     expect(within(card).getByText('Same as residential address')).toBeTruthy();
   }, 30000);
 
-  // The fixture predates the compliance and planning fields entirely, which is
-  // what every existing client's record looks like until someone fills them in.
-  it('shows compliance for a client with nothing recorded yet', async () => {
-    renderClientProfileViewer('/?psec=compliance');
-    const card = await screen.findByRole('region', { name: 'Compliance' });
-    expect(within(card).getByText('Client risk rating not set.')).toBeTruthy();
-    expect(within(card).getByText('Sanctions screening not recorded.')).toBeTruthy();
-    expect(within(card).getByText('No tax residency declared.')).toBeTruthy();
-    fireEvent.click(within(card).getByRole('button', { name: 'Edit' }));
-    expect(await screen.findByText('Compliance review')).toBeTruthy();
-    expect(screen.getByText('Compliance declarations')).toBeTruthy();
+  it('has no compliance section: the compliance record lives in the Compliance tab', async () => {
+    renderClientProfileViewer('/?psec=personal');
+    const rail = await screen.findByRole('navigation', { name: 'Personal details sections' });
+    expect(within(rail).queryByRole('button', { name: 'Compliance' })).toBeNull();
+    expect(within(rail).getByRole('button', { name: 'KYC' })).toBeTruthy();
   }, 30000);
 
   it('shows planning for a client with nothing recorded yet', async () => {

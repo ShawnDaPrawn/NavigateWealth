@@ -164,9 +164,20 @@ stated prerequisite has already caused a production outage once.
   rebuilt from scratch: the page (`src/components/admin/modules/compliance/`)
   renders only a heading, and the `/compliance/*` edge API and
   `compliance-service.ts` are removed. Records the old API wrote are still in
-  the KV store, untouched. The client and personnel drawers' Compliance tabs,
-  Honeycomb and the goAML digest are separate and unaffected. Do not restore
-  the old module or its API in passing.
+  the KV store, untouched. The personnel drawer's Compliance tab and the goAML
+  digest are separate and unaffected; the client drawer's Compliance tab is
+  the client compliance record (see below). Do not restore the old module or
+  its API in passing.
+- **Honeycomb/Beeswax is gone (owner's decision, 2026-11-24): "not a workable
+  solution."** The client drawer's Compliance tab used to run Honeycomb checks
+  (registration, identity, CDD, financial intelligence, corporate, sanctions,
+  address, Beeswax risk assessments, dossier export). All of it is removed:
+  the panels, `RiskAssessmentPanel`, the `/integrations/honeycomb` routes and
+  the server `honeycomb/` folder, plus a fake "sanctions screening" hook that
+  reported "No matches found" after a timer without checking anything.
+  Records those checks wrote are still in the KV store, unread. The
+  `HONEYCOMB_API_KEY` secret is no longer read and can be deleted by the
+  operator. Do not bring Honeycomb back in passing.
 - **Policy details have two write paths, on purpose.** The native path, the
   portal worker and the Review tab's template upload, stages a run that an
   adviser publishes. The portfolio table, the Integrations **Portfolio** tab's
@@ -269,8 +280,9 @@ stated prerequisite has already caused a production outage once.
   "save mode" block of `client-management-profile-routes.contract.test.ts`.
   Any new caller that sends part of a record must send `merge`.
 - **The client compliance record is a hand-over seam (2026-11-24).** The
-  profile's Compliance section (portal: "Compliance & Consent"; admin:
-  "Compliance") stores two keys on `user_profile:{id}:personal_info`:
+  client fills it in from the portal (Profile → "Compliance & Consent"); staff
+  see and edit it in the client drawer's **Compliance tab** (Overview, Client
+  declarations, Compliance review), not under Personal details. It stores two keys on `user_profile:{id}:personal_info`:
   `complianceDeclarations` (PEP, source of funds and wealth, tax residency,
   FATCA, consents — the client and staff edit it) and `complianceReview`
   (risk rating, sanctions screening, KYC review dates — staff only). The
@@ -379,8 +391,8 @@ IDs: [`archive/2026-06-security-audit.md`](archive/2026-06-security-audit.md).
   triggering the platform-sealed completion. Nothing called them; they are
   deleted, with their dead SPA wrappers.
 - **Staff-only routers any client could use.** Honeycomb KYC/AML (paid checks
-  and the raw `/proxy` under the firm's API key, plus every client's results),
-  website submissions (every lead, plus firm-branded `/invite` email to any
+  and the raw `/proxy` under the firm's API key, plus every client's results;
+  since removed altogether), website submissions (every lead, plus firm-branded `/invite` email to any
   address), newsletter subscriber admin, policy extraction (other clients'
   extracted policies, paid bulk re-extraction) and saved retirement scenarios
   were `requireAuth`. All are `requireAdmin`; every caller is in the admin
@@ -661,8 +673,8 @@ is work not yet done, not budget.
   `/publications/press/{config,stats}` are no longer read and can be removed.
 
 - **The Edge Function source is still mostly flat** (440+ files in one
-  directory), organised by filename prefix. `advice-engine/`, `honeycomb/` and
-  `social/` were the first prefixes moved into folders (2026-10-08), alongside
+  directory), organised by filename prefix. `advice-engine/`, `honeycomb/` (since
+  removed) and `social/` were the first prefixes moved into folders (2026-10-08), alongside
   the older `locked/`, `quote-verticals/` and `repositories/`. Split one prefix
   per PR, lowest fan-in first; `esign-*`, `integrations-*` and `client-*` have
   the most inbound imports and test paths and are the expensive ones. See

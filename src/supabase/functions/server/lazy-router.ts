@@ -100,7 +100,8 @@ function usesHonoDefaultErrorHandler(router: HonoErrorSurface): boolean {
  * Two deliberate properties:
  *
  *  - A router that already called `.onError(...)` KEEPS its own handler
- *    (honeycomb-routes.ts is the one such router today). Silently overwriting
+ *    (none does today; the Honeycomb router did until its removal in 2026-11).
+ *    Silently overwriting
  *    another module's explicit choice is precisely the class of bug this work
  *    exists to remove.
  *  - `error.middleware.ts` is imported DYNAMICALLY, not at the top of this

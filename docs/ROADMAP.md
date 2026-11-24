@@ -351,7 +351,8 @@ authorization adapters over `auth-mw` rather than parallel verifiers.
 ### 5.2 Split the god services along the layering (§3.2)
 
 Current worst, re-measured: `resources-service.ts` (1,725),
-`honeycomb-service.ts` (1,613), `quote-request-routes.ts` (1,580),
+`quote-request-routes.ts` (1,580) (`honeycomb-service.ts`, 1,613, was removed
+with Honeycomb on 2026-11-24),
 `ai-advisor.ts` (1,443), `communication-service.ts` (1,387),
 `integrations-portal-worker-routes.ts` (1,142). Split by responsibility, not
 line count — each becomes `*-routes` (transport) + `*-service` (logic) +
