@@ -65,7 +65,7 @@ export default function PortalProfileFields({
             )
           }
         />
-        Use for broker operations
+        Use for broker reporting
       </label>
       {profile && (
         <>

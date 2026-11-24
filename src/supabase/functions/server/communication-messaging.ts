@@ -200,6 +200,8 @@ export async function sendMessage(
           // "Email sent successfully" and stored as sent_via_email: true. That
           // is the reason a communication could appear sent and never arrive.
           await sendEmail({
+            kind: data.campaignId ? 'campaign' : 'direct_message',
+            batchId: data.campaignId,
             to: data.recipientEmail,
             cc: ccNormalized.accepted.length > 0 ? ccNormalized.accepted : undefined,
             subject: resolvedSubject,

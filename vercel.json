@@ -111,6 +111,14 @@
       "source": "/.well-known/oauth-protected-resource/mcp/broker-operations",
       "destination": "/broker-resource.json"
     },
+    {
+      "source": "/mcp/password-vault",
+      "destination": "https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/mcp/password-vault"
+    },
+    {
+      "source": "/.well-known/oauth-protected-resource/mcp/password-vault",
+      "destination": "/vault-resource.json"
+    },
     { "source": "/.well-known/oauth-authorization-server", "destination": "/broker-issuer.json" },
     {
       "source": "/(.*)",

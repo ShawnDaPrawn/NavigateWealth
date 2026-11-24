@@ -207,7 +207,7 @@ async function notifyExpiry(
       'envelope.expired',
     );
     if (decision.deliver) {
-      await sendEmail({ to: senderEmail, subject, html, text });
+      await sendEmail({ to: senderEmail, subject, html, text, kind: 'esign_expired' });
       log.info(`Expiry notification sent to ${senderEmail} for envelope ${envelope.id}`);
     } else if (decision.digest) {
       await queueForDigest({

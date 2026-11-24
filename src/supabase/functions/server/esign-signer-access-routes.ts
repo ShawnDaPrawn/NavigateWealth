@@ -278,6 +278,7 @@ app.post('/signer/validate', rateLimit('SIGNER_ACCESS'), async (c) => {
           });
 
           await sendEmail({
+            kind: 'esign_code',
             to: signer.email,
             subject: `Verification Code: ${envelope.title}`,
             html: emailContent.html,

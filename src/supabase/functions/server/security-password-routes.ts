@@ -227,6 +227,7 @@ Didn't expect this? Contact us immediately.
           `.trim();
 
           await sendEmail({
+            kind: 'password_reset',
             to: deliverTo,
             subject: 'Your Password Has Been Reset',
             html: emailHtml,
@@ -251,6 +252,7 @@ Didn't expect this? Contact us immediately.
         );
         const footerSettings = await getFooterSettings();
         await sendEmail({
+          kind: 'password_reset',
           to: deliverTo,
           subject: 'Your Navigate Wealth password was reset',
           html: createEmailTemplate(

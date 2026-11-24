@@ -517,6 +517,7 @@ app.post(
       // Client confirmation email — the custom from address rides
       // email-core's EmailParams, so this follows the provider switch too.
       sendEmail({
+        kind: 'consultation_ack',
         to: email,
         subject: 'Consultation Request Received — Navigate Wealth',
         text: createPlainTextEmail(`Consultation Request Received\n\n${clientContent}`),
@@ -533,6 +534,7 @@ app.post(
 
       // Admin notification email via shared sendEmail (no custom headers needed)
       sendEmail({
+        kind: 'consultation_alert',
         to: 'info@navigatewealth.co',
         subject: `New Consultation Request: ${name}`,
         html: createEmailTemplate(adminContent, {

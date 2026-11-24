@@ -179,6 +179,7 @@ app.post(
       });
 
       const emailSent = await sendEmail({
+        kind: 'esign_code',
         to: signer.email,
         subject: `Verification Code: ${envelopeTitle}`,
         html: emailContent.html,

@@ -57,6 +57,7 @@ Security Tip: Never share this code with anyone. Navigate Wealth will never ask 
   `.trim();
 
   return await sendEmail({
+    kind: 'two_factor_code',
     to,
     subject: `${code} — Your Navigate Wealth Verification Code`,
     html,
@@ -111,6 +112,7 @@ export async function sendRequestInfoEmail(params: {
   );
 
   return await sendEmail({
+    kind: 'request_info',
     to,
     subject,
     html,
@@ -231,6 +233,7 @@ Admin Dashboard: https://www.navigatewealth.co/admin
   `.trim();
 
   return await sendEmail({
+    kind: 'contact_form_alert',
     to: 'info@navigatewealth.co',
     subject,
     html,
@@ -289,6 +292,7 @@ Navigate Wealth
   `.trim();
 
   return await sendEmail({
+    kind: 'job_application_ack',
     to: data.email,
     subject: 'We received your application — Navigate Wealth',
     html,
@@ -356,6 +360,7 @@ Navigate Wealth
   `.trim();
 
   return await sendEmail({
+    kind: 'contact_form_ack',
     to: data.email,
     subject,
     html,

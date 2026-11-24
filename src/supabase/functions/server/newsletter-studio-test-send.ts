@@ -59,6 +59,7 @@ export async function sendCampaignTestEmails(
         footerSettings,
       });
       await sendEmail({
+        kind: 'newsletter_test',
         to: email,
         subject: `[TEST] ${campaign.title}`,
         html,

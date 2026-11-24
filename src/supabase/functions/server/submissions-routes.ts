@@ -102,6 +102,7 @@ app.post(
     const text = `${greeting}\n\nYou've been invited to complete a request on Navigate Wealth.\n\nClick here to get started: ${formUrl}\n\n${personalMessage ? `Personal note: ${personalMessage}\n\n` : ''}Navigate Wealth | FSP 54606 | info@navigatewealth.co`;
 
     const sent = await sendEmail({
+      kind: 'request_invitation',
       to: recipientEmail,
       subject: emailSubject || "You're Invited — Navigate Wealth",
       html,

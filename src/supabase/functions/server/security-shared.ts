@@ -437,6 +437,7 @@ export async function sendEmailChangeInitiatedNotice(
   ].join('\n\n');
 
   const sent = await sendEmail({
+    kind: 'email_change_notice',
     to: currentEmail,
     subject: 'Navigate Wealth security notice: email change requested',
     html,
@@ -480,6 +481,7 @@ export async function sendEmailChangeCodeEmail(
   ].join('\n\n');
 
   const sent = await sendEmail({
+    kind: 'email_change_code',
     to: targetEmail,
     subject: `Navigate Wealth email change code: ${destinationLabel}`,
     html,
@@ -520,6 +522,7 @@ export async function sendEmailChangeCompletedNotice(oldEmail: string, newEmail:
   const results = await Promise.all(
     recipients.map((to) =>
       sendEmail({
+        kind: 'email_change_notice',
         to,
         subject: 'Navigate Wealth sign-in email updated',
         html,

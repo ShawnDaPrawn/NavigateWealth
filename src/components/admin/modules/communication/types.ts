@@ -258,6 +258,12 @@ export interface CommunicationLog {
   /** Addresses copied on the email. */
   cc?: string[];
   attachments?: AttachmentFile[];
+  /**
+   * An email the platform sent on its own (birthday greeting, newsletter,
+   * e-sign…), read from the email delivery log. Read-only: not deletable.
+   */
+  automated?: boolean;
+  email_kind?: string;
 }
 
 /** Paginated communication history from GET /communication/campaigns */
@@ -266,12 +272,35 @@ export interface CampaignHistorySenderOption {
   label: string;
 }
 
+/** An email kind that has been sent, for the History's type filter. */
+export interface HistoryKindOption {
+  kind: string;
+  label: string;
+  audience: string;
+  sends: number;
+}
+
 export interface CampaignHistoryPageResult {
   entries: ActivityLogEntry[];
   total: number;
   page: number;
   limit: number;
   senderOptions: CampaignHistorySenderOption[];
+  kindOptions: HistoryKindOption[];
+  /** The email log could not be read; only campaigns are listed. */
+  deliveryLogUnavailable?: boolean;
+}
+
+/** One email inside a logged send (a newsletter recipient, or the one email). */
+export interface DeliveryRecord {
+  id: string;
+  createdAt: string;
+  kind: string;
+  recipient: string;
+  subject: string;
+  status: 'sent' | 'failed';
+  error: string | null;
+  providerMessageId: string | null;
 }
 
 export interface ActivityLogEntry {
@@ -291,8 +320,20 @@ export interface ActivityLogEntry {
   attachmentCount: number;
   templateUsed?: string;
   status: CommunicationStatus;
-  /** Individual client message vs Communication Centre campaign. */
-  origin: 'campaign' | 'direct';
+  /**
+   * Individual client message, Communication Centre campaign, or an email the
+   * platform sent on its own (newsletter, article notification, birthday
+   * greeting, e-sign, security, onboarding, staff digest).
+   */
+  origin: 'campaign' | 'direct' | 'automated';
+  /** For `automated` rows: the email kind (src/shared/email/emailKinds.ts). */
+  kind?: string;
+  /** For `automated` rows: the key that lists this send's individual emails. */
+  deliveryGroupKey?: string;
+  /** For a single `automated` email: who it went to. */
+  recipientEmail?: string;
+  /** Provider message id, for tracing a single email in SendGrid / SES. */
+  providerMessageId?: string;
   /** Delivery counts, when the send has actually run. */
   stats?: { sent: number; failed: number; total: number };
   /** CC'd addresses on the envelope. */

@@ -468,7 +468,10 @@ export async function processScheduledCampaigns() {
         });
         const textBody = stripHtml(resolveMergeFields(campaign.bodyHtml, recipient));
         try {
-          await sendEmail(recipient.email, subject, htmlBody, textBody, sendGridAttachments);
+          await sendEmail(recipient.email, subject, htmlBody, textBody, sendGridAttachments, {
+            kind: 'campaign',
+            batchId: campaign.id,
+          });
 
           // Log to KV Store instead of missing table
           const msgId = crypto.randomUUID();
