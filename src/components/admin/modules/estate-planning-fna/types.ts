@@ -259,6 +259,8 @@ export interface DeathBalanceSheet {
     dutyAtUpperRate?: number;
     upperRateThreshold?: number;
     upperRate?: number;
+    /** Part of estimatedEstateDuty recoverable from policy beneficiaries (s13). */
+    dutyRecoverableFromBeneficiaries?: number;
   };
 
   // Capital Gains Tax on Death

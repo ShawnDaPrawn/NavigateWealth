@@ -371,6 +371,7 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
     upperRateThreshold: duty.threshold,
     upperRate: duty.upperRate,
     estimatedEstateDuty,
+    dutyRecoverableFromBeneficiaries: dutyOnNominatedPolicies,
   };
 
   // Net Estate for Heirs: the estate bears the duty on its own assets; the
@@ -466,7 +467,13 @@ function analyzeLiquidity(
   const liquidityRequired = {
     liabilities: balanceSheet.liabilities.total,
     administrationCosts: balanceSheet.administrationCosts.total,
-    estateDuty: balanceSheet.estateDuty.estimatedEstateDuty,
+    // s13: duty on policies paid to beneficiaries is recovered from them, so
+    // the estate only needs cash for the duty on its own assets.
+    estateDuty: Math.max(
+      0,
+      balanceSheet.estateDuty.estimatedEstateDuty -
+        (balanceSheet.estateDuty.dutyRecoverableFromBeneficiaries ?? 0),
+    ),
     cgt: balanceSheet.cgtOnDeath.estimatedCGT,
     cashBequests: 0, // Could be added from will info
     total: 0,

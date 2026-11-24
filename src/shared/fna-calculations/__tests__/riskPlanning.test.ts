@@ -263,6 +263,51 @@ describe('calculateDisabilityCover', () => {
     expect(r.capitalisedIncomeLoss.total).toBeCloseTo(12_175_906.2642 - 5_534_502.8474, 2);
   });
 
+  it("capitalises existing income protection at the policy's own escalation", () => {
+    // Net income R20,000 a month; R20,000 a month permanent IP; 30 years.
+    const withIP = (
+      escalation: RiskCalculationInput['incomeProtectionSettings']['permanent']['escalation'],
+    ) =>
+      calculateDisabilityCover(
+        input({
+          netMonthlyIncome: 20_000,
+          netAnnualIncome: 240_000,
+          existingCover: {
+            ...input().existingCover,
+            incomeProtection: {
+              temporary: { personal: 0, group: 0 },
+              permanent: { personal: 20_000, group: 0 },
+            },
+          },
+          incomeProtectionSettings: {
+            temporary: { benefitPeriod: '12-months' },
+            permanent: { escalation },
+          },
+        }),
+      ).capitalisedIncomeLoss;
+
+    // Level: Σ 240,000 × (1/1.1)^k, k = 0..29 = 240,000 × (1 − 1.1^−30) / (1 − 1/1.1)
+    const levelPV = (240_000 * (1 - Math.pow(1.1, -30))) / (1 - 1 / 1.1);
+    const level = withIP('level');
+    expect(level.permanentIPOffset).toBeCloseTo(levelPV, 4);
+    expect(level.permanentIPOffset).toBeCloseTo(2_488_705.4193, 3);
+    // The rest of the R4.43m income need stays uninsured.
+    expect(level.total).toBeCloseTo((level.grossCapitalisedLoss ?? 0) - levelPV, 4);
+    expect(level.total).toBeGreaterThan(1_900_000);
+
+    // Fixed 3%: v = 1.03/1.1
+    const v3 = 1.03 / 1.1;
+    expect(withIP('fixed-3').permanentIPOffset).toBeCloseTo(
+      (240_000 * (1 - Math.pow(v3, 30))) / (1 - v3),
+      4,
+    );
+
+    // CPI-linked escalates with the income escalation assumption and offsets it all.
+    const cpi = withIP('cpi-linked');
+    expect(cpi.permanentIPOffset).toBeCloseTo(cpi.grossCapitalisedLoss ?? Number.NaN, 4);
+    expect(cpi.total).toBeCloseTo(0, 4);
+  });
+
   it('does not depend on the number of dependants', () => {
     const none = calculateDisabilityCover(input());
     const many = calculateDisabilityCover(

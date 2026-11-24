@@ -367,6 +367,22 @@ export function presentValueOfEscalatingAnnuity(
   return (firstPayment * (1 - Math.pow(v, years))) / (1 - v);
 }
 
+/**
+ * Yearly escalation of an existing income protection benefit, from the policy's
+ * escalation option: level 0%, fixed N%, CPI-linked at the income escalation
+ * assumption (the analysis's inflation proxy). Unknown or missing options are
+ * treated as CPI-linked, the form's default.
+ */
+export function ipBenefitEscalationRate(
+  escalation: IPEscalationType | undefined,
+  cpiProxy: number,
+): number {
+  if (escalation === 'level') return 0;
+  const fixed = /^fixed-(\d+)$/.exec(escalation ?? '');
+  if (fixed) return Number(fixed[1]) / 100;
+  return cpiProxy;
+}
+
 /** The assumptions a calculation uses, with defaults for inputs saved before 3.0.0. */
 export function resolveRiskAssumptions(
   input: Partial<RiskCalculationInput>,
@@ -677,13 +693,18 @@ export function calculateDisabilityCover(input: RiskCalculationInput): Disabilit
     a.incomeEscalation,
   );
   const permanentIPMonthly = coverPair(input.existingCover?.incomeProtection?.permanent).total;
+  const permanentIPEscalationType = input.incomeProtectionSettings?.permanent?.escalation;
+  const permanentIPEscalation = ipBenefitEscalationRate(
+    permanentIPEscalationType,
+    a.incomeEscalation,
+  );
   const permanentIPOffset = Math.min(
     grossCapitalisedLoss,
     presentValueOfEscalatingAnnuity(
       permanentIPMonthly * 12,
       termYears,
       a.investmentReturn,
-      a.incomeEscalation,
+      permanentIPEscalation,
     ),
   );
   const capitalisedTotal = Math.max(0, grossCapitalisedLoss - permanentIPOffset);
@@ -722,9 +743,9 @@ export function calculateDisabilityCover(input: RiskCalculationInput): Disabilit
     )} a year for ${termYears} years (to age ${num(input.retirementAge)}) = ${rand(
       grossCapitalisedLoss,
     )}`,
-    `Less existing permanent income protection ${rand(permanentIPMonthly)} a month, capitalised = ${rand(
-      permanentIPOffset,
-    )}`,
+    `Less existing permanent income protection ${rand(permanentIPMonthly)} a month, escalating at ${pct(
+      permanentIPEscalation,
+    )} a year, capitalised = ${rand(permanentIPOffset)}`,
     `Capitalised income loss: ${rand(capitalisedTotal)} (${capitalisedIncomeLoss.disabilityMultiple}× net income)`,
     `Once-off costs: vehicle adaptation ${rand(DISABILITY_COVER.VEHICLE_ADAPTATION)}, medical equipment ${rand(
       DISABILITY_COVER.MEDICAL_EQUIPMENT,

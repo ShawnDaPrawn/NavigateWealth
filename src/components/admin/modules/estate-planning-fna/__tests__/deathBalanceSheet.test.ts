@@ -183,6 +183,29 @@ describe('deemed property paid to nominated beneficiaries (s3(3)(a))', () => {
     expect(sheet.netEstateForHeirs).toBeCloseTo(1_919_500 - (283_900 - onPolicy), 4);
   });
 
+  it('charges estate liquidity only with the duty the estate bears', () => {
+    const onPolicy = (283_900 * 3_000_000) / 4_919_500;
+    expect(sheet.estateDuty.dutyRecoverableFromBeneficiaries).toBeCloseTo(onPolicy, 4);
+    expect(results.liquidityAnalysis.liquidityRequired.estateDuty).toBeCloseTo(
+      283_900 - onPolicy,
+      4,
+    );
+  });
+
+  it('reports no estate shortfall when all the duty falls on a nominated policy', () => {
+    // No estate assets or costs; a R10m policy to a nominated beneficiary.
+    // Dutiable 10,000,000 − 3,500,000 = 6,500,000 × 20% = 1,300,000, all recoverable (s13).
+    const r = calc(makeInputs({ lifePolicies: [policy(10_000_000)] }));
+    expect(r.deathBalanceSheet.estateDuty.estimatedEstateDuty).toBeCloseTo(1_300_000, 6);
+    expect(r.deathBalanceSheet.estateDuty.dutyRecoverableFromBeneficiaries).toBeCloseTo(
+      1_300_000,
+      6,
+    );
+    expect(r.liquidityAnalysis.liquidityRequired.estateDuty).toBeCloseTo(0, 6);
+    expect(r.liquidityAnalysis.liquidityShortfall).toBe(0);
+    expect(r.liquidityAnalysis.liquidityRisk).toBe('none');
+  });
+
   it('gives a policy paid to a spouse the s4(q) deduction', () => {
     // 2,000,000 + 3,000,000 = 5,000,000 − 3,000,000 spouse − 3,500,000 → 0 dutiable
     const married = calc(
