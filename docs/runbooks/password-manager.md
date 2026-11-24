@@ -4,7 +4,7 @@ The password manager keeps brokerage-wide and personal logins encrypted, and let
 
 ## Opening it
 
-Account menu → **Password manager**. The vault opens only for a session that has just passed two-factor (the email code the platform already uses) and locks again after 15 idle minutes. A super admin without two-factor is asked to turn it on first.
+Account menu → **Password manager**. The vault opens only for a session that has just passed two-factor (the email code the platform already uses) and locks again after 15 idle minutes. Super admins skip both: a super-admin sign-in opens the vault straight away, with no code and no idle lock (owner's request, 2026-11-24). Every vault route already requires super admin, so in practice the code step applies only if that role check is ever widened.
 
 ## Keys and storage
 

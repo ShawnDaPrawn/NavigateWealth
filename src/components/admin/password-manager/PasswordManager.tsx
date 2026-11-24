@@ -55,7 +55,12 @@ export default function PasswordManager({
       .catch((e) => {
         if (!active) return;
         if (isVaultLocked(e))
-          setLockState({ unlocked: false, twoFactorEnabled: true, expiresAt: null });
+          setLockState({
+            unlocked: false,
+            twoFactorEnabled: true,
+            twoFactorRequired: true,
+            expiresAt: null,
+          });
         else setStatusError(errorMessage(e, 'Check your access and try again.'));
       });
     return () => {
@@ -69,7 +74,7 @@ export default function PasswordManager({
         setLockState((state) =>
           state
             ? { ...state, unlocked: false, expiresAt: null }
-            : { unlocked: false, twoFactorEnabled: true, expiresAt: null },
+            : { unlocked: false, twoFactorEnabled: true, twoFactorRequired: true, expiresAt: null },
         ),
       ),
     [],
@@ -121,7 +126,7 @@ export default function PasswordManager({
             </DialogDescription>
           </div>
           <div className="flex gap-2">
-            {unlocked && (
+            {unlocked && lockState?.twoFactorRequired !== false && (
               <Button
                 variant="outline"
                 onClick={() => {

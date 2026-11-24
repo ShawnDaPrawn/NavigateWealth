@@ -148,11 +148,17 @@ export interface CollectionInput {
 /**
  * The vault opens only for a session that passed two-factor in the last five
  * minutes (the existing `/security/:userId/2fa/send-code` + `verify-code`
- * flow), then stays open while used and locks after 15 idle minutes.
+ * flow), then stays open while used and locks after 15 idle minutes. Super
+ * admins skip the code and the idle lock (see `twoFactorRequired`).
  */
 export interface VaultLockState {
   unlocked: boolean;
   twoFactorEnabled: boolean;
+  /**
+   * False for a super admin, who opens the vault without a code and is never
+   * locked out for idling; true for everyone else.
+   */
+  twoFactorRequired: boolean;
   /** When the vault locks if left idle. */
   expiresAt: string | null;
 }
