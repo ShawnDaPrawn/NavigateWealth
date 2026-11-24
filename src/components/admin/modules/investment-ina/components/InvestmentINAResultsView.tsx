@@ -1,5 +1,5 @@
 /**
- * Investment Needs Analysis Results View
+ * Investment Goals Results View
  * Displays detailed INA results with goal breakdowns
  */
 
@@ -73,7 +73,7 @@ export function InvestmentINAResultsView({
       {/* Header */}
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl">Investment Needs Analysis Results</h2>
+          <h2 className="text-2xl">Investment Goals Results</h2>
           <p className="text-muted-foreground">
             Version {session.version} • {session.status === 'published' ? 'Published' : 'Draft'} •{' '}
             {new Date(session.createdAt).toLocaleDateString()}

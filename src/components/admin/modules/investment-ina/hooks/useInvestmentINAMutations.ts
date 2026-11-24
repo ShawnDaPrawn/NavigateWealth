@@ -29,7 +29,7 @@ export function useInvestmentINAMutations() {
       InvestmentINAFnaAPI.calculateINA(clientId, inputs),
     onError: (error) => {
       console.error('useInvestmentINAMutations — calculate failed:', error);
-      toast.error('Failed to calculate Investment INA');
+      toast.error('Failed to calculate the goals analysis');
     },
   });
 
@@ -44,12 +44,12 @@ export function useInvestmentINAMutations() {
         queryKey: INVESTMENT_INA_QUERY_KEYS.latestPublished(variables.clientId),
       });
       const action = variables.status === 'published' ? 'published' : 'saved as draft';
-      toast.success(`Investment INA ${action} successfully`);
+      toast.success(`Goals analysis ${action} successfully`);
     },
     onError: (error, variables) => {
       console.error('useInvestmentINAMutations — saveSession failed:', error);
       const action = variables.status === 'published' ? 'publish' : 'save';
-      toast.error(`Failed to ${action} Investment INA`);
+      toast.error(`Failed to ${action} the goals analysis`);
     },
   });
 
@@ -58,11 +58,11 @@ export function useInvestmentINAMutations() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: INVESTMENT_INA_QUERY_KEYS.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: INVESTMENT_INA_QUERY_KEYS.all });
-      toast.success('Investment INA published successfully');
+      toast.success('Goals analysis published successfully');
     },
     onError: (error) => {
       console.error('useInvestmentINAMutations — publish failed:', error);
-      toast.error('Failed to publish Investment INA');
+      toast.error('Failed to publish the goals analysis');
     },
   });
 
@@ -71,11 +71,11 @@ export function useInvestmentINAMutations() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: INVESTMENT_INA_QUERY_KEYS.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: INVESTMENT_INA_QUERY_KEYS.all });
-      toast.success('Investment INA unpublished — reverted to draft');
+      toast.success('Goals analysis unpublished — reverted to draft');
     },
     onError: (error) => {
       console.error('useInvestmentINAMutations — unpublish failed:', error);
-      toast.error('Failed to unpublish Investment INA');
+      toast.error('Failed to unpublish the goals analysis');
     },
   });
 
@@ -83,11 +83,11 @@ export function useInvestmentINAMutations() {
     mutationFn: (sessionId: string) => InvestmentINAFnaAPI.deleteSession(sessionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: INVESTMENT_INA_QUERY_KEYS.all });
-      toast.success('Investment INA deleted');
+      toast.success('Goals analysis deleted');
     },
     onError: (error) => {
       console.error('useInvestmentINAMutations — delete failed:', error);
-      toast.error('Failed to delete Investment INA');
+      toast.error('Failed to delete the goals analysis');
     },
   });
 

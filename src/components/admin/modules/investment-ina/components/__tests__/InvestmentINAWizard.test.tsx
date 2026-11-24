@@ -76,7 +76,7 @@ describe('InvestmentINAWizard', () => {
     render(<InvestmentINAWizard open onClose={noop} clientId="c-1" clientName="Jane" />);
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { level: 1, name: 'Investment Needs Analysis' })),
+      expect(screen.getByRole('heading', { level: 1, name: 'Investment Goals' })),
     );
     expect(screen.getByText('Information gathering')).toBeTruthy();
     expect(screen.getByText('System auto-calculation')).toBeTruthy();

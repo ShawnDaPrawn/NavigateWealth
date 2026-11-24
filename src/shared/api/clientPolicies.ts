@@ -21,7 +21,7 @@
  */
 import type { QueryClient } from '@tanstack/react-query';
 import { api } from '@/utils/api';
-import { clientGoalKeys, clientPolicyKeys, policySchemaKeys } from '@/utils/queryKeys';
+import { clientPolicyKeys, policySchemaKeys } from '@/utils/queryKeys';
 
 /** The fields every policy row carries; callers narrow to their own row type. */
 export interface ClientPolicyRow {
@@ -135,22 +135,4 @@ export function policySchemasQueryOptions() {
 /** Call after editing any category's schema. */
 export function invalidatePolicySchemas(queryClient: QueryClient) {
   return queryClient.invalidateQueries({ queryKey: policySchemaKeys.all });
-}
-
-// ── Goals ───────────────────────────────────────────────────────────────────
-
-export function clientGoalsQueryOptions<TGoal>(clientId: string) {
-  return {
-    queryKey: clientGoalKeys.client(clientId),
-    queryFn: async (): Promise<TGoal[]> => {
-      const data = await api.get<{ goals?: TGoal[] }>(`/goals/${encodeURIComponent(clientId)}`);
-      return data?.goals ?? [];
-    },
-    staleTime: 0,
-  };
-}
-
-/** Call after saving a client's goals. */
-export function invalidateClientGoals(queryClient: QueryClient, clientId: string) {
-  return queryClient.invalidateQueries({ queryKey: clientGoalKeys.client(clientId) });
 }
