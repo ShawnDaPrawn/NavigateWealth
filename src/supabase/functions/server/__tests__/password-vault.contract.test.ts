@@ -58,10 +58,10 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
   }),
 }));
 import app from '../password-vault-routes.ts';
-import mcp from '../password-vault-mcp.ts';
 import { AdminAuditService } from '../admin-audit-service.ts';
 
 const input = {
+  serviceId: 'navigate-wealth',
   name: 'Portal',
   url: 'https://example.org/login',
   username: 'test-user-1',
@@ -70,17 +70,6 @@ const input = {
 };
 const admin = (path: string, method = 'GET', body?: unknown) =>
   request(app, path, { method, body, as: 'super_admin' });
-const call = (
-  token: string,
-  method: string,
-  params?: unknown,
-  extra: Record<string, string> = {},
-) =>
-  mcp.request('/', {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', ...extra },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 7, method, params }),
-  });
 const list = async () => (await (await admin('/')).json()).items;
 beforeEach(() => {
   kvStore.clear();
@@ -100,14 +89,19 @@ describe('password vault', () => {
       );
     }
   });
-  it('rejects the entire batch on invalid input or missing encryption key', async () => {
+  it('rejects the entire batch on invalid input, an unknown service or a missing key', async () => {
     expect(
       (await admin('/', 'POST', { entries: [input, { ...input, url: 'file:///tmp' }] })).status,
     ).toBe(400);
+    expect(
+      (await admin('/', 'POST', { entries: [{ ...input, serviceId: 'no-such-service' }] })).status,
+    ).toBe(400);
+    expect([...kvStore.keys()].some((k) => k.startsWith('password-vault:'))).toBe(false);
     // A fresh isolate must fail closed even if another isolate has already cached its key.
     vi.resetModules();
     const coldVault = (await import('../password-vault-routes.ts')).default;
     keyRpc.mockResolvedValueOnce({ data: null });
+    kvStore.clear();
     expect(
       (
         await request(coldVault, '/', {
@@ -117,9 +111,9 @@ describe('password vault', () => {
         })
       ).status,
     ).toBe(503);
-    expect(kvStore.size).toBe(0);
+    expect([...kvStore.keys()].some((k) => k.startsWith('password-vault:'))).toBe(false);
   });
-  it('stores encrypted fields, reveals only explicitly, and restricts each MCP token to one record', async () => {
+  it('stores every field encrypted and reveals only on request', async () => {
     expect(
       (
         await admin('/', 'POST', {
@@ -128,91 +122,67 @@ describe('password vault', () => {
       ).status,
     ).toBe(201);
     const serialized = JSON.stringify([...kvStore.values()]);
-    for (const field of Object.values(input)) expect(serialized).not.toContain(field);
-    const items = await list();
-    const item = items.find((i: { name: string }) => i.name === 'Portal');
-    const other = items.find((i: { name: string }) => i.name === 'Other');
+    for (const field of [input.name, input.url, input.username, input.password, input.notes])
+      expect(serialized).not.toContain(field);
+    const item = (await list()).find((i: { name: string }) => i.name === 'Portal');
     expect(item).not.toHaveProperty('password');
     expect(item).not.toHaveProperty('notes');
+    expect(item).toMatchObject({ serviceId: 'navigate-wealth', aiUse: 'ask' });
     const detail = await admin('/' + item.id + '/reveal', 'POST');
     expect(detail.headers.get('cache-control')).toBe('no-store');
     expect(await detail.json()).toMatchObject(input);
-    const tokenResponse = await admin('/' + item.id + '/connect', 'POST', {
-      revision: item.revision,
-    });
-    expect(tokenResponse.status).toBe(201);
-    const { token } = await tokenResponse.json();
-    expect(JSON.stringify([...kvStore.values()])).not.toContain(token);
-    expect((await call(token.replace(item.id, other.id), 'tools/list')).status).toBe(401);
-    expect(
-      (await call(token, 'tools/list', {}, { Origin: 'https://unknown.example' })).status,
-    ).toBe(403);
-    const init = await call(token, 'initialize', { protocolVersion: '2025-06-18' });
-    expect((await init.json()).result.protocolVersion).toBe('2025-06-18');
-    expect(
-      (await (await call(token, 'tools/list')).json()).result.tools.map(
-        (t: { name: string }) => t.name,
-      ),
-    ).toEqual(['get_credential']);
-    const result = await call(token, 'tools/call', { name: 'get_credential', arguments: {} });
-    expect(result.headers.get('cache-control')).toBe('no-store');
-    expect(JSON.parse((await result.json()).result.content[0].text)).toEqual({
-      url: input.url,
-      username: input.username,
-      password: input.password,
-    });
-    expect(
-      (
-        await (
-          await call(token, 'tools/call', { name: 'get_credential', arguments: { id: other.id } })
-        ).json()
-      ).error.code,
-    ).toBe(-32602);
-    expect(
-      (await admin('/' + item.id, 'PUT', { revision: item.revision, credential: input })).status,
-    ).toBe(409);
-    const current = (await list()).find((i: { id: string }) => i.id === item.id);
-    expect(
-      (await admin('/' + item.id + '/revoke', 'POST', { revision: current.revision })).status,
-    ).toBe(200);
-    expect((await call(token, 'tools/list')).status).toBe(401);
     expect(JSON.stringify(vi.mocked(AdminAuditService.record).mock.calls)).not.toContain(
       input.password,
     );
   });
-  it('supports editing, rotating, expiring and deleting a connected login', async () => {
+  it('keeps the saved password and notes when an edit leaves them out, and refuses stale edits', async () => {
     await admin('/', 'POST', { entries: [input] });
     const [item] = await list();
     const path = '/' + item.id;
-    await admin(path, 'PUT', {
-      revision: item.revision,
-      credential: { ...input, password: 'changed' },
-    });
-    expect((await (await admin(path + '/reveal', 'POST')).json()).password).toBe('changed');
-    const issue = async () =>
+    const { password: _p, notes: _n, ...rest } = input;
+    expect(
       (
-        await (
-          await admin(path + '/connect', 'POST', { revision: (await list())[0].revision })
-        ).json()
-      ).token;
-    const old = await issue();
-    const token = await issue();
-    expect((await call(old, 'ping')).status).toBe(401);
-    vi.useFakeTimers();
-    try {
-      vi.setSystemTime(Date.now() + 91 * 86400000);
-      expect((await call(token, 'ping')).status).toBe(401);
-    } finally {
-      vi.useRealTimers();
-    }
-    const initialized = await mcp.request('/', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+        await admin(path, 'PUT', {
+          revision: item.revision,
+          credential: { ...rest, password: '', name: 'Renamed', aiUse: 'allowed' },
+        })
+      ).status,
+    ).toBe(200);
+    expect(await (await admin(path + '/reveal', 'POST')).json()).toMatchObject({
+      name: 'Renamed',
+      aiUse: 'allowed',
+      password: input.password,
+      notes: input.notes,
     });
-    expect(initialized.status).toBe(202);
-    await admin(path, 'DELETE');
-    expect((await call(token, 'tools/list')).status).toBe(401);
+    expect(
+      (await admin(path, 'PUT', { revision: item.revision, credential: { ...rest, password: '' } }))
+        .status,
+    ).toBe(409);
+    const [current] = await list();
+    await admin(path, 'PUT', {
+      revision: current.revision,
+      credential: { ...rest, password: 'changed', notes: '' },
+    });
+    expect(await (await admin(path + '/reveal', 'POST')).json()).toMatchObject({
+      password: 'changed',
+      notes: '',
+    });
+  });
+  it('deletes a login together with the skills written for it alone', async () => {
+    await admin('/', 'POST', { entries: [input] });
+    const [item] = await list();
+    const skill = (credentialId: string | null) => ({
+      name: credentialId ? 'Own' : 'Shared',
+      whenToUse: '',
+      instructions: 'Do the thing.',
+      serviceId: 'navigate-wealth',
+      credentialId,
+    });
+    expect((await admin('/skills', 'POST', skill(item.id))).status).toBe(201);
+    expect((await admin('/skills', 'POST', skill(null))).status).toBe(201);
+    expect((await admin('/' + item.id, 'DELETE')).status).toBe(200);
     expect(await list()).toEqual([]);
+    const left = (await (await admin('/skills')).json()).items as { name: string }[];
+    expect(left.map((s) => s.name)).toEqual(['Shared']);
   });
 });

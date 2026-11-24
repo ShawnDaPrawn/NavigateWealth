@@ -75,6 +75,7 @@ export const MODULE_LOADERS: Record<AdminModule, () => Promise<unknown>> = {
   reporting: () => import('./modules/reporting'),
   calendar: () => import('./modules/calendar'),
   'ai-management': () => import('./modules/ai-management'),
+  'password-manager': () => import('./modules/password-manager'),
   locked: () => import('./modules/locked'),
 
   // Barrels that lazy-split internally — see the header.

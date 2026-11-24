@@ -149,18 +149,13 @@ describe('admin Sidebar', () => {
     const settings = await screen.findByRole('menuitem', { name: 'Account settings' });
     expect(screen.getByText('Super admin · erica@example.com')).toBeDefined();
     expect(screen.getByRole('menuitem', { name: 'Log out' })).toBeDefined();
-    expect(screen.getByRole('menuitem', { name: 'Password manager' })).toBeDefined();
+    // The password manager is a sidebar module now, not an account-menu pop-up.
+    expect(screen.queryByRole('menuitem', { name: /password manager/i })).toBeNull();
     fireEvent.click(settings);
     expect(navigate).toHaveBeenCalledWith('/admin?module=personnel&profile=me');
   });
-  it('omits the password manager for an ordinary admin', async () => {
-    role = 'admin';
+  it('lists the Password Manager under Practice', () => {
     renderSidebar();
-    fireEvent.pointerDown(within(desktopNav()).getByRole('button', { name: /Erica/ }), {
-      button: 0,
-      ctrlKey: false,
-    });
-    await screen.findByRole('menuitem', { name: 'Account settings' });
-    expect(screen.queryByRole('menuitem', { name: 'Password manager' })).toBeNull();
+    expect(within(desktopNav()).getByRole('button', { name: 'Password Manager' })).toBeDefined();
   });
 });

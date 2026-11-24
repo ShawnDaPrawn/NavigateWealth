@@ -50,6 +50,5 @@ export function mountCoreRoutes(app: Hono) {
   lazy(app, '/mcp/broker-operations', () => import('./broker-ops-mcp.ts'));
   lazy(app, '/password-vault', () => import('./password-vault-routes.ts'));
   lazy(app, '/mcp/password-vault', () => import('./password-vault-mcp.ts'));
-  lazy(app, '/password-vault-mine', () => import('./password-vault-mine.ts'));
   lazy(app, '/kv-store', () => import('./kv-routes.ts'));
 }

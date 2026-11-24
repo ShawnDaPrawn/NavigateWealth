@@ -1,15 +1,14 @@
 /**
- * Storage for the AI side of the password manager: connections, workflows,
- * runs, approvals, activity and unlock state. Secrets never live here — only
- * hashes of tokens and references to vault entries.
+ * Storage for everything around the logins: services, skills, AI agent
+ * connections, approvals, activity and unlock state. Secrets never live here —
+ * only hashes of tokens and references to vault entries.
  */
 import type {
+  Service,
+  Skill,
   VaultApproval,
   VaultConnection,
   VaultEvent,
-  VaultRun,
-  VaultWorkflow,
-  WorkflowInput,
 } from '../../../../shared/password-manager.ts';
 import { createKvRepository } from './kv-repository.ts';
 import { db } from './password-vault.ts';
@@ -21,24 +20,8 @@ export interface StoredConnection extends VaultConnection {
   tokenHash: string;
   tokenExpires: number;
 }
-export interface StoredRun extends VaultRun {
-  revision: string;
-  /** Hash of workflow + inputs, for the duplicate check. */
-  signature: string;
-  requestId: string;
-  /** Checkpoint steps a person has already approved. */
-  approvedSteps: number[];
-  /** When a held money move may be submitted. */
-  holdUntil: string | null;
-}
 export interface StoredApproval extends VaultApproval {
   revision: string;
-}
-export type StoredWorkflow = VaultWorkflow;
-export interface WorkflowSnapshot extends WorkflowInput {
-  version: number;
-  publishedAt: string;
-  publishedBy: string;
 }
 export interface UnlockRecord {
   lastActive: number;
@@ -48,16 +31,12 @@ export interface VaultSettings {
 }
 
 export const connections = createKvRepository<StoredConnection>('pvault-connection:');
-export const workflows = createKvRepository<StoredWorkflow>('pvault-workflow:');
-export const workflowVersions = createKvRepository<WorkflowSnapshot>('pvault-workflow-version:');
-export const runs = createKvRepository<StoredRun>('pvault-run:');
+export const services = createKvRepository<Service>('pvault-service:');
+export const skills = createKvRepository<Skill>('pvault-skill:');
 export const approvals = createKvRepository<StoredApproval>('pvault-approval:');
 export const events = createKvRepository<VaultEvent>('pvault-event:');
 export const unlocks = createKvRepository<UnlockRecord>('pvault-unlock:');
 export const settings = createKvRepository<VaultSettings>('pvault-settings:');
-export const ownerHistory = createKvRepository<{ secret: unknown; keyRef?: string; until: number }>(
-  'pvault-previous:',
-);
 
 /**
  * Compare-and-set on any KV row whose value carries `field`. Returns false when
@@ -78,9 +57,6 @@ export async function compareAndSet(
   if (error) throw new Error('Password vault update failed');
   return Boolean(data?.length);
 }
-
-export const versionKey = (workflowId: string, version: number) =>
-  workflowId + ':' + String(version).padStart(6, '0');
 
 export async function isAiPaused() {
   return (await settings.get('global'))?.aiPaused ?? false;

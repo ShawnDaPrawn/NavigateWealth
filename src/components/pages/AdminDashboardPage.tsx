@@ -93,6 +93,9 @@ const NotesModule = React.lazy(() =>
 const AIManagementModule = React.lazy(() =>
   import('../admin/modules/ai-management').then((m) => ({ default: m.AIManagementModule })),
 );
+const PasswordManagerModule = React.lazy(() =>
+  import('../admin/modules/password-manager').then((m) => ({ default: m.PasswordManagerModule })),
+);
 const LockedModule = React.lazy(() =>
   import('../admin/modules/locked').then((m) => ({ default: m.LockedModule })),
 );
@@ -353,6 +356,16 @@ export function AdminDashboardPage() {
             onBackToDashboard={() => handleModuleChange('dashboard')}
           >
             <LockedModule />
+          </ModuleFrame>
+        );
+      case 'password-manager':
+        return (
+          <ModuleFrame
+            module="password-manager"
+            allowed={can('password-manager')}
+            onBackToDashboard={() => handleModuleChange('dashboard')}
+          >
+            <PasswordManagerModule />
           </ModuleFrame>
         );
       case 'ai-management':

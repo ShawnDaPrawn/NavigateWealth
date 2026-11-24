@@ -154,7 +154,7 @@ export const ALWAYS_ACCESSIBLE_MODULES: AdminModule[] = ['dashboard', 'notes'];
  * so they can never be granted to personnel via the permission editor —
  * only super admins ever see them in the sidebar.
  */
-export const SELF_GATED_MODULES: AdminModule[] = ['locked'];
+export const SELF_GATED_MODULES: AdminModule[] = ['locked', 'password-manager'];
 
 /**
  * Super admin email — imported from centralised auth constants.
@@ -336,6 +336,9 @@ export const MODULE_CAPABILITIES: Record<AdminModule, CapabilityMeta[]> = {
     { key: 'create', label: 'Manage KB', description: 'Add and manage knowledge base content' },
     { key: 'export', label: 'Export', description: 'Export analytics and feedback data' },
   ],
+
+  // ── Password Manager (super admins only — never assignable via permissions) ──
+  'password-manager': [],
 
   // ── Locked (access-code gated — never assignable via permissions) ──
   locked: [],

@@ -2,13 +2,14 @@ import { Buffer } from 'node:buffer';
 import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
 import {
   BROKERAGE_COLLECTION_ID,
-  type AiAccess,
+  NAVIGATE_WEALTH_SERVICE_ID,
   type AiExposure,
+  type AiUse,
   type Collection,
   type CredentialInput,
-  type CredentialKind,
   type VaultSummary,
 } from '../../../../shared/password-manager.ts';
+import type { PortalProfile } from '../../../../shared/broker-operations.ts';
 import { createKvRepository } from './kv-repository.ts';
 
 interface Envelope {
@@ -20,8 +21,6 @@ export interface VaultEntry {
   revision: string;
   metadata: Envelope;
   secret: Envelope;
-  /** Legacy single-credential MCP token. */
-  connection: { hash: string; expiresAt: string } | null;
   /** Which key sealed this entry: absent or 'master' for entries written before collections. */
   keyRef?: string;
   collectionId?: string;
@@ -32,15 +31,13 @@ export interface StoredCollection extends Collection {
   wrappedKey: Envelope;
 }
 interface Metadata {
+  serviceId?: string;
   name: string;
   url: string;
   username: string;
-  portal?: CredentialInput['portal'];
-  kind?: CredentialKind;
-  tags?: string[];
-  category?: string;
-  aiAccess?: AiAccess;
-  askFirst?: boolean;
+  /** Retired broker-reporting profile; read for the dormant broker backend only. */
+  portal?: PortalProfile;
+  aiUse?: AiUse;
   rotateMonths?: number;
   fingerprint?: string;
   weak?: boolean;
@@ -155,16 +152,6 @@ export async function ensureBrokerage(): Promise<StoredCollection> {
   return (await collections.get(BROKERAGE_COLLECTION_ID))!;
 }
 
-export async function createCollection(fields: Omit<Collection, 'id' | 'createdAt'>) {
-  const row = await newCollectionRecord(crypto.randomUUID(), fields);
-  await collections.put(row.id, row);
-  return row;
-}
-
-export function publicCollection({ wrappedKey: _key, ...rest }: StoredCollection): Collection {
-  return rest;
-}
-
 async function collectionKey(id: string): Promise<CryptoKey> {
   let key = collectionKeys.get(id);
   if (!key) {
@@ -224,15 +211,11 @@ export async function encryptFields(id: string, input: CredentialInput) {
   const collectionId = input.collectionId || BROKERAGE_COLLECTION_ID;
   const key = await collectionKey(collectionId);
   const metadata: Metadata = {
+    serviceId: input.serviceId,
     name: input.name || new URL(input.url).hostname,
     url: input.url,
     username: input.username,
-    portal: input.portal,
-    kind: input.kind ?? 'login',
-    tags: input.tags ?? [],
-    category: input.category ?? (input.portal ? 'Provider portal' : ''),
-    aiAccess: input.aiAccess ?? (input.portal ? 'use' : 'find'),
-    askFirst: input.askFirst ?? false,
+    aiUse: input.aiUse ?? 'ask',
     rotateMonths: input.rotateMonths ?? 12,
     fingerprint: await fingerprint(input.password),
     weak: isWeak(input.password),
@@ -274,19 +257,15 @@ export async function decode(
   return {
     fingerprint: m.fingerprint ?? '',
     summary: {
+      id: entry.id,
+      revision: entry.revision,
+      serviceId: m.serviceId ?? NAVIGATE_WEALTH_SERVICE_ID,
       name: m.name,
       url: m.url,
       username: m.username,
-      portal: m.portal,
-      id: entry.id,
-      revision: entry.revision,
-      connectionExpiresAt: entry.connection?.expiresAt ?? null,
+      ...(m.portal ? { portal: m.portal } : {}),
       collectionId: entry.collectionId ?? BROKERAGE_COLLECTION_ID,
-      kind: m.kind ?? 'login',
-      tags: m.tags ?? [],
-      category: m.category ?? (m.portal ? 'Provider portal' : ''),
-      aiAccess: m.aiAccess ?? (m.portal ? 'use' : 'find'),
-      askFirst: m.askFirst ?? false,
+      aiUse: m.aiUse ?? 'ask',
       rotateMonths,
       passwordChangedAt: changed,
       hasOtp: m.hasOtp ?? false,
@@ -329,8 +308,8 @@ export async function reveal(entry: VaultEntry): Promise<Pick<Secret, 'password'
   return { password, notes };
 }
 
-// Conditional UPDATE cannot recreate a deleted entry or restore a revoked token
-// while another administrator is rotating the credential.
+// Conditional UPDATE cannot recreate a deleted entry while another
+// administrator is changing the credential.
 export async function replace(entry: VaultEntry, expectedRevision: string) {
   const { data, error } = await db()
     .from(TABLE)

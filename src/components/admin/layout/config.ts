@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   Lock,
   Newspaper,
+  KeyRound,
 } from 'lucide-react';
 import { AdminModule, ModuleConfigItem, ModuleGroup } from './types';
 
@@ -44,6 +45,7 @@ export const moduleConfig: Record<AdminModule, ModuleConfigItem> = {
   calendar: { label: 'Calendar', icon: Calendar },
   issues: { label: 'Issue Manager', icon: ShieldAlert },
   'ai-management': { label: 'AI Management', icon: Bot },
+  'password-manager': { label: 'Password Manager', icon: KeyRound },
   locked: { label: 'Locked', icon: Lock },
 };
 
@@ -75,7 +77,15 @@ export const moduleGroups: ModuleGroup[] = [
   },
   {
     label: 'Practice',
-    modules: ['personnel', 'compliance', 'reporting', 'issues', 'ai-management', 'locked'],
+    modules: [
+      'personnel',
+      'compliance',
+      'reporting',
+      'issues',
+      'ai-management',
+      'password-manager',
+      'locked',
+    ],
   },
 ];
 
