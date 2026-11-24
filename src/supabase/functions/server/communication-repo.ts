@@ -374,6 +374,7 @@ export async function createCampaign(
     recipientType: data.recipientType,
     selectedRecipients: data.selectedRecipients || [],
     selectedGroup: data.selectedGroup as Campaign['selectedGroup'],
+    selectedGroups: (data.selectedGroups || undefined) as Campaign['selectedGroups'],
     status: 'draft',
     attachments: [],
     scheduling: data.scheduling || { type: 'immediate' },

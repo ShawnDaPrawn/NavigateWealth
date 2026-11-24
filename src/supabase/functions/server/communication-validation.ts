@@ -174,6 +174,20 @@ export const CreateCampaignSchema = z
       .passthrough()
       .optional()
       .nullable(),
+    selectedGroups: z
+      .array(
+        z
+          .object({
+            id: z.string(),
+            name: z.string().optional(),
+            type: z.string().optional(),
+            clientCount: z.number().optional(),
+          })
+          .passthrough(),
+      )
+      .max(50, 'Select at most 50 groups')
+      .optional()
+      .nullable(),
     status: z
       .enum(['draft', 'scheduled', 'sending', 'completed', 'partial', 'failed', 'rejected'])
       .optional()

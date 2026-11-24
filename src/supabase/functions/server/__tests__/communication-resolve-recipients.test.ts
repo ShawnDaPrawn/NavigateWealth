@@ -133,3 +133,35 @@ describe('resolveRecipients — provider (system) group', () => {
     expect(recipients.map((r) => r.id).sort()).toEqual(['c1', 'c2', 'c3']);
   });
 });
+
+describe('resolveRecipients — several groups', () => {
+  it('returns the union of the groups, each client once', async () => {
+    getGroup.mockImplementation(async (id: string) =>
+      id === 'sys_provider_hollard'
+        ? {
+            id,
+            name: 'All Hollard Clients',
+            type: 'system',
+            clientIds: [],
+            filterConfig: { productFilters: [{ provider: 'Hollard' }] },
+          }
+        : { id, name: 'Shawn Test Group', type: 'custom', clientIds: ['c2', 'c3'] },
+    );
+
+    const recipients = await resolveRecipients(
+      {
+        recipientType: 'group',
+        selectedRecipients: [],
+        selectedGroup: { id: 'sys_provider_hollard', type: 'system' },
+        selectedGroups: [
+          { id: 'sys_provider_hollard', type: 'system' },
+          { id: 'g_custom', type: 'custom' },
+        ],
+      },
+      supabase,
+    );
+
+    // Hollard: c1, c3. Custom group: c2, c3. c3 is in both and appears once.
+    expect(recipients.map((r) => r.id).sort()).toEqual(['c1', 'c2', 'c3']);
+  });
+});
