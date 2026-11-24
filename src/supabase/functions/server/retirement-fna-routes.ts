@@ -13,24 +13,20 @@ import { assertClientAccess, assertRecordClientAccess } from './client-access.ts
 import { CreateSessionSchema, UpdateInputsSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { nextVersion } from './fna-versioning.ts';
+import {
+  calculateRetirement,
+  retirementInputProblem,
+} from '../../../shared/fna-calculations/retirement.ts';
 
 const retirementFnaRoutes = new Hono();
 const log = createModuleLogger('retirement-fna-routes');
 
 // ==================== CONSTANTS ====================
 
-const SYSTEM_VERSION = '1.0.0';
-
-const DEFAULT_ASSUMPTIONS = {
-  retirementAge: 65,
-  yearsInRetirement: 25,
-  preRetirementReturn: 0.1, // Nominal 10%
-  postRetirementReturn: 0.08, // Nominal 8%
-  inflationRate: 0.06, // CPI 6%
-  replacementRatio: 0.75, // 75%
-  salaryEscalation: 0.07, // 7%
-  premiumEscalation: 0.06, // 6%
-};
+// 2.0.0: shared engine (src/shared/fna-calculations/retirement.ts) — gross
+// income basis, salary-linked contribution escalation, other provision,
+// today's-money figures, drawdown and s11F checks; age is required.
+const SYSTEM_VERSION = '2.0.0';
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -66,13 +62,11 @@ async function getNextVersionNumber(clientId: string): Promise<number> {
   return nextVersion(records.filter(Boolean));
 }
 
-/**
- * Safely parse a number from input, falling back to default if invalid/missing.
- */
-function safeNumber(val: unknown, defaultVal: number): number {
-  if (val === undefined || val === null || val === '') return defaultVal;
+/** A finite number from stored input (stored values may be strings), else undefined. */
+function optionalNumber(val: unknown): number | undefined {
+  if (val === undefined || val === null || val === '') return undefined;
   const num = Number(val);
-  return Number.isNaN(num) ? defaultVal : num;
+  return Number.isFinite(num) ? num : undefined;
 }
 
 /**
@@ -87,144 +81,34 @@ async function autoPopulateFromProfile(clientId: string) {
 
 // ==================== CALCULATION ENGINE ====================
 
-function performCalculations(inputs: RetirementCalcInputs, adjustments: RetirementCalcInputs = {}) {
-  // Use safe parsing for all inputs
-  // Note: adjustments take precedence over inputs for fields like retirementAge
-
-  const currentAge = safeNumber(inputs.currentAge, 30);
-
-  // Logic to pick retirementAge: adjust -> input -> default
-  const inputRetAge =
-    inputs.retirementAge !== undefined ? inputs.retirementAge : DEFAULT_ASSUMPTIONS.retirementAge;
-  const effRetAge =
-    adjustments.retirementAge !== undefined ? adjustments.retirementAge : inputRetAge;
-  const retirementAge = safeNumber(effRetAge, DEFAULT_ASSUMPTIONS.retirementAge);
-
-  const yearsToRetirement = Math.max(0, retirementAge - currentAge);
-  const yearsInRetirement = safeNumber(
-    adjustments.yearsInRetirement,
-    DEFAULT_ASSUMPTIONS.yearsInRetirement,
+/**
+ * Run the shared engine on a stored session. The wizard saves inputs and
+ * adjustments merged into `inputs`, so assumption keys are read from there.
+ * Stored values may be strings; each is parsed, and anything unparseable is
+ * left to the engine's default. The caller checks retirementInputProblem first.
+ */
+function performCalculations(stored: RetirementCalcInputs) {
+  return calculateRetirement(
+    {
+      currentAge: optionalNumber(stored.currentAge),
+      retirementAge: optionalNumber(stored.retirementAge),
+      currentMonthlyIncome: optionalNumber(stored.currentMonthlyIncome),
+      currentGrossMonthlyIncome: optionalNumber(stored.currentGrossMonthlyIncome),
+      currentMonthlyContribution: optionalNumber(stored.currentMonthlyContribution),
+      currentRetirementSavings: optionalNumber(stored.currentRetirementSavings),
+      otherRetirementCapital: optionalNumber(stored.otherRetirementCapital),
+      otherMonthlyRetirementIncome: optionalNumber(stored.otherMonthlyRetirementIncome),
+    },
+    {
+      yearsInRetirement: optionalNumber(stored.yearsInRetirement),
+      replacementRatio: optionalNumber(stored.replacementRatio),
+      inflationRate: optionalNumber(stored.inflationRate),
+      preRetirementReturn: optionalNumber(stored.preRetirementReturn),
+      postRetirementReturn: optionalNumber(stored.postRetirementReturn),
+      salaryEscalation: optionalNumber(stored.salaryEscalation),
+      premiumEscalation: optionalNumber(stored.premiumEscalation),
+    },
   );
-
-  // Economic Assumptions (Nominal)
-  const inflation = safeNumber(adjustments.inflationRate, DEFAULT_ASSUMPTIONS.inflationRate);
-  const preRetReturn = safeNumber(
-    adjustments.preRetirementReturn,
-    DEFAULT_ASSUMPTIONS.preRetirementReturn,
-  );
-  const postRetReturn = safeNumber(
-    adjustments.postRetirementReturn,
-    DEFAULT_ASSUMPTIONS.postRetirementReturn,
-  );
-  const salaryEscalation = safeNumber(
-    adjustments.salaryEscalation,
-    DEFAULT_ASSUMPTIONS.salaryEscalation,
-  );
-  const replaceRatio = safeNumber(
-    adjustments.replacementRatio,
-    DEFAULT_ASSUMPTIONS.replacementRatio,
-  );
-  const premiumEscalation = safeNumber(
-    adjustments.premiumEscalation,
-    DEFAULT_ASSUMPTIONS.premiumEscalation,
-  );
-
-  // 2. Rates (Nominal Monthly)
-  const nominalMonthlyGrowth = Math.pow(1 + preRetReturn, 1 / 12) - 1;
-  const nominalMonthlyEscalation = Math.pow(1 + premiumEscalation, 1 / 12) - 1;
-
-  // Real Rates (for Annuity Factor / Required Capital)
-  const realPostReturn = 1 + inflation !== 0 ? (1 + postRetReturn) / (1 + inflation) - 1 : 0;
-
-  // 3. Target Income (Future Value)
-  const currentIncome = safeNumber(inputs.currentMonthlyIncome, 0);
-
-  // Project current income to retirement using Salary Escalation
-  const projectedFinalNominalIncome =
-    currentIncome * Math.pow(1 + salaryEscalation, yearsToRetirement);
-
-  const targetMonthlyIncome = projectedFinalNominalIncome * replaceRatio;
-  const targetAnnualIncome = targetMonthlyIncome * 12;
-
-  // 4. Required Capital (Future Value)
-  let requiredCapital: number;
-  if (Math.abs(realPostReturn) < 0.000001) {
-    requiredCapital = targetAnnualIncome * yearsInRetirement;
-  } else {
-    requiredCapital =
-      targetAnnualIncome *
-      ((1 - Math.pow(1 + realPostReturn, -yearsInRetirement)) / realPostReturn);
-  }
-
-  // 5. Projected Capital (Future Value)
-  // FV of Existing Lumpsum
-  const currentSavings = safeNumber(inputs.currentRetirementSavings, 0);
-  const fvExisting = currentSavings * Math.pow(1 + preRetReturn, yearsToRetirement);
-
-  // FV of Contributions (Growing Annuity)
-  const monthlyContrib = safeNumber(inputs.currentMonthlyContribution, 0);
-  const months = yearsToRetirement * 12;
-
-  let fvContribs = 0;
-  if (monthlyContrib > 0 && months > 0) {
-    if (Math.abs(nominalMonthlyGrowth - nominalMonthlyEscalation) < 0.000001) {
-      fvContribs = monthlyContrib * months * Math.pow(1 + nominalMonthlyGrowth, months - 1);
-    } else {
-      fvContribs =
-        monthlyContrib *
-        ((Math.pow(1 + nominalMonthlyGrowth, months) -
-          Math.pow(1 + nominalMonthlyEscalation, months)) /
-          (nominalMonthlyGrowth - nominalMonthlyEscalation));
-    }
-  }
-
-  const projectedCapital = fvExisting + fvContribs;
-
-  // 6. Analysis
-  const capitalShortfall = requiredCapital - projectedCapital;
-  const hasShortfall = capitalShortfall > 0;
-  const shortfallPercentage = requiredCapital > 0 ? (capitalShortfall / requiredCapital) * 100 : 0;
-
-  // 7. Solve for Additional Contribution (PMT)
-  let requiredAdditionalContribution = 0;
-  if (hasShortfall && months > 0) {
-    let annuityFactor: number;
-    if (Math.abs(nominalMonthlyGrowth - nominalMonthlyEscalation) < 0.000001) {
-      annuityFactor = months * Math.pow(1 + nominalMonthlyGrowth, months - 1);
-    } else {
-      annuityFactor =
-        (Math.pow(1 + nominalMonthlyGrowth, months) -
-          Math.pow(1 + nominalMonthlyEscalation, months)) /
-        (nominalMonthlyGrowth - nominalMonthlyEscalation);
-    }
-
-    if (annuityFactor > 0) {
-      requiredAdditionalContribution = capitalShortfall / annuityFactor;
-    }
-  }
-
-  const totalRecommendedContribution = monthlyContrib + requiredAdditionalContribution;
-  const percentageOfIncome =
-    currentIncome > 0 ? (totalRecommendedContribution / currentIncome) * 100 : 0;
-
-  // Final NaN check for outputs
-  const safeOutput = (v: number) => (Number.isNaN(v) || !Number.isFinite(v) ? 0 : v);
-
-  return {
-    yearsToRetirement,
-    yearsInRetirement,
-    realGrowthRate: preRetReturn, // Nominal rate
-    realSalaryGrowth: salaryEscalation,
-    targetMonthlyIncome: safeOutput(targetMonthlyIncome),
-    requiredCapital: safeOutput(requiredCapital),
-    projectedCapital: safeOutput(projectedCapital),
-    capitalShortfall: safeOutput(capitalShortfall),
-    hasShortfall,
-    shortfallPercentage: safeOutput(shortfallPercentage),
-    requiredAdditionalContribution: safeOutput(requiredAdditionalContribution),
-    totalRecommendedContribution: safeOutput(totalRecommendedContribution),
-    percentageOfIncome: safeOutput(percentageOfIncome),
-  };
 }
 
 // ==================== ROUTE HANDLERS ====================
@@ -363,9 +247,11 @@ retirementFnaRoutes.post('/:fnaId/calculate', async (c) => {
 
     log.info(`Calculating FNA ${fnaId} with inputs:`, session.inputs);
 
-    // Run Calculation with safe number parsing
-    // Passing inputs as second arg allows adjustments to be picked up if they were merged into inputs
-    const results = performCalculations(session.inputs, session.inputs);
+    // The engine never invents an age (it used to assume 30).
+    const problem = retirementInputProblem(session.inputs ?? {});
+    if (problem) return c.json({ success: false, error: problem }, 400);
+
+    const results = performCalculations(session.inputs ?? {});
 
     session.results = results;
     session.updatedAt = new Date().toISOString();
@@ -607,6 +493,9 @@ interface RetirementCalcInputs {
   currentAge?: number | string;
   retirementAge?: number | string;
   currentMonthlyIncome?: number | string;
+  currentGrossMonthlyIncome?: number | string;
+  otherRetirementCapital?: number | string;
+  otherMonthlyRetirementIncome?: number | string;
   currentRetirementSavings?: number | string;
   currentMonthlyContribution?: number | string;
   yearsInRetirement?: number | string;

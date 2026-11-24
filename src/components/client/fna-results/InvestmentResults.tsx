@@ -48,8 +48,11 @@ interface GoalResult {
   };
   projectedCapital?: { totalProjectedCapital: number };
   timeHorizon?: { yearsToGoal?: number };
+  /** Risk profile too growth-oriented for the horizon (newer results). */
+  suitabilityWarning?: string;
   requiredContributions?: {
     canMeetGoal?: boolean;
+    canMeetGoalReason?: 'horizon' | 'affordability';
     requiredAdditionalMonthly: number;
     alternativeLumpSumToday: number;
   };
@@ -355,7 +358,9 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
                         <strong>Action Required:</strong>{' '}
                         {goal.requiredContributions.canMeetGoal
                           ? `Increase monthly contribution by ${formatCurrency(goal.requiredContributions.requiredAdditionalMonthly)} to meet this goal`
-                          : 'Consider extending timeline or increasing initial capital'}
+                          : goal.requiredContributions.canMeetGoalReason === 'affordability'
+                            ? 'The contribution this goal needs does not fit your budget after higher-priority goals. Consider a later target date, a smaller goal amount, or a lump sum'
+                            : 'Consider extending timeline or increasing initial capital'}
                       </p>
                       {goal.requiredContributions.alternativeLumpSumToday > 0 && (
                         <p className="text-xs text-gray-600 mt-1">
@@ -364,6 +369,10 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
                         </p>
                       )}
                     </div>
+                  )}
+
+                  {goal.suitabilityWarning && (
+                    <p className="text-xs text-amber-800 mt-2">{goal.suitabilityWarning}</p>
                   )}
 
                   {goal.statusRationale && (
@@ -439,7 +448,9 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
               </p>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 mb-1">Expected Real Return</p>
+              <p className="text-xs text-gray-600 mb-1">
+                Expected Real Return (after fees and inflation)
+              </p>
               <p className="text-lg text-gray-900">
                 {(
                   (inputs?.expectedRealReturns?.[inputs?.clientRiskProfile || 'balanced'] || 0) *
@@ -459,7 +470,9 @@ export function InvestmentResults({ fna }: InvestmentResultsProps) {
               <Separator />
               <div>
                 <p className="text-xs text-gray-700 mb-2">
-                  <strong>Real Return Assumptions by Risk Profile:</strong>
+                  <strong>
+                    Real Return Assumptions by Risk Profile (after fees and inflation):
+                  </strong>
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                   {Object.entries(inputs.expectedRealReturns).map(([profile, rate]) => (

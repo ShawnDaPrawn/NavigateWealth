@@ -22,6 +22,7 @@ import {
   getNextVersionNumber,
   autoPopulateFromProfile,
   calculateInvestmentINA,
+  INACalculationError,
   type VersionedSession,
 } from './investment-ina-calculations.ts';
 
@@ -73,6 +74,11 @@ investmentInaRoutes.post('/client/:clientId/calculate', async (c) => {
 
     return c.json({ success: true, data: results });
   } catch (error: unknown) {
+    // Inputs the engine refuses (an over-allocated investment, a risk profile
+    // with no return): the adviser can fix these, so say what is wrong.
+    if (error instanceof INACalculationError) {
+      return c.json({ success: false, error: error.message, problems: error.problems }, 400);
+    }
     log.error('❌ Error calculating Investment INA:', error);
     return fnaErrorResponse(c, error);
   }

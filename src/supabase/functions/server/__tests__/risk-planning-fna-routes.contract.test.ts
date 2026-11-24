@@ -19,6 +19,10 @@
  *     withdrawn FNA, still stamped published
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  calculateRiskAnalysis,
+  normaliseRiskInput,
+} from '../../../../shared/fna-calculations/riskPlanning.ts';
 
 vi.hoisted(() => {
   (globalThis as unknown as { Deno?: unknown }).Deno = {
@@ -244,6 +248,33 @@ describe('POST /create', () => {
     expect(list(CLIENT_A)).toEqual([fna.id]);
   });
 
+  it('calculates with the engine the wizard uses (system version 3.0.0)', async () => {
+    const fna = await create();
+    const stored = record(String(fna.id)) as unknown as {
+      calculations: ReturnType<typeof calculateRiskAnalysis>;
+    };
+    const expected = calculateRiskAnalysis(normaliseRiskInput(INPUT_DATA), 'x');
+    expect(stored.calculations.metadata.systemVersion).toBe('3.0.0');
+    expect(stored.calculations.life.grossNeed).toBeCloseTo(expected.life.grossNeed, 6);
+    expect(stored.calculations.disability.grossNeed).toBeCloseTo(expected.disability.grossNeed, 6);
+    // The old server copy used 5% estate costs; the shared engine uses 3.5% + VAT.
+    expect(stored.calculations.life.immediateCapital.estateCosts).toBeCloseTo(
+      3_200_000 * 0.04025,
+      6,
+    );
+  });
+
+  it('keeps calculations the wizard sent instead of recalculating them', async () => {
+    const sent = { life: { grossNeed: 1 }, metadata: { systemVersion: '2.0.0' } };
+    const res = await req('/create', {
+      method: 'POST',
+      body: { clientId: CLIENT_A, inputData: INPUT_DATA, calculations: sent },
+    });
+    expect(res.status).toBe(200);
+    const id = ((await json(res)) as unknown as { data: { id: string } }).data.id;
+    expect((record(id) as unknown as { calculations: unknown }).calculations).toEqual(sent);
+  });
+
   it('rejects a body with no clientId', async () => {
     const res = await req('/create', { method: 'POST', body: { inputData: {} } });
     expect(res.status).toBe(400);
@@ -329,6 +360,10 @@ describe('PUT /update/:fnaId', () => {
     const stored = record(String(fna.id))!;
     expect((stored.inputData as unknown as Record<string, number>).grossMonthlyIncome).toBe(90_000);
     expect(stored.calculations).toBeTruthy();
+    expect(
+      (stored.calculations as unknown as { metadata: { systemVersion: string } }).metadata
+        .systemVersion,
+    ).toBe('3.0.0');
   });
 
   it('rejects an empty update body', async () => {

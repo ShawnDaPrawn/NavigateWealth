@@ -3,6 +3,7 @@
  */
 
 import type { InvestmentINAInputs } from '../../types';
+import { resolveInvestmentAllocations } from '@/shared/fna-calculations/investment';
 import { validateGoal } from '../../services/investmentINACalculationService';
 
 export type INAStep1Tab = 'overview' | 'investments' | 'risk-profile' | 'goals';
@@ -32,6 +33,11 @@ export function findINAStep1Problem(
     if (errors.length > 0) {
       return { tab: 'goals', message: `Goal "${goal.goalName || 'Untitled'}": ${errors[0]}` };
     }
+  }
+  // One investment's shares across goals may not exceed 100%.
+  const [allocationProblem] = resolveInvestmentAllocations(inputs.goals).problems;
+  if (allocationProblem) {
+    return { tab: 'goals', message: allocationProblem };
   }
   return null;
 }

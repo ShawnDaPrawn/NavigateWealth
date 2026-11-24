@@ -39,6 +39,30 @@ describe('RetirementFNAInputSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('accepts zero net income when gross income is given', () => {
+    const result = RetirementFNAInputSchema.safeParse({
+      ...validInput,
+      currentMonthlyIncome: 0,
+      currentGrossMonthlyIncome: 70000,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('requires the client age', () => {
+    const { currentAge: _omit, ...noAge } = validInput;
+    const result = RetirementFNAInputSchema.safeParse(noAge);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].message).toMatch(/current age is required/);
+  });
+
+  it('rejects negative other provision', () => {
+    const result = RetirementFNAInputSchema.safeParse({
+      ...validInput,
+      otherMonthlyRetirementIncome: -1,
+    });
+    expect(result.success).toBe(false);
+  });
+
   it('accepts zero monthly contribution', () => {
     const result = RetirementFNAInputSchema.safeParse({
       ...validInput,

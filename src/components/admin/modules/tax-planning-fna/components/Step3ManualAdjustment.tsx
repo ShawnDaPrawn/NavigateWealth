@@ -53,7 +53,7 @@ export function Step3ManualAdjustment({
     const newLog: AdjustmentLog = {
       id: Math.random().toString(36).substr(2, 9),
       field,
-      originalValue: baselineInputs[field] as number,
+      originalValue: (baselineInputs[field] as number | undefined) ?? 0,
       newValue,
       reason,
       timestamp: new Date(),
@@ -77,8 +77,9 @@ export function Step3ManualAdjustment({
   // new type on every render, remounting the input and losing focus per keystroke.
   const renderOverrideRow = (label: string, field: keyof TaxPlanningInputs) => {
     const isModified = adjustments.some((a) => a.field === field);
-    const original = baselineInputs[field] as number;
-    const current = adjustedInputs[field] as number;
+    // Optional inputs are absent on FNAs saved before they existed.
+    const original = (baselineInputs[field] as number | undefined) ?? 0;
+    const current = (adjustedInputs[field] as number | undefined) ?? 0;
     const inputClass = `h-8 bg-white ${isModified ? 'border-amber-400 text-amber-700 font-semibold' : ''}`;
     const onValueChange = (v: number | undefined) =>
       handleOverride(field, v ?? 0, 'Manual override');
@@ -158,6 +159,9 @@ export function Step3ManualAdjustment({
               {renderOverrideRow('Employment Income', 'employmentIncome')}
               {renderOverrideRow('Variable (Bonus)', 'variableIncome')}
               {renderOverrideRow('Business Income', 'businessIncome')}
+              {renderOverrideRow('Business Expenses', 'businessExpenses')}
+              {renderOverrideRow('Rental Income', 'rentalIncome')}
+              {renderOverrideRow('Rental Expenses', 'rentalExpenses')}
               {renderOverrideRow('Capital Gains', 'capitalGainsRealised')}
               {renderOverrideRow('Foreign Income', 'foreignIncome')}
             </CardContent>
@@ -170,7 +174,11 @@ export function Step3ManualAdjustment({
             </CardHeader>
             <CardContent className="space-y-1">
               {renderOverrideRow('RA Contributions', 'raContributions')}
+              {renderOverrideRow('Pension / Provident Contributions', 'employerFundContributions')}
+              {renderOverrideRow('TFSA Contributions This Year', 'tfsaContributionsThisYear')}
               {renderOverrideRow('Medical Members', 'medicalSchemeMembers')}
+              {renderOverrideRow('Medical Scheme Contributions', 'medicalSchemeContributions')}
+              {renderOverrideRow('Out-of-Pocket Medical Expenses', 'outOfPocketMedicalExpenses')}
             </CardContent>
           </Card>
         </div>
@@ -245,6 +253,21 @@ export function Step3ManualAdjustment({
                     </td>
                     <td className="text-right p-3 pr-6 text-slate-400">
                       {formatMoney(adjustedResults.raGap - baselineResults.raGap)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-3 pl-6 font-medium">Additional Medical Credit (s6B)</td>
+                    <td className="text-right p-3">
+                      {formatMoney(baselineResults.additionalMedicalTaxCredit ?? 0)}
+                    </td>
+                    <td className="text-right p-3 bg-amber-50/50">
+                      {formatMoney(adjustedResults.additionalMedicalTaxCredit ?? 0)}
+                    </td>
+                    <td className="text-right p-3 pr-6 text-slate-400">
+                      {formatMoney(
+                        (adjustedResults.additionalMedicalTaxCredit ?? 0) -
+                          (baselineResults.additionalMedicalTaxCredit ?? 0),
+                      )}
                     </td>
                   </tr>
                   <tr>

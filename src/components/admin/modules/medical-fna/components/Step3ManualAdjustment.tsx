@@ -8,7 +8,7 @@
  */
 
 import React, { useState } from 'react';
-import { Shield, Users, Wallet, Clock, Info } from 'lucide-react';
+import { Shield, Users, Wallet, Clock, Info, Umbrella } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Input } from '../../../../ui/input';
 import { Label } from '../../../../ui/label';
@@ -174,6 +174,17 @@ export function Step3ManualAdjustment({
           overrideValue={adjustments.ljpBandOverride}
           onOverrideChange={(val: string | boolean) => handleOverrideChange('ljpBandOverride', val)}
           options={['0%', '5%', '25%', '50%', '75%']}
+        />
+
+        <AdjustmentCard
+          title="Gap Cover"
+          icon={Umbrella}
+          systemValue={calculations.gapCoverRecommended ? 'Recommended' : 'Not Recommended'}
+          overrideValue={adjustments.gapCoverOverride}
+          onOverrideChange={(val: string | boolean) =>
+            handleOverrideChange('gapCoverOverride', val)
+          }
+          type="switch"
         />
       </div>
 

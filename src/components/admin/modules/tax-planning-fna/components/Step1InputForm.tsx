@@ -12,7 +12,8 @@ import {
 import { Tabs, TabsContent } from '../../../../ui/tabs';
 import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
 import { TaxPlanningInputs } from '../types';
-import { ArrowRight, Info, User, Wallet, Calculator } from 'lucide-react';
+import { ArrowRight, Info, User, Wallet, Calculator, HeartPulse } from 'lucide-react';
+import { Switch } from '../../../../ui/switch';
 import { toast } from 'sonner';
 import { CurrencyInputField } from '../../../../ui/currency-input';
 import { NumberInputField } from '../../../../ui/number-input';
@@ -55,6 +56,13 @@ export function Step1InputForm({
     raContributions: 0,
     tfsaContributionsLifetime: 0,
     medicalSchemeMembers: 3,
+    employerFundContributions: 0,
+    rentalExpenses: 0,
+    businessExpenses: 0,
+    tfsaContributionsThisYear: 0,
+    medicalSchemeContributions: 0,
+    outOfPocketMedicalExpenses: 0,
+    hasDisability: false,
     ...initialData,
   });
 
@@ -132,11 +140,14 @@ export function Step1InputForm({
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
               <div className="space-y-2">
-                <Label>Age (Years)</Label>
+                <Label>Age on 28 February 2027</Label>
                 <NumberInputField
                   value={formData.age}
                   onValueChange={(v) => handleChange('age', v ?? 0)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Age on the last day of the tax year — this sets the rebates and interest exemption
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -194,7 +205,10 @@ export function Step1InputForm({
                 <Wallet className="h-5 w-5" />
                 Taxable Income Streams
               </CardTitle>
-              <CardDescription>Enter annual gross amounts (Code 3601, 3606, etc.)</CardDescription>
+              <CardDescription>
+                Enter annual gross amounts (Code 3601, 3606, etc.). Rental and business income are
+                gross — enter their allowable expenses separately.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -215,7 +229,7 @@ export function Step1InputForm({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Business / Director Fees</Label>
+                  <Label>Business / Director Fees (Gross)</Label>
                   <CurrencyInputField
                     value={formData.businessIncome}
                     onValueChange={(v) => handleChange('businessIncome', v ?? 0)}
@@ -223,11 +237,30 @@ export function Step1InputForm({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Rental Income (Profit)</Label>
+                  <Label>Business Expenses (Allowable)</Label>
+                  <CurrencyInputField
+                    value={formData.businessExpenses ?? 0}
+                    onValueChange={(v) => handleChange('businessExpenses', v ?? 0)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Rental Income (Gross)</Label>
                   <CurrencyInputField
                     value={formData.rentalIncome}
                     onValueChange={(v) => handleChange('rentalIncome', v ?? 0)}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Rental Expenses (Allowable)</Label>
+                  <CurrencyInputField
+                    value={formData.rentalExpenses ?? 0}
+                    onValueChange={(v) => handleChange('rentalExpenses', v ?? 0)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Bond interest, rates, levies, insurance, repairs, agent fees
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Foreign Income</Label>
@@ -290,13 +323,23 @@ export function Step1InputForm({
             <CardContent className="space-y-6 pt-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>RA / Pension Contributions (Annual)</Label>
+                  <Label>Retirement Annuity Contributions (Annual)</Label>
                   <CurrencyInputField
                     value={formData.raContributions}
                     onValueChange={(v) => handleChange('raContributions', v ?? 0)}
                   />
+                  <p className="text-xs text-muted-foreground">The client's own RA contributions</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Pension / Provident Fund Contributions (Annual)</Label>
+                  <CurrencyInputField
+                    value={formData.employerFundContributions ?? 0}
+                    onValueChange={(v) => handleChange('employerFundContributions', v ?? 0)}
+                  />
                   <p className="text-xs text-muted-foreground">
-                    Total contributions to approved retirement funds
+                    Employee and employer contributions (incl. the employer fringe benefit). They
+                    share the same R430,000 / 27.5% limit as RAs.
                   </p>
                 </div>
 
@@ -309,6 +352,67 @@ export function Step1InputForm({
                   <p className="text-xs text-muted-foreground">
                     Cumulative contributions since inception (Max R500k)
                   </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>TFSA Contributions This Tax Year</Label>
+                  <CurrencyInputField
+                    value={formData.tfsaContributionsThisYear ?? 0}
+                    onValueChange={(v) => handleChange('tfsaContributionsThisYear', v ?? 0)}
+                  />
+                  <p className="text-xs text-muted-foreground">Annual limit R46,000</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SECTION E: MEDICAL EXPENSES (s6B) */}
+          <Card>
+            <CardHeader className="pb-3 border-b bg-muted/20">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <HeartPulse className="h-5 w-5" />
+                Medical Expenses (Optional)
+              </CardTitle>
+              <CardDescription>
+                For the Section 6B additional medical expenses tax credit
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Medical Scheme Contributions Paid (Annual)</Label>
+                  <CurrencyInputField
+                    value={formData.medicalSchemeContributions ?? 0}
+                    onValueChange={(v) => handleChange('medicalSchemeContributions', v ?? 0)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The portion the client pays, not the employer
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Out-of-Pocket Medical Expenses (Annual)</Label>
+                  <CurrencyInputField
+                    value={formData.outOfPocketMedicalExpenses ?? 0}
+                    onValueChange={(v) => handleChange('outOfPocketMedicalExpenses', v ?? 0)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Qualifying expenses not recovered from the scheme
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border p-4 md:col-span-2">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="tax-has-disability">Disability in the family</Label>
+                    <p className="text-xs text-muted-foreground">
+                      The client, spouse or a child has a disability (s6B 33.3% rate)
+                    </p>
+                  </div>
+                  <Switch
+                    id="tax-has-disability"
+                    checked={formData.hasDisability ?? false}
+                    onCheckedChange={(v) => handleChange('hasDisability', v)}
+                  />
                 </div>
               </div>
             </CardContent>

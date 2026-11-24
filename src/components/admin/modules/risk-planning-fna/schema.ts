@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { VALIDATION_RULES } from './constants';
+import { RISK_ASSUMPTION_DEFAULTS, VALIDATION_RULES } from './constants';
 
 // ==================== DEPENDANT SCHEMA ====================
 
@@ -37,6 +37,18 @@ const positiveNumberString = z
   .transform((val) => (val === '' ? '0' : val)) // Default empty strings to '0'
   .refine((val) => !isNaN(Number(val)), 'Must be a valid number')
   .refine((val) => Number(val) >= 0, 'Cannot be negative');
+
+/**
+ * A percentage assumption between 0 and `max`. Blank takes `fallback`, so a
+ * form opened from a draft saved before these fields existed still validates.
+ */
+const percentageString = (fallback: number, max: number) =>
+  z
+    .string()
+    .optional()
+    .transform((val) => (val === undefined || val === '' ? String(fallback) : val))
+    .refine((val) => !isNaN(Number(val)), 'Must be a valid number')
+    .refine((val) => Number(val) >= 0 && Number(val) <= max, `Must be between 0 and ${max}%`);
 
 // ==================== MAIN FORM SCHEMA ====================
 
@@ -119,6 +131,26 @@ export const InformationGatheringSchema = z
       .transform((val) => (val === '' ? '0' : val)) // Default empty to '0'
       .refine((val) => !isNaN(Number(val)), 'Must be a valid number')
       .refine((val) => Number(val) >= 0, 'Cannot be negative'),
+
+    liquidAssetsAvailable: positiveNumberString.optional().transform((val) => val ?? '0'),
+
+    // Calculation assumptions (percentages)
+    investmentReturnAssumption: percentageString(
+      RISK_ASSUMPTION_DEFAULTS.INVESTMENT_RETURN,
+      VALIDATION_RULES.MAX_ASSUMPTION_RATE,
+    ),
+    incomeReplacementRatio: percentageString(
+      RISK_ASSUMPTION_DEFAULTS.INCOME_REPLACEMENT_RATIO,
+      VALIDATION_RULES.MAX_REPLACEMENT_RATIO,
+    ),
+    disabilityIncomeReplacementRatio: percentageString(
+      RISK_ASSUMPTION_DEFAULTS.DISABILITY_INCOME_REPLACEMENT_RATIO,
+      VALIDATION_RULES.MAX_REPLACEMENT_RATIO,
+    ),
+    educationInflationAssumption: percentageString(
+      RISK_ASSUMPTION_DEFAULTS.EDUCATION_INFLATION,
+      VALIDATION_RULES.MAX_ASSUMPTION_RATE,
+    ),
 
     // Existing Cover - Life
     existingCoverLifePersonal: positiveNumberString,
@@ -236,6 +268,20 @@ export function transformFormToInput(formValues: InformationGatheringFormValues)
     combinedHouseholdIncome,
     clientIncomePercentage,
     totalHouseholdMonthlyExpenditure: Number(formValues.totalHouseholdMonthlyExpenditure),
+    liquidAssetsAvailable: Number(formValues.liquidAssetsAvailable ?? 0),
+    investmentReturnAssumption: Number(
+      formValues.investmentReturnAssumption ?? RISK_ASSUMPTION_DEFAULTS.INVESTMENT_RETURN,
+    ),
+    incomeReplacementRatio: Number(
+      formValues.incomeReplacementRatio ?? RISK_ASSUMPTION_DEFAULTS.INCOME_REPLACEMENT_RATIO,
+    ),
+    disabilityIncomeReplacementRatio: Number(
+      formValues.disabilityIncomeReplacementRatio ??
+        RISK_ASSUMPTION_DEFAULTS.DISABILITY_INCOME_REPLACEMENT_RATIO,
+    ),
+    educationInflationAssumption: Number(
+      formValues.educationInflationAssumption ?? RISK_ASSUMPTION_DEFAULTS.EDUCATION_INFLATION,
+    ),
     existingCover: {
       life: {
         personal: Number(formValues.existingCoverLifePersonal),

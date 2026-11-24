@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RETIREMENT_ASSUMPTIONS, calculateRetirementFNA } from '../calculation-engine';
+import {
+  DEFAULT_RETIREMENT_ASSUMPTIONS,
+  RetirementCalculationError,
+  calculateRetirementFNA,
+  getRetirementInputProblem,
+} from '../calculation-engine';
 import type { RetirementFNAAdjustments, RetirementFNAInputs } from '../../types';
 
 function run(
@@ -10,9 +15,16 @@ function run(
 }
 
 describe('calculateRetirementFNA — assumptions & merge', () => {
-  it('applies defaults when inputs are empty', () => {
-    const r = run({});
-    expect(r.yearsToRetirement).toBe(DEFAULT_RETIREMENT_ASSUMPTIONS.retirementAge - 30); // currentAge default 30
+  // Previously asserted that a missing age silently became 30. The engine now
+  // refuses rather than inventing an age.
+  it('refuses to calculate without an age', () => {
+    expect(() => run({})).toThrow(RetirementCalculationError);
+    expect(getRetirementInputProblem({})).toMatch(/current age is required/);
+  });
+
+  it('applies default assumptions when only the age is given', () => {
+    const r = run({ currentAge: 30 });
+    expect(r.yearsToRetirement).toBe(DEFAULT_RETIREMENT_ASSUMPTIONS.retirementAge - 30);
     expect(r.yearsInRetirement).toBe(DEFAULT_RETIREMENT_ASSUMPTIONS.yearsInRetirement);
     expect(r.realGrowthRate).toBe(DEFAULT_RETIREMENT_ASSUMPTIONS.preRetirementReturn);
     expect(r.realSalaryGrowth).toBe(DEFAULT_RETIREMENT_ASSUMPTIONS.salaryEscalation);

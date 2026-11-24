@@ -91,41 +91,86 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
 
   const resultsRecord = (results || {}) as Record<string, unknown>;
 
+  /**
+   * The adviser's calculated results (deathBalanceSheet / liquidityAnalysis),
+   * when stored. They are the figures the adviser advised on; the input-based
+   * estimate below is only a fallback for an analysis without results.
+   */
+  interface StoredEstateResults {
+    deathBalanceSheet?: {
+      estateDuty?: {
+        dutiableEstate?: number;
+        estimatedEstateDuty?: number;
+        lessAbatement?: number;
+        portedAbatement?: number;
+        lessSpousalDeduction?: number;
+      };
+      administrationCosts?: {
+        executorFees?: number;
+        executorFeesVat?: number;
+        masterFees?: number;
+        funeralCosts?: number;
+        conveyancingFees?: number;
+      };
+      cgtOnDeath?: { estimatedCGT?: number };
+    };
+    liquidityAnalysis?: {
+      liquidityRequired?: { total?: number; liabilities?: number };
+      liquidityAvailable?: number;
+    };
+  }
+  const stored = resultsRecord as StoredEstateResults;
+  const storedDuty = stored.deathBalanceSheet?.estateDuty;
+  const storedCosts = stored.deathBalanceSheet?.administrationCosts;
+  const storedLiquidity = stored.liquidityAnalysis;
+  const hasStoredResults = !!storedDuty && !!storedCosts && !!storedLiquidity;
+
   // Use results if available, otherwise derive from inputs
   const estateValue = (resultsRecord.estateValue as number) ?? netEstateValue;
-  const estateDutyAbatement = assumptions?.estateDutyAbatement || 3500000;
+  const estateDutyAbatement =
+    storedDuty?.lessAbatement ?? (assumptions?.estateDutyAbatement || 3500000);
   const estateDutyRate = assumptions?.estateDutyRate || 0.2;
-  const dutiableAmount = Math.max(
-    0,
-    estateValue - (assumptions?.spousalBequest ? estateValue : estateDutyAbatement),
-  );
+  const dutiableAmount =
+    storedDuty?.dutiableEstate ??
+    Math.max(0, estateValue - (assumptions?.spousalBequest ? estateValue : estateDutyAbatement));
+  // Estate duty: 20% on the first R30m of the dutiable amount, 25% above.
   const estimatedEstateDuty =
-    (resultsRecord.estateDuty as number) ?? dutiableAmount * estateDutyRate;
+    storedDuty?.estimatedEstateDuty ??
+    (resultsRecord.estateDuty as number) ??
+    Math.min(dutiableAmount, 30_000_000) * estateDutyRate +
+      Math.max(0, dutiableAmount - 30_000_000) * 0.25;
 
-  // Calculate liquidity needs
-  const executorFees = (estateValue * (assumptions?.executorFeePercentage || 3.5)) / 100;
-  const masterFees = assumptions?.masterFeesEstimate || 5000;
-  const funeralCosts = assumptions?.funeralCostsEstimate || 50000;
+  // Calculate liquidity needs. The executor's tariff is quoted excluding VAT.
+  const executorFees = storedCosts
+    ? (storedCosts.executorFees ?? 0) + (storedCosts.executorFeesVat ?? 0)
+    : ((estateValue * (assumptions?.executorFeePercentage || 3.5)) / 100) * 1.15;
+  const masterFees = storedCosts?.masterFees ?? (assumptions?.masterFeesEstimate || 5000);
+  const funeralCosts = storedCosts?.funeralCosts ?? (assumptions?.funeralCostsEstimate || 50000);
   const conveyancingFees = assumptions?.conveyancingFeesPerProperty || 50000;
   const numProperties = assets.filter(
     (a: EstateAsset) =>
       (a.type || '').toLowerCase() === 'property' ||
       (a.subType || '').toLowerCase().includes('property'),
   ).length;
+  const totalConveyancing = storedCosts?.conveyancingFees ?? conveyancingFees * numProperties;
+  const cgtOnDeath = stored.deathBalanceSheet?.cgtOnDeath?.estimatedCGT ?? 0;
+  const debtsToSettle = storedLiquidity?.liquidityRequired?.liabilities ?? 0;
   const totalLiquidityNeeds =
+    storedLiquidity?.liquidityRequired?.total ??
     (resultsRecord.liquidityNeeds as number) ??
-    estimatedEstateDuty +
-      executorFees +
-      masterFees +
-      funeralCosts +
-      conveyancingFees * numProperties;
+    estimatedEstateDuty + executorFees + masterFees + funeralCosts + totalConveyancing;
 
   // Total life cover payable to estate
   const totalLifeCoverToEstate = lifePolicies
     .filter((p: LifePolicy) => p.payableToEstate)
     .reduce((sum: number, p: LifePolicy) => sum + (p.sumAssured || 0), 0);
 
-  const liquidityShortfall = totalLiquidityNeeds - totalLifeCoverToEstate;
+  // With stored results, liquidity available also counts the estate's cash
+  // and listed investments, not only the life cover payable to it.
+  const liquidityAvailable = hasStoredResults
+    ? (storedLiquidity?.liquidityAvailable ?? totalLifeCoverToEstate)
+    : totalLifeCoverToEstate;
+  const liquidityShortfall = totalLiquidityNeeds - liquidityAvailable;
 
   return (
     <div className="space-y-6">
@@ -364,15 +409,17 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 mb-1">Dutiable Estate</p>
-              <p className="text-lg text-gray-900">{formatCurrency(estateValue)}</p>
+              <p className="text-lg text-gray-900">{formatCurrency(dutiableAmount)}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600 mb-1">Estate Duty Abatement</p>
               <p className="text-lg text-gray-900">{formatCurrency(estateDutyAbatement)}</p>
               <p className="text-xs text-gray-600 mt-1">
-                {assumptions?.spousalBequest
-                  ? 'Spousal bequest exemption applies'
-                  : 'Standard R3.5M abatement'}
+                {storedDuty?.portedAbatement
+                  ? 'Includes the unused abatement of a predeceased spouse'
+                  : assumptions?.spousalBequest
+                    ? 'Spousal bequest exemption applies'
+                    : 'Standard R3.5M abatement'}
               </p>
             </div>
           </div>
@@ -382,13 +429,15 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
           <div className="p-4 bg-red-50 rounded-lg border border-red-200">
             <div className="flex justify-between items-center mb-2">
               <p className="text-sm text-gray-900">
-                <strong>Estimated Estate Duty ({(estateDutyRate * 100).toFixed(0)}%)</strong>
+                <strong>
+                  Estimated Estate Duty ({(estateDutyRate * 100).toFixed(0)}%, 25% above R30m)
+                </strong>
               </p>
               <p className="text-2xl text-red-700">{formatCurrency(estimatedEstateDuty)}</p>
             </div>
             <p className="text-xs text-gray-600">
-              Calculated at {(estateDutyRate * 100).toFixed(0)}% on the dutiable amount above the
-              abatement threshold
+              Calculated at {(estateDutyRate * 100).toFixed(0)}% on the first R30 million of the
+              dutiable amount after the abatement, and 25% on any amount above that
             </p>
           </div>
         </CardContent>
@@ -424,10 +473,22 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
               </div>
               <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
                 <span className="text-gray-600">
-                  Executor Fees ({assumptions?.executorFeePercentage || 3.5}%)
+                  Executor Fees ({assumptions?.executorFeePercentage || 3.5}% + VAT)
                 </span>
                 <span className="text-gray-900">{formatCurrency(executorFees)}</span>
               </div>
+              {cgtOnDeath > 0 && (
+                <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
+                  <span className="text-gray-600">Capital Gains Tax on Death</span>
+                  <span className="text-gray-900">{formatCurrency(cgtOnDeath)}</span>
+                </div>
+              )}
+              {debtsToSettle > 0 && (
+                <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
+                  <span className="text-gray-600">Debts to Settle</span>
+                  <span className="text-gray-900">{formatCurrency(debtsToSettle)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-xs p-2 bg-gray-50 rounded">
                 <span className="text-gray-600">Master of High Court Fees</span>
                 <span className="text-gray-900">{formatCurrency(masterFees)}</span>
@@ -441,9 +502,7 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
                   <span className="text-gray-600">
                     Conveyancing Fees ({numProperties} propert{numProperties === 1 ? 'y' : 'ies'})
                   </span>
-                  <span className="text-gray-900">
-                    {formatCurrency(conveyancingFees * numProperties)}
-                  </span>
+                  <span className="text-gray-900">{formatCurrency(totalConveyancing)}</span>
                 </div>
               )}
               <Separator />
@@ -454,13 +513,17 @@ export function EstatePlanningResults({ fna }: EstatePlanningResultsProps) {
             </div>
           </div>
 
-          {totalLifeCoverToEstate > 0 && (
+          {liquidityAvailable > 0 && (
             <div className="contents">
               <Separator />
               <div className="space-y-2">
                 <div className="flex justify-between text-xs p-2 bg-green-50 rounded">
-                  <span className="text-gray-600">Life Cover Payable to Estate</span>
-                  <span className="text-green-700">{formatCurrency(totalLifeCoverToEstate)}</span>
+                  <span className="text-gray-600">
+                    {hasStoredResults
+                      ? 'Cash, Investments and Life Cover Payable to Estate'
+                      : 'Life Cover Payable to Estate'}
+                  </span>
+                  <span className="text-green-700">{formatCurrency(liquidityAvailable)}</span>
                 </div>
                 <div
                   className={`flex justify-between text-xs p-2 rounded font-semibold ${liquidityShortfall > 0 ? 'bg-red-50' : 'bg-green-50'}`}

@@ -10,6 +10,7 @@
 
 import { api, APIError } from '../utils/api';
 import { logger } from '../utils/logger';
+import type { RetirementEngineResults } from '../shared/fna-calculations/retirement';
 
 // ==================== SHARED BASE TYPE ====================
 
@@ -118,23 +119,13 @@ export interface RetirementFNA extends FNABase {
     totalMonthlyContribution?: number;
     currentRetirementSavings: number;
     totalCurrentRetirementCapital?: number;
+    currentGrossMonthlyIncome?: number;
+    otherRetirementCapital?: number;
+    otherMonthlyRetirementIncome?: number;
   };
   adjustments: Record<string, unknown>;
-  results: {
-    yearsToRetirement: number;
-    yearsInRetirement: number;
-    realGrowthRate: number;
-    realSalaryGrowth: number;
-    targetMonthlyIncome: number;
-    requiredCapital: number;
-    projectedCapital: number;
-    capitalShortfall: number;
-    hasShortfall: boolean;
-    shortfallPercentage: number;
-    requiredAdditionalContribution: number;
-    totalRecommendedContribution: number;
-    percentageOfIncome: number;
-  } | null;
+  /** The shared engine's result shape; fields added in engine v2 are optional. */
+  results: RetirementEngineResults | null;
   metadata?: {
     systemVersion: string;
     createdAt: string;
@@ -165,6 +156,14 @@ export interface TaxPlanningFNA extends FNABase {
     raContributions: number;
     tfsaContributionsLifetime: number;
     medicalSchemeMembers: number;
+    // Optional refinements — absent on FNAs saved before they existed.
+    employerFundContributions?: number;
+    rentalExpenses?: number;
+    businessExpenses?: number;
+    tfsaContributionsThisYear?: number;
+    medicalSchemeContributions?: number;
+    outOfPocketMedicalExpenses?: number;
+    hasDisability?: boolean;
   };
   finalResults: {
     grossIncome: number;
@@ -187,6 +186,15 @@ export interface TaxPlanningFNA extends FNABase {
     raTaxSavingPotential: number;
     interestTaxLeakage: number;
     tfsaRemainingLifetime: number;
+    // Optional refinements — absent on FNAs saved before they existed.
+    allowableExpenses?: number;
+    totalRetirementContributions?: number;
+    retirementDeductionBase?: number;
+    nonDeductibleRetirementContributions?: number;
+    additionalMedicalTaxCredit?: number;
+    marginalRate?: number;
+    tfsaRemainingThisYear?: number;
+    notes?: string[];
   };
   adjustments: Array<{
     id: string;
@@ -288,8 +296,30 @@ export interface MedicalFNA extends FNABase {
     emergencyFundSavings: number;
     severeCriticalIllnessCover: number;
   };
-  // Results from calculateMedicalFNA() on the backend
+  // Results from calculateMedicalFNA() on the backend (legacy shape), or
+  // from the admin wizard's client-side calculation (the flat fields below).
   results: {
+    // Admin-wizard recommendation fields. Gap cover and affordability are
+    // absent on FNAs published before they were assessed.
+    recommendedDependents?: string;
+    recommendedInHospitalCover?: string;
+    msaRecommended?: boolean;
+    ljpBand?: string;
+    gapCoverRecommended?: boolean;
+    premiumAffordability?: {
+      netMonthlyIncome: number;
+      monthlyPremium: number;
+      premiumToIncomeRatio: number;
+      exceedsGuideline: boolean;
+    };
+    rationale?: {
+      hospital?: string;
+      msa?: string;
+      ljp?: string;
+      dependents?: string;
+      gapCover?: string;
+      affordability?: string;
+    };
     hospitalCover?: {
       requiredTier: number;
       requiredTierRationale: string;

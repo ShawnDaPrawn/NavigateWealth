@@ -27,6 +27,7 @@ import {
   RetirementCalculationResults,
 } from '../types';
 import { FNAStepNavigation } from '../../fna';
+import { DEFAULT_RETIREMENT_ASSUMPTIONS } from '../utils/calculation-engine';
 
 interface Step3ManualAdjustmentProps {
   inputs: Partial<RetirementFNAInputs>;
@@ -45,14 +46,17 @@ export function Step3ManualAdjustment({
   const [adjustments, setAdjustments] = useState<RetirementFNAAdjustments>(initialAdjustments);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Standard assumptions
+  // Standard assumptions. Contribution escalation has no standard of its own:
+  // contributions are a percentage of salary, so they follow salary escalation.
+  const salaryEscalation =
+    adjustments.salaryEscalation ?? DEFAULT_RETIREMENT_ASSUMPTIONS.salaryEscalation;
   const STANDARD_ASSUMPTIONS = {
-    inflationRate: 0.06,
-    preRetirementReturn: 0.1,
-    postRetirementReturn: 0.08,
-    replacementRatio: 0.75,
-    yearsInRetirement: 25,
-    premiumEscalation: 0.06,
+    inflationRate: DEFAULT_RETIREMENT_ASSUMPTIONS.inflationRate,
+    preRetirementReturn: DEFAULT_RETIREMENT_ASSUMPTIONS.preRetirementReturn,
+    postRetirementReturn: DEFAULT_RETIREMENT_ASSUMPTIONS.postRetirementReturn,
+    replacementRatio: DEFAULT_RETIREMENT_ASSUMPTIONS.replacementRatio,
+    yearsInRetirement: DEFAULT_RETIREMENT_ASSUMPTIONS.yearsInRetirement,
+    premiumEscalation: salaryEscalation,
   };
 
   // Percentages are typed as 6.5 and stored as 0.065.
@@ -82,7 +86,7 @@ export function Step3ManualAdjustment({
 
   // Check if value differs significantly from standard
   const isDifferent = (field: keyof typeof STANDARD_ASSUMPTIONS, threshold = 0.02) => {
-    const currentValue = adjustments[field] || STANDARD_ASSUMPTIONS[field];
+    const currentValue = adjustments[field] ?? STANDARD_ASSUMPTIONS[field];
     return Math.abs(currentValue - STANDARD_ASSUMPTIONS[field]) > threshold;
   };
 
@@ -200,7 +204,7 @@ export function Step3ManualAdjustment({
 
             <div className="space-y-2">
               <Label htmlFor="premiumEscalation" className="font-medium">
-                Premium Escalation (Annual)
+                Contribution Escalation (Annual)
               </Label>
               <div className="relative">
                 <NumberInputField
@@ -215,7 +219,8 @@ export function Step3ManualAdjustment({
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Standard: {(STANDARD_ASSUMPTIONS.premiumEscalation * 100).toFixed(1)}%
+                Standard: follows salary escalation (
+                {(STANDARD_ASSUMPTIONS.premiumEscalation * 100).toFixed(1)}%)
               </p>
             </div>
           </div>

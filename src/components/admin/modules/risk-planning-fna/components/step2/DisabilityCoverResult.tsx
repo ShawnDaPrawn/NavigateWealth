@@ -25,12 +25,37 @@ export function DisabilityCoverResult({ calculation }: DisabilityCoverResultProp
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              Capitalised Income Loss ({capitalisedIncomeLoss.disabilityMultiple}×)
-            </span>
-            <span>{formatCurrency(capitalisedIncomeLoss.total)}</span>
-          </div>
+          {capitalisedIncomeLoss.grossCapitalisedLoss !== undefined ? (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Lost Income to Retirement (
+                  {formatCurrency(capitalisedIncomeLoss.annualIncomeNeed ?? 0)} a year for{' '}
+                  {capitalisedIncomeLoss.termYears ?? 0} years, present value)
+                </span>
+                <span>{formatCurrency(capitalisedIncomeLoss.grossCapitalisedLoss)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Less Existing Permanent Income Protection (capitalised)
+                </span>
+                <span>({formatCurrency(capitalisedIncomeLoss.permanentIPOffset ?? 0)})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Capitalised Income Loss ({capitalisedIncomeLoss.disabilityMultiple}× net income)
+                </span>
+                <span>{formatCurrency(capitalisedIncomeLoss.total)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">
+                Capitalised Income Loss ({capitalisedIncomeLoss.disabilityMultiple}×)
+              </span>
+              <span>{formatCurrency(capitalisedIncomeLoss.total)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Additional Disability Costs</span>
             <span>{formatCurrency(additionalDisabilityCosts.total)}</span>

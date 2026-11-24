@@ -24,7 +24,15 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
     return isFinite(result) ? Math.min(result, 100) : 0;
   };
 
-  const raUtilisation = safePercent(inputs.raContributions, calculations.maxAllowedRADeduction);
+  const totalRetirementContributions =
+    calculations.totalRetirementContributions ?? inputs.raContributions;
+  const raUtilisation = safePercent(
+    totalRetirementContributions,
+    calculations.maxAllowedRADeduction,
+  );
+  const allowableExpenses = calculations.allowableExpenses ?? 0;
+  const additionalMedicalTaxCredit = calculations.additionalMedicalTaxCredit ?? 0;
+  const notes = calculations.notes ?? [];
   const tfsaUtilisation = safePercent(
     inputs.tfsaContributionsLifetime,
     TAX_YEAR_2026_2027.TFSA_LIFETIME_LIMIT,
@@ -112,6 +120,15 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
                 <span>{formatMoney(calculations.grossIncome)}</span>
               </div>
 
+              {allowableExpenses > 0 && (
+                <div className="py-3 flex justify-between items-center bg-green-50/50 -mx-4 px-4 text-green-700">
+                  <span className="flex items-center gap-2">
+                    Less: Rental &amp; Business Expenses
+                  </span>
+                  <span>({formatMoney(allowableExpenses)})</span>
+                </div>
+              )}
+
               <div className="py-3 flex justify-between items-center bg-green-50/50 -mx-4 px-4 text-green-700">
                 <span className="flex items-center gap-2">2. Less: Interest Exemption</span>
                 <span>({formatMoney(calculations.interestExemption)})</span>
@@ -119,7 +136,7 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
 
               <div className="py-3 flex justify-between items-center bg-green-50/50 -mx-4 px-4 text-green-700">
                 <span className="flex items-center gap-2">
-                  3. Less: Retirement Annuity Deduction
+                  3. Less: Retirement Fund Deduction (s11F)
                 </span>
                 <span>({formatMoney(calculations.actualRADeduction)})</span>
               </div>
@@ -143,6 +160,13 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
                 <span>7. Less: Medical Tax Credits (Section 6A)</span>
                 <span>- {formatMoney(calculations.medicalTaxCredits)}</span>
               </div>
+
+              {additionalMedicalTaxCredit > 0 && (
+                <div className="py-3 flex justify-between items-center text-green-700">
+                  <span>Less: Additional Medical Expenses Credit (Section 6B)</span>
+                  <span>- {formatMoney(additionalMedicalTaxCredit)}</span>
+                </div>
+              )}
 
               <div className="py-3 flex justify-between items-center font-medium">
                 <span>Net Income Tax Payable</span>
@@ -172,10 +196,14 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
               {/* RA Gap */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium">RA Utilization</span>
+                  <span className="font-medium">Retirement Deduction Used</span>
                   <span>{Math.round(raUtilisation)}%</span>
                 </div>
                 <Progress value={raUtilisation} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  {formatMoney(totalRetirementContributions)} contributed (RA + pension / provident)
+                  of a {formatMoney(calculations.maxAllowedRADeduction)} limit
+                </p>
                 {calculations.raGap > 0 && (
                   <p className="text-xs text-amber-600 font-medium">
                     Unused Cap: {formatMoney(calculations.raGap)}
@@ -215,6 +243,11 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
                   <span>{Math.round(tfsaUtilisation)}% Used</span>
                 </div>
                 <Progress value={tfsaUtilisation} className="h-2" />
+                {calculations.tfsaRemainingThisYear !== undefined && (
+                  <p className="text-xs text-muted-foreground">
+                    Room left this year: {formatMoney(calculations.tfsaRemainingThisYear)}
+                  </p>
+                )}
               </div>
 
               {/* Medical Credits */}
@@ -228,6 +261,8 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
                 <p className="text-xs text-muted-foreground">
                   {inputs.medicalSchemeMembers} member{inputs.medicalSchemeMembers !== 1 ? 's' : ''}{' '}
                   on scheme
+                  {additionalMedicalTaxCredit > 0 &&
+                    ` · plus ${formatMoney(additionalMedicalTaxCredit)} s6B credit`}
                 </p>
               </div>
             </CardContent>
@@ -243,6 +278,18 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
               SARS tables. In the next step, you can apply manual adjustments for once-off events or
               specific exclusions.
             </p>
+            {calculations.marginalRate !== undefined && (
+              <p className="text-xs text-amber-700 mt-2">
+                Marginal rate: {formatPercent(calculations.marginalRate)}
+              </p>
+            )}
+            {notes.length > 0 && (
+              <ul className="mt-2 space-y-1 list-disc pl-4 text-xs text-amber-700 leading-relaxed">
+                {notes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>

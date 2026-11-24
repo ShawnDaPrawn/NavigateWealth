@@ -54,6 +54,14 @@ export interface AssetItem {
   location: 'south_africa' | 'offshore';
   liquidity: 'liquid' | 'semi_liquid' | 'illiquid';
   includeInEstate: boolean;
+  /**
+   * Gain that would be realised on death (deemed disposal at market value,
+   * s9HA), for the whole asset before ownershipPercentage. Any asset type may
+   * carry it; when it is absent the calculation uses currentValue − purchasePrice.
+   */
+  unrealisedGain?: number;
+  /** Base cost, where recorded. */
+  purchasePrice?: number;
 }
 
 export interface PropertyAsset extends AssetItem {
@@ -127,6 +135,11 @@ export interface LifePolicy {
   beneficiaries: LifePolicyBeneficiary[];
   cededTo?: string;
   payableToEstate: boolean;
+  /**
+   * A buy-and-sell policy (s3(3)(a)(iii)): taken out by a co-owner to buy the
+   * client's business interest. Not deemed property of the client's estate.
+   */
+  isBuyAndSellPolicy?: boolean;
 }
 
 // ============= ESTATE PLANNING INPUTS =============
@@ -158,6 +171,13 @@ export interface EstatePlanningInputs {
     estateDutyAbatement: number; // e.g., R3.5 million
     spousalBequest: boolean; // Whether spouse inherits (affects estate duty)
     cgtInclusionRate: number; // e.g., 0.40 for individuals
+    /** Marginal income tax rate for CGT in the final return. Default 0.45. */
+    cgtMarginalRate?: number;
+    /**
+     * Unused s4A abatement of a predeceased spouse, which ports to this
+     * estate (0 – R3.5m). Default 0.
+     */
+    predeceasedSpouseUnusedAbatement?: number;
   };
 
   // Cross-border & Trust Flags
@@ -211,6 +231,8 @@ export interface DeathBalanceSheet {
     conveyancingFees: number;
     masterFees: number;
     otherCosts: number;
+    /** VAT on the executor's fee. Absent on analyses published before it was shown. */
+    executorFeesVat?: number;
     total: number;
   };
 
@@ -224,6 +246,21 @@ export interface DeathBalanceSheet {
     lessSpousalDeduction: number;
     dutiableEstate: number;
     estimatedEstateDuty: number;
+    // The fields below are absent on analyses published before they existed.
+    /** CGT on death, a debt of the deceased deducted before duty. */
+    lessCGT?: number;
+    /** Policies on the client's life paid to nominated beneficiaries (s3(3)(a)). */
+    addDeemedPropertyNominated?: number;
+    /** Part of lessAbatement ported from a predeceased spouse (s4A). */
+    portedAbatement?: number;
+    /** Duty at the first-tier rate on the dutiable amount up to the threshold. */
+    dutyAtFirstRate?: number;
+    /** Duty at the upper rate on the dutiable amount above the threshold. */
+    dutyAtUpperRate?: number;
+    upperRateThreshold?: number;
+    upperRate?: number;
+    /** Part of estimatedEstateDuty recoverable from policy beneficiaries (s13). */
+    dutyRecoverableFromBeneficiaries?: number;
   };
 
   // Capital Gains Tax on Death
@@ -231,6 +268,13 @@ export interface DeathBalanceSheet {
     totalUnrealisedGains: number;
     inclusionAmount: number;
     estimatedCGT: number;
+    // The fields below are absent on analyses published before they existed.
+    primaryResidenceExclusion?: number;
+    annualExclusionOnDeath?: number;
+    /** Gain rolled over to a surviving spouse (s9HA(2)); no CGT on it now. */
+    spousalRolloverGain?: number;
+    taxableGain?: number;
+    marginalRate?: number;
   };
 
   // Net Estate
@@ -350,6 +394,11 @@ export interface EstatePlanningResults {
     retirementAligned: boolean;
     notes: string[];
   };
+
+  /** The assumptions and statutory values the calculation used, in words. */
+  assumptions?: string[];
+  /** Points the adviser must check that the calculation does not model. */
+  advisoryNotes?: string[];
 }
 
 // ============= ESTATE PLANNING SESSION =============
@@ -372,9 +421,10 @@ export interface EstatePlanningSession {
 /**
  * Estate Planning runs the shared four-step FNA flow like every other analysis
  * (see fna/wizard/fnaWizardFlow.ts). Its Step 3 is an assumption override:
- * the adviser may change the administration-cost assumptions and the spousal
- * bequest, with a recorded reason. The statutory values (estate duty rate,
- * abatement, CGT inclusion rate) are not adjustable.
+ * the adviser may change the administration-cost assumptions, the spousal
+ * bequest, the marginal rate used for CGT and a predeceased spouse's ported
+ * abatement, with a recorded reason. The statutory values (estate duty rates,
+ * abatement, CGT inclusion rate and exclusions) are not adjustable.
  */
 export type WizardStep = FNAWizardStepNumber;
 
@@ -385,6 +435,8 @@ export type EstateAdjustableAssumptions = Pick<
   | 'masterFeesEstimate'
   | 'funeralCostsEstimate'
   | 'spousalBequest'
+  | 'cgtMarginalRate'
+  | 'predeceasedSpouseUnusedAbatement'
 >;
 
 export interface EstatePlanningAdviserAdjustments {

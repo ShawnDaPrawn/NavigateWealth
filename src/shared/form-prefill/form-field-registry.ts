@@ -128,6 +128,7 @@ export const FORM_FIELD_REGISTRY: Record<FormPrefillId, FormFieldMapping[]> = {
   ],
   'medical-fna-step1': [
     clientKey('age', 'currentAge'),
+    clientKey('netMonthlyIncome', 'netMonthlyIncome'),
     {
       formField: 'spousePartner',
       label: 'Spouse / partner on cover',
@@ -180,6 +181,7 @@ export const FORM_FIELD_REGISTRY: Record<FormPrefillId, FormFieldMapping[]> = {
   'retirement-fna-step1': [
     clientKey('age', 'currentAge'),
     clientKey('retirementAge', 'retirementAge'),
+    clientKey('grossMonthlyIncome', 'currentGrossMonthlyIncome'),
     clientKey('netMonthlyIncome', 'currentMonthlyIncome'),
     {
       formField: 'currentMonthlyContribution',

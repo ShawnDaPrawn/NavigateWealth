@@ -15,7 +15,7 @@ import { Button } from '../../../../ui/button';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { Tabs, TabsContent } from '../../../../ui/tabs';
 import { SegmentedList, SegmentedTrigger } from '../../../layout/page';
-import { User, Wallet, Info, Loader2, TrendingUp } from 'lucide-react';
+import { User, Wallet, Info, Loader2, TrendingUp, PiggyBank } from 'lucide-react';
 import { CurrencyInputField } from '../../../../ui/currency-input';
 import { NumberInputField } from '../../../../ui/number-input';
 import { RetirementFNAInputs, RetirementFNAAdjustments } from '../types';
@@ -40,6 +40,7 @@ interface AutoPopulateResponse {
   currentAge?: number;
   intendedRetirementAge?: number;
   netMonthlyIncome?: number;
+  grossMonthlyIncome?: number;
   totalMonthlyContribution?: number;
   totalCurrentRetirementCapital?: number;
   [key: string]: unknown;
@@ -52,8 +53,10 @@ function mapPrefillToRetirementInputs(
   return {
     currentAge: Number(autoData.currentAge) || undefined,
     retirementAge: Number(autoData.retirementAge ?? autoData.intendedRetirementAge) || 65,
-    // Net income only: gross is a different client key and must not stand in for it.
+    // Net and gross are different client keys; neither stands in for the other.
     currentMonthlyIncome: Number(autoData.currentMonthlyIncome ?? autoData.netMonthlyIncome) || 0,
+    currentGrossMonthlyIncome:
+      Number(autoData.currentGrossMonthlyIncome ?? autoData.grossMonthlyIncome) || undefined,
     currentMonthlyContribution:
       Number(autoData.currentMonthlyContribution ?? autoData.totalMonthlyContribution) || 0,
     currentRetirementSavings:
@@ -78,7 +81,9 @@ export function Step1InputForm({
 }: Step1InputFormProps) {
   const [data, setData] = useState<Partial<RetirementFNAInputs>>(initialData);
 
-  // Initialize assumptions with passed values or system defaults
+  // Initialize assumptions with passed values or system defaults. Contribution
+  // escalation is deliberately not defaulted here: unless an adviser overrides
+  // it (Step 3), contributions escalate with salary.
   const [assumptions, setAssumptions] = useState<RetirementFNAAdjustments>({
     inflationRate:
       initialAssumptions?.inflationRate ?? DEFAULT_RETIREMENT_ASSUMPTIONS.inflationRate,
@@ -89,8 +94,6 @@ export function Step1InputForm({
       DEFAULT_RETIREMENT_ASSUMPTIONS.postRetirementReturn,
     salaryEscalation:
       initialAssumptions?.salaryEscalation ?? DEFAULT_RETIREMENT_ASSUMPTIONS.salaryEscalation,
-    premiumEscalation:
-      initialAssumptions?.premiumEscalation ?? DEFAULT_RETIREMENT_ASSUMPTIONS.premiumEscalation,
     yearsInRetirement:
       initialAssumptions?.yearsInRetirement ?? DEFAULT_RETIREMENT_ASSUMPTIONS.yearsInRetirement,
     replacementRatio:
@@ -135,13 +138,24 @@ export function Step1InputForm({
     e.preventDefault();
     setError(null);
 
-    // Basic Validation
+    // Basic Validation — age is required; the calculation never assumes one.
     if (!data.currentAge || data.currentAge < 18) {
-      setError('Please enter a valid current age (must be 18+)');
+      setError("Please enter the client's current age (must be 18+)");
+      setActiveTab('profile');
       return;
     }
     if (!data.retirementAge || data.retirementAge <= data.currentAge) {
       setError('Retirement age must be greater than current age');
+      setActiveTab('profile');
+      return;
+    }
+    if (
+      !intakeMode &&
+      !(data.currentGrossMonthlyIncome ?? 0) &&
+      !(data.currentMonthlyIncome ?? 0)
+    ) {
+      setError("Enter the client's gross monthly income (or at least net income)");
+      setActiveTab('financial');
       return;
     }
 
@@ -234,18 +248,34 @@ export function Step1InputForm({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="currentMonthlyIncome" className="font-medium">
-                    Net Monthly Income
-                  </Label>
-                  <CurrencyInputField
-                    id="currentMonthlyIncome"
-                    value={data.currentMonthlyIncome}
-                    onValueChange={(v) => handleChange('currentMonthlyIncome', v ?? 0)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Base income for replacement ratio calculation
-                  </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currentGrossMonthlyIncome" className="font-medium">
+                      Gross Monthly Income
+                    </Label>
+                    <CurrencyInputField
+                      id="currentGrossMonthlyIncome"
+                      value={data.currentGrossMonthlyIncome}
+                      onValueChange={(v) => handleChange('currentGrossMonthlyIncome', v ?? 0)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Before tax. The target income ratio applies to gross income.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="currentMonthlyIncome" className="font-medium">
+                      Net Monthly Income
+                    </Label>
+                    <CurrencyInputField
+                      id="currentMonthlyIncome"
+                      value={data.currentMonthlyIncome}
+                      onValueChange={(v) => handleChange('currentMonthlyIncome', v ?? 0)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Take-home pay. Used only if gross income is not known.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -272,7 +302,46 @@ export function Step1InputForm({
                     onValueChange={(v) => handleChange('currentMonthlyContribution', v ?? 0)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Total monthly contributions to retirement savings
+                    Total monthly contributions to retirement funds, including the employer's
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PiggyBank className="h-5 w-5" />
+                  Other Retirement Provision
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="otherRetirementCapital" className="font-medium">
+                    Other Capital Earmarked for Retirement
+                  </Label>
+                  <CurrencyInputField
+                    id="otherRetirementCapital"
+                    value={data.otherRetirementCapital}
+                    onValueChange={(v) => handleChange('otherRetirementCapital', v ?? 0)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    E.g. discretionary investments or preservation funds not counted above
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="otherMonthlyRetirementIncome" className="font-medium">
+                    Other Guaranteed Retirement Income (per month, today's money)
+                  </Label>
+                  <CurrencyInputField
+                    id="otherMonthlyRetirementIncome"
+                    value={data.otherMonthlyRetirementIncome}
+                    onValueChange={(v) => handleChange('otherMonthlyRetirementIncome', v ?? 0)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    E.g. rental income or a defined-benefit pension. Reduces the income the
+                    retirement capital must fund.
                   </p>
                 </div>
               </CardContent>

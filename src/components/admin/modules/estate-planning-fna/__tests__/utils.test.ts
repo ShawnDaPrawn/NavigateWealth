@@ -53,17 +53,11 @@ describe('assessLiquidityRisk', () => {
     expect(assessLiquidityRisk(-100000)).toBe('none');
   });
 
-  it('returns none for shortfall below moderate threshold', () => {
-    expect(assessLiquidityRisk(50000)).toBe('none');
-    expect(
-      assessLiquidityRisk(ESTATE_PLANNING_CONSTANTS.LIQUIDITY_SHORTFALL_MODERATE_THRESHOLD - 1),
-    ).toBe('none');
-  });
-
-  it('returns moderate for shortfall at moderate threshold', () => {
-    expect(
-      assessLiquidityRisk(ESTATE_PLANNING_CONSTANTS.LIQUIDITY_SHORTFALL_MODERATE_THRESHOLD),
-    ).toBe('moderate');
+  // Previously a shortfall under R100,000 was labelled 'none' while the
+  // shortfall still showed. Any shortfall is now at least moderate.
+  it('returns moderate for any shortfall below the severe threshold', () => {
+    expect(assessLiquidityRisk(1)).toBe('moderate');
+    expect(assessLiquidityRisk(50000)).toBe('moderate');
     expect(assessLiquidityRisk(250000)).toBe('moderate');
   });
 
@@ -72,6 +66,12 @@ describe('assessLiquidityRisk', () => {
       assessLiquidityRisk(ESTATE_PLANNING_CONSTANTS.LIQUIDITY_SHORTFALL_SEVERE_THRESHOLD),
     ).toBe('severe');
     expect(assessLiquidityRisk(1000000)).toBe('severe');
+  });
+
+  it('returns severe when the shortfall exceeds a quarter of the liquidity required', () => {
+    expect(assessLiquidityRisk(50000, 100000)).toBe('severe'); // 50%
+    expect(assessLiquidityRisk(25000, 100000)).toBe('moderate'); // exactly 25%
+    expect(assessLiquidityRisk(50000, 1000000)).toBe('moderate'); // 5%
   });
 });
 

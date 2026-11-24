@@ -126,9 +126,17 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
                 <span className="text-gray-600">Gross Income</span>
                 <span className="text-gray-900">{formatCurrency(finalResults.grossIncome)}</span>
               </div>
+              {(finalResults.allowableExpenses ?? 0) > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600">Less: Rental &amp; Business Expenses</span>
+                  <span className="text-green-700">
+                    ({formatCurrency(finalResults.allowableExpenses ?? 0)})
+                  </span>
+                </div>
+              )}
               {finalResults.actualRADeduction > 0 && (
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-600">Less: RA Deduction</span>
+                  <span className="text-gray-600">Less: Retirement Fund Deduction</span>
                   <span className="text-green-700">
                     ({formatCurrency(finalResults.actualRADeduction)})
                   </span>
@@ -182,6 +190,16 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
                   <span className="text-gray-600">Less: Medical Tax Credits (Section 6A)</span>
                   <span className="text-green-700">
                     ({formatCurrency(finalResults.medicalTaxCredits)})
+                  </span>
+                </div>
+              )}
+              {(finalResults.additionalMedicalTaxCredit ?? 0) > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600">
+                    Less: Additional Medical Expenses Credit (Section 6B)
+                  </span>
+                  <span className="text-green-700">
+                    ({formatCurrency(finalResults.additionalMedicalTaxCredit ?? 0)})
                   </span>
                 </div>
               )}
@@ -294,13 +312,17 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
               <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm text-gray-900">RA Contributions</p>
+                    <p className="text-sm text-gray-900">Retirement Fund Contributions</p>
                     <p className="text-xs text-gray-600">
                       Max deductible: {formatCurrency(finalResults.maxAllowedRADeduction)} | Actual
                       deduction: {formatCurrency(finalResults.actualRADeduction)}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-900">{formatCurrency(inputs.raContributions)}</p>
+                  <p className="text-sm text-gray-900">
+                    {formatCurrency(
+                      finalResults.totalRetirementContributions ?? inputs.raContributions,
+                    )}
+                  </p>
                 </div>
               </div>
 
@@ -329,6 +351,9 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
                       <p className="text-xs text-gray-600">
                         You are paying {formatCurrency(finalResults.interestTaxLeakage)} in tax on
                         interest above exemption. Consider redirecting to a TFSA (
+                        {finalResults.tfsaRemainingThisYear !== undefined
+                          ? `${formatCurrency(finalResults.tfsaRemainingThisYear)} of room left this year, `
+                          : ''}
                         {formatCurrency(finalResults.tfsaRemainingLifetime)} lifetime capacity
                         remaining).
                       </p>
@@ -386,6 +411,22 @@ export function TaxPlanningResults({ fna }: TaxPlanningResultsProps) {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Assumptions & Limitations */}
+      {(finalResults.notes ?? []).length > 0 && (
+        <Card className="border-gray-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Assumptions &amp; Limitations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1 list-disc pl-5 text-xs text-gray-600">
+              {(finalResults.notes ?? []).map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}

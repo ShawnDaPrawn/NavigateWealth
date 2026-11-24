@@ -33,6 +33,17 @@ export const TaxPlanningInputSchema = z.object({
     'TFSA lifetime contributions cannot exceed R500,000',
   ),
   medicalSchemeMembers: z.number().int().min(0, 'Cannot be negative'),
+
+  // D) Optional refinements (absent on FNAs saved before they existed)
+  employerFundContributions: positiveNumber.optional(),
+  rentalExpenses: positiveNumber.optional(),
+  businessExpenses: positiveNumber.optional(),
+  tfsaContributionsThisYear: positiveNumber
+    .refine((val) => val <= 46000, 'TFSA contributions this year cannot exceed R46,000')
+    .optional(),
+  medicalSchemeContributions: positiveNumber.optional(),
+  outOfPocketMedicalExpenses: positiveNumber.optional(),
+  hasDisability: z.boolean().optional(),
 });
 
 export type TaxPlanningFormValues = z.infer<typeof TaxPlanningInputSchema>;

@@ -83,171 +83,74 @@ function createInput(overrides?: Partial<InformationGatheringInput>): Informatio
 }
 
 // ============================================================================
-// LIFE COVER
+// LIFE COVER, DISABILITY, SEVERE ILLNESS (system version 3.0.0)
+//
+// These replaced tests that asserted the 2.x income multiples (5× / 10× / 14×
+// life, 6× / 10× / 15× disability). The engine is now a capital needs
+// analysis in src/shared/fna-calculations/riskPlanning.ts, whose own suite
+// (src/shared/fna-calculations/__tests__/riskPlanning.test.ts) holds the
+// hand-computed present values. These check the module wires through to it.
 // ============================================================================
 
-describe('calculateLifeCover', () => {
-  it('applies 5x multiple for single person with no dependants', () => {
-    const input = createInput({ dependants: [] });
-    const result = calculateLifeCover(input);
+describe('calculateLifeCover (capital needs)', () => {
+  it('a single client with no dependants needs immediate capital only', () => {
+    const result = calculateLifeCover(createInput({ dependants: [] }));
 
-    expect(result.incomeReplacementCapital.incomeMultiple).toBe(5);
-    expect(result.incomeReplacementCapital.total).toBe(input.netAnnualIncome * 5);
-  });
-
-  it('applies 10x base multiple for married dual-income with 1 dependant', () => {
-    const input = createInput({
-      dependants: [createDependant()],
-      spouseFullName: 'Jane Doe',
-      spouseAverageMonthlyIncome: 50_000,
-    });
-    const result = calculateLifeCover(input);
-
-    expect(result.incomeReplacementCapital.incomeMultiple).toBe(
-      LIFE_COVER.MULTIPLES.MARRIED_YOUNG_CHILDREN_BASE,
-    );
-  });
-
-  it('applies 14x base multiple for single-income household with 1 dependant', () => {
-    const input = createInput({
-      dependants: [createDependant()],
-      spouseFullName: 'Jane Doe',
-      spouseAverageMonthlyIncome: 0,
-    });
-    const result = calculateLifeCover(input);
-
-    expect(result.incomeReplacementCapital.incomeMultiple).toBe(
-      LIFE_COVER.MULTIPLES.SINGLE_INCOME_HOUSEHOLD_BASE,
-    );
-  });
-
-  it('adds +1x per additional dependant (Mandatory Fix #1)', () => {
-    const input = createInput({
-      dependants: [createDependant(), createDependant(), createDependant()],
-      spouseFullName: 'Jane Doe',
-      spouseAverageMonthlyIncome: 50_000,
-    });
-    const result = calculateLifeCover(input);
-
-    // Base 10 + (3-1)*1 = 12
-    expect(result.incomeReplacementCapital.incomeMultiple).toBe(12);
-  });
-
-  it('calculates immediate capital correctly', () => {
-    const input = createInput({
-      totalOutstandingDebts: 2_000_000,
-      totalEstateValue: 5_000_000,
-    });
-    const result = calculateLifeCover(input);
-
-    expect(result.immediateCapital.outstandingDebt).toBe(2_000_000);
-    expect(result.immediateCapital.funeralFinalExpenses).toBe(LIFE_COVER.FUNERAL_FINAL_EXPENSES);
-    expect(result.immediateCapital.estateCosts).toBe(
-      5_000_000 * LIFE_COVER.ESTATE_COSTS_PERCENTAGE,
-    );
-    expect(result.immediateCapital.total).toBe(
-      2_000_000 +
+    expect(result.incomeReplacementCapital.total).toBe(0);
+    expect(result.grossNeed).toBeCloseTo(
+      1_500_000 +
         LIFE_COVER.FUNERAL_FINAL_EXPENSES +
-        5_000_000 * LIFE_COVER.ESTATE_COSTS_PERCENTAGE,
+        1_500_000 * LIFE_COVER.ESTATE_COSTS_PERCENTAGE,
+      6,
     );
   });
 
-  it('calculates education capital as monthlyEducationCost * 12 * dependencyTerm per dependant', () => {
-    const dep1 = createDependant({ monthlyEducationCost: 5_000, dependencyTerm: 10 });
-    const dep2 = createDependant({ monthlyEducationCost: 8_000, dependencyTerm: 5 });
-    const input = createInput({ dependants: [dep1, dep2] });
-    const result = calculateLifeCover(input);
+  it('uses household expenditure less spouse income, over the dependency term', () => {
+    const result = calculateLifeCover(
+      createInput({
+        dependants: [createDependant({ dependencyTerm: 10, monthlyEducationCost: 0 })],
+        spouseFullName: 'Jane Doe',
+        spouseAverageMonthlyIncome: 20_000,
+        totalHouseholdMonthlyExpenditure: 45_000,
+      }),
+    );
 
-    const expectedDep1 = 5_000 * 12 * 10; // 600,000
-    const expectedDep2 = 8_000 * 12 * 5; // 480,000
-    expect(result.educationCapital.total).toBe(expectedDep1 + expectedDep2);
-    expect(result.educationCapital.perDependant).toHaveLength(2);
-    expect(result.educationCapital.perDependant[0].total).toBe(expectedDep1);
-    expect(result.educationCapital.perDependant[1].total).toBe(expectedDep2);
+    expect(result.incomeReplacementCapital.basis).toBe('household-expenditure');
+    expect(result.incomeReplacementCapital.annualIncomeNeed).toBe(300_000);
+    expect(result.incomeReplacementCapital.total).toBeCloseTo(2_553_793.1777, 2);
   });
 
   it('deducts existing cover from gross need (shortfall cannot be negative)', () => {
     const input = createInput({
-      existingCover: createDefaultExistingCover({
-        life: { personal: 10_000_000, group: 5_000_000 },
-      }),
+      existingCover: createDefaultExistingCover({ life: { personal: 500_000, group: 300_000 } }),
     });
     const result = calculateLifeCover(input);
 
-    expect(result.existingCover.total).toBe(15_000_000);
-    expect(result.netShortfall).toBe(Math.max(0, result.grossNeed - 15_000_000));
+    expect(result.existingCover.total).toBe(800_000);
+    expect(result.netShortfall).toBeCloseTo(Math.max(0, result.grossNeed - 800_000), 6);
   });
 
   it('returns zero shortfall when existing cover exceeds gross need', () => {
     const input = createInput({
-      existingCover: createDefaultExistingCover({
-        life: { personal: 100_000_000, group: 0 },
-      }),
+      existingCover: createDefaultExistingCover({ life: { personal: 50_000_000, group: 0 } }),
     });
-    const result = calculateLifeCover(input);
-
-    expect(result.netShortfall).toBe(0);
+    expect(calculateLifeCover(input).netShortfall).toBe(0);
   });
 
   it('handles zero estate value without errors', () => {
-    const input = createInput({ totalEstateValue: 0 });
-    const result = calculateLifeCover(input);
-
+    const result = calculateLifeCover(createInput({ totalEstateValue: 0 }));
     expect(result.immediateCapital.estateCosts).toBe(0);
   });
 });
 
-// ============================================================================
-// DISABILITY COVER
-// ============================================================================
+describe('calculateDisabilityCover (capital needs)', () => {
+  it('capitalises net income to retirement age and adds the fixed costs', () => {
+    const result = calculateDisabilityCover(createInput());
 
-describe('calculateDisabilityCover', () => {
-  it('applies 6x multiple for 0 or 1 dependant', () => {
-    const input = createInput({ dependants: [] });
-    const result = calculateDisabilityCover(input);
-
-    expect(result.capitalisedIncomeLoss.disabilityMultiple).toBe(
-      DISABILITY_COVER.MULTIPLES.ONE_DEPENDANT,
-    );
-  });
-
-  it('applies 10x multiple for 2-4 dependants', () => {
-    const input = createInput({
-      dependants: [createDependant(), createDependant(), createDependant()],
-    });
-    const result = calculateDisabilityCover(input);
-
-    expect(result.capitalisedIncomeLoss.disabilityMultiple).toBe(
-      DISABILITY_COVER.MULTIPLES.TWO_TO_FOUR_DEPENDANTS,
-    );
-  });
-
-  it('applies 15x multiple for 5+ dependants', () => {
-    const deps = Array.from({ length: 5 }, () => createDependant());
-    const input = createInput({ dependants: deps });
-    const result = calculateDisabilityCover(input);
-
-    expect(result.capitalisedIncomeLoss.disabilityMultiple).toBe(
-      DISABILITY_COVER.MULTIPLES.FIVE_PLUS_DEPENDANTS,
-    );
-  });
-
-  it('adds fixed additional disability costs', () => {
-    const input = createInput();
-    const result = calculateDisabilityCover(input);
-
-    expect(result.additionalDisabilityCosts.vehicleAdaptation).toBe(
-      DISABILITY_COVER.VEHICLE_ADAPTATION,
-    );
-    expect(result.additionalDisabilityCosts.medicalEquipment).toBe(
-      DISABILITY_COVER.MEDICAL_EQUIPMENT,
-    );
-    expect(result.additionalDisabilityCosts.onceOffCareCosts).toBe(
-      DISABILITY_COVER.ONCE_OFF_CARE_COSTS,
-    );
+    expect(result.capitalisedIncomeLoss.termYears).toBe(30);
+    expect(result.capitalisedIncomeLoss.total).toBeCloseTo(12_175_906.2642, 2);
     expect(result.additionalDisabilityCosts.total).toBe(
-      DISABILITY_COVER.HOME_MODIFICATIONS +
-        DISABILITY_COVER.VEHICLE_ADAPTATION +
+      DISABILITY_COVER.VEHICLE_ADAPTATION +
         DISABILITY_COVER.MEDICAL_EQUIPMENT +
         DISABILITY_COVER.ONCE_OFF_CARE_COSTS,
     );
@@ -262,52 +165,37 @@ describe('calculateDisabilityCover', () => {
     const result = calculateDisabilityCover(input);
 
     expect(result.existingCover.total).toBe(1_500_000);
-    expect(result.netShortfall).toBe(Math.max(0, result.grossNeed - 1_500_000));
+    expect(result.netShortfall).toBeCloseTo(result.grossNeed - 1_500_000, 6);
   });
 });
 
-// ============================================================================
-// SEVERE ILLNESS COVER
-// ============================================================================
-
 describe('calculateSevereIllnessCover', () => {
   it('applies 2x multiple for income <= R500,000', () => {
-    const input = createInput({ grossAnnualIncome: 400_000 });
-    const result = calculateSevereIllnessCover(input);
-
+    const result = calculateSevereIllnessCover(createInput({ grossAnnualIncome: 400_000 }));
     expect(result.incomeMultiple).toBe(2);
     expect(result.grossNeed).toBe(400_000 * 2);
   });
 
   it('applies 3x multiple for income R500,001 - R1,500,000', () => {
-    const input = createInput({ grossAnnualIncome: 960_000 });
-    const result = calculateSevereIllnessCover(input);
-
+    const result = calculateSevereIllnessCover(createInput({ grossAnnualIncome: 960_000 }));
     expect(result.incomeMultiple).toBe(3);
-    expect(result.grossNeed).toBe(960_000 * 3);
   });
 
   it('applies 5x multiple for income > R1,500,000', () => {
-    const input = createInput({ grossAnnualIncome: 2_000_000 });
-    const result = calculateSevereIllnessCover(input);
-
+    const result = calculateSevereIllnessCover(createInput({ grossAnnualIncome: 2_000_000 }));
     expect(result.incomeMultiple).toBe(5);
-    expect(result.grossNeed).toBe(2_000_000 * 5);
   });
 
-  it('returns 0 multiple when income falls outside all bands', () => {
-    // Edge case: exactly R500,000 should fall in band 1
-    const input = createInput({ grossAnnualIncome: 500_000 });
-    const result = calculateSevereIllnessCover(input);
-
-    expect(result.incomeMultiple).toBe(2);
+  it('puts exactly R500,000 in the first band', () => {
+    expect(
+      calculateSevereIllnessCover(createInput({ grossAnnualIncome: 500_000 })).incomeMultiple,
+    ).toBe(2);
   });
 
-  it('handles band boundary at R500,001 correctly', () => {
-    const input = createInput({ grossAnnualIncome: 500_001 });
-    const result = calculateSevereIllnessCover(input);
-
-    expect(result.incomeMultiple).toBe(3);
+  it('has no gap between bands (R500,000.50 is in the second band, not 0×)', () => {
+    expect(
+      calculateSevereIllnessCover(createInput({ grossAnnualIncome: 500_000.5 })).incomeMultiple,
+    ).toBe(3);
   });
 });
 

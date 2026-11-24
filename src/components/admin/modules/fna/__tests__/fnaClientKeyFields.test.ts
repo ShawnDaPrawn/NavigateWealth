@@ -19,6 +19,7 @@ import type { FamilyInformation } from '../../estate-planning-fna/types';
 const RETIREMENT_FIELDS = [
   'currentAge',
   'retirementAge',
+  'currentGrossMonthlyIncome',
   'currentMonthlyIncome',
   'currentMonthlyContribution',
   'currentRetirementSavings',

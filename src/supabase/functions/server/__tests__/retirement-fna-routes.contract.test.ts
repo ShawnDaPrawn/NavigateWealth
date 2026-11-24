@@ -44,6 +44,7 @@ vi.mock('../form-prefill-auto-populate.ts', () => prefill);
 
 import { kvStore } from './helpers/contract-harness.ts';
 import { resetFnaHarness, seedFnaUser, fnaAssignments } from './helpers/fna-routes-harness.ts';
+import { calculateRetirement } from '../../../../shared/fna-calculations/retirement.ts';
 
 const app = (await import('../retirement-fna-routes.ts')).default;
 
@@ -385,6 +386,59 @@ describe('lifecycle', () => {
     const stored = record(String(fna.id))!;
     expect(stored.results).toBeTruthy();
     expect(stored.results).not.toBeNull();
+  });
+
+  it('refuses to calculate without an age rather than assuming one', async () => {
+    const fna = await create();
+    const { currentAge: _omit, ...noAge } = INPUTS;
+    await req(`/${fna.id}/inputs`, { method: 'PUT', body: noAge });
+
+    const res = await req(`/${fna.id}/calculate`, { method: 'POST' });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/current age is required/);
+    expect(record(String(fna.id))!.results).toBeNull();
+  });
+
+  it('stores exactly what the shared engine (the wizard preview) produces', async () => {
+    const fna = await create();
+    // As the wizard saves them: inputs and adjustments merged, fractions for rates.
+    const saved = {
+      currentAge: 45,
+      retirementAge: 65,
+      currentMonthlyIncome: 52_000,
+      currentGrossMonthlyIncome: 75_000,
+      currentMonthlyContribution: 9_000,
+      currentRetirementSavings: 1_400_000,
+      otherRetirementCapital: 250_000,
+      otherMonthlyRetirementIncome: 6_000,
+      inflationRate: 0.055,
+      preRetirementReturn: 0.105,
+      salaryEscalation: 0.065,
+      adviserNotes: 'ignored by the engine',
+    };
+    await req(`/${fna.id}/inputs`, { method: 'PUT', body: saved });
+    await req(`/${fna.id}/calculate`, { method: 'POST' });
+
+    expect(record(String(fna.id))!.results).toEqual(
+      calculateRetirement(saved, {
+        inflationRate: 0.055,
+        preRetirementReturn: 0.105,
+        salaryEscalation: 0.065,
+      }),
+    );
+  });
+
+  it('parses stored string values the same way', async () => {
+    const fna = await create();
+    await req(`/${fna.id}/inputs`, {
+      method: 'PUT',
+      body: { currentAge: '50', retirementAge: '65', currentGrossMonthlyIncome: '60000' },
+    });
+    await req(`/${fna.id}/calculate`, { method: 'POST' });
+
+    const results = record(String(fna.id))!.results as unknown as Record<string, unknown>;
+    expect(results.yearsToRetirement).toBe(15);
+    expect(results.incomeBasis).toBe('gross');
   });
 
   it('publishing stamps the record and points :latest at it', async () => {

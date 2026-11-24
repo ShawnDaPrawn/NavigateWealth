@@ -104,6 +104,7 @@ export const LifePolicySchema = z.object({
   beneficiaries: z.array(LifePolicyBeneficiarySchema),
   cededTo: z.string().optional(),
   payableToEstate: z.boolean(),
+  isBuyAndSellPolicy: z.boolean().optional(),
 });
 
 export const AssumptionsSchema = z.object({
@@ -115,6 +116,8 @@ export const AssumptionsSchema = z.object({
   estateDutyAbatement: z.number().min(0),
   spousalBequest: z.boolean(),
   cgtInclusionRate: z.number().min(0).max(1),
+  cgtMarginalRate: z.number().min(0).max(0.45).optional(),
+  predeceasedSpouseUnusedAbatement: z.number().min(0).max(3_500_000).optional(),
 });
 
 // ==================== MAIN INPUT SCHEMA ====================

@@ -1,108 +1,34 @@
 /**
  * Risk Planning FNA System Constants
  *
- * ⚠️ CRITICAL: Do NOT change, optimize, or reinterpret these formulas
- * All constants are explicit and auditable for FAIS compliance
- *
- * Mandatory Fix #1: Additional Income Multiple per Additional Dependant = +1×
- * Mandatory Fix #2: Insurable Maximum Guardrail (admin-configurable)
- * Mandatory Fix #3: Existing Cover Offset Rules
+ * The calculation constants (LIFE_COVER, DISABILITY_COVER, SEVERE_ILLNESS_COVER,
+ * INCOME_PROTECTION, assumption defaults and the system version) live with the
+ * calculation engine in src/shared/fna-calculations/riskPlanning.ts, which the
+ * Edge Function shares, and are re-exported here. Since system version 3.0.0
+ * the analysis is a capital needs analysis (present value of needs less
+ * available assets), not income multiples — see that file for the method.
+ * Constants stay explicit and auditable for FAIS compliance; change them there,
+ * with tests, and bump RISK_SYSTEM_VERSION.
  */
 
 import { buildFNAWizardSteps } from '../fna';
 import type { OverrideClassification, IPBenefitPeriod, IPEscalationType } from './types';
+import {
+  LIFE_COVER,
+  DISABILITY_COVER,
+  SEVERE_ILLNESS_COVER,
+  INCOME_PROTECTION,
+  RISK_ASSUMPTION_DEFAULTS,
+  RISK_SYSTEM_VERSION,
+} from '../../../../shared/fna-calculations/riskPlanning';
 
-// ==================== LIFE COVER CONSTANTS ====================
-
-export const LIFE_COVER = {
-  // Immediate Capital Components
-  FUNERAL_FINAL_EXPENSES: 100_000, // Default R100,000
-  ESTATE_COSTS_PERCENTAGE: 0.0399, // 3.99% of estate
-
-  // Income Multiple Rules
-  MULTIPLES: {
-    SINGLE_NO_DEPENDANTS: 5,
-    MARRIED_YOUNG_CHILDREN_BASE: 10, // For 1 dependant
-    SINGLE_INCOME_HOUSEHOLD_BASE: 14, // For 1 dependant
-    ADDITIONAL_PER_DEPENDANT: 1, // Mandatory Fix #1
-  },
-} as const;
-
-// ==================== DISABILITY COVER CONSTANTS ====================
-
-export const DISABILITY_COVER = {
-  // Additional Disability Cost Defaults
-  HOME_MODIFICATIONS: 0, // User-provided or 0
-  VEHICLE_ADAPTATION: 150_000, // Default R150,000
-  MEDICAL_EQUIPMENT: 200_000, // Default R200,000
-  ONCE_OFF_CARE_COSTS: 150_000, // Default R150,000
-
-  // Disability Multiple Rules
-  MULTIPLES: {
-    ONE_DEPENDANT: 6,
-    TWO_TO_FOUR_DEPENDANTS: 10,
-    FIVE_PLUS_DEPENDANTS: 15,
-  },
-} as const;
-
-// ==================== SEVERE ILLNESS COVER CONSTANTS ====================
-
-export const SEVERE_ILLNESS_COVER = {
-  // Income Bands and Multiples
-  BANDS: [
-    {
-      minIncome: 0,
-      maxIncome: 500_000,
-      multiple: 2,
-      label: 'R0 – R500,000 p.a.',
-    },
-    {
-      minIncome: 500_001,
-      maxIncome: 1_500_000,
-      multiple: 3,
-      label: 'R501,000 – R1,500,000 p.a.',
-    },
-    {
-      minIncome: 1_500_001,
-      maxIncome: Infinity,
-      multiple: 5,
-      label: 'R1,500,001+',
-    },
-  ],
-} as const;
-
-// ==================== INCOME PROTECTION CONSTANTS ====================
-
-export const INCOME_PROTECTION = {
-  // Benefit Calculation
-  NET_INCOME_PERCENTAGE: 1.0, // 100% of Net Monthly Income
-
-  // Insurable Maximum Guardrail (Mandatory Fix #2)
-  // Admin-configurable field - this is the default
-  DEFAULT_INSURABLE_MAXIMUM_MONTHLY: 150_000,
-
-  // Warning Message
-  EXCEEDS_LIMIT_WARNING:
-    'Calculated need exceeds typical insurer limits and may be restricted by underwriting.',
-
-  // Benefit Periods (Temporary IP)
-  BENEFIT_PERIODS: [
-    { value: '6-months', label: '6 months' },
-    { value: '12-months', label: '12 months' },
-    { value: '24-months', label: '24 months' },
-  ] as const,
-
-  // Escalation Options (Permanent IP)
-  ESCALATION_OPTIONS: [
-    { value: 'fixed-1', label: 'Fixed 1%' },
-    { value: 'fixed-2', label: 'Fixed 2%' },
-    { value: 'fixed-3', label: 'Fixed 3%' },
-    { value: 'fixed-4', label: 'Fixed 4%' },
-    { value: 'fixed-5', label: 'Fixed 5%' },
-    { value: 'cpi-linked', label: 'CPI-Linked' },
-    { value: 'level', label: 'Level' },
-  ] as const,
-} as const;
+export {
+  LIFE_COVER,
+  DISABILITY_COVER,
+  SEVERE_ILLNESS_COVER,
+  INCOME_PROTECTION,
+  RISK_ASSUMPTION_DEFAULTS,
+};
 
 // ==================== OVERRIDE CLASSIFICATIONS ====================
 
@@ -126,7 +52,7 @@ export const COMPLIANCE_DISCLAIMERS = [
 
 // ==================== SYSTEM METADATA ====================
 
-export const SYSTEM_VERSION = '2.0.0'; // FNA Risk Planning Tool Version
+export const SYSTEM_VERSION = RISK_SYSTEM_VERSION; // FNA Risk Planning Tool Version (3.0.0)
 
 // ==================== FORM DEFAULTS ====================
 
@@ -144,6 +70,15 @@ export const DEFAULT_FORM_VALUES = {
   spouseFullName: '',
   spouseAverageMonthlyIncome: '',
   totalHouseholdMonthlyExpenditure: '0', // Default to R0
+  liquidAssetsAvailable: String(RISK_ASSUMPTION_DEFAULTS.LIQUID_ASSETS_AVAILABLE),
+
+  // Calculation assumptions (3.0.0), as percentages
+  investmentReturnAssumption: String(RISK_ASSUMPTION_DEFAULTS.INVESTMENT_RETURN),
+  incomeReplacementRatio: String(RISK_ASSUMPTION_DEFAULTS.INCOME_REPLACEMENT_RATIO),
+  disabilityIncomeReplacementRatio: String(
+    RISK_ASSUMPTION_DEFAULTS.DISABILITY_INCOME_REPLACEMENT_RATIO,
+  ),
+  educationInflationAssumption: String(RISK_ASSUMPTION_DEFAULTS.EDUCATION_INFLATION),
 
   // Existing Cover Defaults (all zero)
   existingCoverLifePersonal: '0',
@@ -189,6 +124,8 @@ export const VALIDATION_RULES = {
   MAX_INCOME_ESCALATION: 100, // Percentage
   MIN_DEPENDANCY_TERM: 0,
   MAX_DEPENDANCY_TERM: 50, // Years
+  MAX_ASSUMPTION_RATE: 30, // Percentage — return, escalation-style assumptions
+  MAX_REPLACEMENT_RATIO: 100, // Percentage of net income
 } as const;
 
 // ==================== STEP CONFIGURATION ====================

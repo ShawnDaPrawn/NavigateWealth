@@ -30,7 +30,18 @@ export interface MedicalFNAInputs {
 
   // D. LJP
   currentAge: number;
+  /** Fallback LJP method: used only when creditableCoverageYearsAfter21 is absent. */
   yearsWithoutCoverAfter35: number;
+  /**
+   * Regulation 13 method: years of creditable SA medical scheme cover after
+   * age 21. When present, penalty years = age − (35 + this).
+   */
+  creditableCoverageYearsAfter21?: number;
+  /** Continuous medical scheme cover since before 1 April 2001 — exempt from LJP. */
+  coveredBeforeApril2001?: boolean;
+
+  /** Net monthly income, for the premium affordability check (optional). */
+  netMonthlyIncome?: number;
 
   // E. Existing Policy (Optional)
   existingPlanType?: string;
@@ -48,6 +59,21 @@ export interface MedicalFNARationale {
   msa: string;
   ljp: string;
   dependents: string;
+  /** Absent on FNAs calculated before gap cover was assessed. */
+  gapCover?: string;
+  /** Present only when income and premium were both captured. */
+  affordability?: string;
+}
+
+/** How the Late Joiner Penalty band was determined. */
+export type LJPMethod = 'under-35' | 'exempt-pre-2001' | 'regulation-13' | 'years-without-cover';
+
+export interface PremiumAffordability {
+  netMonthlyIncome: number;
+  monthlyPremium: number;
+  /** Premium as a share of net monthly income (0.12 = 12%). */
+  premiumToIncomeRatio: number;
+  exceedsGuideline: boolean;
 }
 
 export interface MedicalFNAResults {
@@ -56,6 +82,14 @@ export interface MedicalFNAResults {
   msaRecommended: boolean;
   ljpBand: string; // '0%', '5%', '25%', '50%', '75%'
   rationale: MedicalFNARationale;
+
+  // Added later — absent on FNAs published before them; readers must treat
+  // them as optional.
+  gapCoverRecommended?: boolean;
+  ljpMethod?: LJPMethod;
+  /** Penalty years used for the band (Regulation 13 or the fallback). */
+  ljpPenaltyYears?: number;
+  premiumAffordability?: PremiumAffordability;
 }
 
 // ==================== ADJUSTMENTS & FINAL TYPES ====================
@@ -66,6 +100,7 @@ export interface MedicalFNAAdjustments {
   hospitalCoverOverride?: string;
   msaOverride?: boolean;
   ljpBandOverride?: string;
+  gapCoverOverride?: boolean;
 
   // Justification
   notes: string;
@@ -76,6 +111,7 @@ export interface MedicalFNAFinalNeeds {
   hospitalCover: string;
   msa: boolean;
   ljpBand: string;
+  gapCover?: boolean;
 }
 
 // ==================== WIZARD STATE ====================

@@ -1,6 +1,10 @@
 /**
  * Investment Needs Analysis (INA) Calculation Service
- * Client-side calculation utilities and validation
+ * Client-side validation, formatting and display helpers.
+ *
+ * The money maths is NOT duplicated here: it comes from the shared engine
+ * (src/shared/fna-calculations/investment.ts) that the Edge Function uses to
+ * calculate the stored results, so a figure shown here matches the INA.
  */
 
 import type {
@@ -10,6 +14,14 @@ import type {
   DiscretionaryInvestment,
   RiskProfile,
 } from '../types';
+import {
+  INA_AFFORDABILITY_LIMIT_PERCENT,
+  futureValueOfLumpSum,
+  futureValueOfMonthlyContributions,
+  presentValueOfLumpSum,
+  requiredMonthlyContribution,
+  resolveInvestmentAllocations,
+} from '@/shared/fna-calculations/investment';
 import {
   formatCurrency as formatCurrencyWithCents,
   formatCurrencyWhole,
@@ -57,6 +69,7 @@ export function validateInputs(inputs: Partial<InvestmentINAInputs>): {
         errors.push(`Goal ${index + 1} (${goal.goalName}): ${goalErrors.join(', ')}`);
       }
     });
+    errors.push(...resolveInvestmentAllocations(inputs.goals).problems);
   }
 
   return {
@@ -91,6 +104,14 @@ export function validateGoal(goal: InvestmentGoal): string[] {
     errors.push('Risk profile is required (either client or goal-specific)');
   }
 
+  for (const [investmentId, percent] of Object.entries(goal.linkedInvestmentAllocations ?? {})) {
+    if (!goal.linkedInvestmentIds?.includes(investmentId)) continue;
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+      errors.push('Investment allocation must be between 0% and 100%');
+      break;
+    }
+  }
+
   return errors;
 }
 
@@ -120,21 +141,19 @@ export function formatPercentage(value: number, decimals: number = 1): string {
  * Calculate future value of lump sum
  */
 export function calculateFutureValue(presentValue: number, rate: number, years: number): number {
-  return presentValue * Math.pow(1 + rate, years);
+  return futureValueOfLumpSum(presentValue, rate, years);
 }
 
 /**
- * Calculate future value of annuity (monthly contributions)
+ * Future value of monthly contributions, compounded monthly at the monthly
+ * equivalent of the annual rate (a 0% rate is handled).
  */
 export function calculateAnnuityFutureValue(
   monthlyPayment: number,
   annualRate: number,
   years: number,
 ): number {
-  if (monthlyPayment === 0 || years <= 0) return 0;
-
-  const annuityFactor = (Math.pow(1 + annualRate, years) - 1) / annualRate;
-  return monthlyPayment * 12 * annuityFactor;
+  return futureValueOfMonthlyContributions(monthlyPayment, annualRate, Math.round(years * 12));
 }
 
 /**
@@ -145,17 +164,14 @@ export function calculateRequiredMonthlyPayment(
   annualRate: number,
   years: number,
 ): number {
-  if (years <= 0) return 0;
-
-  const annuityFactor = (Math.pow(1 + annualRate, years) - 1) / annualRate;
-  return futureValue / (12 * annuityFactor);
+  return requiredMonthlyContribution(futureValue, annualRate, Math.round(years * 12));
 }
 
 /**
  * Calculate present value (today's value of future amount)
  */
 export function calculatePresentValue(futureValue: number, rate: number, years: number): number {
-  return futureValue / Math.pow(1 + rate, years);
+  return presentValueOfLumpSum(futureValue, rate, years);
 }
 
 /**
@@ -292,10 +308,10 @@ export function calculateAffordability(
 
   const percentage = (monthlyContribution / grossMonthlyIncome) * 100;
 
-  // Generally, total savings should not exceed 20-30% of gross income
-  const isAffordable = percentage <= 30;
+  // Guideline shared with the INA engine: goal saving up to 30% of gross income
+  const isAffordable = percentage <= INA_AFFORDABILITY_LIMIT_PERCENT;
   const warningMessage =
-    percentage > 30
+    percentage > INA_AFFORDABILITY_LIMIT_PERCENT
       ? `This represents ${percentage.toFixed(1)}% of gross income, which may be challenging to maintain`
       : undefined;
 

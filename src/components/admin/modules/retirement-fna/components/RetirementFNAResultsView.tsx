@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '../../../../ui/alert';
 import { CheckCircle2, AlertTriangle, TrendingUp, TrendingDown, Info } from 'lucide-react';
 import { formatCurrency } from '../../../../../utils/currencyFormatter';
 import type { RetirementFNASession } from '../types';
+import { RetirementAnalysisDetails } from './RetirementAnalysisDetails';
 
 interface RetirementFNAResultsViewProps {
   fna: RetirementFNASession;
@@ -101,7 +102,11 @@ export function RetirementFNAResultsView({ fna }: RetirementFNAResultsViewProps)
               <div className="bg-muted/50 p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">Target Monthly Income</p>
                 <p className="text-2xl font-bold">{formatCurrency(targetMonthlyIncome)}</p>
-                <p className="text-xs text-muted-foreground">Future value (at retirement)</p>
+                <p className="text-xs text-muted-foreground">
+                  Future rands, at retirement
+                  {results.targetMonthlyIncomeToday !== undefined &&
+                    ` · ${formatCurrency(results.targetMonthlyIncomeToday)} in today's money`}
+                </p>
               </div>
               <div className="bg-muted/50 p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">Required Capital</p>
@@ -249,25 +254,52 @@ export function RetirementFNAResultsView({ fna }: RetirementFNAResultsViewProps)
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Inflation (CPI):</span>
                   <span className="font-medium">
-                    {((adjustments.inflationRate || 0.06) * 100).toFixed(1)}%
+                    {((results.inflationRate ?? adjustments.inflationRate ?? 0.06) * 100).toFixed(
+                      1,
+                    )}
+                    %
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Pre-Ret Growth:</span>
                   <span className="font-medium">
-                    {((adjustments.preRetirementReturn || 0.1) * 100).toFixed(1)}%
+                    {(
+                      (results.preRetirementReturn ?? adjustments.preRetirementReturn ?? 0.1) * 100
+                    ).toFixed(1)}
+                    %
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Post-Ret Growth:</span>
                   <span className="font-medium">
-                    {((adjustments.postRetirementReturn || 0.08) * 100).toFixed(1)}%
+                    {(
+                      (results.postRetirementReturn ?? adjustments.postRetirementReturn ?? 0.08) *
+                      100
+                    ).toFixed(1)}
+                    %
                   </span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Salary Escalation:</span>
+                  <span className="font-medium">
+                    {(results.realSalaryGrowth * 100).toFixed(1)}%
+                  </span>
+                </div>
+                {results.premiumEscalation !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Contribution Escalation:</span>
+                    <span className="font-medium">
+                      {(results.premiumEscalation * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Replacement Ratio:</span>
                   <span className="font-medium">
-                    {((adjustments.replacementRatio || 0.75) * 100).toFixed(0)}%
+                    {(
+                      (results.replacementRatio ?? adjustments.replacementRatio ?? 0.75) * 100
+                    ).toFixed(0)}
+                    %
                   </span>
                 </div>
               </div>
@@ -275,6 +307,8 @@ export function RetirementFNAResultsView({ fna }: RetirementFNAResultsViewProps)
           </CardContent>
         </Card>
       </div>
+
+      <RetirementAnalysisDetails results={results} />
 
       {/* Compliance Notice */}
       <Alert>

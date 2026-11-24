@@ -79,7 +79,7 @@ export function Step3ManualAdjustment({
     },
     ...RETURN_PROFILES.map((profile) => ({
       id: profile,
-      label: `Real return — ${RISK_PROFILE_LABELS[profile]}`,
+      label: `Real return after fees and inflation — ${RISK_PROFILE_LABELS[profile]}`,
       systemValue: systemReturns[profile],
       value: returns[profile],
       format: 'fraction' as const,

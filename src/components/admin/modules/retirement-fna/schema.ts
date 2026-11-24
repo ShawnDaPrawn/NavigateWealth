@@ -11,20 +11,26 @@ const positiveNumber = z.number().min(0, 'Cannot be negative');
 
 export const RetirementFNAInputSchema = z
   .object({
-    // Client Profile
-    currentAge: z.number().min(18, 'Minimum age is 18').max(100, 'Maximum age is 100'),
+    // Client Profile — age is required: the calculation never assumes one.
+    currentAge: z
+      .number({ error: "The client's current age is required" })
+      .min(18, 'Minimum age is 18')
+      .max(100, 'Maximum age is 100'),
     retirementAge: z
       .number()
       .min(40, 'Minimum retirement age is 40')
       .max(80, 'Maximum retirement age is 80'),
 
     // Current Financial Position
-    currentMonthlyIncome: positiveNumber.refine(
-      (val) => val > 0,
-      'Monthly income must be greater than zero',
-    ),
+    currentMonthlyIncome: positiveNumber, // Net
+    /** Gross monthly income — the basis of the replacement ratio. */
+    currentGrossMonthlyIncome: positiveNumber.optional(),
     currentMonthlyContribution: positiveNumber,
     currentRetirementSavings: positiveNumber,
+
+    // Other retirement provision
+    otherRetirementCapital: positiveNumber.optional(),
+    otherMonthlyRetirementIncome: positiveNumber.optional(),
 
     // Optional / Advanced
     existingProducts: z.array(z.unknown()).optional(),
@@ -32,6 +38,10 @@ export const RetirementFNAInputSchema = z
   .refine((data) => data.retirementAge > data.currentAge, {
     message: 'Retirement age must be greater than current age',
     path: ['retirementAge'],
+  })
+  .refine((data) => data.currentMonthlyIncome > 0 || (data.currentGrossMonthlyIncome ?? 0) > 0, {
+    message: 'Monthly income must be greater than zero',
+    path: ['currentMonthlyIncome'],
   });
 
 export type RetirementFNAFormValues = z.infer<typeof RetirementFNAInputSchema>;

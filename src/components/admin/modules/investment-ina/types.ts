@@ -35,6 +35,12 @@ export interface InvestmentGoal {
 
   // Funding details
   linkedInvestmentIds: string[]; // IDs of discretionary investments earmarked for this goal
+  /**
+   * investmentId → % of that investment earmarked for this goal (0–100).
+   * Optional: an investment linked to several goals with no allocation is
+   * split equally between them, so it is never counted in full twice.
+   */
+  linkedInvestmentAllocations?: Record<string, number>;
   currentContributionToGoal: number; // Monthly contribution towards this goal
   expectedLumpSums: LumpSumContribution[];
 
@@ -90,7 +96,7 @@ export interface InvestmentINAInputs {
 
   // Economic Assumptions
   longTermInflationRate: number; // e.g., 0.06 for 6%
-  expectedRealReturns: RiskProfileReturns; // Real returns after inflation by risk profile
+  expectedRealReturns: RiskProfileReturns; // Real returns after fees and inflation, by risk profile
 
   // Existing Discretionary Investments (auto-populated from Investments tab)
   discretionaryInvestments: DiscretionaryInvestment[];
@@ -110,7 +116,9 @@ export interface InvestmentINAInputs {
 export interface GoalTimeHorizon {
   targetYear: number;
   currentYear: number;
-  yearsToGoal: number;
+  yearsToGoal: number; // to one decimal (monthsToGoal ÷ 12) on newer results
+  /** Whole months to the target date. Absent on results calculated before 2026-11. */
+  monthsToGoal?: number;
   isValidTimeHorizon: boolean; // false if yearsToGoal <= 0
   warningMessage?: string;
 }
@@ -120,6 +128,13 @@ export interface ExistingCapitalProjection {
     investmentId: string;
     investmentName: string;
     currentValue: number;
+    /** % of the investment earmarked for this goal (newer results only). */
+    allocationPercent?: number;
+    /** currentValue × allocationPercent — the part counted for this goal. */
+    allocatedValue?: number;
+    /** Linked to more than one goal. */
+    isShared?: boolean;
+    sharedWithGoalCount?: number;
     yearsToGoal: number;
     applicableRealReturn: number;
     futureValue: number;
@@ -130,8 +145,11 @@ export interface ExistingCapitalProjection {
 export interface MonthlyContributionsProjection {
   monthlyContributionReal: number;
   yearsToGoal: number;
+  monthsToGoal?: number;
   applicableRealReturn: number;
   annuityFactor: number;
+  /** 'monthly' on newer results; older results used an annual approximation. */
+  compounding?: 'monthly';
   futureValueOfContributions: number;
 }
 
@@ -142,6 +160,8 @@ export interface LumpSumProjection {
   yearsFromLumpToGoal: number;
   applicableRealReturn: number;
   futureValue: number;
+  /** Arrives after the target date, so it does not count (newer results). */
+  arrivesAfterGoal?: boolean;
 }
 
 export interface ProjectedCapitalBreakdown {
@@ -166,7 +186,8 @@ export interface RequiredContributions {
   requiredAdditionalMonthly: number; // Extra monthly needed to close gap
   recommendedTotalMonthly: number; // Total monthly needed
   alternativeLumpSumToday: number; // One-time lump sum needed if no additional monthly
-  canMeetGoal: boolean; // false if time horizon too short or return too low
+  canMeetGoal: boolean; // false if the horizon has passed or the budget cannot fund it
+  canMeetGoalReason?: 'horizon' | 'affordability';
 }
 
 export interface GoalCalculationResult {
@@ -184,6 +205,13 @@ export interface GoalCalculationResult {
   applicableRiskProfile: RiskProfile;
   applicableRealReturn: number;
 
+  priorityLevel?: PriorityLevel;
+  /** The goal's own profile had no return, so the client's was used. */
+  riskProfileNote?: string;
+  /** The risk profile is too growth-oriented for the horizon (FAIS suitability). */
+  suitabilityWarning?: string;
+  suggestedRiskProfile?: RiskProfile;
+
   calculatedAt: string;
 }
 
@@ -193,6 +221,7 @@ export interface GoalRecommendation {
   action: string;
   priority: PriorityLevel;
   impact: string;
+  type?: 'funding' | 'affordability' | 'suitability' | 'timeline';
 }
 
 // ==================== AGGREGATE RESULTS ====================
@@ -209,6 +238,37 @@ export interface PortfolioSummary {
   goalsOverfunded: number;
 
   overallPortfolioHealth: 'excellent' | 'good' | 'needs-attention' | 'critical';
+
+  // Newer results only (calculated from 2026-11); older stored results lack them.
+  /** Σ min(projected, required) ÷ Σ required × 100 — what the health is based on. */
+  capitalWeightedFundingPercentage?: number;
+  affordability?: INAAffordability;
+  priorityFunding?: INAPriorityFundingRow[];
+}
+
+export interface INAAffordability {
+  incomeBasis: 'gross' | 'net' | 'none';
+  monthlyIncome: number;
+  limitPercent: number;
+  affordableMonthly: number | null;
+  totalRecommendedMonthly: number;
+  percentageOfIncome: number;
+  isAffordable: boolean;
+  warningMessage?: string;
+}
+
+export type INAPriorityFundingStatus =
+  'fully-funded' | 'partially-funded' | 'not-funded' | 'horizon-passed' | 'not-assessed';
+
+export interface INAPriorityFundingRow {
+  goalId: string;
+  goalName: string;
+  priorityLevel: string;
+  requiredMonthly: number;
+  allocatedMonthly: number;
+  cumulativeMonthly: number;
+  fundingStatus: INAPriorityFundingStatus;
+  projectedFundingPercentage: number;
 }
 
 export interface InvestmentINAResults {
@@ -218,7 +278,10 @@ export interface InvestmentINAResults {
   economicAssumptions: {
     inflationRate: number;
     realReturnsByProfile: RiskProfileReturns;
+    realReturnBasis?: 'after fees and inflation';
   };
+  /** The basis of the numbers, as sentences (newer results only). */
+  assumptions?: string[];
   calculatedAt: string;
 }
 

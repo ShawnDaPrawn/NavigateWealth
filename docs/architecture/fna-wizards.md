@@ -165,3 +165,25 @@ Two tests hold this in place:
 - Add client values to the registry, not to the wizard. Reuse a shared key if
   the fact is shared; add it to `FNA_CLIENT_KEYS` the moment a second analysis
   needs it.
+
+## Calculation engines
+
+Where a server route stores or recalculates results, the wizard and the Edge
+Function share one pure engine in `src/shared/fna-calculations/`:
+
+- `riskPlanning.ts` — capital needs analysis (present value of the household
+  income need, education and immediate capital, less liquid assets and existing
+  cover); disability as the present value of lost income to retirement, less
+  existing permanent income protection. `PUT /risk-planning-fna/update` used to
+  recalculate with its own divergent copy.
+- `retirement.ts` — the wizard's Step 2 and the server's `/calculate` (whose
+  result is stored) run the same code, so they cannot drift.
+- `investment.ts` — the Investment INA, calculated on the server.
+
+Tax, Medical and Estate are calculated only in the wizard, in their own module.
+
+A change to `src/shared/fna-calculations/**` alone redeploys the Edge Function
+(it is in the deploy workflow's paths). Every result field added since these
+engines changed is optional, and every view renders analyses published before
+it — keep it that way: published FNAs are records of advice and are never
+recalculated.

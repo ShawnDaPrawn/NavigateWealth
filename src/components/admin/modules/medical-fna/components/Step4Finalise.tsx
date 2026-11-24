@@ -19,6 +19,7 @@ import {
   Check,
   ArrowDown,
   ArrowUp,
+  Umbrella,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Alert, AlertDescription } from '../../../../ui/alert';
@@ -56,6 +57,10 @@ export function Step4Finalise({
       adjustments.msaOverride !== undefined ? adjustments.msaOverride : calculations.msaRecommended,
     dependents: adjustments.dependentsOverride || calculations.recommendedDependents,
     ljpBand: adjustments.ljpBandOverride || calculations.ljpBand,
+    gapCover:
+      adjustments.gapCoverOverride !== undefined
+        ? adjustments.gapCoverOverride
+        : calculations.gapCoverRecommended,
   };
 
   // --- Gap Analysis Logic ---
@@ -258,7 +263,24 @@ export function Step4Finalise({
           value={finalNeeds.ljpBand}
           isOverridden={!!adjustments.ljpBandOverride}
         />
+        {finalNeeds.gapCover !== undefined && (
+          <FinalCard
+            title="Gap Cover"
+            icon={Umbrella}
+            value={finalNeeds.gapCover ? 'Yes' : 'No'}
+            isOverridden={adjustments.gapCoverOverride !== undefined}
+          />
+        )}
       </div>
+
+      {calculations.rationale.affordability && (
+        <Alert
+          variant={calculations.premiumAffordability?.exceedsGuideline ? 'destructive' : 'default'}
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{calculations.rationale.affordability}</AlertDescription>
+        </Alert>
+      )}
 
       {adjustments.notes && (
         <Card>

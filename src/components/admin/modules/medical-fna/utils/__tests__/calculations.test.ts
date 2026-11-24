@@ -68,11 +68,33 @@ describe('calculateMedicalNeeds — MSA recommendation', () => {
     );
   });
 
-  it('recommends an MSA for high cashflow sensitivity or 2+ children', () => {
+  it('recommends an MSA for high cashflow sensitivity', () => {
     expect(calculateMedicalNeeds(makeInputs({ cashflowSensitivity: 'High' })).msaRecommended).toBe(
       true,
     );
-    expect(calculateMedicalNeeds(makeInputs({ childrenCount: 2 })).msaRecommended).toBe(true);
+  });
+
+  // Changed: the old rule recommended an MSA for any family with 2+ children,
+  // whatever they spent. The threshold now scales with the beneficiaries.
+  it('does not recommend an MSA merely because there are 2+ children', () => {
+    expect(calculateMedicalNeeds(makeInputs({ childrenCount: 2 })).msaRecommended).toBe(false);
+  });
+
+  it('scales the day-to-day threshold at R3,000 per beneficiary', () => {
+    // Main member + spouse + 2 children = 4 beneficiaries → R12,000
+    const family = { spousePartner: true, childrenCount: 2 };
+    expect(
+      calculateMedicalNeeds(makeInputs({ ...family, annualDayToDayEstimate: 11_999 }))
+        .msaRecommended,
+    ).toBe(false);
+    expect(
+      calculateMedicalNeeds(makeInputs({ ...family, annualDayToDayEstimate: 12_000 }))
+        .msaRecommended,
+    ).toBe(true);
+    // A single member at R3,000 now qualifies (previously needed R6,000)
+    expect(
+      calculateMedicalNeeds(makeInputs({ annualDayToDayEstimate: 3_000 })).msaRecommended,
+    ).toBe(true);
   });
 
   it('does not recommend an MSA when all triggers are below threshold', () => {

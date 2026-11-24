@@ -109,6 +109,14 @@ export function Step4Finalise({
                   - {formatMoney(finalResults.medicalTaxCredits)}
                 </span>
               </div>
+              {(finalResults.additionalMedicalTaxCredit ?? 0) > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>Additional Medical Credit (s6B)</span>
+                  <span className="font-medium text-green-600">
+                    - {formatMoney(finalResults.additionalMedicalTaxCredit ?? 0)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span>Net Tax Payable</span>
                 <span className="font-medium">{formatMoney(finalResults.totalTaxLiability)}</span>

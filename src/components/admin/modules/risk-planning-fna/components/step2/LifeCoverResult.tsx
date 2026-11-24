@@ -1,7 +1,16 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../../../../ui/card';
 import { Separator } from '../../../../../ui/separator';
 import { formatCurrency } from '../../utils';
+import { LIFE_COVER } from '../../constants';
 import type { LifeCoverCalculation } from '../../types';
+
+const pct = (decimal: number) => `${Math.round(decimal * 10_000) / 100}%`;
+
+const BASIS_LABEL = {
+  'household-expenditure': 'Household expenditure less spouse income',
+  'income-replacement-ratio': 'Share of net income',
+  'no-dependants': 'No dependants — no income to replace',
+} as const;
 
 interface LifeCoverResultProps {
   calculation: LifeCoverCalculation;
@@ -16,13 +25,17 @@ export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
     existingCover,
     netShortfall,
     assumptions,
+    totalCapitalNeed,
+    liquidAssetsOffset,
   } = calculation;
+  // Calculations from before system version 3.0.0 have no breakdown fields.
+  const isCapitalNeeds = incomeReplacementCapital.basis !== undefined;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg font-semibold">
-          Life Cover (Death) – Capital Replacement Model
+          Life Cover (Death) – Capital Needs Analysis
         </CardTitle>
         <CardDescription className="text-sm">Gross need calculation breakdown</CardDescription>
       </CardHeader>
@@ -44,7 +57,9 @@ export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Estate Costs (3.99%)</span>
+              <span className="text-muted-foreground">
+                Estate Costs ({pct(LIFE_COVER.ESTATE_COSTS_PERCENTAGE)}: executor's fee + VAT)
+              </span>
               <span className="font-medium">{formatCurrency(immediateCapital.estateCosts)}</span>
             </div>
             <Separator className="my-3" />
@@ -59,19 +74,48 @@ export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
         <div>
           <h4 className="text-base font-semibold mb-3">2. Income Replacement Capital</h4>
           <div className="space-y-2.5 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Net Annual Income</span>
-              <span className="font-medium">
-                {formatCurrency(incomeReplacementCapital.netAnnualIncome)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Income Multiple</span>
-              <span className="font-medium">{incomeReplacementCapital.incomeMultiple}×</span>
-            </div>
+            {isCapitalNeeds ? (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Basis</span>
+                  <span className="font-medium">
+                    {BASIS_LABEL[incomeReplacementCapital.basis ?? 'no-dependants']}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Yearly Income Need</span>
+                  <span className="font-medium">
+                    {formatCurrency(incomeReplacementCapital.annualIncomeNeed ?? 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Provision Term</span>
+                  <span className="font-medium">
+                    {incomeReplacementCapital.provisionTerm ?? 0} years
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Equivalent Multiple of Net Income</span>
+                  <span className="font-medium">{incomeReplacementCapital.incomeMultiple}×</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Net Annual Income</span>
+                  <span className="font-medium">
+                    {formatCurrency(incomeReplacementCapital.netAnnualIncome)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Income Multiple</span>
+                  <span className="font-medium">{incomeReplacementCapital.incomeMultiple}×</span>
+                </div>
+              </>
+            )}
             <Separator className="my-3" />
             <div className="flex justify-between font-semibold text-base">
-              <span>Income Capital Required</span>
+              <span>Income Capital Required (present value)</span>
               <span>{formatCurrency(incomeReplacementCapital.total)}</span>
             </div>
           </div>
@@ -105,6 +149,18 @@ export function LifeCoverResult({ calculation }: LifeCoverResultProps) {
 
         {/* Total Life Cover */}
         <div className="space-y-2">
+          {totalCapitalNeed !== undefined && (
+            <>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total Capital Need</span>
+                <span>{formatCurrency(totalCapitalNeed)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Less Liquid Assets Available</span>
+                <span>({formatCurrency(liquidAssetsOffset ?? 0)})</span>
+              </div>
+            </>
+          )}
           <div className="flex justify-between text-lg font-semibold">
             <span>Gross Life Cover Need</span>
             <span className="text-primary">{formatCurrency(grossNeed)}</span>

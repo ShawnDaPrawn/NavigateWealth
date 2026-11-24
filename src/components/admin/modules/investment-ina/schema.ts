@@ -36,6 +36,7 @@ export const InvestmentGoalSchema = z.object({
   targetYear: z.number().min(2024),
   priorityLevel: z.enum(['low', 'medium', 'high']),
   linkedInvestmentIds: z.array(z.string()),
+  linkedInvestmentAllocations: z.record(z.string(), z.number().min(0).max(100)).optional(),
   currentContributionToGoal: z.number().min(0),
   expectedLumpSums: z.array(LumpSumContributionSchema),
   useClientRiskProfile: z.boolean(),
