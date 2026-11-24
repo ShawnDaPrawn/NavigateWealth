@@ -738,6 +738,7 @@ export function ClientManagementModule() {
                   loading={loading}
                   searchable={false}
                   exportable={false}
+                  bordered={false}
                   pageSize={25}
                   getRowKey={(row) => row.id as React.Key}
                   emptyState={
