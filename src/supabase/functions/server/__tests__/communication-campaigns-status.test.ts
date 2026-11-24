@@ -210,6 +210,87 @@ describe('sendCampaign — external contacts', () => {
   });
 });
 
+describe('sendCampaign — several groups', () => {
+  function seedMultiGroupCampaign(): string {
+    kvStore.set('communication:groups:g1', {
+      id: 'g1',
+      name: 'Allan Gray Clients',
+      clientIds: ['c1', 'c2'],
+      externalContacts: [{ email: 'ext@example.com', source: 'newsletter', subscribedAt: '' }],
+      filterConfig: {},
+    });
+    kvStore.set('communication:groups:g2', {
+      id: 'g2',
+      name: 'Newsletter Contacts',
+      clientIds: ['c2', 'c3'],
+      externalContacts: [
+        // Same address as g1's, different case: still one person.
+        { email: 'EXT@example.com', source: 'newsletter', subscribedAt: '' },
+        { email: 'other@example.com', source: 'newsletter', subscribedAt: '' },
+      ],
+      filterConfig: {},
+    });
+    return seedCampaign({
+      id: 'multi-1',
+      recipientType: 'group',
+      selectedRecipients: [],
+      selectedGroup: { id: 'g1', name: 'Allan Gray Clients' },
+      selectedGroups: [
+        { id: 'g1', name: 'Allan Gray Clients' },
+        { id: 'g2', name: 'Newsletter Contacts' },
+      ],
+    });
+  }
+
+  it('sends to every selected group, once per person', async () => {
+    const result = await sendCampaign(seedMultiGroupCampaign(), 'admin-1');
+
+    // c2 sits in both groups and ext@ is listed twice: neither is mailed twice.
+    const clientIds = sendMessageMock.mock.calls.map((call) => call[1].recipients[0]).sort();
+    expect(clientIds).toEqual(['c1', 'c2', 'c3']);
+    const externals = sendEmailMock.mock.calls.map((call) => call[0].to).sort();
+    expect(externals).toEqual(['ext@example.com', 'other@example.com']);
+    expect(result.sent).toBe(5);
+    expect(result.status).toBe('completed');
+  });
+
+  it('does not email a client again because they are also an external contact', async () => {
+    getAllClientsMock.mockResolvedValueOnce([
+      { id: 'c1', email: 'Ext@Example.com', firstName: 'Ann' },
+      { id: 'c2', email: 'two@example.com', firstName: 'Ben' },
+      { id: 'c3', email: 'three@example.com', firstName: 'Cara' },
+    ] as never);
+
+    const result = await sendCampaign(seedMultiGroupCampaign(), 'admin-1');
+
+    // c1 is reached through the client loop; ext@ is c1's own address.
+    expect(sendMessageMock.mock.calls.map((call) => call[1].recipients[0]).sort()).toEqual([
+      'c1',
+      'c2',
+      'c3',
+    ]);
+    expect(sendEmailMock.mock.calls.map((call) => call[0].to)).toEqual(['other@example.com']);
+    expect(result.sent).toBe(4);
+  });
+
+  it('fails clearly when one of the selected groups no longer exists', async () => {
+    const id = seedMultiGroupCampaign();
+    kvStore.delete('communication:groups:g2');
+    await expect(sendCampaign(id, 'admin-1')).rejects.toThrow(/Group not found/);
+    expect(sendMessageMock).not.toHaveBeenCalled();
+  });
+
+  it('is found in history by any of its groups', async () => {
+    seedMultiGroupCampaign();
+    const result = await listCampaignsFiltered({
+      page: 1,
+      limit: 10,
+      search: 'newsletter contacts',
+    });
+    expect(result.campaigns.map((c) => c.id)).toEqual(['multi-1']);
+  });
+});
+
 describe('listCampaignsFiltered — history filters', () => {
   beforeEach(() => {
     seedCampaign({ id: 'a', status: 'completed', createdAt: '2026-01-03T00:00:00.000Z' });
