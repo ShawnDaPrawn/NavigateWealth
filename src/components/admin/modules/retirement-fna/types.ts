@@ -9,6 +9,7 @@
  */
 
 import type { FNAWizardStepNumber } from '../fna';
+import type { RetirementEngineResults } from '../../../../shared/fna-calculations/retirement';
 
 // ==================== WIZARD STEPS ====================
 // Moved to constants.ts — re-exported for backward compatibility
@@ -31,9 +32,21 @@ export interface RetirementFNAInputs {
   retirementAge: number; // Intended retirement age
 
   // Current Financial Position
-  currentMonthlyIncome: number; // Net monthly income
-  currentMonthlyContribution: number; // Total monthly retirement contributions
+  currentMonthlyIncome: number; // Net (take-home) monthly income
+  /**
+   * Gross monthly income before tax — the basis of the replacement ratio.
+   * Optional because records published before it was captured do not have it;
+   * the engine then falls back to net income and says so.
+   */
+  currentGrossMonthlyIncome?: number;
+  currentMonthlyContribution: number; // Total monthly retirement contributions (incl. employer)
   currentRetirementSavings: number; // Total current retirement capital
+
+  // Other retirement provision (optional, default 0)
+  /** Other capital earmarked for retirement, e.g. discretionary investments. */
+  otherRetirementCapital?: number;
+  /** Other guaranteed retirement income per month, in today's money. */
+  otherMonthlyRetirementIncome?: number;
 
   // Optional / Advanced
   existingProducts?: Record<string, unknown>[]; // For audit trail if needed
@@ -42,33 +55,14 @@ export interface RetirementFNAInputs {
 // ==================== CALCULATION RESULTS (Step 2) ====================
 
 /**
- * Step 2: System Auto-Calculation Results
- * All values calculated based on standard actuarial assumptions
+ * Step 2: System Auto-Calculation Results.
+ *
+ * The shape is owned by the shared engine (src/shared/fna-calculations), which
+ * documents each field. Capital and income fields are NOMINAL (future rands)
+ * unless their name ends in `Today`. Fields added in engine v2 are optional
+ * because older published records do not carry them.
  */
-export interface RetirementCalculationResults {
-  // Timeline
-  yearsToRetirement: number;
-  yearsInRetirement: number;
-
-  // Real Rates (Inflation-adjusted)
-  realGrowthRate: number; // Pre-retirement real growth
-  realSalaryGrowth: number; // Real salary escalation
-
-  // Capital Requirements (Real Terms)
-  targetMonthlyIncome: number; // Required monthly income in retirement (today's value)
-  requiredCapital: number; // Total capital required at retirement
-  projectedCapital: number; // Projected capital at retirement with current contributions
-
-  // Gap Analysis
-  capitalShortfall: number; // Difference between required and projected
-  hasShortfall: boolean; // True if shortfall exists
-  shortfallPercentage: number; // Percentage shortfall
-
-  // Recommendations
-  requiredAdditionalContribution: number; // Additional monthly contribution needed
-  totalRecommendedContribution: number; // Total recommended monthly contribution
-  percentageOfIncome: number; // Contribution as % of income
-}
+export type RetirementCalculationResults = RetirementEngineResults;
 
 // ==================== ADJUSTMENTS (Step 3) ====================
 
@@ -87,7 +81,7 @@ export interface RetirementFNAAdjustments {
   preRetirementReturn?: number; // Override pre-retirement growth (default: 0.10)
   postRetirementReturn?: number; // Override post-retirement growth (default: 0.08)
   salaryEscalation?: number; // Override salary escalation rate
-  premiumEscalation?: number; // Override premium escalation rate (default: 0.06)
+  premiumEscalation?: number; // Override contribution escalation (default: follows salaryEscalation)
 
   // Documentation
   adviserNotes?: string; // Justification for adjustments

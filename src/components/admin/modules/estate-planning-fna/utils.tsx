@@ -49,17 +49,26 @@ export function classifyLiquidity(
   return 'semi_liquid';
 }
 
-export function assessLiquidityRisk(shortfall: number): 'none' | 'moderate' | 'severe' {
+/**
+ * Any shortfall is a risk: the executor cannot pay debts, costs and taxes from
+ * cash and policies payable to the estate. It is severe from R500,000, or
+ * when it is more than a quarter of the liquidity the estate needs.
+ */
+export function assessLiquidityRisk(
+  shortfall: number,
+  liquidityRequired = 0,
+): 'none' | 'moderate' | 'severe' {
   if (shortfall <= 0) {
     return 'none';
   }
-  if (shortfall < ESTATE_PLANNING_CONSTANTS.LIQUIDITY_SHORTFALL_MODERATE_THRESHOLD) {
-    return 'none';
+  if (
+    shortfall >= ESTATE_PLANNING_CONSTANTS.LIQUIDITY_SHORTFALL_SEVERE_THRESHOLD ||
+    (liquidityRequired > 0 &&
+      shortfall > liquidityRequired * ESTATE_PLANNING_CONSTANTS.LIQUIDITY_SHORTFALL_SEVERE_RATIO)
+  ) {
+    return 'severe';
   }
-  if (shortfall < ESTATE_PLANNING_CONSTANTS.LIQUIDITY_SHORTFALL_SEVERE_THRESHOLD) {
-    return 'moderate';
-  }
-  return 'severe';
+  return 'moderate';
 }
 
 /**
@@ -70,11 +79,83 @@ export function formatCurrency(amount: number): string {
   return formatCurrencyWhole(amount).replace('R', '');
 }
 
+export type ResolvedEstateAssumptions = Required<EstatePlanningInputs['assumptions']>;
+
+/**
+ * The assumptions with defaults for the values added after analyses were
+ * first published, so an older stored analysis recalculates the same way a
+ * new one does.
+ */
+export function resolveEstateAssumptions(
+  assumptions: EstatePlanningInputs['assumptions'],
+): ResolvedEstateAssumptions {
+  const ported = Number(assumptions.predeceasedSpouseUnusedAbatement) || 0;
+  return {
+    ...assumptions,
+    cgtMarginalRate:
+      assumptions.cgtMarginalRate ?? ESTATE_PLANNING_CONSTANTS.DEFAULT_CGT_MARGINAL_RATE,
+    predeceasedSpouseUnusedAbatement: Math.min(
+      Math.max(0, ported),
+      ESTATE_PLANNING_CONSTANTS.MAX_PORTED_ABATEMENT,
+    ),
+  };
+}
+
+export function isMarried(maritalStatus: string | undefined): boolean {
+  return String(maritalStatus ?? '').startsWith('married');
+}
+
+/** Estate duty: the first-tier rate up to R30m of the dutiable amount, 25% above. */
+export function calculateEstateDutyTiers(dutiableAmount: number, firstRate: number) {
+  const threshold = ESTATE_PLANNING_CONSTANTS.ESTATE_DUTY_UPPER_RATE_THRESHOLD;
+  const upperRate = ESTATE_PLANNING_CONSTANTS.ESTATE_DUTY_UPPER_RATE;
+  const amount = Math.max(0, dutiableAmount);
+  const dutyAtFirstRate = Math.min(amount, threshold) * firstRate;
+  const dutyAtUpperRate = Math.max(0, amount - threshold) * upperRate;
+  return {
+    dutyAtFirstRate,
+    dutyAtUpperRate,
+    total: dutyAtFirstRate + dutyAtUpperRate,
+    threshold,
+    upperRate,
+  };
+}
+
+/**
+ * The client's share of the gain on an asset at death (deemed disposal at
+ * market value). Retirement funds are outside the estate; personal-use assets
+ * (para 53) and endowment policies (taxed inside the policy fund) carry no
+ * CGT for the client. A recorded gain wins; otherwise value less base cost.
+ */
+export function assetGainOnDeath(asset: EstatePlanningInputs['assets'][number]): number {
+  if (asset.type === 'retirement' || asset.type === 'personal') return 0;
+  if (asset.type === 'financial' && asset.subType === 'endowment') return 0;
+  let gain = Number(asset.unrealisedGain) || 0;
+  if (gain === 0) {
+    const baseCost = Number(asset.purchasePrice) || 0;
+    if (baseCost > 0) gain = (Number(asset.currentValue) || 0) - baseCost;
+  }
+  return gain * (asset.ownershipPercentage / 100);
+}
+
+/** A policy on the client's life that is deemed property but paid outside the estate. */
+function isNominatedDeemedPolicy(policy: EstatePlanningInputs['lifePolicies'][number]): boolean {
+  return (
+    policy.ownership === 'client' &&
+    !policy.payableToEstate &&
+    !policy.isBuyAndSellPolicy &&
+    policy.policyType !== 'group_life'
+  );
+}
+
 /**
  * Step 1: Build Death Balance Sheet
  */
 function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet {
-  const { assets, liabilities, lifePolicies, assumptions } = inputs;
+  const { assets, liabilities, lifePolicies } = inputs;
+  const assumptions = resolveEstateAssumptions(inputs.assumptions);
+  const married = isMarried(inputs.familyInfo.maritalStatus);
+  const spousalApplies = assumptions.spousalBequest && married;
 
   // Calculate gross estate assets
   const grossEstateAssets = {
@@ -94,12 +175,24 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
   };
 
   let totalUnrealisedGains = 0;
+  let primaryResidenceExclusion = 0;
 
   assets.forEach((asset) => {
     const assetValue = asset.currentValue * (asset.ownershipPercentage / 100);
 
     if (!asset.includeInEstate) {
       return; // Skip assets not in estate (e.g., trust-owned)
+    }
+
+    const gain = assetGainOnDeath(asset);
+    totalUnrealisedGains += gain;
+    if (asset.type === 'property' && asset.subType === 'primary_residence' && gain > 0) {
+      // The R3m exclusion is shared between co-owners by interest held (para 45(2)).
+      primaryResidenceExclusion += Math.min(
+        gain,
+        ESTATE_PLANNING_CONSTANTS.CGT_PRIMARY_RESIDENCE_EXCLUSION *
+          (asset.ownershipPercentage / 100),
+      );
     }
 
     if (asset.type === 'retirement') {
@@ -110,11 +203,6 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
       retirementFunds.total += assetValue;
     } else if (asset.type === 'property') {
       grossEstateAssets.property += assetValue;
-      const propAsset = asset as unknown as Record<string, unknown>;
-      if (propAsset.unrealisedGain) {
-        totalUnrealisedGains +=
-          (propAsset.unrealisedGain as number) * (asset.ownershipPercentage / 100);
-      }
     } else if (asset.type === 'financial') {
       grossEstateAssets.financial += assetValue;
     } else if (asset.type === 'business') {
@@ -124,10 +212,17 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
     }
   });
 
-  // Deemed property - life policies payable to estate
+  // Deemed property paid into the estate: part of the gross estate.
+  // Deemed property paid to nominated beneficiaries: dutiable (s3(3)(a)), but
+  // outside the estate, so no executor's fee and no estate liquidity.
+  let nominatedDeemedProperty = 0;
+  let nominatedToSpouse = 0;
   lifePolicies.forEach((policy) => {
     if (policy.payableToEstate && policy.ownership === 'client') {
       grossEstateAssets.deemedProperty += policy.sumAssured;
+    } else if (isNominatedDeemedPolicy(policy)) {
+      nominatedDeemedProperty += policy.sumAssured;
+      if (policy.beneficiaryType === 'spouse') nominatedToSpouse += policy.sumAssured;
     }
   });
 
@@ -176,12 +271,16 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
     liabilitiesBreakdown.total += amount;
   });
 
-  // Calculate administration costs
+  // Calculate administration costs. The executor's tariff is quoted
+  // excluding VAT; VAT is added on top.
   const propertyCount = assets.filter((a) => a.type === 'property').length;
+  const executorFees = grossEstateAssets.total * (assumptions.executorFeePercentage / 100);
+  const executorFeesVat = executorFees * ESTATE_PLANNING_CONSTANTS.VAT_RATE;
 
   const administrationCosts = {
     funeralCosts: assumptions.funeralCostsEstimate,
-    executorFees: grossEstateAssets.total * (assumptions.executorFeePercentage / 100),
+    executorFees,
+    executorFeesVat,
     conveyancingFees: propertyCount * assumptions.conveyancingFeesPerProperty,
     masterFees: assumptions.masterFeesEstimate,
     otherCosts: 0,
@@ -191,52 +290,93 @@ function buildDeathBalanceSheet(inputs: EstatePlanningInputs): DeathBalanceSheet
   administrationCosts.total =
     administrationCosts.funeralCosts +
     administrationCosts.executorFees +
+    administrationCosts.executorFeesVat +
     administrationCosts.conveyancingFees +
     administrationCosts.masterFees +
     administrationCosts.otherCosts;
 
-  // Estate Duty Calculation
+  // Capital Gains Tax on Death (s9HA deemed disposal). Assets left to a
+  // surviving spouse roll over (s9HA(2)): no CGT now, the spouse takes over
+  // the base cost.
+  const gainAfterResidence = totalUnrealisedGains - primaryResidenceExclusion;
+  let spousalRolloverGain = 0;
+  let annualExclusionOnDeath = 0;
+  let taxableGain = 0;
+  if (spousalApplies) {
+    spousalRolloverGain = Math.max(0, gainAfterResidence);
+  } else {
+    annualExclusionOnDeath = Math.min(
+      Math.max(0, gainAfterResidence),
+      ESTATE_PLANNING_CONSTANTS.CGT_DEATH_EXCLUSION,
+    );
+    taxableGain = Math.max(0, gainAfterResidence - ESTATE_PLANNING_CONSTANTS.CGT_DEATH_EXCLUSION);
+  }
+  const inclusionAmount = taxableGain * assumptions.cgtInclusionRate;
+  const estimatedCGT = inclusionAmount * assumptions.cgtMarginalRate;
+
+  const cgtOnDeath = {
+    totalUnrealisedGains,
+    primaryResidenceExclusion,
+    spousalRolloverGain,
+    annualExclusionOnDeath,
+    taxableGain,
+    inclusionAmount,
+    marginalRate: assumptions.cgtMarginalRate,
+    estimatedCGT,
+  };
+
+  // Estate Duty Calculation. CGT on death is a debt of the deceased (s4(b)),
+  // so it comes off before duty.
   const grossEstate = grossEstateAssets.total;
   const netEstateBeforeDuty = grossEstate - liabilitiesBreakdown.total - administrationCosts.total;
+  const propertyForDuty = netEstateBeforeDuty - estimatedCGT + nominatedDeemedProperty;
 
-  let spousalDeduction = 0;
-  if (assumptions.spousalBequest && inputs.familyInfo.maritalStatus.startsWith('married')) {
-    // Simplified: assume all goes to spouse, so full spousal deduction
-    spousalDeduction = Math.max(0, netEstateBeforeDuty);
-  }
-
-  const dutiableEstate = Math.max(
-    0,
-    netEstateBeforeDuty - assumptions.estateDutyAbatement - spousalDeduction,
+  // s4(q): what accrues to a surviving spouse — the residue when the estate
+  // passes to the spouse, and policies paid to the spouse.
+  const estateToSpouse = spousalApplies ? Math.max(0, netEstateBeforeDuty - estimatedCGT) : 0;
+  const policiesToSpouse = married ? nominatedToSpouse : 0;
+  const spousalDeduction = Math.min(
+    Math.max(0, propertyForDuty),
+    estateToSpouse + policiesToSpouse,
   );
 
-  const estimatedEstateDuty = dutiableEstate * assumptions.estateDutyRate;
+  const portedAbatement = assumptions.predeceasedSpouseUnusedAbatement;
+  const totalAbatement = assumptions.estateDutyAbatement + portedAbatement;
+
+  const dutiableEstate = Math.max(0, propertyForDuty - spousalDeduction - totalAbatement);
+  const duty = calculateEstateDutyTiers(dutiableEstate, assumptions.estateDutyRate);
+  const estimatedEstateDuty = duty.total;
+
+  // s13: the duty on policies paid to beneficiaries is recoverable from them.
+  const dutiableBeforeAbatement = propertyForDuty - spousalDeduction;
+  const nominatedNotToSpouse = Math.max(0, nominatedDeemedProperty - policiesToSpouse);
+  const dutyOnNominatedPolicies =
+    dutiableBeforeAbatement > 0
+      ? estimatedEstateDuty * Math.min(1, nominatedNotToSpouse / dutiableBeforeAbatement)
+      : 0;
 
   const estateDuty = {
     grossEstate,
     lessLiabilities: liabilitiesBreakdown.total,
     lessCosts: administrationCosts.total,
     netEstateBeforeDuty,
-    lessAbatement: assumptions.estateDutyAbatement,
+    lessCGT: estimatedCGT,
+    addDeemedPropertyNominated: nominatedDeemedProperty,
+    lessAbatement: totalAbatement,
+    portedAbatement,
     lessSpousalDeduction: spousalDeduction,
     dutiableEstate,
+    dutyAtFirstRate: duty.dutyAtFirstRate,
+    dutyAtUpperRate: duty.dutyAtUpperRate,
+    upperRateThreshold: duty.threshold,
+    upperRate: duty.upperRate,
     estimatedEstateDuty,
   };
 
-  // Capital Gains Tax on Death
-  const inclusionAmount = totalUnrealisedGains * assumptions.cgtInclusionRate;
-  // CGT rate = marginal rate (assume 45% for high net worth estates)
-  const marginalRate = 0.45;
-  const estimatedCGT = inclusionAmount * marginalRate;
-
-  const cgtOnDeath = {
-    totalUnrealisedGains,
-    inclusionAmount,
-    estimatedCGT,
-  };
-
-  // Net Estate for Heirs
-  const netEstateForHeirs = netEstateBeforeDuty - estimatedEstateDuty - estimatedCGT;
+  // Net Estate for Heirs: the estate bears the duty on its own assets; the
+  // duty on policies paid to beneficiaries is recovered from them.
+  const netEstateForHeirs =
+    netEstateBeforeDuty - (estimatedEstateDuty - dutyOnNominatedPolicies) - estimatedCGT;
 
   return {
     grossEstateAssets,
@@ -344,7 +484,7 @@ function analyzeLiquidity(
 
   // Shortfall
   const liquidityShortfall = Math.max(0, liquidityRequired.total - liquidityAvailable);
-  const liquidityRisk = assessLiquidityRisk(liquidityShortfall);
+  const liquidityRisk = assessLiquidityRisk(liquidityShortfall, liquidityRequired.total);
 
   // Recommendations
   const liquidityRecommendations: string[] = [];
@@ -361,10 +501,12 @@ function analyzeLiquidity(
     );
   } else if (liquidityRisk === 'moderate') {
     liquidityRecommendations.push(
-      `Moderate liquidity shortfall of R${formatCurrency(liquidityShortfall)}`,
+      `Liquidity shortfall of R${formatCurrency(liquidityShortfall)}: cash and policies payable to the estate do not cover its debts, costs and taxes`,
     );
     liquidityRecommendations.push(
-      'Semi-liquid assets may need to be accessed - ensure executors are aware',
+      semiLiquidAssets.total >= liquidityShortfall
+        ? 'Semi-liquid assets could cover it, but may be slow or costly to realise - ensure executors are aware, or add life cover payable to the estate'
+        : 'Consider life cover payable to the estate to close the shortfall',
     );
   } else {
     liquidityRecommendations.push('Estate has sufficient liquidity to cover obligations');
@@ -759,8 +901,11 @@ function generateExecutiveSummary(
  */
 function analyzeIntegration(inputs: EstatePlanningInputs, balanceSheet: DeathBalanceSheet) {
   // Calculate total death benefits
+  // Policies payable to the estate are already inside netEstateForHeirs.
   const totalDeathBenefits =
-    inputs.lifePolicies.reduce((sum, p) => sum + p.sumAssured, 0) +
+    inputs.lifePolicies
+      .filter((p) => !(p.payableToEstate && p.ownership === 'client'))
+      .reduce((sum, p) => sum + p.sumAssured, 0) +
     balanceSheet.retirementFunds.total +
     balanceSheet.netEstateForHeirs;
 
@@ -783,6 +928,91 @@ function analyzeIntegration(inputs: EstatePlanningInputs, balanceSheet: DeathBal
     retirementAligned: true,
     notes,
   };
+}
+
+function formatPercent(rate: number): string {
+  const pct = rate * 100;
+  return `${Number.isInteger(pct) ? pct : pct.toFixed(3).replace(/0+$/, '')}%`;
+}
+
+/**
+ * Step 9: The assumptions behind the numbers, in words, and the points the
+ * adviser must check that the calculation does not model.
+ */
+function describeAssumptions(
+  inputs: EstatePlanningInputs,
+  balanceSheet: DeathBalanceSheet,
+): { assumptions: string[]; advisoryNotes: string[] } {
+  const a = resolveEstateAssumptions(inputs.assumptions);
+  const C = ESTATE_PLANNING_CONSTANTS;
+  const married = isMarried(inputs.familyInfo.maritalStatus);
+  const effectiveExecutorRate = (a.executorFeePercentage / 100) * (1 + C.VAT_RATE);
+
+  const assumptions = [
+    `Executor's fee: ${formatPercent(a.executorFeePercentage / 100)} of gross estate assets plus ${formatPercent(C.VAT_RATE)} VAT (${formatPercent(effectiveExecutorRate)} in total)`,
+    `Funeral costs R${formatCurrency(a.funeralCostsEstimate)}; Master's fees R${formatCurrency(a.masterFeesEstimate)}; conveyancing R${formatCurrency(a.conveyancingFeesPerProperty)} per property`,
+    `Estate duty: ${formatPercent(a.estateDutyRate)} on the first R${formatCurrency(C.ESTATE_DUTY_UPPER_RATE_THRESHOLD)} of the dutiable amount and ${formatPercent(C.ESTATE_DUTY_UPPER_RATE)} above it`,
+    a.predeceasedSpouseUnusedAbatement > 0
+      ? `Abatement: R${formatCurrency(a.estateDutyAbatement)} plus R${formatCurrency(a.predeceasedSpouseUnusedAbatement)} unused by a predeceased spouse (s4A)`
+      : `Abatement: R${formatCurrency(a.estateDutyAbatement)} (s4A)`,
+    "Policies on the client's life, owned by the client and paid to nominated beneficiaries, are deemed property for estate duty (s3(3)(a)); they are not estate assets, so they carry no executor's fee and do not help estate liquidity. The duty on them is recoverable from the beneficiaries (s13)",
+    `CGT on death: deemed disposal at market value; primary residence exclusion R${formatCurrency(C.CGT_PRIMARY_RESIDENCE_EXCLUSION)} (shared by interest held); R${formatCurrency(C.CGT_DEATH_EXCLUSION)} annual exclusion in the year of death; ${formatPercent(a.cgtInclusionRate)} inclusion; taxed at a ${formatPercent(a.cgtMarginalRate)} marginal rate`,
+    'CGT on death is deducted as a debt of the deceased before estate duty is worked out',
+    'Retirement funds pass outside the estate; personal-use assets and endowment policies carry no CGT for the client',
+  ];
+
+  if (a.spousalBequest && married) {
+    assumptions.push(
+      'The estate passes to the surviving spouse: section 4(q) deduction and section 9HA(2) CGT rollover applied (the spouse takes over the base cost, so CGT is deferred, not saved)',
+    );
+  } else if (a.spousalBequest && !married) {
+    assumptions.push(
+      'A spousal bequest is set, but the client is not recorded as married, so no spousal deduction or CGT rollover is applied',
+    );
+  }
+
+  const advisoryNotes: string[] = [];
+  const status = inputs.familyInfo.maritalStatus;
+  if (status === 'married_cop' || status === 'married_customary') {
+    advisoryNotes.push(
+      status === 'married_cop'
+        ? "Married in community of property: only half of the joint estate belongs to the deceased. Check that ownership percentages and liabilities reflect the client's half; the surviving spouse's half is not part of this estate."
+        : 'Customary marriage: unless an antenuptial contract excludes it, the marriage is in community of property and only half of the joint estate belongs to the deceased. Check ownership percentages and liabilities.',
+    );
+  } else if (status === 'married_anc') {
+    advisoryNotes.push(
+      "Married out of community of property: if the antenuptial contract includes the accrual system, an accrual claim arises on death. It is a liability of this estate if it grew more than the spouse's, or an asset if it grew less. It is not modelled here; obtain both spouses' net asset values.",
+    );
+  }
+
+  if (a.predeceasedSpouseUnusedAbatement > 0 && status !== 'widowed') {
+    advisoryNotes.push(
+      "A ported abatement is applied, but the client is not recorded as widowed. It only applies to the estate of a surviving spouse of a previous marriage; confirm with the predeceased spouse's estate records.",
+    );
+  }
+
+  const groupLife = inputs.lifePolicies.filter(
+    (p) => p.policyType === 'group_life' && !p.payableToEstate,
+  );
+  if (groupLife.length > 0) {
+    advisoryNotes.push(
+      'Group life benefits paid to beneficiaries are left out of the dutiable estate, as they usually are when paid through an approved retirement fund. Cover under an unapproved scheme is dutiable deemed property; confirm the scheme type.',
+    );
+  }
+
+  if (inputs.lifePolicies.some((p) => p.isBuyAndSellPolicy)) {
+    advisoryNotes.push(
+      'Buy-and-sell policies are excluded from deemed property (s3(3)(a)(iii)), on the basis that the premiums were not paid by the client. Confirm this with the policy and the agreement.',
+    );
+  }
+
+  if (balanceSheet.estateDuty.addDeemedPropertyNominated) {
+    advisoryNotes.push(
+      'Policies taken out under a registered antenuptial contract for the spouse or children may be excluded from deemed property (s3(3)(a)(ii)); they are treated as dutiable here.',
+    );
+  }
+
+  return { assumptions, advisoryNotes };
 }
 
 /**
@@ -824,6 +1054,9 @@ export const EstatePlanningCalculationService = {
     // Step 8: Integration with Other FNAs
     const integrationWithOtherFNAs = analyzeIntegration(inputs, deathBalanceSheet);
 
+    // Step 9: Assumptions and advisory notes
+    const { assumptions, advisoryNotes } = describeAssumptions(inputs, deathBalanceSheet);
+
     return {
       deathBalanceSheet,
       liquidityAnalysis,
@@ -833,6 +1066,8 @@ export const EstatePlanningCalculationService = {
       structuralRisks,
       executiveSummary,
       integrationWithOtherFNAs,
+      assumptions,
+      advisoryNotes,
     };
   },
 };

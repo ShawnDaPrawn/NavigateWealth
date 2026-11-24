@@ -8,7 +8,7 @@
  * - Navigation: Back to Step 1, Next to Step 3
  */
 
-import { Shield, Users, Wallet, Clock, Info } from 'lucide-react';
+import { Shield, Users, Wallet, Clock, Info, Umbrella, Scale } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../ui/card';
 import { Alert, AlertDescription } from '../../../../ui/alert';
 import { MedicalFNAInputs, MedicalFNAResults } from '../types';
@@ -166,6 +166,14 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
                   This is a permanent monthly premium increase
                 </p>
               )}
+              {calculations.ljpPenaltyYears !== undefined && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Penalty years: {calculations.ljpPenaltyYears}
+                  {calculations.ljpMethod === 'regulation-13' && ' (Regulation 13 formula)'}
+                  {calculations.ljpMethod === 'years-without-cover' &&
+                    ' (years without cover — fallback)'}
+                </p>
+              )}
             </div>
           </div>
           <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded border italic">
@@ -173,6 +181,74 @@ export function Step2SystemCalculation({ inputs, calculations, onNext, onBack }:
           </div>
         </CardContent>
       </Card>
+
+      {/* Gap Cover */}
+      {calculations.gapCoverRecommended !== undefined && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Umbrella className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg font-semibold">Gap Cover</CardTitle>
+            </div>
+            <CardDescription>In-hospital shortfall and co-payment protection</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                System Recommendation
+              </p>
+              <p className="text-lg font-bold text-primary">
+                {calculations.gapCoverRecommended ? 'Recommended' : 'Optional'}
+              </p>
+            </div>
+            {calculations.rationale.gapCover && (
+              <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded border italic">
+                "{calculations.rationale.gapCover}"
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Premium Affordability */}
+      {calculations.premiumAffordability && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Scale className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg font-semibold">Premium Affordability</CardTitle>
+            </div>
+            <CardDescription>Current premium against net monthly income</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3 bg-muted/30 rounded-lg border">
+                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                  Premium / Net Income
+                </p>
+                <p
+                  className={`text-lg font-bold ${calculations.premiumAffordability.exceedsGuideline ? 'text-destructive' : 'text-primary'}`}
+                >
+                  {(calculations.premiumAffordability.premiumToIncomeRatio * 100).toFixed(1)}%
+                </p>
+              </div>
+              <div className="p-3 bg-muted/30 rounded-lg border">
+                <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider mb-1">
+                  Monthly Premium
+                </p>
+                <p className="text-lg font-medium">
+                  {formatCurrencyWhole(calculations.premiumAffordability.monthlyPremium)}
+                </p>
+              </div>
+            </div>
+            {calculations.rationale.affordability && (
+              <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded border italic">
+                "{calculations.rationale.affordability}"
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <FNAStepNavigation step={2} onBack={onBack} onNext={onNext} />
     </div>

@@ -13,85 +13,16 @@ import { assertClientAccess, assertRecordClientAccess } from './client-access.ts
 import { CreateRiskPlanningFnaSchema, UpdateRiskPlanningFnaSchema } from './fna-validation.ts';
 import { formatZodError } from './shared-validation-utils.ts';
 import { nextVersion } from './fna-versioning.ts';
-import { formatRand } from './quote-verticals/formatRand.ts';
+import {
+  calculateRiskAnalysis,
+  normaliseRiskInput,
+  RISK_SYSTEM_VERSION as SYSTEM_VERSION,
+} from '../../../shared/fna-calculations/riskPlanning.ts';
 import { NetWorthSnapshotService } from './net-worth-snapshot-service.ts';
 
 const riskPlanningFnaRoutes = new Hono();
 const log = createModuleLogger('risk-planning-fna-routes');
 const snapshotService = new NetWorthSnapshotService();
-
-// ==================== LOCAL INTERFACES ====================
-
-/** Dependant derived from family member data */
-interface DependantRecord {
-  id: string;
-  relationship: string;
-  dependencyTerm: number;
-  monthlyEducationCost: number;
-}
-
-/** Existing cover structure for calculation functions */
-interface ExistingCoverData {
-  life: { personal: number; group: number };
-  disability: { personal: number; group: number };
-  severeIllness: { personal: number; group: number };
-  incomeProtection: {
-    temporary: { personal: number; group: number };
-    permanent: { personal: number; group: number };
-  };
-}
-
-/** Income protection settings */
-interface IncomeProtectionSettings {
-  temporary: { benefitPeriod: string };
-  permanent: { escalation: string };
-}
-
-/** Input data shape for all risk planning calculation functions */
-interface RiskCalcInputData {
-  grossMonthlyIncome: number;
-  grossAnnualIncome: number;
-  netMonthlyIncome: number;
-  netAnnualIncome: number;
-  currentAge: number;
-  retirementAge: number;
-  dependants: DependantRecord[];
-  totalOutstandingDebts: number;
-  totalCurrentAssets: number;
-  totalEstateValue: number;
-  spouseFullName: string;
-  spouseAverageMonthlyIncome: number;
-  existingCover: ExistingCoverData;
-  incomeProtectionSettings: IncomeProtectionSettings;
-  [key: string]: unknown;
-}
-
-// ==================== CONSTANTS ====================
-
-const SYSTEM_VERSION = '1.0.0';
-
-// Life Cover Constants
-const LIFE_COVER_MULTIPLES = {
-  SINGLE_NO_DEPENDANTS: 5,
-  SINGLE_INCOME_HOUSEHOLD_BASE: 14,
-  MARRIED_YOUNG_CHILDREN_BASE: 10,
-  ADDITIONAL_PER_DEPENDANT: 1, // Mandatory: +1Ã— per additional dependant
-};
-
-const FUNERAL_FINAL_EXPENSES = 100000; // R100,000
-const ESTATE_COSTS_PERCENTAGE = 0.05; // 5%
-
-// Disability Cover Constants
-const DISABILITY_MULTIPLE_BASE = 10;
-const ADDITIONAL_DISABILITY_COSTS = {
-  HOME_MODIFICATIONS: 200000,
-  VEHICLE_ADAPTATION: 150000,
-  MEDICAL_EQUIPMENT: 100000,
-  ONCE_OFF_CARE_COSTS: 100000,
-};
-
-// Severe Illness Cover Constants
-const SEVERE_ILLNESS_MULTIPLE = 3;
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -137,283 +68,17 @@ async function autoPopulateFromProfile(clientId: string) {
 }
 
 /**
- * Calculate Life Cover
+ * Perform all Risk Planning calculations.
+ *
+ * The engine is shared with the admin wizard (src/shared/fna-calculations/
+ * riskPlanning.ts), so a draft recalculated here on update stores exactly the
+ * numbers the wizard showed. Until system version 3.0.0 this file had its own
+ * copy with different constants (estate costs 5% vs 3.99%, other disability
+ * multiples), so updating a draft's inputs silently changed its figures.
+ * `normaliseRiskInput` tolerates the loosely-typed request body.
  */
-function calculateLifeCover(input: RiskCalcInputData) {
-  const {
-    netAnnualIncome,
-    totalOutstandingDebts,
-    totalEstateValue,
-    dependants,
-    spouseAverageMonthlyIncome,
-    existingCover,
-  } = input;
-
-  // Step 1: Immediate Capital
-  const estateCosts = Math.max(0, totalEstateValue * ESTATE_COSTS_PERCENTAGE);
-  const immediateCapital = {
-    outstandingDebt: totalOutstandingDebts,
-    funeralFinalExpenses: FUNERAL_FINAL_EXPENSES,
-    estateCosts,
-    total: totalOutstandingDebts + FUNERAL_FINAL_EXPENSES + estateCosts,
-  };
-
-  // Step 2: Income Replacement Capital
-  const numDependants = dependants.length;
-  const isSingleIncome = !spouseAverageMonthlyIncome || spouseAverageMonthlyIncome === 0;
-
-  let incomeMultiple: number;
-
-  if (numDependants === 0) {
-    incomeMultiple = LIFE_COVER_MULTIPLES.SINGLE_NO_DEPENDANTS;
-  } else {
-    const baseMultiple = isSingleIncome
-      ? LIFE_COVER_MULTIPLES.SINGLE_INCOME_HOUSEHOLD_BASE
-      : LIFE_COVER_MULTIPLES.MARRIED_YOUNG_CHILDREN_BASE;
-
-    incomeMultiple =
-      baseMultiple + (numDependants - 1) * LIFE_COVER_MULTIPLES.ADDITIONAL_PER_DEPENDANT;
-  }
-
-  const incomeReplacementCapital = {
-    netAnnualIncome,
-    incomeMultiple,
-    total: netAnnualIncome * incomeMultiple,
-  };
-
-  // Step 3: Education Capital
-  const educationCapitalPerDependant = dependants.map((dep: DependantRecord) => ({
-    dependantId: dep.id,
-    relationship: dep.relationship,
-    monthlyEducationCost: dep.monthlyEducationCost,
-    dependencyTerm: dep.dependencyTerm,
-    total: dep.monthlyEducationCost * 12 * dep.dependencyTerm,
-  }));
-
-  const educationCapitalTotal = educationCapitalPerDependant.reduce(
-    (sum: number, dep: { total: number }) => sum + dep.total,
-    0,
-  );
-
-  const educationCapital = {
-    perDependant: educationCapitalPerDependant,
-    total: educationCapitalTotal,
-  };
-
-  // Step 4: Total Life Cover
-  const grossNeed =
-    immediateCapital.total + incomeReplacementCapital.total + educationCapital.total;
-
-  const existingCoverData = {
-    personal: existingCover.life.personal,
-    group: existingCover.life.group,
-    total: existingCover.life.personal + existingCover.life.group,
-  };
-
-  const netShortfall = Math.max(0, grossNeed - existingCoverData.total);
-
-  const assumptions = [
-    `Income multiple: ${incomeMultiple}Ã— (${numDependants} dependant${numDependants !== 1 ? 's' : ''}, ${isSingleIncome ? 'single-income' : 'dual-income'} household)`,
-    `Estate costs: ${(ESTATE_COSTS_PERCENTAGE * 100).toFixed(2)}% of net estate value`,
-    `Funeral and final expenses: ${formatRand(FUNERAL_FINAL_EXPENSES)}`,
-    `Net annual income: ${formatRand(netAnnualIncome)}`,
-  ];
-
-  const riskNotes = [
-    'Life cover ensures dependants can maintain their standard of living and complete education.',
-    'Capital replacement model assumes lump sum investment at retirement return rates.',
-    'Review upon material life events (marriage, birth, divorce, debt changes).',
-  ];
-
-  return {
-    immediateCapital,
-    incomeReplacementCapital,
-    educationCapital,
-    grossNeed,
-    existingCover: existingCoverData,
-    netShortfall,
-    assumptions,
-    riskNotes,
-  };
-}
-
-/**
- * Calculate Disability Cover
- */
-function calculateDisabilityCover(input: RiskCalcInputData) {
-  const { netAnnualIncome, dependants, existingCover } = input;
-
-  const numDependants = dependants.length;
-  const disabilityMultiple = DISABILITY_MULTIPLE_BASE + numDependants;
-
-  const capitalisedIncomeLoss = {
-    netAnnualIncome,
-    disabilityMultiple,
-    total: netAnnualIncome * disabilityMultiple,
-  };
-
-  const additionalDisabilityCosts = {
-    homeModifications: ADDITIONAL_DISABILITY_COSTS.HOME_MODIFICATIONS,
-    vehicleAdaptation: ADDITIONAL_DISABILITY_COSTS.VEHICLE_ADAPTATION,
-    medicalEquipment: ADDITIONAL_DISABILITY_COSTS.MEDICAL_EQUIPMENT,
-    onceOffCareCosts: ADDITIONAL_DISABILITY_COSTS.ONCE_OFF_CARE_COSTS,
-    total: Object.values(ADDITIONAL_DISABILITY_COSTS).reduce((sum, val) => sum + val, 0),
-  };
-
-  const grossNeed = capitalisedIncomeLoss.total + additionalDisabilityCosts.total;
-
-  const existingCoverData = {
-    personal: existingCover.disability.personal,
-    group: existingCover.disability.group,
-    total: existingCover.disability.personal + existingCover.disability.group,
-  };
-
-  const netShortfall = Math.max(0, grossNeed - existingCoverData.total);
-
-  const assumptions = [
-    `Disability income multiple: ${disabilityMultiple}Ã— (base 10Ã— + ${numDependants} dependant${numDependants !== 1 ? 's' : ''})`,
-    `Net annual income: ${formatRand(netAnnualIncome)}`,
-    'Additional costs: Home modifications, vehicle adaptation, medical equipment, care costs',
-  ];
-
-  const riskNotes = [
-    'Lump sum disability cover provides capital to adapt living environment and replace lost income.',
-    'Does not replace Income Protection (IP) â€“ this is for permanent disability capital needs.',
-    'Review if health status changes or dependant structure changes.',
-  ];
-
-  return {
-    capitalisedIncomeLoss,
-    additionalDisabilityCosts,
-    grossNeed,
-    existingCover: existingCoverData,
-    netShortfall,
-    assumptions,
-    riskNotes,
-  };
-}
-
-/**
- * Calculate Severe Illness Cover
- */
-function calculateSevereIllnessCover(input: RiskCalcInputData) {
-  const { grossAnnualIncome, existingCover } = input;
-
-  const incomeMultiple = SEVERE_ILLNESS_MULTIPLE;
-  const grossNeed = grossAnnualIncome * incomeMultiple;
-
-  const existingCoverData = {
-    personal: existingCover.severeIllness.personal,
-    group: existingCover.severeIllness.group,
-    total: existingCover.severeIllness.personal + existingCover.severeIllness.group,
-  };
-
-  const netShortfall = Math.max(0, grossNeed - existingCoverData.total);
-
-  const assumptions = [
-    `Severe illness income multiple: ${incomeMultiple}Ã—`,
-    `Gross annual income: ${formatRand(grossAnnualIncome)}`,
-  ];
-
-  const riskNotes = [
-    'Severe illness cover provides capital for medical treatment, lifestyle adjustments, and recovery period.',
-    'Typically pays out on diagnosis of specified critical illnesses (e.g., cancer, heart attack, stroke).',
-    'Review if health status changes or family medical history reveals new risks.',
-  ];
-
-  return {
-    grossAnnualIncome,
-    incomeMultiple,
-    grossNeed,
-    existingCover: existingCoverData,
-    netShortfall,
-    assumptions,
-    riskNotes,
-  };
-}
-
-/**
- * Calculate Income Protection
- */
-function calculateIncomeProtection(input: RiskCalcInputData) {
-  const { netMonthlyIncome, currentAge, retirementAge, existingCover, incomeProtectionSettings } =
-    input;
-
-  const calculatedNeed = netMonthlyIncome; // 100% of net monthly income
-  const benefitTerm = retirementAge - currentAge;
-
-  const temporary = {
-    calculatedNeed,
-    benefitPeriod: incomeProtectionSettings.temporary.benefitPeriod,
-    existingCover: {
-      personal: existingCover.incomeProtection.temporary.personal,
-      group: existingCover.incomeProtection.temporary.group,
-      total:
-        existingCover.incomeProtection.temporary.personal +
-        existingCover.incomeProtection.temporary.group,
-    },
-    netShortfall: Math.max(
-      0,
-      calculatedNeed -
-        (existingCover.incomeProtection.temporary.personal +
-          existingCover.incomeProtection.temporary.group),
-    ),
-  };
-
-  const permanent = {
-    calculatedNeed,
-    escalation: incomeProtectionSettings.permanent.escalation,
-    benefitTerm,
-    existingCover: {
-      personal: existingCover.incomeProtection.permanent.personal,
-      group: existingCover.incomeProtection.permanent.group,
-      total:
-        existingCover.incomeProtection.permanent.personal +
-        existingCover.incomeProtection.permanent.group,
-    },
-    netShortfall: Math.max(
-      0,
-      calculatedNeed -
-        (existingCover.incomeProtection.permanent.personal +
-          existingCover.incomeProtection.permanent.group),
-    ),
-  };
-
-  const assumptions = [
-    `Calculated need: ${formatRand(calculatedNeed)}/month (100% of net monthly income)`,
-    `Benefit term: ${benefitTerm} years (to retirement)`,
-  ];
-
-  const riskNotes = [
-    'Income Protection (IP) replaces monthly income during temporary or permanent disability.',
-    'Temporary IP: Short-term disability with benefit period (e.g., 6, 12, or 24 months).',
-    'Permanent IP: Long-term disability paying until retirement or recovery.',
-    'Personal and Group IP do NOT cross-offset â€“ each type must meet its own shortfall.',
-  ];
-
-  return {
-    temporary,
-    permanent,
-    assumptions,
-    riskNotes,
-  };
-}
-
-/**
- * Perform all Risk Planning calculations
- */
-function performCalculations(inputData: RiskCalcInputData, userId: string) {
-  return {
-    life: calculateLifeCover(inputData),
-    disability: calculateDisabilityCover(inputData),
-    severeIllness: calculateSevereIllnessCover(inputData),
-    incomeProtection: calculateIncomeProtection(inputData),
-    metadata: {
-      calculatedAt: new Date().toISOString(),
-      calculatedBy: userId,
-      systemVersion: SYSTEM_VERSION,
-    },
-  };
+function performCalculations(inputData: unknown, userId: string) {
+  return calculateRiskAnalysis(normaliseRiskInput(inputData), userId);
 }
 
 // ==================== ROUTE HANDLERS ====================
@@ -726,10 +391,7 @@ riskPlanningFnaRoutes.put('/update/:fnaId', async (c) => {
 
     // Recalculate if inputData changed
     if (updates.inputData) {
-      updatedFna.calculations = performCalculations(
-        updates.inputData as Parameters<typeof performCalculations>[0],
-        user.id,
-      );
+      updatedFna.calculations = performCalculations(updates.inputData, user.id);
     }
 
     // Save

@@ -106,6 +106,29 @@ describe('validateInputs', () => {
     expect(errors).toEqual([]);
   });
 
+  it('rejects allocations of one investment above 100% across goals', () => {
+    const { errors } = validateInputs({
+      currentAge: 40,
+      dateOfBirth: '1985-01-01',
+      clientRiskProfile: 'balanced',
+      longTermInflationRate: 0.06,
+      expectedRealReturns: {} as RiskProfileReturns,
+      goals: [
+        makeGoal({ id: 'g1', linkedInvestmentIds: ['a'], linkedInvestmentAllocations: { a: 60 } }),
+        makeGoal({ id: 'g2', linkedInvestmentIds: ['a'], linkedInvestmentAllocations: { a: 60 } }),
+      ],
+    });
+    expect(errors.some((e) => e.includes('120%'))).toBe(true);
+  });
+
+  it('rejects a goal allocation outside 0–100%', () => {
+    expect(
+      validateGoal(
+        makeGoal({ linkedInvestmentIds: ['a'], linkedInvestmentAllocations: { a: 150 } }),
+      ),
+    ).toContain('Investment allocation must be between 0% and 100%');
+  });
+
   it('prefixes goal-level errors with the goal index and name', () => {
     const { errors } = validateInputs({
       currentAge: 40,
@@ -139,9 +162,15 @@ describe('time + money math', () => {
     expect(calculateAnnuityFutureValue(100, 0.1, 0)).toBe(0);
   });
 
-  it('calculateAnnuityFutureValue accumulates contributions', () => {
-    // 1 year, monthly 100 -> 1200 annual * factor((1.1^1 - 1)/0.1 = 1) = 1200
-    expect(calculateAnnuityFutureValue(100, 0.1, 1)).toBeCloseTo(1200, 6);
+  it('calculateAnnuityFutureValue compounds monthly contributions monthly', () => {
+    // Was 1,200 (one annual payment at year end). Now monthly: rm = 1.1^(1/12) − 1
+    // = 0.0079741; factor = (1.1 − 1) / rm = 12.5406 → 100 × 12.5406 = 1,254.06
+    expect(calculateAnnuityFutureValue(100, 0.1, 1)).toBeCloseTo(1254.06, 1);
+  });
+
+  it('calculateAnnuityFutureValue handles a 0% rate (previously 0/0 = NaN)', () => {
+    expect(calculateAnnuityFutureValue(100, 0, 2)).toBe(2400);
+    expect(calculateRequiredMonthlyPayment(2400, 0, 2)).toBe(100);
   });
 
   it('calculateRequiredMonthlyPayment returns 0 when years <= 0, else inverts the annuity', () => {

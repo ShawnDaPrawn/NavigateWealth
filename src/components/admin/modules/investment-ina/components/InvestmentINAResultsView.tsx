@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { InvestmentINASession, GoalCalculationResult } from '../types';
 import { InvestmentINACalculationService } from '../services/investmentINACalculationService';
+import { INAAffordabilityPanel, INAAssumptionsList, INAGoalWarnings } from './INAResultsDetails';
 
 interface InvestmentINAResultsViewProps {
   session: InvestmentINASession;
@@ -106,7 +107,15 @@ export function InvestmentINAResultsView({
         <CardContent className="space-y-4">
           {/* Health Badge */}
           <div className="flex items-center justify-between">
-            <span className="text-sm">Portfolio Health</span>
+            <span className="text-sm">
+              Portfolio Health
+              {portfolioSummary.capitalWeightedFundingPercentage !== undefined && (
+                <span className="block text-xs text-muted-foreground">
+                  {Math.round(portfolioSummary.capitalWeightedFundingPercentage)}% of goal capital
+                  funded
+                </span>
+              )}
+            </span>
             <Badge className={getHealthBadgeColor(portfolioSummary.overallPortfolioHealth)}>
               {portfolioSummary.overallPortfolioHealth.replace('-', ' ').toUpperCase()}
             </Badge>
@@ -170,6 +179,9 @@ export function InvestmentINAResultsView({
               </div>
             </div>
           </div>
+
+          <INAAffordabilityPanel summary={portfolioSummary} />
+          <INAGoalWarnings goalResults={goalResults} />
         </CardContent>
       </Card>
 
@@ -240,7 +252,9 @@ export function InvestmentINAResultsView({
           </div>
           <Separator />
           <div className="space-y-2">
-            <p className="text-sm font-medium">Expected Real Returns by Risk Profile</p>
+            <p className="text-sm font-medium">
+              Expected Real Returns by Risk Profile (after fees and inflation)
+            </p>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2 md:[&>*:last-child:nth-child(odd)]:col-span-1">
               {Object.entries(results.economicAssumptions.realReturnsByProfile).map(
                 ([profile, returnRate]) => (
@@ -252,6 +266,7 @@ export function InvestmentINAResultsView({
               )}
             </div>
           </div>
+          <INAAssumptionsList results={results} />
         </CardContent>
       </Card>
     </div>
@@ -435,6 +450,24 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
           </div>
         )}
 
+        {goal.fundingGap.hasShortfall && !goal.requiredContributions.canMeetGoal && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-900">
+            {goal.requiredContributions.canMeetGoalReason === 'affordability' ? (
+              <>
+                This goal needs {formatCurrency(goal.requiredContributions.recommendedTotalMonthly)}
+                /month, which does not fit within the affordable budget after higher-priority goals.
+                Consider a later target date, a smaller goal amount, or a lump sum of{' '}
+                {formatCurrency(goal.requiredContributions.alternativeLumpSumToday)} today.
+              </>
+            ) : (
+              <>
+                The target date has passed or falls this month. Set a new target date, or fund the
+                shortfall as a lump sum.
+              </>
+            )}
+          </div>
+        )}
+
         {/* Investment Details */}
         {goal.projectedCapital.existingCapital.linkedInvestments.length > 0 && (
           <div className="space-y-2">
@@ -444,9 +477,22 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
             <div className="space-y-1 text-sm">
               {goal.projectedCapital.existingCapital.linkedInvestments.map((inv, index) => (
                 <div key={index} className="flex justify-between text-muted-foreground">
-                  <span>{inv.investmentName}</span>
                   <span>
-                    {formatCurrency(inv.currentValue)} → {formatCurrency(inv.futureValue)}
+                    {inv.investmentName}
+                    {inv.allocationPercent !== undefined && inv.allocationPercent < 100 && (
+                      <span className="text-xs">
+                        {' '}
+                        ({Math.round(inv.allocationPercent * 10) / 10}%
+                        {inv.isShared
+                          ? `, shared with ${(inv.sharedWithGoalCount ?? 2) - 1} other goal(s)`
+                          : ''}
+                        )
+                      </span>
+                    )}
+                  </span>
+                  <span>
+                    {formatCurrency(inv.allocatedValue ?? inv.currentValue)} →{' '}
+                    {formatCurrency(inv.futureValue)}
                   </span>
                 </div>
               ))}
@@ -458,7 +504,8 @@ function GoalResultCard({ goal }: { goal: GoalCalculationResult }) {
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Risk Profile</span>
           <Badge variant="outline" className="capitalize">
-            {goal.applicableRiskProfile} ({formatPercentage(goal.applicableRealReturn)} real return)
+            {goal.applicableRiskProfile} ({formatPercentage(goal.applicableRealReturn)} real return
+            after fees)
           </Badge>
         </div>
       </CardContent>

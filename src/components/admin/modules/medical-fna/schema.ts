@@ -23,6 +23,12 @@ export const MedicalFNAInputSchema = z.object({
   // D. LJP
   currentAge: z.number().min(0).max(120).default(30),
   yearsWithoutCoverAfter35: z.number().min(0).default(0),
+  // Regulation 13 inputs — optional so FNAs saved before them still validate
+  creditableCoverageYearsAfter21: z.number().min(0).max(100).optional(),
+  coveredBeforeApril2001: z.boolean().optional(),
+
+  // Affordability (optional)
+  netMonthlyIncome: z.number().min(0).optional(),
 
   // E. Existing Policy (Optional)
   existingPlanType: z.string().optional(),

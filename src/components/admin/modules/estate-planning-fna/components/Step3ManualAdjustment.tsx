@@ -1,9 +1,10 @@
 /**
  * Estate Planning — Step 3: Adviser Manual Adjustment
  *
- * The adviser may override the administration-cost assumptions and whether
- * the estate passes to a surviving spouse. Statutory values are fixed. Every
- * override needs a recorded reason; the wizard recalculates before Step 4.
+ * The adviser may override the administration-cost assumptions, whether the
+ * estate passes to a surviving spouse, the marginal rate used for CGT on death
+ * and a predeceased spouse's unused abatement. Statutory values are fixed.
+ * Every override needs a recorded reason; the wizard recalculates before Step 4.
  */
 
 import { useState } from 'react';
@@ -24,18 +25,29 @@ import type {
   EstatePlanningAdviserAdjustments,
   EstatePlanningInputs,
 } from '../types';
+import { resolveEstateAssumptions } from '../utils';
 
 type NumericAssumption = Exclude<keyof EstateAdjustableAssumptions, 'spousalBequest'>;
 
 const NUMERIC_ASSUMPTIONS: {
   id: NumericAssumption;
   label: string;
-  format: 'percent' | 'currency';
+  format: 'percent' | 'fraction' | 'currency';
 }[] = [
-  { id: 'executorFeePercentage', label: 'Executor fee (of gross estate)', format: 'percent' },
+  {
+    id: 'executorFeePercentage',
+    label: 'Executor fee (of gross estate, excl. VAT — 15% VAT is added)',
+    format: 'percent',
+  },
   { id: 'conveyancingFeesPerProperty', label: 'Conveyancing per property', format: 'currency' },
   { id: 'masterFeesEstimate', label: "Master's fees", format: 'currency' },
   { id: 'funeralCostsEstimate', label: 'Funeral costs', format: 'currency' },
+  { id: 'cgtMarginalRate', label: 'Marginal tax rate for CGT on death', format: 'fraction' },
+  {
+    id: 'predeceasedSpouseUnusedAbatement',
+    label: "Predeceased spouse's unused abatement (s4A, up to R3.5m)",
+    format: 'currency',
+  },
 ];
 
 interface Step3Props {
@@ -46,7 +58,7 @@ interface Step3Props {
 }
 
 export function Step3ManualAdjustment({ inputs, initialAdjustments, onNext, onBack }: Step3Props) {
-  const system = inputs.assumptions;
+  const system = resolveEstateAssumptions(inputs.assumptions);
   const overrides = initialAdjustments?.overrides ?? {};
 
   const [values, setValues] = useState<Record<NumericAssumption, number>>(() => {
@@ -111,7 +123,8 @@ export function Step3ManualAdjustment({ inputs, initialAdjustments, onNext, onBa
         <CardHeader>
           <CardTitle>Administration Cost Assumptions</CardTitle>
           <CardDescription>
-            Estate duty rate, abatement and the CGT inclusion rate are statutory and fixed.
+            Estate duty rates (20%, 25% above R30m), the R3.5m abatement, the CGT inclusion rate and
+            exclusions are statutory and fixed.
           </CardDescription>
         </CardHeader>
         <CardContent>

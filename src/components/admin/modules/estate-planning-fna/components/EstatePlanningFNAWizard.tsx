@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { FNAWizardShell, resolveInitialFNAStep, useFNAPublish } from '../../fna';
 import type { FNAWizardProps } from '../../fna';
 import { EstatePlanningAPI } from '../api';
-import { EstatePlanningCalculationService } from '../utils';
+import { EstatePlanningCalculationService, resolveEstateAssumptions } from '../utils';
 import type {
   EstatePlanningAdviserAdjustments,
   EstatePlanningInputs,
@@ -172,6 +172,9 @@ export function EstatePlanningFNAWizard({
             masterFeesEstimate: inputs.assumptions.masterFeesEstimate,
             funeralCostsEstimate: inputs.assumptions.funeralCostsEstimate,
             spousalBequest: inputs.assumptions.spousalBequest,
+            cgtMarginalRate: resolveEstateAssumptions(inputs.assumptions).cgtMarginalRate,
+            predeceasedSpouseUnusedAbatement: resolveEstateAssumptions(inputs.assumptions)
+              .predeceasedSpouseUnusedAbatement,
           },
         }
       : undefined;

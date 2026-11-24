@@ -16,6 +16,7 @@ import { formatCurrency } from '../../../../../utils/currencyFormatter';
 import { RetirementFNAInputs, RetirementCalculationResults } from '../types';
 import { SVGBarChart } from '../../../../ui/svg-charts';
 import { FNAStepNavigation } from '../../fna';
+import { RetirementAnalysisDetails } from './RetirementAnalysisDetails';
 
 interface Step2SystemCalculationProps {
   inputs: Partial<RetirementFNAInputs>;
@@ -90,7 +91,11 @@ export function Step2SystemCalculation({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(targetMonthlyIncome)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Future value (at retirement)</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Future rands, at retirement
+              {calculations.targetMonthlyIncomeToday !== undefined &&
+                ` · ${formatCurrency(calculations.targetMonthlyIncomeToday)} today`}
+            </p>
           </CardContent>
         </Card>
 
@@ -160,7 +165,15 @@ export function Step2SystemCalculation({
               <p>
                 Based on a retirement age of <strong>{inputs.retirementAge}</strong>, the client
                 requires <strong>{formatCurrency(requiredCapital)}</strong> to maintain a living
-                standard of <strong>{formatCurrency(targetMonthlyIncome)}</strong> per month.
+                standard of <strong>{formatCurrency(targetMonthlyIncome)}</strong> per month
+                {calculations.targetMonthlyIncomeToday !== undefined && (
+                  <>
+                    {' '}
+                    (<strong>{formatCurrency(calculations.targetMonthlyIncomeToday)}</strong> in
+                    today's money)
+                  </>
+                )}
+                .
               </p>
               <p>
                 Current savings and contribution levels are projected to reach{' '}
@@ -204,6 +217,8 @@ export function Step2SystemCalculation({
           </CardContent>
         </Card>
       </div>
+
+      <RetirementAnalysisDetails results={calculations} />
 
       <FNAStepNavigation step={2} onBack={onBack} onNext={onNext} />
     </div>

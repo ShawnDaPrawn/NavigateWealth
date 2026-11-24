@@ -21,6 +21,7 @@ import {
   RetirementFNAAdjustments,
 } from '../types';
 import { FNAStepNavigation } from '../../fna';
+import { RetirementAnalysisDetails } from './RetirementAnalysisDetails';
 
 interface Step4FinaliseProps {
   inputs: RetirementFNAInputs;
@@ -104,7 +105,11 @@ export function Step4Finalise({
               <div className="bg-muted/50 p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">Target Monthly Income</p>
                 <p className="text-2xl font-bold">{formatCurrency(targetMonthlyIncome)}</p>
-                <p className="text-xs text-muted-foreground">Future value (at retirement)</p>
+                <p className="text-xs text-muted-foreground">
+                  Future rands, at retirement
+                  {calculations.targetMonthlyIncomeToday !== undefined &&
+                    ` · ${formatCurrency(calculations.targetMonthlyIncomeToday)} in today's money`}
+                </p>
               </div>
               <div className="bg-muted/50 p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">Required Capital</p>
@@ -252,25 +257,54 @@ export function Step4Finalise({
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Inflation (CPI):</span>
                   <span className="font-medium">
-                    {((adjustments.inflationRate || 0.06) * 100).toFixed(1)}%
+                    {(
+                      (calculations.inflationRate ?? adjustments.inflationRate ?? 0.06) * 100
+                    ).toFixed(1)}
+                    %
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Pre-Ret Growth:</span>
                   <span className="font-medium">
-                    {((adjustments.preRetirementReturn || 0.1) * 100).toFixed(1)}%
+                    {(
+                      (calculations.preRetirementReturn ?? adjustments.preRetirementReturn ?? 0.1) *
+                      100
+                    ).toFixed(1)}
+                    %
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Post-Ret Growth:</span>
                   <span className="font-medium">
-                    {((adjustments.postRetirementReturn || 0.08) * 100).toFixed(1)}%
+                    {(
+                      (calculations.postRetirementReturn ??
+                        adjustments.postRetirementReturn ??
+                        0.08) * 100
+                    ).toFixed(1)}
+                    %
                   </span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-muted-foreground">Salary Escalation:</span>
+                  <span className="font-medium">
+                    {(calculations.realSalaryGrowth * 100).toFixed(1)}%
+                  </span>
+                </div>
+                {calculations.premiumEscalation !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Contribution Escalation:</span>
+                    <span className="font-medium">
+                      {(calculations.premiumEscalation * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Replacement Ratio:</span>
                   <span className="font-medium">
-                    {((adjustments.replacementRatio || 0.75) * 100).toFixed(0)}%
+                    {(
+                      (calculations.replacementRatio ?? adjustments.replacementRatio ?? 0.75) * 100
+                    ).toFixed(0)}
+                    %
                   </span>
                 </div>
               </div>
@@ -278,6 +312,8 @@ export function Step4Finalise({
           </CardContent>
         </Card>
       </div>
+
+      <RetirementAnalysisDetails results={calculations} />
 
       {/* Compliance Notice */}
       <Alert>

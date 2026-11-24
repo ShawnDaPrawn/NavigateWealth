@@ -164,10 +164,12 @@ app.get('/client/:clientId/auto-populate', async (c) => {
           beneficiaries: policy.beneficiaries || [],
           cededTo: policy.cededTo || '',
           payableToEstate: beneficiaryType === 'estate',
+          isBuyAndSellPolicy: policy.isBuyAndSellPolicy === true,
         };
       });
 
-    // Default assumptions
+    // Default assumptions. The executor's fee excludes VAT, which the
+    // calculation adds; estate duty is 20% to R30m and 25% above it.
     const assumptions = {
       executorFeePercentage: 3.5,
       conveyancingFeesPerProperty: 50000,
@@ -177,6 +179,8 @@ app.get('/client/:clientId/auto-populate', async (c) => {
       estateDutyAbatement: 3500000,
       spousalBequest: String(familyInfo.maritalStatus ?? '').startsWith('married'),
       cgtInclusionRate: 0.4,
+      cgtMarginalRate: 0.45,
+      predeceasedSpouseUnusedAbatement: 0,
     };
 
     // Check for offshore assets and trusts

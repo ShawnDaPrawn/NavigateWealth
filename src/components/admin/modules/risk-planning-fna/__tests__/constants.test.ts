@@ -7,6 +7,7 @@ import {
   OVERRIDE_CLASSIFICATIONS,
   COMPLIANCE_DISCLAIMERS,
   SYSTEM_VERSION,
+  RISK_ASSUMPTION_DEFAULTS,
   DEFAULT_FORM_VALUES,
   EMPLOYMENT_TYPE_LABELS,
   RELATIONSHIP_OPTIONS,
@@ -15,26 +16,33 @@ import {
   QUERY_KEYS,
 } from '../constants';
 
+// The 2.x income multiples (LIFE_COVER.MULTIPLES, DISABILITY_COVER.MULTIPLES)
+// were removed in 3.0.0 when the analysis became a capital needs analysis.
 describe('LIFE_COVER', () => {
-  it('has FUNERAL_FINAL_EXPENSES and ESTATE_COSTS_PERCENTAGE', () => {
+  it('has funeral costs and estate costs of 3.5% executor’s fee + 15% VAT', () => {
     expect(LIFE_COVER.FUNERAL_FINAL_EXPENSES).toBeGreaterThan(0);
-    expect(LIFE_COVER.ESTATE_COSTS_PERCENTAGE).toBeGreaterThan(0);
+    expect(LIFE_COVER.ESTATE_COSTS_PERCENTAGE).toBeCloseTo(0.035 * 1.15, 6);
+  });
+});
+
+describe('RISK_ASSUMPTION_DEFAULTS', () => {
+  it('defaults the capital needs assumptions', () => {
+    expect(RISK_ASSUMPTION_DEFAULTS).toMatchObject({
+      INVESTMENT_RETURN: 10,
+      INCOME_ESCALATION: 6,
+      INCOME_REPLACEMENT_RATIO: 75,
+      DISABILITY_INCOME_REPLACEMENT_RATIO: 100,
+      EDUCATION_INFLATION: 8,
+      LIQUID_ASSETS_AVAILABLE: 0,
+    });
   });
 
-  it('MULTIPLES has values for all household types', () => {
-    expect(LIFE_COVER.MULTIPLES.SINGLE_NO_DEPENDANTS).toBeGreaterThan(0);
-    expect(LIFE_COVER.MULTIPLES.MARRIED_YOUNG_CHILDREN_BASE).toBeGreaterThan(0);
-    expect(LIFE_COVER.MULTIPLES.SINGLE_INCOME_HOUSEHOLD_BASE).toBeGreaterThan(0);
-    expect(LIFE_COVER.MULTIPLES.ADDITIONAL_PER_DEPENDANT).toBe(1);
-  });
-
-  it('single-income household base > married with young children > single no dependants', () => {
-    expect(LIFE_COVER.MULTIPLES.SINGLE_INCOME_HOUSEHOLD_BASE).toBeGreaterThan(
-      LIFE_COVER.MULTIPLES.MARRIED_YOUNG_CHILDREN_BASE,
-    );
-    expect(LIFE_COVER.MULTIPLES.MARRIED_YOUNG_CHILDREN_BASE).toBeGreaterThan(
-      LIFE_COVER.MULTIPLES.SINGLE_NO_DEPENDANTS,
-    );
+  it('seeds the Step 1 form with the same defaults', () => {
+    expect(DEFAULT_FORM_VALUES.investmentReturnAssumption).toBe('10');
+    expect(DEFAULT_FORM_VALUES.incomeReplacementRatio).toBe('75');
+    expect(DEFAULT_FORM_VALUES.disabilityIncomeReplacementRatio).toBe('100');
+    expect(DEFAULT_FORM_VALUES.educationInflationAssumption).toBe('8');
+    expect(DEFAULT_FORM_VALUES.liquidAssetsAvailable).toBe('0');
   });
 });
 
@@ -43,15 +51,6 @@ describe('DISABILITY_COVER', () => {
     expect(DISABILITY_COVER.VEHICLE_ADAPTATION).toBeGreaterThan(0);
     expect(DISABILITY_COVER.MEDICAL_EQUIPMENT).toBeGreaterThan(0);
     expect(DISABILITY_COVER.ONCE_OFF_CARE_COSTS).toBeGreaterThan(0);
-  });
-
-  it('MULTIPLES increase with number of dependants', () => {
-    expect(DISABILITY_COVER.MULTIPLES.TWO_TO_FOUR_DEPENDANTS).toBeGreaterThan(
-      DISABILITY_COVER.MULTIPLES.ONE_DEPENDANT,
-    );
-    expect(DISABILITY_COVER.MULTIPLES.FIVE_PLUS_DEPENDANTS).toBeGreaterThan(
-      DISABILITY_COVER.MULTIPLES.TWO_TO_FOUR_DEPENDANTS,
-    );
   });
 });
 

@@ -21,11 +21,16 @@ const OVERRIDE_LABELS: Record<keyof EstateAdjustableAssumptions, string> = {
   masterFeesEstimate: "Master's fees",
   funeralCostsEstimate: 'Funeral costs',
   spousalBequest: 'Estate passes to spouse',
+  cgtMarginalRate: 'Marginal rate for CGT on death',
+  predeceasedSpouseUnusedAbatement: "Predeceased spouse's unused abatement",
 };
 
 function describeOverride(key: keyof EstateAdjustableAssumptions, value: unknown): string {
   if (key === 'spousalBequest') return `${OVERRIDE_LABELS[key]}: ${value ? 'Yes' : 'No'}`;
-  if (key === 'executorFeePercentage') return `${OVERRIDE_LABELS[key]}: ${value}%`;
+  if (key === 'executorFeePercentage') return `${OVERRIDE_LABELS[key]}: ${value}% + VAT`;
+  if (key === 'cgtMarginalRate') {
+    return `${OVERRIDE_LABELS[key]}: ${Math.round(Number(value) * 10000) / 100}%`;
+  }
   return `${OVERRIDE_LABELS[key]}: R${formatCurrency(Number(value))}`;
 }
 

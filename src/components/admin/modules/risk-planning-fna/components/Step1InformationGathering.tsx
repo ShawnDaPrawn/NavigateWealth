@@ -29,6 +29,7 @@ import type { InformationGatheringInput } from '../types';
 import { IncomeDetailsForm } from './step1/IncomeDetailsForm';
 import { DependantsForm } from './step1/DependantsForm';
 import { ExistingCoverForm } from './step1/ExistingCoverForm';
+import { AssumptionsForm } from './step1/AssumptionsForm';
 import { useFormPrefill } from '../../form-prefill';
 import { FNAStepNavigation } from '../../fna';
 import { formatCurrency } from '../utils';
@@ -70,6 +71,7 @@ const STEP1_TABS: ReadonlyArray<{
       'totalCurrentAssets',
       'estateWorth',
       'totalHouseholdMonthlyExpenditure',
+      'liquidAssetsAvailable',
     ],
   },
   {
@@ -95,7 +97,20 @@ const STEP1_TABS: ReadonlyArray<{
       'ipPermanentEscalation',
     ],
   },
+  {
+    value: 'assumptions',
+    label: 'Assumptions',
+    fields: [
+      'investmentReturnAssumption',
+      'incomeReplacementRatio',
+      'disabilityIncomeReplacementRatio',
+      'educationInflationAssumption',
+    ],
+  },
 ];
+
+/** Adviser-only planning assumptions are not shown on the client's own intake. */
+const ADVISER_ONLY_TABS = new Set(['assumptions']);
 
 /**
  * The figures the calculation will start from, kept in view while the adviser
@@ -221,6 +236,35 @@ export function Step1InformationGathering({
         'totalHouseholdMonthlyExpenditure',
         formatOptionalNumber(data.totalHouseholdMonthlyExpenditure),
       );
+      form.setValue('liquidAssetsAvailable', formatOptionalNumber(data.liquidAssetsAvailable));
+      form.setValue(
+        'investmentReturnAssumption',
+        formatOptionalNumber(
+          data.investmentReturnAssumption,
+          DEFAULT_FORM_VALUES.investmentReturnAssumption,
+        ),
+      );
+      form.setValue(
+        'incomeReplacementRatio',
+        formatOptionalNumber(
+          data.incomeReplacementRatio,
+          DEFAULT_FORM_VALUES.incomeReplacementRatio,
+        ),
+      );
+      form.setValue(
+        'disabilityIncomeReplacementRatio',
+        formatOptionalNumber(
+          data.disabilityIncomeReplacementRatio,
+          DEFAULT_FORM_VALUES.disabilityIncomeReplacementRatio,
+        ),
+      );
+      form.setValue(
+        'educationInflationAssumption',
+        formatOptionalNumber(
+          data.educationInflationAssumption,
+          DEFAULT_FORM_VALUES.educationInflationAssumption,
+        ),
+      );
       form.setValue('spouseFullName', data.spouseFullName || '');
       form.setValue(
         'spouseAverageMonthlyIncome',
@@ -328,25 +372,27 @@ export function Step1InformationGathering({
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0 flex-1">
             <SegmentedList aria-label="Information sections">
-              {STEP1_TABS.map((tab) => {
-                const hasError =
-                  form.formState.isSubmitted &&
-                  tab.fields.some((name) => name in form.formState.errors);
-                return (
-                  <SegmentedTrigger key={tab.value} value={tab.value} className="gap-1.5">
-                    {tab.label}
-                    {hasError && (
-                      <>
-                        <span
-                          className="h-1.5 w-1.5 rounded-full bg-[var(--nw-danger)]"
-                          aria-hidden="true"
-                        />
-                        <span className="sr-only">(has errors)</span>
-                      </>
-                    )}
-                  </SegmentedTrigger>
-                );
-              })}
+              {STEP1_TABS.filter((tab) => !intakeMode || !ADVISER_ONLY_TABS.has(tab.value)).map(
+                (tab) => {
+                  const hasError =
+                    form.formState.isSubmitted &&
+                    tab.fields.some((name) => name in form.formState.errors);
+                  return (
+                    <SegmentedTrigger key={tab.value} value={tab.value} className="gap-1.5">
+                      {tab.label}
+                      {hasError && (
+                        <>
+                          <span
+                            className="h-1.5 w-1.5 rounded-full bg-[var(--nw-danger)]"
+                            aria-hidden="true"
+                          />
+                          <span className="sr-only">(has errors)</span>
+                        </>
+                      )}
+                    </SegmentedTrigger>
+                  );
+                },
+              )}
             </SegmentedList>
 
             <TabsContent value="income" className="mt-5">
@@ -364,6 +410,12 @@ export function Step1InformationGathering({
                 onRecalculate={() => void refreshFromPolicies()}
               />
             </TabsContent>
+
+            {!intakeMode && (
+              <TabsContent value="assumptions" className="mt-5">
+                <AssumptionsForm />
+              </TabsContent>
+            )}
           </Tabs>
 
           <RiskStep1Summary />

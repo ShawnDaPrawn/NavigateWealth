@@ -35,6 +35,14 @@ export const TAX_YEAR_2026_2027 = {
   MEDICAL_CREDIT_MAIN: 376,
   MEDICAL_CREDIT_FIRST_DEP: 376,
   MEDICAL_CREDIT_ADDITIONAL: 254,
+  // Section 6B additional medical expenses tax credit
+  S6B_RATE_UNDER_65: 0.25,
+  S6B_RATE_65_OR_DISABLED: 0.333,
+  S6B_CONTRIBUTION_MULTIPLE_UNDER_65: 4, // contributions above 4 × the s6A credit
+  S6B_CONTRIBUTION_MULTIPLE_65_OR_DISABLED: 3, // contributions above 3 × the s6A credit
+  S6B_TAXABLE_INCOME_THRESHOLD: 0.075, // under 65: only the excess over 7.5% of taxable income
+  // Tax inside an individual-policyholder endowment wrapper
+  ENDOWMENT_WRAPPER_RATE: 0.3,
 };
 
 /**

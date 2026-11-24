@@ -235,6 +235,26 @@ export function IncomeDetailsForm() {
                 <FormControl>
                   <CurrencyInputField {...field} />
                 </FormControl>
+                <FormDescription className={hint}>
+                  Sets the family's income need on death. Leave out education costs (captured per
+                  dependant).
+                </FormDescription>
+                <FormMessage className="text-xs" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="liquidAssetsAvailable"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Liquid assets available on death</FormLabel>
+                <FormControl>
+                  <CurrencyInputField {...field} />
+                </FormControl>
+                <FormDescription className={hint}>
+                  Cash and investments the family can use. Not property or retirement funds.
+                </FormDescription>
                 <FormMessage className="text-xs" />
               </FormItem>
             )}

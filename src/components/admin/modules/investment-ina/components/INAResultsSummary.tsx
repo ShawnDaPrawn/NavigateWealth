@@ -6,6 +6,7 @@ import { Badge } from '../../../../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../ui/card';
 import type { InvestmentINAResults } from '../types';
 import { formatCurrency, getGoalStatusLabel } from '../services/investmentINACalculationService';
+import { INAAffordabilityPanel, INAGoalWarnings } from './INAResultsDetails';
 
 const HEALTH_LABELS: Record<
   InvestmentINAResults['portfolioSummary']['overallPortfolioHealth'],
@@ -42,6 +43,12 @@ export function INAResultsSummary({
               {HEALTH_LABELS[portfolioSummary.overallPortfolioHealth] ??
                 portfolioSummary.overallPortfolioHealth}
             </p>
+            {portfolioSummary.capitalWeightedFundingPercentage !== undefined && (
+              <p className="text-xs text-muted-foreground">
+                {Math.round(portfolioSummary.capitalWeightedFundingPercentage)}% of goal capital
+                funded
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">Goals On Track</p>
@@ -83,7 +90,14 @@ export function INAResultsSummary({
               <tbody>
                 {goalResults.map((goal) => (
                   <tr key={goal.goalId} className="border-t">
-                    <td className="px-4 py-2 font-medium">{goal.goalName}</td>
+                    <td className="px-4 py-2 font-medium">
+                      {goal.goalName}
+                      {goal.timeHorizon.isValidTimeHorizon && (
+                        <span className="block text-xs font-normal text-muted-foreground">
+                          {goal.timeHorizon.yearsToGoal} years
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-2">
                       <Badge variant="outline">{getGoalStatusLabel(goal.goalStatus)}</Badge>
                     </td>
@@ -109,6 +123,9 @@ export function INAResultsSummary({
             </table>
           </div>
         )}
+
+        <INAGoalWarnings goalResults={goalResults} />
+        <INAAffordabilityPanel summary={portfolioSummary} />
       </CardContent>
     </Card>
   );

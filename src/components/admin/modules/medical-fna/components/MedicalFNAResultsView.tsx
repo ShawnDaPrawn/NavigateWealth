@@ -14,6 +14,7 @@ import {
   ArrowDown,
   ArrowUp,
   AlertTriangle,
+  Umbrella,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../ui/card';
 import { Badge } from '../../../../ui/badge';
@@ -88,6 +89,11 @@ export function MedicalFNAResultsView({ results: propResults, fna }: MedicalFNAR
       adjustments.msaOverride !== undefined ? adjustments.msaOverride : calculations.msaRecommended,
     dependents: adjustments.dependentsOverride || calculations.recommendedDependents,
     ljpBand: adjustments.ljpBandOverride || calculations.ljpBand,
+    // Absent on FNAs published before gap cover was assessed.
+    gapCover:
+      adjustments.gapCoverOverride !== undefined
+        ? adjustments.gapCoverOverride
+        : calculations.gapCoverRecommended,
   };
 
   // 3. Gap Analysis Logic (Same logic as Step4Finalise)
@@ -306,7 +312,33 @@ export function MedicalFNAResultsView({ results: propResults, fna }: MedicalFNAR
           isOverridden={!!adjustments.ljpBandOverride}
           rationale={calculations.rationale.ljp}
         />
+        {finalNeeds.gapCover !== undefined && (
+          <FinalCard
+            title="Gap Cover"
+            icon={Umbrella}
+            value={finalNeeds.gapCover ? 'Yes' : 'No'}
+            isOverridden={adjustments.gapCoverOverride !== undefined}
+            rationale={calculations.rationale.gapCover}
+          />
+        )}
       </div>
+
+      {calculations.rationale.affordability && (
+        <Card
+          className={
+            calculations.premiumAffordability?.exceedsGuideline
+              ? 'border-amber-200 bg-amber-50'
+              : undefined
+          }
+        >
+          <CardHeader>
+            <CardTitle className="text-base">Premium Affordability</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">{calculations.rationale.affordability}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Adviser Notes */}
       {adjustments.notes && (

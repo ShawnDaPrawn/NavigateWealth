@@ -85,6 +85,9 @@ export function Step1InputForm({
       cashflowSensitivity: initialData?.cashflowSensitivity ?? 'Medium',
       currentAge: initialData?.currentAge ?? 30,
       yearsWithoutCoverAfter35: initialData?.yearsWithoutCoverAfter35 ?? 0,
+      creditableCoverageYearsAfter21: initialData?.creditableCoverageYearsAfter21,
+      coveredBeforeApril2001: initialData?.coveredBeforeApril2001 ?? false,
+      netMonthlyIncome: initialData?.netMonthlyIncome ?? 0,
       existingPlanType: initialData?.existingPlanType ?? '',
       existingHospitalCover: initialData?.existingHospitalCover ?? '',
       existingTotalPremium: initialData?.existingTotalPremium ?? 0,
@@ -95,6 +98,12 @@ export function Step1InputForm({
   });
 
   const [prefillStarted, setPrefillStarted] = React.useState(false);
+
+  // The Regulation 13 inputs replace "years without cover" once captured.
+  const creditableCoverage = form.watch('creditableCoverageYearsAfter21');
+  const coveredBeforeApril2001 = form.watch('coveredBeforeApril2001');
+  const usesRegulation13 =
+    typeof creditableCoverage === 'number' && Number.isFinite(creditableCoverage);
 
   // Client keys reach this form only through the shared review prefill. The
   // review stays available throughout; only the automatic start is gated.
@@ -374,6 +383,29 @@ export function Step1InputForm({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="netMonthlyIncome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Net Monthly Income (R)</FormLabel>
+                  <FormControl>
+                    <CurrencyInputField
+                      name={field.name}
+                      ref={field.ref}
+                      value={field.value}
+                      onBlur={field.onBlur}
+                      onValueChange={(v) => field.onChange(v ?? 0)}
+                    />
+                  </FormControl>
+                  <div className="text-xs text-muted-foreground">
+                    Optional — checks the premium against 10% of net income
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </CardContent>
         </Card>
 
@@ -548,7 +580,9 @@ export function Step1InputForm({
                 <p className="text-blue-800">
                   LJP is a <strong>permanent monthly premium increase</strong> for individuals who
                   join a medical aid after age 35 with gaps in prior South African medical scheme
-                  coverage. It ranges from <strong>5% to 75%</strong> based on years without cover.
+                  coverage. It ranges from <strong>5% to 75%</strong>. Under Regulation 13, penalty
+                  years = age − (35 + years of creditable cover after age 21). Continuous cover
+                  since before 1 April 2001 is exempt.
                 </p>
               </div>
             </div>
@@ -578,26 +612,72 @@ export function Step1InputForm({
 
               <FormField
                 control={form.control}
-                name="yearsWithoutCoverAfter35"
+                name="creditableCoverageYearsAfter21"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Years Without Medical Aid (After Age 35)</FormLabel>
+                    <FormLabel>Years of Creditable Cover After Age 21</FormLabel>
                     <FormControl>
                       <NumberInputField
                         name={field.name}
                         ref={field.ref}
                         value={field.value}
                         onBlur={field.onBlur}
-                        onValueChange={(v) => field.onChange(v ?? 0)}
+                        onValueChange={(v) => field.onChange(v)}
+                        disabled={coveredBeforeApril2001}
                       />
                     </FormControl>
                     <div className="text-xs text-muted-foreground">
-                      Total years without registered SA medical scheme coverage after turning 35
+                      Total years on any SA medical scheme since turning 21 (Regulation 13). Leave
+                      blank to use years without cover instead.
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="coveredBeforeApril2001"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Covered Since Before April 2001</FormLabel>
+                      <div className="text-xs text-muted-foreground">
+                        Continuous medical scheme cover since before 1 April 2001 (exempt)
+                      </div>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {!usesRegulation13 && !coveredBeforeApril2001 && (
+                <FormField
+                  control={form.control}
+                  name="yearsWithoutCoverAfter35"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Years Without Medical Aid After Age 35 (Fallback)</FormLabel>
+                      <FormControl>
+                        <NumberInputField
+                          name={field.name}
+                          ref={field.ref}
+                          value={field.value}
+                          onBlur={field.onBlur}
+                          onValueChange={(v) => field.onChange(v ?? 0)}
+                        />
+                      </FormControl>
+                      <div className="text-xs text-muted-foreground">
+                        Used only when creditable cover is not captured. It ignores cover held
+                        between 21 and 35, so it can overstate the penalty.
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             {/* Penalty Bands Reference */}

@@ -34,6 +34,26 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
   const currentPlan = inputs?.currentPlan;
   const healthNeeds = inputs?.healthNeeds;
 
+  // FNAs published from the admin wizard carry flat recommendation fields,
+  // with any adviser overrides in `adjustments`. Gap cover is absent on FNAs
+  // published before it was assessed.
+  const adjustments = (fna.adjustments ?? {}) as Record<string, unknown>;
+  const overrideText = (key: string): string | undefined =>
+    typeof adjustments[key] === 'string' && adjustments[key] !== ''
+      ? (adjustments[key] as string)
+      : undefined;
+  const overrideFlag = (key: string): boolean | undefined =>
+    typeof adjustments[key] === 'boolean' ? (adjustments[key] as boolean) : undefined;
+  const recommendation = results?.recommendedInHospitalCover
+    ? {
+        hospitalCover: overrideText('hospitalCoverOverride') ?? results.recommendedInHospitalCover,
+        msa: overrideFlag('msaOverride') ?? results.msaRecommended ?? false,
+        dependents: overrideText('dependentsOverride') ?? results.recommendedDependents,
+        ljpBand: overrideText('ljpBandOverride') ?? results.ljpBand,
+        gapCover: overrideFlag('gapCoverOverride') ?? results.gapCoverRecommended,
+      }
+    : null;
+
   return (
     <div className="space-y-6">
       {/* Summary Banner */}
@@ -148,6 +168,67 @@ export function MedicalResults({ fna }: MedicalResultsProps) {
                   </div>
                 </div>
               </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recommended Medical Aid Structure (admin-wizard FNAs) */}
+      {recommendation && (
+        <Card className="border-gray-200">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-600">
+                <CheckCircle className="h-5 w-5 text-white" />
+              </div>
+              <CardTitle className="text-base">Recommended Medical Aid Structure</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">In-Hospital Cover</p>
+                <p className="text-gray-900">{recommendation.hospitalCover}</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-600 mb-1">Medical Savings Account</p>
+                <p className="text-gray-900">{recommendation.msa ? 'Recommended' : 'Not needed'}</p>
+              </div>
+              {recommendation.dependents && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-600 mb-1">Members to Cover</p>
+                  <p className="text-gray-900">{recommendation.dependents}</p>
+                </div>
+              )}
+              {recommendation.ljpBand && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-600 mb-1">Late Joiner Penalty</p>
+                  <p className="text-gray-900">{recommendation.ljpBand}</p>
+                </div>
+              )}
+              {recommendation.gapCover !== undefined && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-600 mb-1">Gap Cover</p>
+                  <p className="text-gray-900">
+                    {recommendation.gapCover ? 'Recommended' : 'Optional'}
+                  </p>
+                </div>
+              )}
+            </div>
+            {results?.rationale && (
+              <ul className="space-y-1 list-disc pl-5 text-xs text-gray-600">
+                {[
+                  results.rationale.hospital,
+                  results.rationale.msa,
+                  results.rationale.ljp,
+                  results.rationale.gapCover,
+                  results.rationale.affordability,
+                ]
+                  .filter((text): text is string => typeof text === 'string' && text !== '')
+                  .map((text) => (
+                    <li key={text}>{text}</li>
+                  ))}
+              </ul>
             )}
           </CardContent>
         </Card>

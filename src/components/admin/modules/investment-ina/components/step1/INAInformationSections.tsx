@@ -34,6 +34,11 @@ import type {
 } from '../../types';
 import { GOAL_TYPE_LABELS, RISK_PROFILE_LABELS } from '../../constants';
 import { formatCurrency } from '../../services/investmentINACalculationService';
+import {
+  GoalLinkedInvestmentsField,
+  GoalLumpSumsField,
+  GoalRiskProfileField,
+} from './GoalFundingFields';
 
 export interface INASectionProps {
   inputs: Partial<InvestmentINAInputs>;
@@ -173,8 +178,10 @@ export function RiskProfileSection({ inputs, updateInputs }: INASectionProps) {
         </div>
         <div className="bg-muted p-4 rounded-lg">
           <p className="text-sm text-muted-foreground">
-            Each profile carries its own expected real return. The system uses the standard economic
-            assumptions; you can override them, with a reason, in Adviser Manual Adjustment.
+            Each profile carries its own expected real return, after fees and inflation. The system
+            uses the standard economic assumptions; you can override them, with a reason, in Adviser
+            Manual Adjustment. A goal can use a different profile from the client&apos;s, set on the
+            goal itself.
           </p>
         </div>
       </CardContent>
@@ -246,6 +253,9 @@ export function GoalsSection({ inputs, updateInputs }: INASectionProps) {
             <GoalEditorCard
               key={goal.id}
               goal={goal}
+              goals={goals}
+              investments={inputs.discretionaryInvestments || []}
+              clientRiskProfile={inputs.clientRiskProfile}
               index={index}
               isEditing={editingGoalIndex === index}
               onEdit={() => setEditingGoalIndex(index)}
@@ -262,6 +272,9 @@ export function GoalsSection({ inputs, updateInputs }: INASectionProps) {
 
 function GoalEditorCard({
   goal,
+  goals,
+  investments,
+  clientRiskProfile,
   index,
   isEditing,
   onEdit,
@@ -270,6 +283,9 @@ function GoalEditorCard({
   onDelete,
 }: {
   goal: InvestmentGoal;
+  goals: InvestmentGoal[];
+  investments: DiscretionaryInvestment[];
+  clientRiskProfile?: RiskProfile;
   index: number;
   isEditing: boolean;
   onEdit: () => void;
@@ -393,6 +409,21 @@ function GoalEditorCard({
             onValueChange={(v) => onUpdate({ currentContributionToGoal: v ?? 0 })}
           />
         </div>
+
+        <GoalRiskProfileField
+          goal={goal}
+          clientRiskProfile={clientRiskProfile}
+          onUpdate={onUpdate}
+        />
+
+        <GoalLinkedInvestmentsField
+          goal={goal}
+          goals={goals}
+          investments={investments}
+          onUpdate={onUpdate}
+        />
+
+        <GoalLumpSumsField goal={goal} onUpdate={onUpdate} />
 
         <div className="space-y-2">
           <Label htmlFor={id('description')}>Description (Optional)</Label>

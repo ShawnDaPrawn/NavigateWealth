@@ -124,6 +124,11 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
               <p className="text-xs text-gray-600 mt-1">
                 To sustain {results.yearsInRetirement} years of income
               </p>
+              {results.requiredCapitalToday !== undefined && (
+                <p className="text-xs text-gray-600 mt-1">
+                  About {formatCurrency(results.requiredCapitalToday)} in today's money
+                </p>
+              )}
             </div>
             <div className="p-4 bg-green-50 rounded-lg border border-green-100">
               <p className="text-xs text-gray-600 mb-1">Projected Capital at Retirement</p>
@@ -131,13 +136,36 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
               <p className="text-xs text-gray-600 mt-1">
                 Based on current savings and contributions
               </p>
+              {results.projectedCapitalToday !== undefined && (
+                <p className="text-xs text-gray-600 mt-1">
+                  About {formatCurrency(results.projectedCapitalToday)} in today's money
+                </p>
+              )}
             </div>
             <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
               <p className="text-xs text-gray-600 mb-1">Target Monthly Income</p>
               <p className="text-xl text-gray-900">{formatCurrency(results.targetMonthlyIncome)}</p>
               <p className="text-xs text-gray-600 mt-1">In future value terms</p>
+              {results.targetMonthlyIncomeToday !== undefined && (
+                <p className="text-xs text-gray-600 mt-1">
+                  About {formatCurrency(results.targetMonthlyIncomeToday)} in today's money
+                </p>
+              )}
             </div>
           </div>
+
+          {(results.drawdownStatus === 'high' || results.drawdownStatus === 'exceeds-maximum') && (
+            <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-gray-700">
+                  {typeof results.initialDrawdownRate === 'number'
+                    ? `Your projected savings would need to pay out about ${(results.initialDrawdownRate * 100).toFixed(1)}% a year at retirement. Above 5% a year, savings are at high risk of running out during retirement.`
+                    : 'No retirement savings are projected yet to fund your retirement income.'}
+                </p>
+              </div>
+            </div>
+          )}
 
           {results.hasShortfall && (
             <div className="contents">
@@ -206,9 +234,17 @@ export function RetirementResults({ fna }: RetirementResultsProps) {
                       </strong>
                     </p>
                     <p className="text-xs text-gray-600">
-                      This represents {results.percentageOfIncome.toFixed(1)}% of your gross monthly
-                      income.
+                      This represents {results.percentageOfIncome.toFixed(1)}% of your{' '}
+                      {results.incomeBasis === 'net' ? 'net' : 'gross'} monthly income.
                     </p>
+                    {results.exceedsDeductibleLimit && (
+                      <p className="text-xs text-amber-800 mt-1">
+                        Part of this (
+                        {formatCurrency(results.contributionAboveDeductibleLimit ?? 0)} a year) is
+                        above the tax-deductible limit for retirement contributions. Your adviser
+                        can suggest where best to save it.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

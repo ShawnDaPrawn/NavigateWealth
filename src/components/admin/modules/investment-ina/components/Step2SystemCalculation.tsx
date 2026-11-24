@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '../../../../ui/alert';
 import { FNAStepNavigation } from '../../fna';
 import type { InvestmentINAResults } from '../types';
 import { INAResultsSummary } from './INAResultsSummary';
+import { INAAssumptionsList } from './INAResultsDetails';
 
 interface Step2Props {
   results: InvestmentINAResults;
@@ -35,6 +36,8 @@ export function Step2SystemCalculation({ results, onNext, onBack }: Step2Props) 
           </ul>
         </div>
       )}
+
+      <INAAssumptionsList results={results} />
 
       <Alert>
         <Info className="h-4 w-4" />

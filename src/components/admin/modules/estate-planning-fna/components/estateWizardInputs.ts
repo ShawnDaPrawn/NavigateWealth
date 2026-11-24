@@ -39,6 +39,8 @@ export function buildDefaultEstateInputs(): EstatePlanningInputs {
       estateDutyAbatement: ESTATE_PLANNING_CONSTANTS.ESTATE_DUTY_ABATEMENT,
       spousalBequest: false,
       cgtInclusionRate: ESTATE_PLANNING_CONSTANTS.CGT_INCLUSION_RATE_INDIVIDUAL,
+      cgtMarginalRate: ESTATE_PLANNING_CONSTANTS.DEFAULT_CGT_MARGINAL_RATE,
+      predeceasedSpouseUnusedAbatement: 0,
     },
     hasOffshorAssets: false,
     hasTrusts: false,

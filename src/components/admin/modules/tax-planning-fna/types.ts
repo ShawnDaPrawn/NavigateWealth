@@ -34,9 +34,30 @@ export interface TaxPlanningInputs {
   capitalGainsRealised: number; // Total gains for the year
 
   // C) Contributions & Allowances
-  raContributions: number; // Current annual contribution
+  raContributions: number; // Own retirement annuity contributions (annual)
   tfsaContributionsLifetime: number; // Cumulative total
   medicalSchemeMembers: number; // Total members on scheme (Main + Dependant)
+
+  // D) Optional refinements. Every one defaults to 0 / false, so FNAs saved
+  // before these existed calculate exactly as they did.
+  /**
+   * Annual pension / provident fund contributions by the employee AND the
+   * employer (including the employer-contribution fringe benefit). Shares the
+   * single s11F limit with RA contributions.
+   */
+  employerFundContributions?: number;
+  /** Allowable annual expenses against the gross rental income above. */
+  rentalExpenses?: number;
+  /** Allowable annual expenses against the gross business income above. */
+  businessExpenses?: number;
+  /** TFSA contributions already made in the current tax year. */
+  tfsaContributionsThisYear?: number;
+  /** Medical scheme contributions paid by the taxpayer this year (annual). */
+  medicalSchemeContributions?: number;
+  /** Qualifying medical expenses not recovered from the scheme (annual). */
+  outOfPocketMedicalExpenses?: number;
+  /** Taxpayer, spouse or child has a disability (s6B 33.3% rate). */
+  hasDisability?: boolean;
 }
 
 // ==================== STEP 2: CALCULATION RESULTS ====================
@@ -75,6 +96,25 @@ export interface TaxCalculationResults {
   raTaxSavingPotential: number; // If gap was filled
   interestTaxLeakage: number; // Tax paid on interest above exemption
   tfsaRemainingLifetime: number;
+
+  // 8. Refinements (added later — absent on FNAs published before them, so
+  // every reader must treat them as optional).
+  /** Rental + business expenses deducted from gross income. */
+  allowableExpenses?: number;
+  /** Total s11F contributions: RA + pension / provident (employee + employer). */
+  totalRetirementContributions?: number;
+  /** Base for the 27.5% s11F limit: greater of remuneration or taxable income. */
+  retirementDeductionBase?: number;
+  /** Contributions above the s11F limit, carried forward to later years. */
+  nonDeductibleRetirementContributions?: number;
+  /** Section 6B additional medical expenses tax credit (annual). */
+  additionalMedicalTaxCredit?: number;
+  /** Marginal rate on the final taxable income. */
+  marginalRate?: number;
+  /** TFSA capacity left this tax year (annual limit and lifetime limit). */
+  tfsaRemainingThisYear?: number;
+  /** What the calculation assumes or does not model for this client. */
+  notes?: string[];
 }
 
 // ==================== STEP 3: ADJUSTMENTS & SCENARIOS ====================

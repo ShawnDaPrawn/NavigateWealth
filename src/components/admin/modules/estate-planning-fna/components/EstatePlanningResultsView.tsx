@@ -213,17 +213,58 @@ export function EstatePlanningResultsView({ fna: session }: EstatePlanningResult
                 <span>Net Estate (before duty):</span>
                 <span>{formatCurrency(deathBalanceSheet.estateDuty.netEstateBeforeDuty)}</span>
               </div>
+              {!!deathBalanceSheet.estateDuty.lessCGT && (
+                <div className="flex justify-between text-red-600">
+                  <span>Less: CGT on death (debt of the deceased)</span>
+                  <span className="font-medium">
+                    ({formatCurrency(deathBalanceSheet.estateDuty.lessCGT)})
+                  </span>
+                </div>
+              )}
+              {!!deathBalanceSheet.estateDuty.addDeemedPropertyNominated && (
+                <div className="flex justify-between">
+                  <span>Add: Policies paid to nominated beneficiaries (deemed property)</span>
+                  <span className="font-medium">
+                    {formatCurrency(deathBalanceSheet.estateDuty.addDeemedPropertyNominated)}
+                  </span>
+                </div>
+              )}
+              {deathBalanceSheet.estateDuty.lessSpousalDeduction > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Less: Spousal Deduction (s4(q))</span>
+                  <span className="font-medium">
+                    ({formatCurrency(deathBalanceSheet.estateDuty.lessSpousalDeduction)})
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between text-green-600">
-                <span>Less: Abatement</span>
+                <span>
+                  Less: Abatement
+                  {deathBalanceSheet.estateDuty.portedAbatement
+                    ? ` (incl. ${formatCurrency(deathBalanceSheet.estateDuty.portedAbatement)} from predeceased spouse)`
+                    : ''}
+                </span>
                 <span className="font-medium">
                   ({formatCurrency(deathBalanceSheet.estateDuty.lessAbatement)})
                 </span>
               </div>
-              {deathBalanceSheet.estateDuty.lessSpousalDeduction > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Less: Spousal Deduction</span>
+              <div className="flex justify-between font-medium">
+                <span>Dutiable Amount:</span>
+                <span>{formatCurrency(deathBalanceSheet.estateDuty.dutiableEstate)}</span>
+              </div>
+              {deathBalanceSheet.estateDuty.dutyAtFirstRate !== undefined && (
+                <div className="flex justify-between">
+                  <span>Duty at 20% (first R30m)</span>
                   <span className="font-medium">
-                    ({formatCurrency(deathBalanceSheet.estateDuty.lessSpousalDeduction)})
+                    {formatCurrency(deathBalanceSheet.estateDuty.dutyAtFirstRate)}
+                  </span>
+                </div>
+              )}
+              {!!deathBalanceSheet.estateDuty.dutyAtUpperRate && (
+                <div className="flex justify-between">
+                  <span>Duty at 25% (above R30m)</span>
+                  <span className="font-medium">
+                    {formatCurrency(deathBalanceSheet.estateDuty.dutyAtUpperRate)}
                   </span>
                 </div>
               )}
@@ -457,6 +498,85 @@ export function EstatePlanningResultsView({ fna: session }: EstatePlanningResult
           </Card>
         )}
       </div>
+
+      {/* CGT on death, assumptions and advisory notes */}
+      <Card>
+        <CardHeader>
+          <CardTitle>CGT on Death &amp; Assumptions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>Gains on deemed disposal:</span>
+              <span className="font-medium">
+                {formatCurrency(deathBalanceSheet.cgtOnDeath.totalUnrealisedGains)}
+              </span>
+            </div>
+            {!!deathBalanceSheet.cgtOnDeath.primaryResidenceExclusion && (
+              <div className="flex justify-between text-green-600">
+                <span>Less: Primary residence exclusion</span>
+                <span className="font-medium">
+                  ({formatCurrency(deathBalanceSheet.cgtOnDeath.primaryResidenceExclusion)})
+                </span>
+              </div>
+            )}
+            {!!deathBalanceSheet.cgtOnDeath.spousalRolloverGain && (
+              <div className="flex justify-between text-green-600">
+                <span>Rolled over to surviving spouse (s9HA(2))</span>
+                <span className="font-medium">
+                  ({formatCurrency(deathBalanceSheet.cgtOnDeath.spousalRolloverGain)})
+                </span>
+              </div>
+            )}
+            {!!deathBalanceSheet.cgtOnDeath.annualExclusionOnDeath && (
+              <div className="flex justify-between text-green-600">
+                <span>Less: Annual exclusion in year of death</span>
+                <span className="font-medium">
+                  ({formatCurrency(deathBalanceSheet.cgtOnDeath.annualExclusionOnDeath)})
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span>Taxable capital gain (after inclusion):</span>
+              <span className="font-medium">
+                {formatCurrency(deathBalanceSheet.cgtOnDeath.inclusionAmount)}
+              </span>
+            </div>
+            <div className="flex justify-between font-bold">
+              <span>Estimated CGT on death:</span>
+              <span className="text-red-600">
+                {formatCurrency(deathBalanceSheet.cgtOnDeath.estimatedCGT)}
+              </span>
+            </div>
+          </div>
+          {!!results.assumptions?.length && (
+            <div className="contents">
+              <Separator />
+              <div>
+                <h4 className="font-medium mb-2">Assumptions</h4>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                  {results.assumptions.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          {!!results.advisoryNotes?.length && (
+            <div className="contents">
+              <Separator />
+              <div>
+                <h4 className="font-medium mb-2">Check before advising</h4>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                  {results.advisoryNotes.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -162,8 +162,15 @@ export function TaxPlanningResultsView({ plan }: TaxPlanningResultsViewProps) {
               <span>{formatMoney(finalResults.grossIncome)}</span>
             </div>
 
+            {(finalResults.allowableExpenses ?? 0) > 0 && (
+              <div className="py-2 flex justify-between text-slate-500">
+                <span>Less: Rental &amp; Business Expenses</span>
+                <span>- {formatMoney(finalResults.allowableExpenses ?? 0)}</span>
+              </div>
+            )}
+
             <div className="py-2 flex justify-between text-slate-500">
-              <span>Less: Deductions (RA + Exemptions)</span>
+              <span>Less: Deductions (Retirement Funds + Exemptions)</span>
               <span>
                 - {formatMoney(finalResults.interestExemption + finalResults.actualRADeduction)}
               </span>
@@ -195,8 +202,14 @@ export function TaxPlanningResultsView({ plan }: TaxPlanningResultsViewProps) {
                 <span>- {formatMoney(finalResults.medicalTaxCredits)}</span>
               </div>
             )}
+            {(finalResults.additionalMedicalTaxCredit ?? 0) > 0 && (
+              <div className="py-2 flex justify-between text-green-600">
+                <span>Less: Additional Medical Expenses Credit (Section 6B)</span>
+                <span>- {formatMoney(finalResults.additionalMedicalTaxCredit ?? 0)}</span>
+              </div>
+            )}
             <div className="py-2 flex justify-between text-slate-500">
-              <span>Plus: Specific Taxes (Div + CGT)</span>
+              <span>Plus: Dividend Tax (CGT is included in normal tax above)</span>
               <span>+ {formatMoney(finalResults.dividendTax)}</span>
             </div>
 
@@ -207,6 +220,22 @@ export function TaxPlanningResultsView({ plan }: TaxPlanningResultsViewProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* 4b. ASSUMPTIONS & LIMITS */}
+      {(finalResults.notes ?? []).length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Assumptions &amp; Limitations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1 list-disc pl-5 text-sm text-slate-600">
+              {(finalResults.notes ?? []).map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* 5. AUDIT TRAIL */}
       {(adjustments.length > 0 || adviserNotes) && (

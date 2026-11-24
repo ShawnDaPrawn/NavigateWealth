@@ -56,7 +56,8 @@ export async function retirementAutoPopulateFromResolver(
   return {
     currentAge: proposed.currentAge ?? 30,
     intendedRetirementAge: proposed.retirementAge ?? 65,
-    grossMonthlyIncome: proposed.grossMonthlyIncome ?? 0,
+    // The retirement form field is `currentGrossMonthlyIncome`.
+    grossMonthlyIncome: proposed.currentGrossMonthlyIncome ?? proposed.grossMonthlyIncome ?? 0,
     netMonthlyIncome: proposed.currentMonthlyIncome ?? 0,
     totalMonthlyContribution: proposed.currentMonthlyContribution ?? 0,
     totalCurrentRetirementCapital: proposed.currentRetirementSavings ?? 0,

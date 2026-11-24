@@ -19,7 +19,7 @@ import type {
   RetirementFNAWizardState,
 } from '../types';
 import { WIZARD_STEPS } from '../constants';
-import { calculateRetirementFNA } from '../utils/calculation-engine';
+import { calculateRetirementFNA, getRetirementInputProblem } from '../utils/calculation-engine';
 import { RetirementFnaAPI } from '../api';
 
 function buildInitialRetirementState({
@@ -28,11 +28,16 @@ function buildInitialRetirementState({
   startAtStep,
   intakePrefill,
 }: FNAWizardProps): RetirementFNAWizardState {
-  const currentStep = resolveInitialFNAStep(startAtStep, intakePrefill);
+  const requestedStep = resolveInitialFNAStep(startAtStep, intakePrefill);
   // The client intake stores the assumptions beside the inputs.
   const { assumptions, ...inputFields } = intakePrefill ?? {};
   const inputs = inputFields as Partial<RetirementFNAInputs>;
   const adjustments = { ...((assumptions as RetirementFNAAdjustments | undefined) ?? {}) };
+
+  // Falls back to Step 1 when the intake cannot be calculated as it stands
+  // (no age): the engine requires one rather than inventing it.
+  const canCalculate = getRetirementInputProblem(inputs) === null;
+  const currentStep = requestedStep === 2 && !canCalculate ? 1 : requestedStep;
 
   return {
     currentStep,
@@ -40,8 +45,7 @@ function buildInitialRetirementState({
     clientName,
     inputs,
     adjustments,
-    calculations:
-      currentStep === 2 ? calculateRetirementFNA(inputs as RetirementFNAInputs, adjustments) : null,
+    calculations: currentStep === 2 ? calculateRetirementFNA(inputs, adjustments) : null,
   };
 }
 
@@ -68,7 +72,7 @@ export function RetirementFNAWizard(props: FNAWizardProps) {
   };
 
   const handleStep3Submit = (adjustments: RetirementFNAAdjustments) => {
-    const calculations = calculateRetirementFNA(state.inputs as RetirementFNAInputs, adjustments);
+    const calculations = calculateRetirementFNA(state.inputs, adjustments);
     setState((prev) => ({ ...prev, adjustments, calculations, currentStep: 4 }));
   };
 
