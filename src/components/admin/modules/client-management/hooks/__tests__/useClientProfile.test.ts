@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useClientProfile } from '../useClientProfile';
 import type { Client } from '../../types';
+import { defaultProfileExtensionFields } from '../../../../../../shared/client-profile';
+import { emptyComplianceReview } from '../../../../../../shared/compliance';
 
 const mockFetchQuery = vi.fn();
 const mockSetQueryData = vi.fn();
@@ -530,6 +532,8 @@ describe('useClientProfile', () => {
           },
           assets: [],
           liabilities: [],
+          ...defaultProfileExtensionFields(),
+          complianceReview: emptyComplianceReview(),
         },
       },
     };

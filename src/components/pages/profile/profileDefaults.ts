@@ -1,4 +1,5 @@
 import type { ProfileData } from './types';
+import { defaultProfileExtensionFields } from '../../../shared/client-profile';
 
 export const getInitialProfileData = (
   userEmail?: string,
@@ -110,4 +111,7 @@ export const getInitialProfileData = (
 
   // Budgeting
   budgetExpenses: [],
+
+  // Postal address, smoking history, alcohol, compliance, goals, planning
+  ...defaultProfileExtensionFields(),
 });

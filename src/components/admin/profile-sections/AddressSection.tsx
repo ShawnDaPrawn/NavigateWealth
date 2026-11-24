@@ -17,6 +17,8 @@ import {
 } from '../../ui/alert-dialog';
 import { MapPin, Home, Briefcase, CheckCircle, Edit2, Trash2, Upload, Check } from 'lucide-react';
 import { FieldWithCopy } from '../FieldWithCopy';
+import { PostalAddressFields } from '../../shared/client-profile';
+import { normalizeProfileExtensionFields } from '../../../shared/client-profile';
 
 interface AddressSectionProps {
   profileData: Record<string, unknown>;
@@ -231,6 +233,13 @@ export function AddressSection({
               )}
             </div>
           </div>
+
+          <Separator />
+
+          <PostalAddressFields
+            value={normalizeProfileExtensionFields(profileData)}
+            onChange={handleInputChange}
+          />
 
           <Separator />
 

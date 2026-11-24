@@ -26,6 +26,8 @@ import {
   Loader2,
   AlertCircle,
   Plus,
+  Flag,
+  ShieldCheck,
 } from 'lucide-react';
 import { AddressSection } from '../../../../profile-sections/AddressSection';
 import { EmploymentSection } from '../../../../profile-sections/EmploymentSection';
@@ -51,15 +53,32 @@ import {
   type PolicyAssetSourceRecord,
 } from '../../../../../../utils/derivedPolicyAssets';
 
+import {
+  ComplianceDeclarationsCard,
+  ComplianceIndicatorList,
+  ComplianceReviewCard,
+  PlanningSection,
+} from '../../../../../shared/client-profile';
+import {
+  applicationHints,
+  normalizeProfileExtensionFields,
+} from '../../../../../../shared/client-profile';
+import {
+  complianceIndicators,
+  legacyConsentEvidence,
+  normalizeComplianceReview,
+} from '../../../../../../shared/compliance';
 import { ClientProfilePersonalCard } from './ClientProfilePersonalCard';
 import { ProfileSectionView } from './ProfileSectionView';
 import {
   addressGroups,
   assetsView,
   bankingTable,
+  complianceView,
   contactGroups,
   employmentView,
   familyTable,
+  planningView,
   healthView,
   kycTable,
   personalGroups,
@@ -71,11 +90,13 @@ const PROFILE_SECTIONS = [
   'personal',
   'contact',
   'kyc',
+  'compliance',
   'address',
   'employment',
   'health',
   'family',
   'banking',
+  'planning',
   'risk',
   'assets',
   'budgeting',
@@ -86,6 +107,8 @@ const VIEW_EDIT_SECTIONS: ReadonlySet<ProfileSection> = new Set([
   'personal',
   'contact',
   'kyc',
+  'compliance',
+  'planning',
   'address',
   'employment',
   'health',
@@ -197,15 +220,25 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
     { id: 'personal', label: 'Personal info', icon: User },
     { id: 'contact', label: 'Contact details', icon: Mail },
     { id: 'kyc', label: 'KYC', icon: Shield },
+    { id: 'compliance', label: 'Compliance', icon: ShieldCheck },
     { id: 'address', label: 'Address', icon: MapPin },
     { id: 'employment', label: 'Employment', icon: Briefcase },
     { id: 'health', label: 'Health info', icon: Heart },
     { id: 'family', label: 'Family', icon: Users },
     { id: 'banking', label: 'Banking', icon: CreditCard },
+    { id: 'planning', label: 'Planning', icon: Flag },
     { id: 'risk', label: 'Risk profile', icon: Target },
     { id: 'assets', label: 'Assets & liabilities', icon: PieChart },
     { id: 'budgeting', label: 'Budgeting', icon: Wallet },
   ];
+  // What the application and first-sign-in terms recorded, for the Planning and
+  // Compliance sections (stored on the record; ProfileData does not type them).
+  const storedRecord = state.profileData as unknown as Record<string, unknown>;
+  const fromApplication = applicationHints(storedRecord);
+  // The hook normalises these on load; read them through the normaliser again
+  // so a record that reached state another way cannot crash the section.
+  const extension = normalizeProfileExtensionFields(storedRecord);
+  const complianceReview = normalizeComplianceReview(storedRecord.complianceReview);
   const activeLabel = sections.find((x) => x.id === activeSection)?.label ?? '';
   useClientSubCrumbs(activeLabel ? [{ label: activeLabel }] : []);
   const viewOnly = VIEW_EDIT_SECTIONS.has(activeSection) && !editing && !state.hasChanges;
@@ -302,6 +335,29 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                   Add document
                 </Button>
               }
+            />
+          )}
+          {viewOnly && activeSection === 'compliance' && (
+            <ProfileSectionView
+              title="Compliance"
+              {...complianceView(state.profileData)}
+              banner={
+                <ComplianceIndicatorList
+                  indicators={complianceIndicators(
+                    extension.complianceDeclarations,
+                    complianceReview,
+                    new Date().toISOString().slice(0, 10),
+                  )}
+                />
+              }
+              onEdit={startEditing}
+            />
+          )}
+          {viewOnly && activeSection === 'planning' && (
+            <ProfileSectionView
+              title="Planning"
+              {...planningView(state.profileData)}
+              onEdit={startEditing}
             />
           )}
           {viewOnly && activeSection === 'address' && (
@@ -406,6 +462,37 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               identityDocToDelete={state.identityDocToDelete}
               setIdentityDocToDelete={actions.setIdentityDocToDelete}
               userId={clientData.id}
+            />
+          )}
+
+          {/* Compliance Section */}
+          {activeSection === 'compliance' && !viewOnly && (
+            <div className="space-y-6">
+              <ComplianceReviewCard
+                value={complianceReview}
+                onChange={(next) => handleInputChangeLoose('complianceReview', next)}
+                declarations={extension.complianceDeclarations}
+              />
+              <ComplianceDeclarationsCard
+                value={extension.complianceDeclarations}
+                onChange={(next) => handleInputChangeLoose('complianceDeclarations', next)}
+                audience="adviser"
+                legacyConsent={legacyConsentEvidence(storedRecord)}
+                applicationSaysSaTaxResident={fromApplication.saTaxResident}
+                saTaxNumber={state.profileData.taxNumber}
+              />
+            </div>
+          )}
+
+          {/* Planning Section */}
+          {activeSection === 'planning' && !viewOnly && (
+            <PlanningSection
+              planning={extension.planningProfile}
+              onPlanningChange={(next) => handleInputChangeLoose('planningProfile', next)}
+              audience="adviser"
+              dateOfBirth={state.profileData.dateOfBirth}
+              monthlyIncome={state.profileData.netMonthlyIncome || state.profileData.netIncome}
+              applicationGoals={fromApplication.goals}
             />
           )}
 

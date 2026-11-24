@@ -185,5 +185,30 @@ describe('ClientProfileViewerFull', () => {
     const card = await screen.findByRole('region', { name: 'Address' });
     expect(within(card).getByText('14 Jacaranda Street')).toBeTruthy();
     expect(within(card).getByText('Work address')).toBeTruthy();
+    // A record saved before the postal address existed reads as "same as residential".
+    expect(within(card).getByText('Same as residential address')).toBeTruthy();
+  }, 30000);
+
+  // The fixture predates the compliance and planning fields entirely, which is
+  // what every existing client's record looks like until someone fills them in.
+  it('shows compliance for a client with nothing recorded yet', async () => {
+    renderClientProfileViewer('/?psec=compliance');
+    const card = await screen.findByRole('region', { name: 'Compliance' });
+    expect(within(card).getByText('Client risk rating not set.')).toBeTruthy();
+    expect(within(card).getByText('Sanctions screening not recorded.')).toBeTruthy();
+    expect(within(card).getByText('No tax residency declared.')).toBeTruthy();
+    fireEvent.click(within(card).getByRole('button', { name: 'Edit' }));
+    expect(await screen.findByText('Compliance review')).toBeTruthy();
+    expect(screen.getByText('Compliance declarations')).toBeTruthy();
+  }, 30000);
+
+  it('shows planning for a client with nothing recorded yet', async () => {
+    renderClientProfileViewer('/?psec=planning');
+    const card = await screen.findByRole('region', { name: 'Planning' });
+    expect(within(card).getByText('Planning profile')).toBeTruthy();
+    fireEvent.click(within(card).getByRole('button', { name: 'Edit' }));
+    expect(
+      await screen.findByText('Investment goals are captured in Goals on the Investments tab'),
+    ).toBeTruthy();
   }, 30000);
 });

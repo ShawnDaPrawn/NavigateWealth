@@ -46,12 +46,15 @@ export function ProfileSectionView({
   groups = [],
   tables = [],
   actions,
+  banner,
   onEdit,
   canEdit = true,
 }: {
   title: string;
   groups?: RowGroup[];
   tables?: TableSpec[];
+  /** Shown under the header, before the rows (e.g. compliance warnings). */
+  banner?: ReactNode;
   /** Extra header buttons before Edit (e.g. Add family member). */
   actions?: ReactNode;
   onEdit: () => void;
@@ -71,6 +74,7 @@ export function ProfileSectionView({
           )}
         </div>
       </div>
+      {banner && <div className="border-b border-nw-line-2 px-5 py-4">{banner}</div>}
       {groups.map((group, i) => (
         <div key={group.title ?? i} className="border-b border-nw-line-2 px-5 py-4 last:border-b-0">
           {group.title && (

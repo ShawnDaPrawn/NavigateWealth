@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useProfileManager } from '../useProfileManager';
 
 const mockGetSession = vi.fn();
 const mockApiGet = vi.fn();
 const mockApiPut = vi.fn();
+const mockApiPost = vi.fn();
 
 vi.mock('../../../../../utils/auth/authService', () => ({
   getSession: (...args: unknown[]) => mockGetSession(...args),
@@ -14,6 +15,7 @@ vi.mock('../../../../../utils/api/client', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
     put: (...args: unknown[]) => mockApiPut(...args),
+    post: (...args: unknown[]) => mockApiPost(...args),
   },
 }));
 
@@ -298,6 +300,54 @@ describe('useProfileManager', () => {
       returned = await result.current.handleSave();
     });
     expect(returned).toBe(false);
+  });
+
+  it('loads an old record with the new fields complete, and saves a patch as a merge', async () => {
+    mockGetSession.mockResolvedValue({ access_token: 't', user: { id: 'u-1' } });
+    // A record saved before compliance, planning and the postal address existed.
+    mockApiGet.mockResolvedValue({
+      success: true,
+      data: { firstName: 'Alice', lastName: 'Smith', email: 'test@example.com' },
+    });
+    mockApiPost.mockResolvedValue({ success: true });
+    const { result } = renderHook(() => useProfileManager(DEFAULT_INPUT));
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+
+    expect(result.current.profileData.complianceDeclarations.isPep).toBe('');
+    expect(result.current.profileData.planningProfile.plannedRetirementAge).toBe(0);
+    expect(result.current.profileData.postalSameAsResidential).toBe(true);
+    expect(result.current.isDirty).toBe(false);
+
+    // Six changed fields: the size of patch the server used to read as a
+    // whole record, wiping everything else.
+    act(() => {
+      for (const [field, value] of [
+        ['residentialAddressLine1', '1 New Street'],
+        ['residentialAddressLine2', 'Unit 4'],
+        ['residentialSuburb', 'Rondebosch'],
+        ['residentialCity', 'Cape Town'],
+        ['residentialProvince', 'Western Cape'],
+        ['residentialPostalCode', '7700'],
+      ] as const) {
+        result.current.handleInputChange(field, value);
+      }
+    });
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(mockApiPost).toHaveBeenCalledTimes(1);
+    const [url, body] = mockApiPost.mock.calls[0] as [string, Record<string, unknown>];
+    expect(url).toBe('/profile/personal-info');
+    expect(body.mode).toBe('merge');
+    expect(Object.keys(body.data as object).sort()).toEqual([
+      'residentialAddressLine1',
+      'residentialAddressLine2',
+      'residentialCity',
+      'residentialPostalCode',
+      'residentialProvince',
+      'residentialSuburb',
+    ]);
   });
 
   it('isDirty is false initially', () => {

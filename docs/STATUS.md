@@ -257,6 +257,40 @@ stated prerequisite has already caused a production outage once.
 - **Tooling changes ship separately from runtime fixes.** New hooks, required
   scripts, CI checks and formatter sweeps change how every future change is
   made, and have blocked a hotfix before.
+- **A profile patch must say `mode: 'merge'` (2026-11-24).**
+  `POST /profile/personal-info` guesses "whole record" for any payload of more than
+  five keys, or one carrying first name, last name and email together, and a
+  whole-record save deletes the stored record first. The portal sends only
+  the fields that changed, so a save of six address fields used to erase the
+  rest of the client's profile. The portal (`useProfileManager`) and
+  `updateUserProfile` now send `mode: 'merge'`; `mode: 'replace'` forces a
+  whole-record save; no mode keeps the old guess for callers that send the
+  whole record (the admin viewer, the first-login terms gate). Pinned by the
+  "save mode" block of `client-management-profile-routes.contract.test.ts`.
+  Any new caller that sends part of a record must send `merge`.
+- **The client compliance record is a hand-over seam (2026-11-24).** The
+  profile's Compliance section (portal: "Compliance & Consent"; admin:
+  "Compliance") stores two keys on `user_profile:{id}:personal_info`:
+  `complianceDeclarations` (PEP, source of funds and wealth, tax residency,
+  FATCA, consents — the client and staff edit it) and `complianceReview`
+  (risk rating, sanctions screening, KYC review dates — staff only). The
+  edge function strips `complianceReview` from the client's own saves, carries
+  the stored value over, and never returns it to the client
+  (`STAFF_ONLY_PROFILE_FIELDS`). Both carry `schemaVersion: 1`, and all rules
+  (review intervals, indicators, what is outstanding) are pure functions in
+  `src/shared/compliance/clientCompliance.ts`, so the self-built compliance
+  engine can lift the data and rules out as they are. This is not the old
+  Compliance module, which stays an empty shell (see above). The review
+  intervals (12/24/36 months for high/medium/low) are defaults, not the RMCP;
+  the engine is expected to own them. The sanctions result is typed in by
+  staff: nothing screens automatically.
+- **The profile keeps planning inputs, not goals.** The profile's Planning
+  section stores `planningProfile` (retirement age and income target,
+  emergency fund, investment knowledge and experience, capacity for loss) on
+  the profile record. It deliberately keeps no goals list, because Goals (the
+  Investment INA) is the single goal store (see above). It shows the goals the
+  client wrote on the application (`_applicationMeta.financialGoals`) and
+  points to Goals. No FNA wizard reads `planningProfile` yet.
 
 ## Open operator items
 

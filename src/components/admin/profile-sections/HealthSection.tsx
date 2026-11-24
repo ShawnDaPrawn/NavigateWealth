@@ -17,6 +17,8 @@ import {
   AlertDialogTitle,
 } from '../../ui/alert-dialog';
 import { Heart, Plus, Edit2, Trash2, X, Check, Pill } from 'lucide-react';
+import { SmokingAlcoholFields } from '../../shared/client-profile';
+import { normalizeProfileExtensionFields } from '../../../shared/client-profile';
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
 
@@ -168,16 +170,14 @@ export function HealthSection({
           <Separator />
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm text-gray-900">Smoker</h4>
-                <p className="text-xs text-gray-500">Does the client currently smoke?</p>
-              </div>
-              <Switch
-                checked={pd.smokerStatus}
-                onCheckedChange={(checked) => handleInputChange('smokerStatus', checked)}
-              />
-            </div>
+            <SmokingAlcoholFields
+              value={{
+                smokerStatus: pd.smokerStatus === true,
+                ...normalizeProfileExtensionFields(profileData),
+              }}
+              onChange={handleInputChange}
+              audience="adviser"
+            />
 
             <div className="flex items-center justify-between">
               <div>

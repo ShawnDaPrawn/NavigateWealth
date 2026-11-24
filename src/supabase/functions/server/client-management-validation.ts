@@ -281,6 +281,12 @@ export const PersonalInfoQuerySchema = z.object({
 export const PersonalInfoUpdateSchema = z.object({
   key: z.string(),
   data: z.unknown(),
+  /**
+   * `merge` lays `data` over the stored record; `replace` makes `data` the
+   * whole record. Omitted, the route guesses from the payload's shape (the
+   * original behaviour, kept for callers that send the whole record).
+   */
+  mode: z.enum(['merge', 'replace']).optional(),
 });
 
 /**

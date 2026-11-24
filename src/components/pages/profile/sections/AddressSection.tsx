@@ -7,6 +7,7 @@ import { Button } from '../../../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../ui/select';
 import { Separator } from '../../../ui/separator';
 import { MapPin, Home, Briefcase, Upload, Edit2, Trash2, CheckCircle, Check } from 'lucide-react';
+import { PostalAddressFields } from '../../../shared/client-profile';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -223,6 +224,10 @@ export function AddressSection({
               )}
             </div>
           </div>
+
+          <Separator />
+
+          <PostalAddressFields value={profileData} onChange={handleInputChange} />
 
           <Separator />
 

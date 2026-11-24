@@ -31,6 +31,7 @@ import type {
   HandleInputChange,
 } from '../types';
 import { getInitialProfileData } from '../profileDefaults';
+import { normalizeProfileExtensionFields } from '../../../../shared/client-profile';
 import {
   createBankAccount,
   createFamilyMember,
@@ -361,6 +362,7 @@ export function useProfileManager({
               passportNumber: result.data.passportNumber || '',
               employmentCountry: result.data.employmentCountry || '',
               workPermitNumber: result.data.workPermitNumber || '',
+              ...normalizeProfileExtensionFields(result.data as unknown as Record<string, unknown>),
             };
 
             setProfileData(mergedData);
@@ -498,7 +500,14 @@ export function useProfileManager({
         return true;
       }
 
-      await api.post('/profile/personal-info', { key: profileKey, data: cleanPatchData });
+      // `merge`: this is a patch of the changed fields only. Without it the
+      // server reads a patch of more than five fields as a whole record and
+      // drops everything else.
+      await api.post('/profile/personal-info', {
+        key: profileKey,
+        data: cleanPatchData,
+        mode: 'merge',
+      });
 
       updateUser({
         firstName: profileData.firstName,

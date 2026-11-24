@@ -10,6 +10,8 @@ export type {
   RiskAssessment,
 } from '../../../../shared/types';
 import type { BaseClient, RiskAssessment } from '../../../../shared/types';
+import type { EmployerBenefits, ProfileExtensionFields } from '../../../../shared/client-profile';
+import type { ComplianceReview } from '../../../../shared/compliance';
 import type {
   ClientDirectoryEntry,
   ClientDirectoryResponse,
@@ -155,6 +157,8 @@ export interface Employer {
   jobTitle: string;
   employerName: string;
   industry: string;
+  /** Group benefits through this employer. Absent on records saved before 2026-11. */
+  benefits?: EmployerBenefits;
 }
 
 export interface ChronicCondition {
@@ -173,7 +177,14 @@ export interface BudgetExpense {
   category: 'needs' | 'wants' | 'savings';
 }
 
-export interface ProfileData {
+/**
+ * The client's profile record as the admin viewer edits it. Fields added in
+ * 2026-11 come from `ProfileExtensionFields` (shared with the client portal);
+ * `complianceReview` is the staff-only half of the compliance record and is
+ * never sent to the client.
+ */
+export interface ProfileData extends ProfileExtensionFields {
+  complianceReview: ComplianceReview;
   title: string;
   firstName: string;
   middleName: string;

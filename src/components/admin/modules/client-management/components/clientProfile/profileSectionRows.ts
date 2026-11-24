@@ -1,5 +1,26 @@
 import { formatCurrencyDisplay } from '../../../../../../utils/currencyFormatter';
 import type { ClientProfileHook } from './clientProfileHook';
+import {
+  ALCOHOL_CONSUMPTION_OPTIONS,
+  CAPACITY_FOR_LOSS_OPTIONS,
+  INVESTMENT_KNOWLEDGE_OPTIONS,
+  INVESTMENT_PRODUCT_OPTIONS,
+  applicationHints,
+  employerBenefitLines,
+  normalizeProfileExtensionFields,
+} from '../../../../../../shared/client-profile';
+import {
+  CLIENT_RISK_RATING_OPTIONS,
+  CONSENT_DEFINITIONS,
+  NO_TAX_NUMBER_REASON_OPTIONS,
+  PEP_CATEGORY_OPTIONS,
+  PEP_RELATIONSHIP_OPTIONS,
+  SANCTIONS_RESULT_OPTIONS,
+  SOURCE_OF_FUNDS_OPTIONS,
+  SOURCE_OF_WEALTH_OPTIONS,
+  normalizeComplianceDeclarations,
+  normalizeComplianceReview,
+} from '../../../../../../shared/compliance';
 
 type Profile = ClientProfileHook['state']['profileData'];
 export type Row = { label: string; value: string; copy?: boolean };
@@ -22,6 +43,19 @@ function date(value: unknown): string {
 function money(value: unknown): string {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? `R ${formatCurrencyDisplay(n)}` : '';
+}
+
+/** The label of `value` in an option list, or '' when unset or unknown. */
+function labelOf(options: ReadonlyArray<{ value: string; label: string }>, value: unknown): string {
+  return options.find((o) => o.value === value)?.label ?? '';
+}
+
+function labelsOf(options: ReadonlyArray<{ value: string; label: string }>, values: string[]) {
+  return values.map((v) => labelOf(options, v) || v).join(', ');
+}
+
+function yesNoText(value: '' | 'yes' | 'no'): string {
+  return value === 'yes' ? 'Yes' : value === 'no' ? 'No' : '';
 }
 
 export function personalGroups(p: Profile): RowGroup[] {
@@ -129,6 +163,7 @@ export function addressGroups(p: Profile): RowGroup[] {
         },
       ],
     },
+    postalGroup(p),
     {
       title: 'Work address',
       rows: [
@@ -142,6 +177,28 @@ export function addressGroups(p: Profile): RowGroup[] {
       ],
     },
   ];
+}
+
+function postalGroup(p: Profile): RowGroup {
+  const postal = normalizeProfileExtensionFields(p as unknown as Record<string, unknown>);
+  if (postal.postalSameAsResidential) {
+    return {
+      title: 'Postal address',
+      rows: [{ label: 'Postal address', value: 'Same as residential address' }],
+    };
+  }
+  return {
+    title: 'Postal address',
+    rows: [
+      { label: 'Address line 1 / PO Box', value: postal.postalAddressLine1, copy: true },
+      { label: 'Address line 2', value: postal.postalAddressLine2 },
+      { label: 'Suburb', value: postal.postalSuburb },
+      { label: 'City', value: postal.postalCity },
+      { label: 'Province', value: postal.postalProvince },
+      { label: 'Postal code', value: postal.postalPostalCode, copy: true },
+      { label: 'Country', value: postal.postalCountry },
+    ],
+  };
 }
 
 export function employmentView(p: Profile): { groups: RowGroup[]; tables: TableSpec[] } {
@@ -160,16 +217,27 @@ export function employmentView(p: Profile): { groups: RowGroup[]; tables: TableS
     tables: [
       {
         title: "Client's employers",
-        columns: ['Employer name', 'Job title', 'Industry'],
+        columns: ['Employer name', 'Job title', 'Industry', 'Benefits'],
         rows: (p.employers ?? []).map((e) => [
           text(e.employerName),
           text(e.jobTitle),
           text(e.industry),
+          employerBenefitLines(e.benefits, (n) => `R ${formatCurrencyDisplay(n)}`).join('; '),
         ]),
         emptyText: 'No employers recorded.',
       },
     ],
   };
+}
+
+function smokingText(p: Profile): string {
+  if (p.smokerStatus === true) return 'Current smoker';
+  if (p.formerSmoker === true) {
+    return p.quitSmokingYear ? `Former smoker (stopped ${p.quitSmokingYear})` : 'Former smoker';
+  }
+  // A record saved before the smoking history existed only says "not a
+  // current smoker"; it does not say "never smoked".
+  return p.smokerStatus === false ? 'Not a current smoker' : '';
 }
 
 export function healthView(p: Profile): { groups: RowGroup[]; tables: TableSpec[] } {
@@ -182,7 +250,11 @@ export function healthView(p: Profile): { groups: RowGroup[]; tables: TableSpec[
           { label: 'Height', value: height },
           { label: 'Weight', value: weight },
           { label: 'Blood type', value: text(p.bloodType) },
-          { label: 'Smoker', value: yesNo(p.smokerStatus) },
+          { label: 'Smoking', value: smokingText(p) },
+          {
+            label: 'Alcohol',
+            value: labelOf(ALCOHOL_CONSUMPTION_OPTIONS, p.alcoholConsumption),
+          },
           { label: 'Health conditions', value: yesNo(p.hasChronicConditions) },
         ],
       },
@@ -317,6 +389,152 @@ export function assetsView(p: Profile): { groups: RowGroup[]; tables: TableSpec[
           Number(l.interestRate) > 0 ? `${l.interestRate}%` : '—',
         ]),
         emptyText: 'No liabilities recorded.',
+      },
+    ],
+  };
+}
+
+// ============================================================================
+// Compliance
+// ============================================================================
+
+export function complianceView(p: Profile): { groups: RowGroup[]; tables: TableSpec[] } {
+  const d = normalizeComplianceDeclarations(p.complianceDeclarations);
+  const r = normalizeComplianceReview(p.complianceReview);
+  const pep =
+    d.isPep === 'yes'
+      ? [labelOf(PEP_CATEGORY_OPTIONS, d.pepCategory), d.pepPosition].filter(Boolean).join(' — ') ||
+        'Yes'
+      : yesNoText(d.isPep);
+  const pepRelated =
+    d.isPepRelated === 'yes'
+      ? [
+          d.pepRelatedName,
+          labelOf(PEP_RELATIONSHIP_OPTIONS, d.pepRelationship),
+          d.pepRelatedPosition,
+        ]
+          .filter(Boolean)
+          .join(' — ') || 'Yes'
+      : yesNoText(d.isPepRelated);
+  const consentText = (key: (typeof CONSENT_DEFINITIONS)[number]['key']) => {
+    const c = d.consents[key];
+    if (!c.status) return '';
+    const word = c.status === 'granted' ? 'Agreed' : 'Declined';
+    return c.recordedAt ? `${word} (${date(c.recordedAt)})` : word;
+  };
+  return {
+    groups: [
+      {
+        title: 'Client review',
+        rows: [
+          { label: 'Risk rating', value: labelOf(CLIENT_RISK_RATING_OPTIONS, r.riskRating) },
+          { label: 'Rated on', value: date(r.riskRatedAt) },
+          { label: 'Reason', value: r.riskRatingReason },
+          {
+            label: 'Sanctions screening',
+            value: labelOf(SANCTIONS_RESULT_OPTIONS, r.sanctionsResult),
+          },
+          { label: 'Screened on', value: date(r.sanctionsScreenedAt) },
+          { label: 'Screening reference', value: r.sanctionsReference, copy: true },
+          { label: 'Last KYC review', value: date(r.lastKycReviewDate) },
+          { label: 'Next KYC review due', value: date(r.nextKycReviewDate) },
+          { label: 'Notes', value: r.notes },
+        ],
+      },
+      {
+        title: 'Client declarations',
+        rows: [
+          { label: 'Politically exposed person', value: pep },
+          { label: 'PEP family member or associate', value: pepRelated },
+          { label: 'Source of funds', value: labelsOf(SOURCE_OF_FUNDS_OPTIONS, d.sourceOfFunds) },
+          { label: 'Source of funds details', value: d.sourceOfFundsDetails },
+          {
+            label: 'Source of wealth',
+            value: labelsOf(SOURCE_OF_WEALTH_OPTIONS, d.sourceOfWealth),
+          },
+          { label: 'Source of wealth details', value: d.sourceOfWealthDetails },
+          {
+            label: 'US person (FATCA)',
+            value:
+              d.isUsPerson === 'yes' && d.usTin ? `Yes — TIN ${d.usTin}` : yesNoText(d.isUsPerson),
+          },
+          { label: 'Confirmed by client', value: date(d.confirmedAt) },
+        ],
+      },
+      {
+        title: 'Consents',
+        rows: CONSENT_DEFINITIONS.map((c) => ({ label: c.label, value: consentText(c.key) })),
+      },
+    ],
+    tables: [
+      {
+        title: 'Tax residency',
+        columns: ['Country', 'Tax number'],
+        rows: d.taxResidencies.map((t) => [
+          t.country,
+          t.taxNumber || labelOf(NO_TAX_NUMBER_REASON_OPTIONS, t.noTaxNumberReason),
+        ]),
+        emptyText: 'No tax residency declared.',
+      },
+    ],
+  };
+}
+
+// ============================================================================
+// Planning
+// ============================================================================
+
+/** Goals themselves live in Goals (the Investment INA); see planning.ts. */
+export function planningView(p: Profile): { groups: RowGroup[] } {
+  const ext = normalizeProfileExtensionFields(p as unknown as Record<string, unknown>);
+  const plan = ext.planningProfile;
+  const fromApplication = applicationHints(p as unknown as Record<string, unknown>);
+  const capacity = CAPACITY_FOR_LOSS_OPTIONS.find((o) => o.value === plan.capacityForLoss);
+  return {
+    groups: [
+      {
+        title: 'Planning profile',
+        rows: [
+          {
+            label: 'Planned retirement age',
+            value: plan.plannedRetirementAge ? String(plan.plannedRetirementAge) : '',
+          },
+          {
+            label: 'Retirement income target',
+            value: plan.retirementIncomeTargetPercent
+              ? `${plan.retirementIncomeTargetPercent}% of current income`
+              : '',
+          },
+          {
+            label: 'Emergency fund target',
+            value: plan.emergencyFundTargetMonths
+              ? `${plan.emergencyFundTargetMonths} months of income`
+              : '',
+          },
+          { label: 'Emergency fund set aside', value: money(plan.emergencyFundCurrentAmount) },
+          {
+            label: 'Investment knowledge',
+            value: labelOf(INVESTMENT_KNOWLEDGE_OPTIONS, plan.investmentKnowledge),
+          },
+          {
+            label: 'Years of investing',
+            value: plan.investmentExperienceYears ? String(plan.investmentExperienceYears) : '',
+          },
+          {
+            label: 'Products invested in',
+            value: labelsOf(INVESTMENT_PRODUCT_OPTIONS, plan.investmentProductsHeld),
+          },
+          {
+            label: 'Capacity for loss',
+            value: capacity
+              ? `${capacity.value[0].toUpperCase()}${capacity.value.slice(1)} — ${capacity.label}`
+              : '',
+          },
+          { label: 'Capacity for loss notes', value: plan.capacityForLossNotes },
+          ...(fromApplication.goals
+            ? [{ label: 'Goals noted on application', value: fromApplication.goals }]
+            : []),
+        ],
       },
     ],
   };

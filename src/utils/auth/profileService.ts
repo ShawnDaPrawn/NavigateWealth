@@ -441,7 +441,8 @@ export async function updateUserProfile(
         Authorization: `Bearer ${accessToken}`,
         apikey: publicAnonKey,
       },
-      body: JSON.stringify({ key, data: updates }),
+      // A partial update: merge it over the stored record.
+      body: JSON.stringify({ key, data: updates, mode: 'merge' }),
     });
 
     if (!response.ok) {

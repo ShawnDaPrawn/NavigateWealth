@@ -7,6 +7,9 @@ import { BudgetingPage } from './BudgetingPage';
 import { useProfileManager } from './profile/hooks/useProfileManager';
 import { usePortfolioSummary } from './portfolio/hooks';
 import { derivePolicyAssetsFromProductHoldings } from '../../utils/derivedPolicyAssets';
+import { ComplianceDeclarationsCard, PlanningSection } from '../shared/client-profile';
+import { applicationHints } from '../../shared/client-profile';
+import { legacyConsentEvidence } from '../../shared/compliance';
 
 // Section components (Guidelines §4.1 — decomposed presentation)
 import {
@@ -46,6 +49,8 @@ import {
   Activity,
   Wallet,
   AlertTriangle,
+  Flag,
+  ShieldCheck,
 } from 'lucide-react';
 import { PortalPageHeader } from '../portal/PortalPageHeader';
 
@@ -57,11 +62,13 @@ const NAV_ITEMS = [
   { id: 'personal', label: 'Personal Info', icon: User },
   { id: 'contact', label: 'Contact Details', icon: Mail },
   { id: 'identity', label: 'Identity', icon: Shield },
+  { id: 'compliance', label: 'Compliance & Consent', icon: ShieldCheck },
   { id: 'address', label: 'Address', icon: MapPin },
   { id: 'employment', label: 'Employment', icon: Briefcase },
   { id: 'health', label: 'Health Info', icon: Heart },
   { id: 'family', label: 'Family', icon: Users },
   { id: 'banking', label: 'Banking', icon: CreditCard },
+  { id: 'planning', label: 'Planning', icon: Flag },
   { id: 'risk', label: 'Risk Profile', icon: Target },
   { id: 'assets', label: 'Assets & Liabilities', icon: PieChart },
   { id: 'budgeting', label: 'Budgeting', icon: Wallet },
@@ -90,6 +97,12 @@ export function ProfilePage() {
   );
   const linkedPolicyAssetsError =
     portfolioSummaryQuery.error instanceof Error ? portfolioSummaryQuery.error.message : null;
+
+  // What the application and first-sign-in terms recorded, for the new
+  // Planning and Compliance sections (the server returns these keys on the
+  // record; ProfileData does not type them).
+  const storedRecord = pm.profileData as unknown as Record<string, unknown>;
+  const fromApplication = applicationHints(storedRecord);
 
   // Handle URL parameters to open specific tab
   useEffect(() => {
@@ -380,6 +393,28 @@ export function ProfilePage() {
                 totalAssets={pm.totalAssets}
                 totalLiabilities={pm.totalLiabilities}
                 netWorth={pm.netWorth}
+              />
+            )}
+
+            {activeSection === 'compliance' && (
+              <ComplianceDeclarationsCard
+                value={pm.profileData.complianceDeclarations}
+                onChange={(next) => pm.handleInputChange('complianceDeclarations', next)}
+                audience="client"
+                legacyConsent={legacyConsentEvidence(storedRecord)}
+                applicationSaysSaTaxResident={fromApplication.saTaxResident}
+                saTaxNumber={pm.profileData.taxNumber}
+              />
+            )}
+
+            {activeSection === 'planning' && (
+              <PlanningSection
+                planning={pm.profileData.planningProfile}
+                onPlanningChange={(next) => pm.handleInputChange('planningProfile', next)}
+                audience="client"
+                dateOfBirth={pm.profileData.dateOfBirth}
+                monthlyIncome={pm.profileData.netIncome}
+                applicationGoals={fromApplication.goals}
               />
             )}
 
