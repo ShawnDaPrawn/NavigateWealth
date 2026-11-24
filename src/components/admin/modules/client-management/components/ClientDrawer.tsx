@@ -665,7 +665,10 @@ function ClientWorkspace({
         {/* 1. Personal Details Section */}
         <TabsContent value="personal" className="space-y-4">
           <Suspense fallback={<TabPanelFallback />}>
-            <ClientProfileViewerFull clientData={client} />
+            <ClientProfileViewerFull
+              clientData={client}
+              onOpenPolicies={() => onTabChange('policies')}
+            />
           </Suspense>
         </TabsContent>
 

@@ -9,6 +9,10 @@ import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Separator } from '../ui/separator';
 import { formatCurrency } from '../../utils/currencyFormatter';
+import {
+  deriveLiabilityBudgetExpenses,
+  type KnownBudgetExpense,
+} from '../../utils/knownBudgetExpenses';
 import { EmptyState } from './profile/EmptyState';
 import { emptyStateConfigs } from './profile/emptyStateConfigs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -31,6 +35,7 @@ import {
   Save,
   TrendingUp,
   Target,
+  Link2,
 } from 'lucide-react';
 
 interface Expense {
@@ -51,6 +56,11 @@ interface BudgetingPageProps {
   setIncomeValidationError?: (error: string | null) => void;
   profileData?: Record<string, unknown>;
   handleInputChange?: (field: string, value: unknown) => void;
+  /**
+   * Premiums and contributions on the client's policies
+   * (utils/knownBudgetExpenses). Shown read-only and counted in the budget.
+   */
+  policyExpenses?: KnownBudgetExpense[];
 }
 
 const CATEGORY_COLORS = {
@@ -109,6 +119,7 @@ export function BudgetingPage({
   embedded,
   profileData,
   handleInputChange,
+  policyExpenses,
 }: BudgetingPageProps) {
   const navigate = useNavigate();
 
@@ -144,6 +155,22 @@ export function BudgetingPage({
       setLocalExpenses(next);
     }
   };
+  // Expenses the platform already knows: liability repayments from the
+  // profile, and policy premiums the caller passes in. Read-only here; they
+  // change where they are captured and are never copied into budgetExpenses.
+  const profileLiabilities = profileData?.liabilities;
+  const knownExpenses = useMemo<KnownBudgetExpense[]>(
+    () => [...deriveLiabilityBudgetExpenses(profileLiabilities), ...(policyExpenses ?? [])],
+    [profileLiabilities, policyExpenses],
+  );
+  const hasAnyExpenses = expenses.length > 0 || knownExpenses.length > 0;
+  const expenseCount = expenses.length + knownExpenses.length;
+
+  // A captured expense with the same amount as a known one was probably
+  // typed in before these were filled in automatically.
+  const possibleDuplicateOf = (expense: Expense): KnownBudgetExpense | undefined =>
+    knownExpenses.find((known) => Math.abs(known.amount - expense.amount) < 1);
+
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
 
@@ -156,19 +183,23 @@ export function BudgetingPage({
 
   // Calculate totals
   const totals = useMemo(() => {
-    const needsTotal = expenses
+    const all: { amount: number; category: Expense['category'] }[] = [
+      ...expenses,
+      ...knownExpenses,
+    ];
+    const needsTotal = all
       .filter((e) => e.category === 'needs')
       .reduce((sum, e) => sum + e.amount, 0);
-    const wantsTotal = expenses
+    const wantsTotal = all
       .filter((e) => e.category === 'wants')
       .reduce((sum, e) => sum + e.amount, 0);
-    const savingsTotal = expenses
+    const savingsTotal = all
       .filter((e) => e.category === 'savings')
       .reduce((sum, e) => sum + e.amount, 0);
     const total = needsTotal + wantsTotal + savingsTotal;
 
     return { needsTotal, wantsTotal, savingsTotal, total };
-  }, [expenses]);
+  }, [expenses, knownExpenses]);
 
   // Calculate budget recommendations (50-30-20 rule)
   const recommendations = useMemo(
@@ -517,8 +548,20 @@ export function BudgetingPage({
                 <CardDescription>
                   {isAddingExpense
                     ? 'Fill in the details below to track your expense'
-                    : `${expenses.length} ${expenses.length === 1 ? 'expense' : 'expenses'} tracked • ${formatCurrency(totals.total)} total`}
+                    : `${expenseCount} ${expenseCount === 1 ? 'expense' : 'expenses'} tracked • ${formatCurrency(totals.total)} total`}
                 </CardDescription>
+                {!isAddingExpense && knownExpenses.length > 0 && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {knownExpenses.length} filled in from{' '}
+                    {[
+                      knownExpenses.some((e) => e.source === 'liability') && 'liabilities',
+                      knownExpenses.some((e) => e.source === 'policy') && 'policies',
+                    ]
+                      .filter(Boolean)
+                      .join(' and ')}
+                    . Change those where they are captured.
+                  </p>
+                )}
                 {!isAddingExpense && usePersistedExpenses && (
                   <p className="text-xs text-gray-400 mt-1">
                     Changes are stored with the profile — use the Save button at the top to keep
@@ -645,7 +688,7 @@ export function BudgetingPage({
             )}
 
             {/* All Expenses by Category */}
-            {expenses.length === 0 && !isAddingExpense ? (
+            {!hasAnyExpenses && !isAddingExpense ? (
               <div className="text-center py-12 px-6">
                 <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-br from-[#6d28d9] to-[#5b21b6] flex items-center justify-center mb-4">
                   <Wallet className="h-8 w-8 text-white" />
@@ -668,11 +711,16 @@ export function BudgetingPage({
                 <div className="space-y-6">
                   {(['needs', 'wants', 'savings'] as const).map((category) => {
                     const categoryExpenses = expenses.filter((e) => e.category === category);
-                    if (categoryExpenses.length === 0) return null;
+                    const categoryKnown = knownExpenses.filter((e) => e.category === category);
+                    const categoryCount = categoryExpenses.length + categoryKnown.length;
+                    if (categoryCount === 0) return null;
 
                     const info = CATEGORY_INFO[category];
                     const Icon = info.icon;
-                    const allocated = categoryExpenses.reduce((sum, e) => sum + e.amount, 0);
+                    const allocated = [...categoryExpenses, ...categoryKnown].reduce(
+                      (sum, e) => sum + e.amount,
+                      0,
+                    );
 
                     return (
                       <div key={category}>
@@ -684,14 +732,46 @@ export function BudgetingPage({
                             <Icon className="h-4 w-4" style={{ color: info.color }} />
                           </div>
                           <h3 className="text-base text-gray-900">
-                            {info.name} • {categoryExpenses.length}{' '}
-                            {categoryExpenses.length === 1 ? 'expense' : 'expenses'}
+                            {info.name} • {categoryCount}{' '}
+                            {categoryCount === 1 ? 'expense' : 'expenses'}
                           </h3>
                           <span className="text-sm text-gray-600">
                             ({formatCurrency(allocated)})
                           </span>
                         </div>
                         <div className="space-y-2">
+                          {categoryKnown.map((known) => (
+                            <div
+                              key={known.id}
+                              className="flex items-center justify-between gap-3 p-4 rounded-lg border border-gray-200 bg-gray-50"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div
+                                  className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                                  style={{ backgroundColor: `${info.color}15` }}
+                                >
+                                  <Icon className="h-5 w-5" style={{ color: info.color }} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm text-gray-900 truncate">
+                                    {known.description}
+                                  </p>
+                                  <p className="text-xs text-gray-500 truncate">{known.detail}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="hidden sm:inline-flex items-center gap-1.5 h-[22px] px-2 rounded border border-gray-200 bg-white text-xs font-semibold text-gray-600 whitespace-nowrap">
+                                  <Link2 className="h-3 w-3" aria-hidden="true" />
+                                  {known.source === 'liability'
+                                    ? 'From liabilities'
+                                    : 'From policies'}
+                                </span>
+                                <p className="text-base text-gray-900 tabular-nums">
+                                  {formatCurrency(known.amount)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
                           {categoryExpenses.map((expense) => (
                             <div
                               key={expense.id}
@@ -704,9 +784,17 @@ export function BudgetingPage({
                                 >
                                   <Icon className="h-5 w-5" style={{ color: info.color }} />
                                 </div>
-                                <p className="text-sm text-gray-900 truncate flex-1">
-                                  {expense.description}
-                                </p>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm text-gray-900 truncate">
+                                    {expense.description}
+                                  </p>
+                                  {possibleDuplicateOf(expense) && (
+                                    <p className="text-xs text-amber-700 truncate">
+                                      Same amount as {possibleDuplicateOf(expense)?.description},
+                                      which is already counted. Delete this one if it is the same.
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 <p className="text-base text-gray-900 mr-2">
@@ -744,7 +832,7 @@ export function BudgetingPage({
         </Card>
 
         {/* Charts */}
-        {expenses.length > 0 && (
+        {hasAnyExpenses && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recommended vs Actual */}
             <Card>

@@ -1,9 +1,9 @@
 /**
- * Liabilities card of the admin assets & liabilities section. Pure view
- * over props from AssetsLiabilitiesSection.
+ * Liabilities card of the admin assets & liabilities section (design: the
+ * "Assets & liabilities redesign" canvas): one table, Edit and Delete under
+ * ⋯ on each row. Pure view over props from AssetsLiabilitiesSection.
  */
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import { Input } from '../../ui/input';
 import { CurrencyInputField } from '../../ui/currency-input';
 import { NumberInputField } from '../../ui/number-input';
@@ -19,12 +19,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../ui/dialog';
-import { DollarSign, Plus, Edit2, Trash2, X, Check } from 'lucide-react';
-import { EmptyState } from '../../pages/profile/EmptyState';
-import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
+import { Check, CreditCard, X } from 'lucide-react';
 import { useInlineEditDialogClose } from '../../shared/unsaved-changes';
 
-import { DetailChip } from './assetsLiabilitiesShared';
+import {
+  BalanceCard,
+  PanelEmptyState,
+  RowActionsMenu,
+  TD,
+  TD_ACTIONS,
+  TD_NUM,
+  TH,
+  TH_NUM,
+} from './assetsLiabilitiesShared';
 import { getLiabilityTypeLabel } from '../../../shared/formatting';
 import type { Liability } from '../../../shared/types';
 
@@ -53,288 +60,264 @@ export function LiabilitiesPanel({
   editLiability,
   confirmDeleteLiability,
 }: LiabilitiesPanelProps) {
-  return (
-    <Card className="border-gray-200 shadow-sm">
-      <CardHeader className="pb-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
-              <DollarSign className="h-5 w-5 text-red-600" />
-            </div>
-            <div>
-              <CardTitle className="text-xl">Liabilities</CardTitle>
-              <CardDescription>Client's debts and financial obligations</CardDescription>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-700">
-              {formatCurrency(totalLiabilities)}
-            </div>
-            <Button
-              onClick={addLiability}
-              size="sm"
-              disabled={liabilitiesInEditMode.size > 0}
-              className="bg-[#6d28d9] hover:bg-[#5b21b6] disabled:cursor-not-allowed disabled:opacity-50"
-              title={
-                liabilitiesInEditMode.size > 0
-                  ? 'Please save the current liability before adding a new one'
-                  : 'Add a new liability'
-              }
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              Add Liability
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {liabilities.length === 0 ? (
-          <EmptyState
-            icon={emptyStateConfigs.liabilities.icon}
-            title={emptyStateConfigs.liabilities.title}
-            description={emptyStateConfigs.liabilities.description}
-            actionLabel={emptyStateConfigs.liabilities.actionLabel}
-            onAction={addLiability}
-            iconColor={emptyStateConfigs.liabilities.iconColor}
-            iconBgColor={emptyStateConfigs.liabilities.iconBgColor}
-            buttonColor={emptyStateConfigs.liabilities.buttonColor}
-            buttonHoverColor={emptyStateConfigs.liabilities.buttonHoverColor}
-          />
-        ) : (
-          liabilities.map((liability, index) => {
-            const isEditing = liabilitiesInEditMode.has(liability.id);
-            const isOtherType = liability.type === 'Other';
-            let isValid: string | boolean | undefined =
-              liability.type && liability.name && liability.provider;
-            if (isOtherType) {
-              isValid = isValid && liability.customType;
-            }
+  const addBlocked = liabilitiesInEditMode.size > 0;
+  const totalMonthly = liabilities.reduce((sum, l) => sum + (l.monthlyPayment || 0), 0);
 
-            return (
-              <React.Fragment key={liability.id}>
-                <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 transition-colors hover:border-gray-300">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100">
-                        <DollarSign className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div className="min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <p className="text-sm font-semibold text-gray-900">
-                            {liability.name || `Liability ${index + 1}`}
-                          </p>
-                          <span className="text-xs text-gray-500">
-                            {getLiabilityTypeLabel(liability)}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <DetailChip
-                            label="Outstanding"
-                            value={formatCurrency(liability.outstandingBalance || 0)}
-                          />
-                          <DetailChip
-                            label="Monthly"
-                            value={formatCurrency(liability.monthlyPayment || 0)}
-                          />
-                          <DetailChip label="Provider" value={liability.provider || 'Not set'} />
-                          {liability.interestRate > 0 && (
-                            <DetailChip label="Interest" value={`${liability.interestRate}%`} />
-                          )}
-                        </div>
-                        {liability.description && (
-                          <p className="text-xs leading-relaxed text-gray-500">
-                            {liability.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2 self-end lg:self-start">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
+  return (
+    <BalanceCard
+      id="admin-liabilities-heading"
+      title="Liabilities"
+      addLabel="Add liability"
+      onAdd={addLiability}
+      addDisabled={addBlocked}
+      addTitle={addBlocked ? 'Save the liability you are editing first' : undefined}
+    >
+      {liabilities.length === 0 ? (
+        <PanelEmptyState
+          icon={CreditCard}
+          title="No liabilities yet"
+          description="Add bonds, loans and credit cards so net worth is right."
+          actionLabel="Add liability"
+          onAction={addLiability}
+        />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
+            <thead className="bg-nw-paper-3">
+              <tr>
+                <th scope="col" className={TH}>
+                  Liability
+                </th>
+                <th scope="col" className={TH}>
+                  Type
+                </th>
+                <th scope="col" className={TH}>
+                  Provider
+                </th>
+                <th scope="col" className={TH_NUM}>
+                  Interest
+                </th>
+                <th scope="col" className={TH_NUM}>
+                  Monthly
+                </th>
+                <th scope="col" className={TH_NUM}>
+                  Outstanding
+                </th>
+                <th scope="col" className={TH}>
+                  <span className="sr-only">Actions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {liabilities.map((liability, index) => {
+                const name = liability.name || `Liability ${index + 1}`;
+                return (
+                  <tr key={liability.id} className="transition-colors hover:bg-nw-paper-3">
+                    <td className={TD}>
+                      <p className="font-semibold text-nw-ink">{name}</p>
+                      {liability.description && (
+                        <p className="mt-0.5 max-w-xs text-[13px] leading-[18px] text-nw-muted">
+                          {liability.description}
+                        </p>
+                      )}
+                    </td>
+                    <td className={TD}>{getLiabilityTypeLabel(liability)}</td>
+                    <td className={`${TD} text-nw-text`}>{liability.provider || '—'}</td>
+                    <td className={TD_NUM}>
+                      {liability.interestRate > 0 ? `${liability.interestRate}%` : '—'}
+                    </td>
+                    <td className={TD_NUM}>{formatCurrency(liability.monthlyPayment || 0)}</td>
+                    <td className={TD_NUM}>{formatCurrency(liability.outstandingBalance || 0)}</td>
+                    <td className={TD_ACTIONS}>
+                      <RowActionsMenu
+                        name={name}
+                        onEdit={() => {
                           liabilityEditGuard.trackEditStart(liability.id);
                           editLiability(liability.id);
                         }}
-                        className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
-                      >
-                        <Edit2 className="mr-1 h-4 w-4" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => confirmDeleteLiability(liability.id)}
-                        className="border-red-200 text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        onDelete={() => confirmDeleteLiability(liability.id)}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={4} className="px-5 py-3.5 font-semibold text-nw-ink">
+                  Total liabilities
+                </td>
+                <td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold tabular-nums text-nw-ink">
+                  {formatCurrency(totalMonthly)}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold tabular-nums text-nw-ink">
+                  {formatCurrency(totalLiabilities)}
+                </td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+
+      {liabilities.map((liability, index) => {
+        const isEditing = liabilitiesInEditMode.has(liability.id);
+        const isOtherType = liability.type === 'Other';
+        let isValid: string | boolean | undefined =
+          liability.type && liability.name && liability.provider;
+        if (isOtherType) {
+          isValid = isValid && liability.customType;
+        }
+        return (
+          <React.Fragment key={`edit-${liability.id}`}>
+            <Dialog
+              open={isEditing}
+              onOpenChange={(open) => liabilityEditGuard.handleDialogOpenChange(liability.id, open)}
+            >
+              <DialogContent className="sm:max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{liability.name || `Liability ${index + 1}`}</DialogTitle>
+                  <DialogDescription>
+                    Update the client's liability details without stretching the whole page.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <Label htmlFor={`liability-type-${liability.id}`}>Liability Type *</Label>
+                    <Select
+                      value={liability.type}
+                      onValueChange={(value) => updateLiability(liability.id, { type: value })}
+                    >
+                      <SelectTrigger id={`liability-type-${liability.id}`} className="mt-1.5">
+                        <SelectValue placeholder="Select liability type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Home Loan">Home Loan</SelectItem>
+                        <SelectItem value="Vehicle Finance">Vehicle Finance</SelectItem>
+                        <SelectItem value="Credit Card">Credit Card</SelectItem>
+                        <SelectItem value="Personal Loan">Personal Loan</SelectItem>
+                        <SelectItem value="Student Loan">Student Loan</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {isOtherType && (
+                    <div className="sm:col-span-2">
+                      <Label htmlFor={`custom-liability-type-${liability.id}`}>
+                        Custom Liability Type *
+                      </Label>
+                      <Input
+                        id={`custom-liability-type-${liability.id}`}
+                        value={liability.customType || ''}
+                        onChange={(e) =>
+                          updateLiability(liability.id, { customType: e.target.value })
+                        }
+                        placeholder="Specify custom liability type"
+                        className="mt-1.5"
+                      />
                     </div>
+                  )}
+                  <div className="sm:col-span-2">
+                    <Label htmlFor={`liability-name-${liability.id}`}>
+                      Liability Name / Description *
+                    </Label>
+                    <Input
+                      id={`liability-name-${liability.id}`}
+                      value={liability.name}
+                      onChange={(e) => updateLiability(liability.id, { name: e.target.value })}
+                      placeholder="Enter liability name"
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label htmlFor={`liability-provider-${liability.id}`}>Provider / Bank *</Label>
+                    <Input
+                      id={`liability-provider-${liability.id}`}
+                      value={liability.provider}
+                      onChange={(e) => updateLiability(liability.id, { provider: e.target.value })}
+                      placeholder="e.g., Standard Bank, ABSA"
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`outstanding-${liability.id}`}>Outstanding Balance (R) *</Label>
+                    <CurrencyInputField
+                      id={`outstanding-${liability.id}`}
+                      value={liability.outstandingBalance}
+                      onValueChange={(v) =>
+                        updateLiability(liability.id, { outstandingBalance: v ?? 0 })
+                      }
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`monthly-payment-${liability.id}`}>
+                      Monthly Repayment (R) *
+                    </Label>
+                    <CurrencyInputField
+                      id={`monthly-payment-${liability.id}`}
+                      value={liability.monthlyPayment}
+                      onValueChange={(v) =>
+                        updateLiability(liability.id, { monthlyPayment: v ?? 0 })
+                      }
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`interest-rate-${liability.id}`}>Interest Rate (%)</Label>
+                    <NumberInputField
+                      id={`interest-rate-${liability.id}`}
+                      decimals={2}
+                      value={liability.interestRate || ''}
+                      onValueChange={(v) => updateLiability(liability.id, { interestRate: v ?? 0 })}
+                      placeholder="0.00"
+                      className="mt-1.5"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label htmlFor={`liability-desc-${liability.id}`}>Additional Details</Label>
+                    <Textarea
+                      id={`liability-desc-${liability.id}`}
+                      value={liability.description}
+                      onChange={(e) =>
+                        updateLiability(liability.id, { description: e.target.value })
+                      }
+                      placeholder="Any additional information"
+                      className="mt-1.5"
+                      rows={3}
+                    />
                   </div>
                 </div>
-
-                <Dialog
-                  open={isEditing}
-                  onOpenChange={(open) =>
-                    liabilityEditGuard.handleDialogOpenChange(liability.id, open)
-                  }
-                >
-                  <DialogContent className="sm:max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>{liability.name || `Liability ${index + 1}`}</DialogTitle>
-                      <DialogDescription>
-                        Update the client's liability details without stretching the whole page.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="sm:col-span-2">
-                        <Label htmlFor={`liability-type-${liability.id}`}>Liability Type *</Label>
-                        <Select
-                          value={liability.type}
-                          onValueChange={(value) => updateLiability(liability.id, { type: value })}
-                        >
-                          <SelectTrigger id={`liability-type-${liability.id}`} className="mt-1.5">
-                            <SelectValue placeholder="Select liability type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Home Loan">Home Loan</SelectItem>
-                            <SelectItem value="Vehicle Finance">Vehicle Finance</SelectItem>
-                            <SelectItem value="Credit Card">Credit Card</SelectItem>
-                            <SelectItem value="Personal Loan">Personal Loan</SelectItem>
-                            <SelectItem value="Student Loan">Student Loan</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {isOtherType && (
-                        <div className="sm:col-span-2">
-                          <Label htmlFor={`custom-liability-type-${liability.id}`}>
-                            Custom Liability Type *
-                          </Label>
-                          <Input
-                            id={`custom-liability-type-${liability.id}`}
-                            value={liability.customType || ''}
-                            onChange={(e) =>
-                              updateLiability(liability.id, { customType: e.target.value })
-                            }
-                            placeholder="Specify custom liability type"
-                            className="mt-1.5"
-                          />
-                        </div>
-                      )}
-                      <div className="sm:col-span-2">
-                        <Label htmlFor={`liability-name-${liability.id}`}>
-                          Liability Name / Description *
-                        </Label>
-                        <Input
-                          id={`liability-name-${liability.id}`}
-                          value={liability.name}
-                          onChange={(e) => updateLiability(liability.id, { name: e.target.value })}
-                          placeholder="Enter liability name"
-                          className="mt-1.5"
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <Label htmlFor={`liability-provider-${liability.id}`}>
-                          Provider / Bank *
-                        </Label>
-                        <Input
-                          id={`liability-provider-${liability.id}`}
-                          value={liability.provider}
-                          onChange={(e) =>
-                            updateLiability(liability.id, { provider: e.target.value })
-                          }
-                          placeholder="e.g., Standard Bank, ABSA"
-                          className="mt-1.5"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`outstanding-${liability.id}`}>
-                          Outstanding Balance (R) *
-                        </Label>
-                        <CurrencyInputField
-                          id={`outstanding-${liability.id}`}
-                          value={liability.outstandingBalance}
-                          onValueChange={(v) =>
-                            updateLiability(liability.id, { outstandingBalance: v ?? 0 })
-                          }
-                          className="mt-1.5"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`monthly-payment-${liability.id}`}>
-                          Monthly Repayment (R) *
-                        </Label>
-                        <CurrencyInputField
-                          id={`monthly-payment-${liability.id}`}
-                          value={liability.monthlyPayment}
-                          onValueChange={(v) =>
-                            updateLiability(liability.id, { monthlyPayment: v ?? 0 })
-                          }
-                          className="mt-1.5"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor={`interest-rate-${liability.id}`}>Interest Rate (%)</Label>
-                        <NumberInputField
-                          id={`interest-rate-${liability.id}`}
-                          decimals={2}
-                          value={liability.interestRate || ''}
-                          onValueChange={(v) =>
-                            updateLiability(liability.id, { interestRate: v ?? 0 })
-                          }
-                          placeholder="0.00"
-                          className="mt-1.5"
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <Label htmlFor={`liability-desc-${liability.id}`}>Additional Details</Label>
-                        <Textarea
-                          id={`liability-desc-${liability.id}`}
-                          value={liability.description}
-                          onChange={(e) =>
-                            updateLiability(liability.id, { description: e.target.value })
-                          }
-                          placeholder="Any additional information"
-                          className="mt-1.5"
-                          rows={3}
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() =>
-                          liabilityEditGuard.handleDialogOpenChange(liability.id, false)
-                        }
-                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                      >
-                        <X className="mr-1 h-4 w-4" />
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          liabilityEditGuard.clearSnapshot(liability.id);
-                          saveLiability(liability.id);
-                        }}
-                        disabled={!isValid}
-                        className={
-                          !isValid
-                            ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300'
-                            : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'
-                        }
-                      >
-                        <Check className="mr-1 h-4 w-4" />
-                        Save Liability
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </React.Fragment>
-            );
-          })
-        )}
-      </CardContent>
-    </Card>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => liabilityEditGuard.handleDialogOpenChange(liability.id, false)}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    <X className="mr-1 h-4 w-4" />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      liabilityEditGuard.clearSnapshot(liability.id);
+                      saveLiability(liability.id);
+                    }}
+                    disabled={!isValid}
+                    className={
+                      !isValid
+                        ? 'cursor-not-allowed bg-gray-300 text-gray-500 hover:bg-gray-300'
+                        : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'
+                    }
+                  >
+                    <Check className="mr-1 h-4 w-4" />
+                    Save Liability
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </React.Fragment>
+        );
+      })}
+    </BalanceCard>
   );
 }

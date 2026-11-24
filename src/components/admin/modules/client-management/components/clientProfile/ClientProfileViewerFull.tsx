@@ -50,12 +50,15 @@ import {
   type DerivedPolicyAsset,
   type PolicyAssetSourceRecord,
 } from '../../../../../../utils/derivedPolicyAssets';
+import {
+  derivePolicyBudgetExpenses,
+  type KnownBudgetExpense,
+} from '../../../../../../utils/knownBudgetExpenses';
 
 import { ClientProfilePersonalCard } from './ClientProfilePersonalCard';
 import { ProfileSectionView } from './ProfileSectionView';
 import {
   addressGroups,
-  assetsView,
   bankingTable,
   contactGroups,
   employmentView,
@@ -91,18 +94,23 @@ const VIEW_EDIT_SECTIONS: ReadonlySet<ProfileSection> = new Set([
   'health',
   'family',
   'banking',
-  'assets',
 ]);
 import { ClientProfileContactCard } from './ClientProfileContactCard';
 
 interface ClientProfileViewerFullProps {
   clientData: Client;
   onSave?: (data: ProfileData) => void;
+  /** Opens the client's Policy details tab (from a policy row in Assets & liabilities). */
+  onOpenPolicies?: () => void;
 }
 
 const ADMIN_CLIENT_PROFILE_REGISTRY_ID = 'admin-client-profile';
 
-export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileViewerFullProps) {
+export function ClientProfileViewerFull({
+  clientData,
+  onSave,
+  onOpenPolicies,
+}: ClientProfileViewerFullProps) {
   // The open section is in the address (?psec=).
   const [activeSection, setActiveSection] = useUrlState<ProfileSection>(
     'psec',
@@ -190,6 +198,13 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
 
   const derivedPolicyAssets = useMemo<DerivedPolicyAsset[]>(
     () => derivePolicyAssetsFromPolicies(policyRecords),
+    [policyRecords],
+  );
+
+  // Premiums and contributions already on the client's policies, so the
+  // budget doesn't ask for them again.
+  const policyBudgetExpenses = useMemo<KnownBudgetExpense[]>(
+    () => derivePolicyBudgetExpenses(policyRecords),
     [policyRecords],
   );
 
@@ -371,13 +386,6 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               }
             />
           )}
-          {viewOnly && activeSection === 'assets' && (
-            <ProfileSectionView
-              title="Assets & liabilities"
-              {...assetsView(state.profileData)}
-              onEdit={startEditing}
-            />
-          )}
           {activeSection === 'personal' && !viewOnly && (
             <ClientProfilePersonalCard state={state} actions={actions} />
           )}
@@ -548,6 +556,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               liabilityToDelete={state.liabilityToDelete}
               setLiabilityToDelete={actions.setLiabilityToDelete}
               formatCurrency={formatCurrency}
+              onOpenPolicies={onOpenPolicies}
             />
           )}
 
@@ -564,6 +573,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
                 }
                 profileData={profileDataLoose}
                 handleInputChange={handleInputChangeLoose}
+                policyExpenses={policyBudgetExpenses}
               />
             </div>
           )}
