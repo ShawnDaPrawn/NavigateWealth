@@ -16,6 +16,7 @@ import {
 } from './profile-application-sync.ts';
 import { deepSanitize } from './client-management-utils.ts';
 import { isPlatformAdminRole, requireClientAccess } from './client-access.ts';
+import { COMPLIANCE_REVIEW_PROFILE_KEY } from '../../../shared/compliance/clientCompliance.ts';
 
 const app = new Hono();
 const log = createModuleLogger('client-management-profile-crud');
@@ -37,6 +38,23 @@ const SERVER_CONTROLLED_PROFILE_FIELDS = [
   'applicationId',
   'application_id',
 ] as const;
+
+/**
+ * Fields only staff may read or write: the firm's own assessment of the client
+ * (risk rating, sanctions screening, KYC review dates — see
+ * `src/shared/compliance/clientCompliance.ts`). When the caller is the client
+ * themself, a save neither sets nor erases them (the stored values are carried
+ * over) and a read does not return them. An adviser with access to the client
+ * is not the client, so their saves keep these fields.
+ */
+const STAFF_ONLY_PROFILE_FIELDS = [COMPLIANCE_REVIEW_PROFILE_KEY] as const;
+
+/** The caller is the client whose record this is, and not a platform admin. */
+function isClientSelf(c: Parameters<typeof requireClientAccess>[0], key: string): boolean {
+  return (
+    c.get('userId') === extractUserIdFromProfileKey(key) && !isPlatformAdminRole(c.get('userRole'))
+  );
+}
 
 async function requireProfileKeyAccess(c: Parameters<typeof requireClientAccess>[0], key: string) {
   const userId = extractUserIdFromProfileKey(key);
@@ -85,6 +103,10 @@ app.get(
         role: profile.role,
         isSuperAdmin,
       });
+
+      if (isClientSelf(c, key)) {
+        for (const field of STAFF_ONLY_PROFILE_FIELDS) delete profile[field];
+      }
 
       return c.json({
         success: true,
@@ -139,7 +161,7 @@ app.post(
           400,
         );
       }
-      const { key, data } = validated;
+      const { key, data, mode } = validated;
 
       const accessDenied = await requireProfileKeyAccess(c, key);
       if (accessDenied) return accessDenied;
@@ -158,17 +180,27 @@ app.post(
           delete incomingData[privileged];
         }
       }
+      const callerIsClientSelf = isClientSelf(c, key);
+      if (callerIsClientSelf) {
+        for (const field of STAFF_ONLY_PROFILE_FIELDS) delete incomingData[field];
+      }
 
       const keys = Object.keys(incomingData);
 
-      // Heuristic: Is this a full replacement?
+      // An explicit mode wins. Without one, guess from the payload's shape —
+      // the original behaviour, kept for callers that send the whole record.
+      // The guess is wrong for a patch of more than five changed fields (it
+      // deletes the record and keeps only the patch), so every caller that
+      // sends a patch must say `mode: 'merge'`.
       const hasCoreFields =
         keys.includes('firstName') && keys.includes('lastName') && keys.includes('email');
       const isBigPayload = keys.length > 5;
-      const isFullProfileReplacement = hasCoreFields || isBigPayload;
+      const isFullProfileReplacement =
+        mode === 'merge' ? false : mode === 'replace' ? true : hasCoreFields || isBigPayload;
 
       log.info('Analyzing update type', {
         isFullProfileReplacement,
+        mode: mode ?? 'inferred',
         keyCount: keys.length,
       });
 
@@ -216,6 +248,13 @@ app.post(
         }
         finalProfile = { ...finalProfile, ...carried };
       }
+      if (callerIsClientSelf) {
+        const carried: Record<string, unknown> = {};
+        for (const field of STAFF_ONLY_PROFILE_FIELDS) {
+          if (field in existing) carried[field] = existing[field];
+        }
+        finalProfile = { ...finalProfile, ...carried };
+      }
 
       // Sanitize
       try {
@@ -255,9 +294,14 @@ app.post(
           });
       }
 
+      const responseProfile = { ...(finalProfile as Record<string, unknown>) };
+      if (callerIsClientSelf) {
+        for (const field of STAFF_ONLY_PROFILE_FIELDS) delete responseProfile[field];
+      }
+
       return c.json({
         success: true,
-        data: finalProfile,
+        data: responseProfile,
       });
     } catch (error) {
       log.error('Error in POST /personal-info', error);

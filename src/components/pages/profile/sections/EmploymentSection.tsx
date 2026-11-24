@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from '../../../ui/alert-dialog';
 import { Briefcase, Plus, Edit2, Trash2, X, Check } from 'lucide-react';
+import { EmployerBenefitsFields, EmployerBenefitsSummary } from '../../../shared/client-profile';
 
 interface EmploymentSectionProps {
   profileData: ProfileData;
@@ -243,6 +244,11 @@ export function EmploymentSection({
                                   className="mt-1.5"
                                 />
                               </div>
+                              <EmployerBenefitsFields
+                                idPrefix={`employer-${employer.id}`}
+                                value={employer.benefits}
+                                onChange={(benefits) => updateEmployer(employer.id, { benefits })}
+                              />
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -250,6 +256,7 @@ export function EmploymentSection({
                                 <p className="text-gray-600 text-[14px]">Industry</p>
                                 <p className="text-gray-900">{employer.industry || '-'}</p>
                               </div>
+                              <EmployerBenefitsSummary value={employer.benefits} />
                             </div>
                           )}
                         </div>

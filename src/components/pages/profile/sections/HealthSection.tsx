@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from '../../../ui/alert-dialog';
 import { Heart, Pill, Plus, Edit2, Trash2, X, Check } from 'lucide-react';
+import { SmokingAlcoholFields } from '../../../shared/client-profile';
 
 interface HealthSectionProps {
   profileData: ProfileData;
@@ -146,16 +147,11 @@ export function HealthSection({
           <Separator />
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm text-gray-900">Smoker</h4>
-                <p className="text-xs text-gray-500">Do you currently smoke?</p>
-              </div>
-              <Switch
-                checked={profileData.smokerStatus}
-                onCheckedChange={(checked) => handleInputChange('smokerStatus', checked)}
-              />
-            </div>
+            <SmokingAlcoholFields
+              value={profileData}
+              onChange={handleInputChange}
+              audience="client"
+            />
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-sm text-gray-900">Health Conditions</h4>

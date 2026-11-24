@@ -2,6 +2,7 @@
 // byte-identical copy of both. One definition now, re-exported here so this
 // module's existing importers are unaffected.
 import type { Asset, Liability } from '../../../shared/types';
+import type { EmployerBenefits, ProfileExtensionFields } from '../../../shared/client-profile';
 
 export type { Asset, Liability };
 
@@ -28,6 +29,8 @@ export type ProfileSection =
   | 'family'
   | 'banking'
   | 'risk'
+  | 'goals'
+  | 'compliance'
   | 'assets'
   | 'budgeting';
 
@@ -89,6 +92,8 @@ export interface Employer {
   jobTitle: string;
   employerName: string;
   industry: string;
+  /** Group benefits through this employer. Absent on records saved before 2026-11. */
+  benefits?: EmployerBenefits;
 }
 
 export interface ChronicCondition {
@@ -128,7 +133,13 @@ export interface RiskAssessment {
 // Root Profile Data
 // ============================================================================
 
-export interface ProfileData {
+/**
+ * The client's profile record. Fields added in 2026-11 (postal address,
+ * smoking history, alcohol, compliance declarations, goals and planning) come
+ * from `ProfileExtensionFields` in `src/shared/client-profile`, which the admin
+ * viewer's `ProfileData` extends too.
+ */
+export interface ProfileData extends ProfileExtensionFields {
   // Personal Information
   title: string;
   firstName: string;

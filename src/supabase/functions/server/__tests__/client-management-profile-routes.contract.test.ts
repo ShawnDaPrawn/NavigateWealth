@@ -457,6 +457,159 @@ describe('client-management-profile-routes.ts route contracts', () => {
     });
   });
 
+  // ── Save mode ─────────────────────────────────────────────────────────────
+  //
+  // The portal sends only the fields that changed. Without a mode the route
+  // guessed "full replacement" for any payload of more than five keys, deleted
+  // the record and stored only the patch — so changing six address fields in
+  // one save erased the rest of the client's profile.
+  describe('save mode', () => {
+    const AS_CLIENT = { ...AUTH, 'x-test-role': 'client', 'x-test-user': TEST_UUID };
+    const stored = () => kvStore.get(PROFILE_KEY) as Record<string, unknown>;
+    const sixFieldPatch = {
+      residentialAddressLine1: '1 New Street',
+      residentialAddressLine2: 'Unit 4',
+      residentialSuburb: 'Rondebosch',
+      residentialCity: 'Cape Town',
+      residentialProvince: 'Western Cape',
+      residentialPostalCode: '7700',
+    };
+    const post = (body: Record<string, unknown>) =>
+      profileRouter.request('/personal-info', {
+        method: 'POST',
+        body: JSON.stringify({ key: PROFILE_KEY, ...body }),
+        headers: { ...AS_CLIENT, 'Content-Type': 'application/json' },
+      });
+
+    beforeEach(() => {
+      kvStore.set(PROFILE_KEY, {
+        userId: TEST_UUID,
+        firstName: 'John',
+        lastName: 'Client',
+        email: 'john@test.co',
+        bankAccounts: [{ id: 'b1', bankName: 'fnb' }],
+        role: 'client',
+      });
+    });
+
+    it('merges a patch of more than five fields when the caller says merge', async () => {
+      const res = await post({ data: sixFieldPatch, mode: 'merge' });
+      expect(res.status).toBe(200);
+      expect(stored()).toMatchObject({
+        ...sixFieldPatch,
+        firstName: 'John',
+        lastName: 'Client',
+        email: 'john@test.co',
+        bankAccounts: [{ id: 'b1', bankName: 'fnb' }],
+      });
+    });
+
+    it('still replaces the whole record when no mode is given (legacy callers)', async () => {
+      const res = await post({ data: sixFieldPatch });
+      expect(res.status).toBe(200);
+      expect(stored().bankAccounts).toBeUndefined();
+      expect(stored().residentialCity).toBe('Cape Town');
+    });
+
+    it('replaces the whole record when the caller says replace, even for one field', async () => {
+      const res = await post({ data: { firstName: 'Johnny' }, mode: 'replace' });
+      expect(res.status).toBe(200);
+      expect(stored().firstName).toBe('Johnny');
+      expect(stored().bankAccounts).toBeUndefined();
+    });
+
+    it('rejects an unknown mode', async () => {
+      const res = await post({ data: { firstName: 'Johnny' }, mode: 'upsert' });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ── Staff-only profile fields ─────────────────────────────────────────────
+  //
+  // `complianceReview` is the firm's own assessment of the client (risk rating,
+  // sanctions screening, KYC review dates). The client may neither read nor
+  // write it; staff with access to the client may do both.
+  describe('staff-only profile fields', () => {
+    const AS_CLIENT = { ...AUTH, 'x-test-role': 'client', 'x-test-user': TEST_UUID };
+    const REVIEW = { schemaVersion: 1, riskRating: 'high', sanctionsResult: 'clear' };
+    const stored = () => kvStore.get(PROFILE_KEY) as Record<string, unknown>;
+    const save = (
+      data: Record<string, unknown>,
+      headers: Record<string, string>,
+      mode?: 'merge' | 'replace',
+    ) =>
+      profileRouter.request('/personal-info', {
+        method: 'POST',
+        body: JSON.stringify({ key: PROFILE_KEY, data, ...(mode ? { mode } : {}) }),
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+
+    beforeEach(() => {
+      kvStore.set(PROFILE_KEY, {
+        userId: TEST_UUID,
+        firstName: 'John',
+        lastName: 'Client',
+        email: 'john@test.co',
+        role: 'client',
+        complianceReview: REVIEW,
+      });
+    });
+
+    it('does not return the review to the client', async () => {
+      const res = await profileRouter.request(`/personal-info?key=${PROFILE_KEY}`, {
+        headers: AS_CLIENT,
+      });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: Record<string, unknown> };
+      expect(body.data.firstName).toBe('John');
+      expect(body.data).not.toHaveProperty('complianceReview');
+    });
+
+    it('returns the review to staff', async () => {
+      const res = await profileRouter.request(`/personal-info?key=${PROFILE_KEY}`, {
+        headers: AUTH,
+      });
+      const body = (await res.json()) as { data: Record<string, unknown> };
+      expect(body.data.complianceReview).toEqual(REVIEW);
+    });
+
+    it("ignores a client's attempt to write the review", async () => {
+      const res = await save(
+        { complianceReview: { schemaVersion: 1, riskRating: 'low' } },
+        AS_CLIENT,
+        'merge',
+      );
+      expect(res.status).toBe(200);
+      expect(stored().complianceReview).toEqual(REVIEW);
+      const body = (await res.json()) as { data: Record<string, unknown> };
+      expect(body.data).not.toHaveProperty('complianceReview');
+    });
+
+    it("keeps the review through a client's full-replacement save", async () => {
+      const res = await save(
+        { firstName: 'John', lastName: 'Renamed', email: 'john@test.co' },
+        AS_CLIENT,
+        'replace',
+      );
+      expect(res.status).toBe(200);
+      expect(stored()).toMatchObject({ lastName: 'Renamed', complianceReview: REVIEW });
+    });
+
+    it('lets the client write their own declarations', async () => {
+      const declarations = { schemaVersion: 1, isPep: 'no' };
+      const res = await save({ complianceDeclarations: declarations }, AS_CLIENT, 'merge');
+      expect(res.status).toBe(200);
+      expect(stored().complianceDeclarations).toEqual(declarations);
+    });
+
+    it('lets staff write the review', async () => {
+      const updated = { ...REVIEW, riskRating: 'medium' };
+      const res = await save({ complianceReview: updated }, AUTH, 'merge');
+      expect(res.status).toBe(200);
+      expect(stored().complianceReview).toEqual(updated);
+    });
+  });
+
   // ── PUT / ─────────────────────────────────────────────────────────────────
   describe('PUT /', () => {
     it('returns 400 when no update fields provided besides userId', async () => {

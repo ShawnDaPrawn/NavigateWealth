@@ -13,6 +13,20 @@ import { createBankAccountHandlers } from './clientProfile/bankAccountHandlers';
 import { createRiskAssessmentHandlers } from './clientProfile/riskAssessmentHandlers';
 import { createAssetHandlers } from './clientProfile/assetHandlers';
 import { createLiabilityHandlers } from './clientProfile/liabilityHandlers';
+import { normalizeProfileExtensionFields } from '../../../../../shared/client-profile';
+import { normalizeComplianceReview } from '../../../../../shared/compliance';
+
+/**
+ * The fields added in 2026-11 (postal address, smoking history, alcohol,
+ * compliance, goals, planning), complete and typed, from whatever is stored.
+ */
+function extensionFieldsFrom(record: unknown) {
+  const r = (record && typeof record === 'object' ? record : {}) as Record<string, unknown>;
+  return {
+    ...normalizeProfileExtensionFields(r),
+    complianceReview: normalizeComplianceReview(r.complianceReview),
+  };
+}
 
 /**
  * Create a stable, comparable snapshot of profile data for dirty detection.
@@ -143,6 +157,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
     assets: initialPersonalInfo?.assets || [],
     liabilities: initialPersonalInfo?.liabilities || [],
     budgetExpenses: initialPersonalInfo?.budgetExpenses || [],
+    ...extensionFieldsFrom(initialPersonalInfo),
   });
 
   // Edit mode tracking states
@@ -238,6 +253,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
             passportNumber: profile.passportNumber || '',
             employmentCountry: profile.employmentCountry || '',
             workPermitNumber: profile.workPermitNumber || '',
+            ...extensionFieldsFrom(profile),
           }));
           setSnapshotPending(true);
         }
@@ -267,6 +283,7 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
           passportNumber: personalInfo?.passportNumber || '',
           employmentCountry: personalInfo?.employmentCountry || '',
           workPermitNumber: personalInfo?.workPermitNumber || '',
+          ...extensionFieldsFrom(personalInfo),
         }));
       } finally {
         setHasChanges(false);

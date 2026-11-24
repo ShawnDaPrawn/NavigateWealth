@@ -17,6 +17,9 @@ import {
   AlertDialogTitle,
 } from '../../ui/alert-dialog';
 import { Briefcase, Plus, Edit2, Trash2, X, Check, Building2, Factory } from 'lucide-react';
+import { EmployerBenefitsFields } from '../../shared/client-profile';
+import { employerBenefitLines, type EmployerBenefits } from '../../../shared/client-profile';
+import { formatCurrency } from '../../../utils/currencyFormatter';
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
 
@@ -25,6 +28,7 @@ interface Employer {
   jobTitle: string;
   employerName: string;
   industry: string;
+  benefits?: EmployerBenefits;
 }
 
 interface EmploymentSectionProps {
@@ -302,6 +306,12 @@ export function EmploymentSection({
                                   </div>
                                 </div>
 
+                                <EmployerBenefitsFields
+                                  idPrefix={`employer-${employer.id}`}
+                                  value={employer.benefits}
+                                  onChange={(benefits) => updateEmployer(employer.id, { benefits })}
+                                />
+
                                 {!isValid && (
                                   <p className="text-xs text-amber-600 flex items-center gap-1">
                                     <span className="inline-block h-1 w-1 rounded-full bg-amber-500" />
@@ -333,6 +343,21 @@ export function EmploymentSection({
                                   </div>
                                 )}
                               </div>
+                              {employerBenefitLines(employer.benefits, formatCurrency).length >
+                                0 && (
+                                <div className="mt-3 border-t border-gray-100 pt-3 text-sm">
+                                  <p className="text-xs text-gray-500 font-medium">
+                                    Employer benefits
+                                  </p>
+                                  <ul className="mt-0.5 space-y-0.5 text-gray-900">
+                                    {employerBenefitLines(employer.benefits, formatCurrency).map(
+                                      (line) => (
+                                        <li key={line}>{line}</li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

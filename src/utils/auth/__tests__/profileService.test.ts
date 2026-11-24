@@ -197,6 +197,8 @@ describe('updateUserProfile', () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.key).toContain('u-001');
     expect(body.data).toEqual({ firstName: 'John' });
+    // A partial update must be merged, never read as the whole record.
+    expect(body.mode).toBe('merge');
   });
 
   it('throws when response is not ok', async () => {
