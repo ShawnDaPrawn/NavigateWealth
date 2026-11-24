@@ -246,6 +246,13 @@ describe('Navigator legal document page', () => {
       top: 1000,
     } as DOMRect);
     await renderLoaded();
+    // The entry in view is measured in an effect after the document renders,
+    // so wait for it rather than assume it has run: on a loaded CI runner the
+    // article can be found before that effect is flushed.
+    await waitFor(() => {
+      const nav = screen.getAllByRole('navigation', { name: 'On this page' })[0];
+      expect(within(nav).getAllByRole('link')[0].getAttribute('aria-current')).toBe('location');
+    });
     const nav = screen.getAllByRole('navigation', { name: 'On this page' })[0];
     const links = within(nav).getAllByRole('link');
     expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
