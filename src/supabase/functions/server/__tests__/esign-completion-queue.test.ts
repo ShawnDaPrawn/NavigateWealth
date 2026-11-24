@@ -119,6 +119,60 @@ describe('esign completion queue', () => {
     );
   });
 
+  it('dead-letters a job whose isolate died on every attempt, instead of retrying forever', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-23T23:52:49Z'));
+    await enqueueCompletion('env-1');
+    // Every attempt is cut off by the runtime: completeEnvelope never returns.
+    work.complete.mockImplementation(() => new Promise(() => undefined));
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      void drainCompletionQueue();
+      await vi.waitFor(() => expect(work.complete).toHaveBeenCalledTimes(attempt));
+      vi.setSystemTime(Date.now() + COMPLETION_LEASE_MS + 1);
+    }
+
+    const result = await drainCompletionQueue();
+    expect(work.complete).toHaveBeenCalledTimes(3);
+    expect(result.deadLettered).toBe(1);
+    expect(await getQueueDepth()).toBe(0);
+    expect(work.status).toHaveBeenLastCalledWith('env-1', 'partially_signed');
+    expect(work.audit).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'completion_dead_lettered' }),
+    );
+  });
+
+  it('a kick during a running drain still gets its envelope completed in that protected drain', async () => {
+    const waitUntil = vi.fn();
+    (globalThis as { EdgeRuntime?: unknown }).EdgeRuntime = { waitUntil };
+    try {
+      let release!: () => void;
+      work.complete.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            release = () => resolve({ success: true });
+          }),
+      );
+      await enqueueCompletion('env-1');
+      kickCompletionDrain();
+      await vi.waitFor(() => expect(work.complete).toHaveBeenCalledWith('env-1'));
+
+      // A second envelope completes while env-1's drain is mid-flight.
+      await enqueueCompletion('env-2');
+      kickCompletionDrain();
+      release();
+
+      // Both kicks hold the same protected promise, which must not settle
+      // until env-2 is done too.
+      expect(waitUntil.mock.calls[1][0]).toBe(waitUntil.mock.calls[0][0]);
+      await waitUntil.mock.calls[0][0];
+      expect(work.complete).toHaveBeenCalledWith('env-2');
+      expect(await getQueueDepth()).toBe(0);
+    } finally {
+      delete (globalThis as { EdgeRuntime?: unknown }).EdgeRuntime;
+    }
+  });
+
   it('kickCompletionDrain holds the isolate open with EdgeRuntime.waitUntil', async () => {
     const waitUntil = vi.fn();
     (globalThis as { EdgeRuntime?: unknown }).EdgeRuntime = { waitUntil };

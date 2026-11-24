@@ -147,6 +147,21 @@ export async function enqueueCompletion(envelopeId: string): Promise<void> {
   }
 }
 
+/** Give up on a job: back to `partially_signed`, with an audit event an operator can act on. */
+async function deadLetter(job: CompletionJob, error: string): Promise<void> {
+  try {
+    await updateEnvelopeStatus(job.envelopeId, 'partially_signed');
+    await logAuditEvent({
+      envelopeId: job.envelopeId,
+      actorType: 'system',
+      action: 'completion_dead_lettered',
+      metadata: { attempts: job.attempts, error },
+    });
+  } catch (logErr) {
+    log.error(`Dead-letter audit write failed for ${job.envelopeId}: ${String(logErr)}`);
+  }
+}
+
 /**
  * Drain up to `maxJobs` available items from the queue. Each job runs
  * through `completeEnvelope`; failures retry up to `MAX_ATTEMPTS` before
@@ -161,15 +176,29 @@ export async function drainCompletionQueue(maxJobs = 5): Promise<DrainResult> {
 
   // Take the lease BEFORE working, and persist it, so a dropped isolate
   // leaves the job in the queue for the next drain instead of losing it.
+  //
+  // A job that is available again with its attempts already spent is one
+  // whose isolate died on its last try — the failure branch below never ran
+  // for it. Dead-letter it here, or a job that kills its isolate every time
+  // would be retried forever.
   const leasedUntil = new Date(now + COMPLETION_LEASE_MS).toISOString();
   const batch: CompletionJob[] = [];
-  const leased = queue.map((job) => {
-    if (batch.length >= maxJobs || !isAvailable(job, now)) return job;
-    const taken = { ...job, attempts: job.attempts + 1, leasedUntil };
-    batch.push(taken);
-    return taken;
-  });
-  if (!batch.length) {
+  const exhausted: CompletionJob[] = [];
+  const leased: CompletionJob[] = [];
+  for (const job of queue) {
+    if (!isAvailable(job, now)) {
+      leased.push(job);
+    } else if (job.attempts >= MAX_ATTEMPTS) {
+      exhausted.push(job);
+    } else if (batch.length < maxJobs) {
+      const taken = { ...job, attempts: job.attempts + 1, leasedUntil };
+      batch.push(taken);
+      leased.push(taken);
+    } else {
+      leased.push(job);
+    }
+  }
+  if (!batch.length && !exhausted.length) {
     return { processed: 0, failed: 0, deadLettered: 0, remaining: queue.length };
   }
   await saveQueue(leased);
@@ -177,6 +206,11 @@ export async function drainCompletionQueue(maxJobs = 5): Promise<DrainResult> {
   let processed = 0;
   let failed = 0;
   let deadLettered = 0;
+
+  for (const job of exhausted) {
+    deadLettered += 1;
+    await deadLetter(job, job.lastError || 'Completion did not finish (worker stopped mid-job)');
+  }
 
   for (const job of batch) {
     let error: string | null = null;
@@ -199,17 +233,7 @@ export async function drainCompletionQueue(maxJobs = 5): Promise<DrainResult> {
     if (job.attempts >= MAX_ATTEMPTS) {
       deadLettered += 1;
       await updateJob(job.envelopeId, () => null);
-      try {
-        await updateEnvelopeStatus(job.envelopeId, 'partially_signed');
-        await logAuditEvent({
-          envelopeId: job.envelopeId,
-          actorType: 'system',
-          action: 'completion_dead_lettered',
-          metadata: { attempts: job.attempts, error },
-        });
-      } catch (logErr) {
-        log.error(`Dead-letter audit write failed for ${job.envelopeId}: ${String(logErr)}`);
-      }
+      await deadLetter(job, error);
     } else {
       failed += 1;
       const lastError = error;
@@ -220,8 +244,14 @@ export async function drainCompletionQueue(maxJobs = 5): Promise<DrainResult> {
   return { processed, failed, deadLettered, remaining: (await loadQueue()).length };
 }
 
-/** One drain per isolate at a time; a second kick joins the running one. */
-let activeDrain: Promise<DrainResult | void> | null = null;
+/**
+ * One drain per isolate at a time. A kick that arrives while it runs sets
+ * `drainAgain`: the running drain chose its batch before that job was queued,
+ * so it goes round once more rather than leaving the new job to the
+ * unprotected interval tick.
+ */
+let activeDrain: Promise<void> | null = null;
+let drainAgain = false;
 
 /**
  * Start a drain that the runtime will not drop mid-way.
@@ -232,12 +262,21 @@ let activeDrain: Promise<DrainResult | void> | null = null;
  * drain simply runs detached. Never throws.
  */
 export function kickCompletionDrain(): void {
-  if (!activeDrain) {
-    activeDrain = drainCompletionQueue()
-      .catch((err) => log.error(`Completion drain failed: ${getErrMsg(err)}`))
-      .finally(() => {
+  if (activeDrain) {
+    drainAgain = true;
+  } else {
+    activeDrain = (async () => {
+      try {
+        do {
+          drainAgain = false;
+          await drainCompletionQueue();
+        } while (drainAgain);
+      } catch (err) {
+        log.error(`Completion drain failed: ${getErrMsg(err)}`);
+      } finally {
         activeDrain = null;
-      });
+      }
+    })();
   }
   const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } })
     .EdgeRuntime;
