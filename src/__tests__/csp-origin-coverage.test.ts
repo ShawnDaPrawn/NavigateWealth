@@ -75,6 +75,12 @@ const NOT_FETCHED: Record<string, string> = {
   'react.dev': 'React error-code docs link, text in an issue hint',
   'app.local': 'placeholder base for new URL() parsing of relative paths',
 
+  // Password Manager → AI agents: the OAuth callback addresses Claude and
+  // ChatGPT register, pre-filled in a form and sent to our own server, which
+  // later redirects the browser there after consent. Never fetched.
+  'claude.ai': 'OAuth callback value for a Claude connector, a redirect target',
+  'chatgpt.com': 'OAuth callback value for a ChatGPT connector, a redirect target',
+
   // <a href> destinations. CSP does not govern navigation; `navigate-to` was
   // never shipped by any browser.
   'mail.google.com': 'link: "Open Gmail" on the verify-email page (src/site)',

@@ -21,6 +21,7 @@ export type AdminModule =
   | 'esign'
   | 'issues'
   | 'ai-management'
+  | 'password-manager'
   | 'locked';
 
 export interface ModuleConfigItem {

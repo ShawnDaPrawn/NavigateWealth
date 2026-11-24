@@ -1,6 +1,7 @@
 /**
- * Requests that wait for a person. They exist only when a connection's own
- * autonomy settings ask for one; under Full autonomy none are created.
+ * Password requests that wait for a person: an agent asked for a password or
+ * one-time code, and the login or the agent is set to "ask". A super admin
+ * approves or denies it under Activity; an approval is used once.
  */
 import type { VaultApproval } from '../../../shared/password-manager.ts';
 import {
@@ -23,10 +24,7 @@ export function publicApproval(row: StoredApproval): VaultApproval {
 
 export async function requestApproval(
   conn: StoredConnection,
-  fields: Pick<
-    VaultApproval,
-    'action' | 'credentialId' | 'credentialName' | 'workflowId' | 'runId' | 'reason' | 'detail'
-  >,
+  fields: Pick<VaultApproval, 'action' | 'credentialId' | 'credentialName' | 'reason'>,
   ttlMinutes: number,
 ): Promise<StoredApproval> {
   const now = Date.now();
@@ -36,10 +34,8 @@ export async function requestApproval(
     revision: crypto.randomUUID(),
     connectionId: conn.id,
     connectionName: conn.name,
-    personName: conn.personName,
-    requiredApprovals: conn.autonomy.approver === 'two_people' ? 2 : 1,
-    approvals: [],
     state: 'pending',
+    decidedBy: null,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + ttlMinutes * 60000).toISOString(),
   };
@@ -47,35 +43,19 @@ export async function requestApproval(
   return row;
 }
 
-/** Whether `userId` may decide this approval as the connection's own person. */
-export function ownerMayDecide(conn: StoredConnection | null, userId: string) {
-  return Boolean(conn && conn.personUserId === userId && conn.autonomy.approver !== 'any_super');
-}
-
 export async function decide(
   id: string,
-  userId: string,
+  decidedBy: string,
   decision: 'approve' | 'deny',
-): Promise<StoredApproval | 'not_found' | 'closed' | 'already'> {
+): Promise<StoredApproval | 'not_found' | 'closed'> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const row = await approvals.get(id);
     if (!row) return 'not_found';
-    const now = current(row);
-    if (now.state !== 'pending') return 'closed';
-    if (row.approvals.some((a) => a.userId === userId)) return 'already';
-    const nextApprovals =
-      decision === 'approve'
-        ? [...row.approvals, { userId, at: new Date().toISOString() }]
-        : row.approvals;
+    if (current(row).state !== 'pending') return 'closed';
     const next: StoredApproval = {
       ...row,
-      approvals: nextApprovals,
-      state:
-        decision === 'deny'
-          ? 'denied'
-          : nextApprovals.length >= row.requiredApprovals
-            ? 'approved'
-            : 'pending',
+      state: decision === 'approve' ? 'approved' : 'denied',
+      decidedBy,
       revision: crypto.randomUUID(),
     };
     if (await compareAndSet(approvals.key(id), next, 'revision', row.revision)) return next;

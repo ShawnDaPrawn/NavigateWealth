@@ -4,7 +4,7 @@ if (parameters.has('client_id') && window.location.search.length < 8192) {
     'nw-broker-consent',
     JSON.stringify({ expires: Date.now() + 600000, params: Object.fromEntries(parameters) }),
   );
-  window.location.replace('/admin');
+  window.location.replace('/admin?module=password-manager&tab=agents');
 } else {
   document.querySelector('p').textContent = 'Start this connection from your MCP client.';
 }

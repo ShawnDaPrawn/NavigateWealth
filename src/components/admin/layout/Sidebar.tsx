@@ -1,7 +1,6 @@
-import { lazy, Suspense, useState } from 'react';
+import { useState } from 'react';
 import {
   Settings,
-  KeyRound,
   LogOut,
   ArrowLeftRight,
   PanelLeftClose,
@@ -44,8 +43,6 @@ import { InstallHelpDialog } from './InstallHelpDialog';
 import { usePWAInstall } from '../../../hooks/usePWAInstall';
 import { readClosedGroups, writeClosedGroups } from './sidebarState';
 
-const PasswordManager = lazy(() => import('../password-manager/PasswordManager'));
-
 interface SidebarProps {
   activeModule: AdminModule;
   onModuleChange: (module: AdminModule) => void;
@@ -77,16 +74,6 @@ export function Sidebar({
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showInstallHelp, setShowInstallHelp] = useState(false);
-  const [vaultOpen, setVaultOpen] = useState(() => {
-    try {
-      return (
-        Boolean(sessionStorage.getItem('nw-broker-consent')) ||
-        new URLSearchParams(window.location.search).has('brokerRun')
-      );
-    } catch {
-      return false;
-    }
-  });
   const { installApp, isInstalling, showInstallOption } = usePWAInstall();
 
   const isSuperAdmin = user?.role === 'super_admin';
@@ -119,7 +106,6 @@ export function Sidebar({
     onInstallApp: installApp,
     installOptionVisible: showInstallOption,
     isInstallingApp: isInstalling,
-    onOpenVault: () => setVaultOpen(true),
     onShowInstallHelp: () => setShowInstallHelp(true),
     // Account settings is the signed-in admin's own profile in Personnel.
     onOpenAccountSettings: () => {
@@ -160,15 +146,6 @@ export function Sidebar({
         </div>
       )}
 
-      {isSuperAdmin && vaultOpen && (
-        <Suspense fallback={null}>
-          <PasswordManager
-            key={user?.id}
-            userId={user?.id ?? null}
-            onClose={() => setVaultOpen(false)}
-          />
-        </Suspense>
-      )}
       <InstallHelpDialog open={showInstallHelp} onOpenChange={setShowInstallHelp} />
     </div>
   );
@@ -184,7 +161,6 @@ interface SidebarContentProps {
   onLogout: () => void;
   onSwitchToPersonal: () => void;
   onOpenAccountSettings: () => void;
-  onOpenVault: () => void;
   onInstallApp: () => Promise<'accepted' | 'dismissed' | null>;
   installOptionVisible: boolean;
   isInstallingApp: boolean;
@@ -205,7 +181,6 @@ function SidebarContent({
   onLogout,
   onSwitchToPersonal,
   onOpenAccountSettings,
-  onOpenVault,
   onInstallApp,
   installOptionVisible,
   isInstallingApp,
@@ -506,18 +481,6 @@ function SidebarContent({
                 <Settings className="mr-2 h-4 w-4" />
                 Account settings
               </DropdownMenuItem>
-              {isSuperAdmin && (
-                <DropdownMenuItem
-                  onClick={() => {
-                    setUserDropdownOpen(false);
-                    setMobileOpen(false);
-                    onOpenVault();
-                  }}
-                >
-                  <KeyRound className="mr-2 h-4 w-4" />
-                  Password manager
-                </DropdownMenuItem>
-              )}
               {isSuperAdmin && (
                 <DropdownMenuItem
                   onClick={() => {
