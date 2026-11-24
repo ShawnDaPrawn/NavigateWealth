@@ -44,8 +44,8 @@ export function InvestmentManagementDashboardPage() {
   const { topContent, scrollToPanel } = useServiceFnaSection({
     clientId: user?.id,
     fnaType: 'investment',
-    title: 'Investment Needs Analysis',
-    description: 'Start your discovery or view your published investment analysis',
+    title: 'Investment Goals',
+    description: 'Share your investment goals or view the goals analysis your adviser published',
   });
 
   const { data: portfolio } = usePortfolioSummary(user?.id);

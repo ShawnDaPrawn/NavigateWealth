@@ -34,7 +34,7 @@ const DOMAIN_LABELS: Record<string, string> = {
   risk: 'Risk Planning',
   medical: 'Medical Aid',
   retirement: 'Retirement',
-  investment: 'Investment INA',
+  investment: 'Investment Goals',
   tax: 'Tax Planning',
   estate: 'Estate Planning',
 };

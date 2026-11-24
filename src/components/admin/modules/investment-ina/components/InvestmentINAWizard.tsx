@@ -120,7 +120,7 @@ export function InvestmentINAWizard({
       } catch (error) {
         logger.error('Investment INA calculation failed', error);
         toast.error(
-          `Failed to calculate the INA: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to calculate the goals analysis: ${error instanceof Error ? error.message : String(error)}`,
         );
         return null;
       } finally {

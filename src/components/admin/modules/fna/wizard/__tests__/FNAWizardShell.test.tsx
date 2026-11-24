@@ -23,9 +23,7 @@ describe('FNAWizardShell', () => {
       </FNAWizardShell>,
     );
 
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Investment Needs Analysis' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1, name: 'Investment Goals' })).toBeTruthy();
     expect(screen.getByText('Jane Client · Draft')).toBeTruthy();
     // Not a pop-up any more.
     expect(screen.queryByRole('dialog')).toBeNull();

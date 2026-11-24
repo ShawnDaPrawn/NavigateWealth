@@ -301,7 +301,7 @@ export interface INAResults {
 export class INACalculationError extends Error {
   readonly problems: string[];
   constructor(problems: string[]) {
-    super(`Investment INA cannot be calculated: ${problems.join('; ')}`);
+    super(`The goals analysis cannot be calculated: ${problems.join('; ')}`);
     this.name = 'INACalculationError';
     this.problems = problems;
   }

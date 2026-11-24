@@ -45,6 +45,10 @@ interface FNAManagementViewProps {
   title: string;
   /** e.g. "Retirement FNA" — used in the empty state. */
   fnaName: string;
+  /** One run when "FNA" is the wrong word, e.g. "goals analysis". Default "FNA". */
+  itemNoun?: string;
+  /** Several runs, e.g. "goals analyses". Default "FNAs". */
+  itemNounPlural?: string;
   /** The FNA just published: highlighted and scrolled into view. */
   highlightFnaId?: string;
 }
@@ -62,8 +66,14 @@ export function FNAManagementView({
   onClose,
   title,
   fnaName,
+  itemNoun,
+  itemNounPlural,
   highlightFnaId,
 }: FNAManagementViewProps) {
+  const item = itemNoun ?? 'FNA';
+  const items = itemNounPlural ?? (itemNoun ? `${itemNoun}s` : 'FNAs');
+  // "Every Retirement FNA run…", or "Every goals analysis run…".
+  const runName = itemNoun ?? fnaName;
   const [fnas, setFnas] = useState<FNASummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const highlightedRow = useRef<HTMLTableRowElement | null>(null);
@@ -142,19 +152,19 @@ export function FNAManagementView({
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-nw-ink">{title}</h2>
           <p className="mt-0.5 text-sm text-nw-text-3">
-            Every {fnaName} run for {clientName || 'this client'}.
+            Every {runName} run for {clientName || 'this client'}.
           </p>
         </div>
         <Button onClick={onCreateNew}>
           <Zap className="h-4 w-4" aria-hidden="true" />
-          Run new FNA
+          Run new {item}
         </Button>
       </div>
 
       {/* Summary Stats */}
       {!isLoading && fnas.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Total FNAs" value={fnas.length} />
+          <StatCard label={`Total ${items}`} value={fnas.length} />
           <StatCard label="Published" value={fnas.filter((f) => f.status === 'published').length} />
           <StatCard label="Drafts" value={fnas.filter((f) => f.status === 'draft').length} />
         </div>
@@ -170,13 +180,13 @@ export function FNAManagementView({
           ) : fnas.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No FNAs yet</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No {items} yet</h3>
               <p className="text-sm text-gray-600 mb-6">
-                Get started by running your first {fnaName} for this client.
+                Get started by running your first {runName} for this client.
               </p>
               <Button onClick={onCreateNew}>
                 <Zap className="mr-2 h-4 w-4" />
-                Run new FNA
+                Run new {item}
               </Button>
             </div>
           ) : (

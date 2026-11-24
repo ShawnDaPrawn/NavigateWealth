@@ -525,7 +525,7 @@ ${clientContext.beneficiaries.length > 0 ? `\nBeneficiaries:\n${clientContext.be
 - Risk Planning FNAs: ${clientContext.fnas.riskPlanning.length} sessions
 - Medical FNAs: ${clientContext.fnas.medical.length} sessions
 - Retirement FNAs: ${clientContext.fnas.retirement.length} sessions
-- Investment INAs: ${clientContext.fnas.investment.length} sessions
+- Investment goals analyses (INA): ${clientContext.fnas.investment.length} sessions
 - Tax Planning FNAs: ${clientContext.fnas.taxPlanning.length} sessions
 - Estate Planning FNAs: ${clientContext.fnas.estatePlanning.length} sessions
 
@@ -535,7 +535,7 @@ ${clientContext.fnas.medical.length > 0 ? `\n##### Medical FNAs:\n${clientContex
 
 ${clientContext.fnas.retirement.length > 0 ? `\n##### Retirement FNAs:\n${clientContext.fnas.retirement.map((fna: FnaEntry) => `- Version ${fna.version || 'N/A'}, Status: ${fna.status || 'draft'}, Created: ${fna.createdAt || 'N/A'}\n  ${JSON.stringify(fna, null, 2)}`).join('\n')}` : ''}
 
-${clientContext.fnas.investment.length > 0 ? `\n##### Investment INAs:\n${clientContext.fnas.investment.map((ina: FnaEntry) => `- Version ${ina.version || 'N/A'}, Status: ${ina.status || 'draft'}, Created: ${ina.createdAt || 'N/A'}\n  ${JSON.stringify(ina, null, 2)}`).join('\n')}` : ''}
+${clientContext.fnas.investment.length > 0 ? `\n##### Investment goals analyses (INA):\n${clientContext.fnas.investment.map((ina: FnaEntry) => `- Version ${ina.version || 'N/A'}, Status: ${ina.status || 'draft'}, Created: ${ina.createdAt || 'N/A'}\n  ${JSON.stringify(ina, null, 2)}`).join('\n')}` : ''}
 
 ${clientContext.fnas.taxPlanning.length > 0 ? `\n##### Tax Planning FNAs:\n${clientContext.fnas.taxPlanning.map((fna: FnaEntry) => `- Version ${fna.version || 'N/A'}, Status: ${fna.status || 'draft'}, Created: ${fna.createdAt || 'N/A'}\n  ${JSON.stringify(fna, null, 2)}`).join('\n')}` : ''}
 

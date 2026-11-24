@@ -121,7 +121,7 @@ describe('calculate mutation', () => {
 
     captured[0].onError?.(new Error('calc failed'));
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to calculate Investment INA');
+    expect(toast.error).toHaveBeenCalledWith('Failed to calculate the goals analysis');
   });
 });
 
@@ -155,7 +155,7 @@ describe('saveSession mutation', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['investment-ina', 'latest-published', 'c-2'],
     });
-    expect(toast.success).toHaveBeenCalledWith('Investment INA saved as draft successfully');
+    expect(toast.success).toHaveBeenCalledWith('Goals analysis saved as draft successfully');
   });
 
   it('onSuccess shows published toast when status is published', async () => {
@@ -171,7 +171,7 @@ describe('saveSession mutation', () => {
     };
     captured[1].onSuccess?.({ id: 's-1' }, variables);
 
-    expect(toast.success).toHaveBeenCalledWith('Investment INA published successfully');
+    expect(toast.success).toHaveBeenCalledWith('Goals analysis published successfully');
   });
 
   it('onError shows save toast.error for draft status', async () => {
@@ -182,7 +182,7 @@ describe('saveSession mutation', () => {
     const variables = { clientId: 'c-2', inputs: {}, results: null, status: 'draft' as const };
     captured[1].onError?.(new Error('save failed'), variables);
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to save Investment INA');
+    expect(toast.error).toHaveBeenCalledWith('Failed to save the goals analysis');
   });
 
   it('onError shows publish toast.error for published status', async () => {
@@ -198,7 +198,7 @@ describe('saveSession mutation', () => {
     };
     captured[1].onError?.(new Error('publish failed'), variables);
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to publish Investment INA');
+    expect(toast.error).toHaveBeenCalledWith('Failed to publish the goals analysis');
   });
 });
 
@@ -230,7 +230,7 @@ describe('publish mutation', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['investment-ina'],
     });
-    expect(toast.success).toHaveBeenCalledWith('Investment INA published successfully');
+    expect(toast.success).toHaveBeenCalledWith('Goals analysis published successfully');
   });
 
   it('onError shows toast.error', async () => {
@@ -240,7 +240,7 @@ describe('publish mutation', () => {
 
     captured[2].onError?.(new Error('publish failed'));
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to publish Investment INA');
+    expect(toast.error).toHaveBeenCalledWith('Failed to publish the goals analysis');
   });
 });
 
@@ -272,7 +272,7 @@ describe('unpublish mutation', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['investment-ina'],
     });
-    expect(toast.success).toHaveBeenCalledWith('Investment INA unpublished — reverted to draft');
+    expect(toast.success).toHaveBeenCalledWith('Goals analysis unpublished — reverted to draft');
   });
 
   it('onError shows toast.error', async () => {
@@ -282,7 +282,7 @@ describe('unpublish mutation', () => {
 
     captured[3].onError?.(new Error('unpublish failed'));
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to unpublish Investment INA');
+    expect(toast.error).toHaveBeenCalledWith('Failed to unpublish the goals analysis');
   });
 });
 
@@ -311,7 +311,7 @@ describe('delete mutation', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['investment-ina'],
     });
-    expect(toast.success).toHaveBeenCalledWith('Investment INA deleted');
+    expect(toast.success).toHaveBeenCalledWith('Goals analysis deleted');
   });
 
   it('onError shows toast.error', async () => {
@@ -321,6 +321,6 @@ describe('delete mutation', () => {
 
     captured[4].onError?.(new Error('delete failed'));
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to delete Investment INA');
+    expect(toast.error).toHaveBeenCalledWith('Failed to delete the goals analysis');
   });
 });

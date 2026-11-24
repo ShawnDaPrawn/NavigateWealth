@@ -20,16 +20,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { withNavigateWealthPrintTitle } from '../../../utils/pdfPrintTitle';
 import { getFNAConfig, hasFNASupport } from './fna-config';
 import { DEFAULT_SCHEMAS } from './default-schemas';
-import { calculateGoalStatus } from '../../../shared/goals';
+import { goalLinksByPolicyId, type InvestmentINASession } from '../modules/investment-ina';
 import {
-  clientGoalsQueryOptions,
   clientPoliciesQueryOptions,
   filterPoliciesForCategory,
   policySchemasQueryOptions,
   type PolicySchemaFieldRow,
 } from '../../../shared/api/clientPolicies';
 import { fnaKeys } from '../../../utils/queryKeys';
-import type { Goal } from '../../../shared/goals';
 import { PolicyComparisonPanel } from './PolicyComparisonPanel';
 import { DsButton } from '../layout/page';
 
@@ -165,7 +163,6 @@ interface OverviewSectionProps {
 }
 
 const EMPTY_POLICIES: PolicyRecord[] = [];
-const EMPTY_GOALS: Goal[] = [];
 
 /** Sections whose table splits into sub-categories, each with its own schema. */
 const COMPOSITE_SUBCATEGORIES: Record<string, readonly string[]> = {
@@ -184,14 +181,21 @@ function schemaFieldsFor(
     []) as unknown as SchemaField[];
 }
 
-/** The latest published FNA's results for a section, unwrapped per FNA type. */
-async function fetchLatestFnaResults(
+/** The latest published FNA of a section, as its API returns it. */
+async function fetchLatestPublishedFna(
   sectionId: string,
   clientId: string,
 ): Promise<Record<string, unknown> | null> {
   const fnaConfig = getFNAConfig(sectionId);
   if (!fnaConfig) return null;
-  const fnaData = await fnaConfig.getLatestPublished(clientId);
+  return fnaConfig.getLatestPublished(clientId);
+}
+
+/** A published FNA's results, unwrapped per FNA type. */
+function unwrapFnaResults(
+  sectionId: string,
+  fnaData: Record<string, unknown> | null,
+): Record<string, unknown> | null {
   if (!fnaData) return null;
   let results: unknown;
   if (sectionId === 'medical-aid') {
@@ -214,7 +218,7 @@ function OverviewSection({
   const Icon = section.icon;
   const isEmbedded = variant === 'embedded';
 
-  // Four independent reads, in parallel. They used to run one after another —
+  // Three independent reads, in parallel. They used to run one after another —
   // schema, then sub-schemas, then policies, then goals, then the FNA — so each
   // section waited for up to five Edge Function round trips (~2 s each from
   // South Africa) before it could draw. Schemas and policies come from the
@@ -223,13 +227,11 @@ function OverviewSection({
   // (shared/api/clientPolicies.ts).
   const schemasQuery = useQuery(policySchemasQueryOptions());
   const policiesQuery = useQuery(clientPoliciesQueryOptions(clientId));
-  const goalsQuery = useQuery({
-    ...clientGoalsQueryOptions<Goal>(clientId),
-    enabled: section.categoryId === 'investments',
-  });
+  // For Investments the published FNA is the goals analysis, which also says
+  // which policies fund which goal.
   const fnaQuery = useQuery({
     queryKey: [...fnaKeys.latestPublished(clientId), section.id],
-    queryFn: () => fetchLatestFnaResults(section.id, clientId),
+    queryFn: () => fetchLatestPublishedFna(section.id, clientId),
     enabled: hasFNASupport(section.id),
     staleTime: 0,
   });
@@ -256,34 +258,22 @@ function OverviewSection({
       ),
     [policiesQuery.data, section.categoryId],
   );
-  const goals = goalsQuery.data ?? EMPTY_GOALS;
-  const fnaResults = fnaQuery.data ?? null;
+  const publishedFna = fnaQuery.data ?? null;
+  const fnaResults = useMemo(
+    () => unwrapFnaResults(section.id, publishedFna),
+    [section.id, publishedFna],
+  );
   const loading = schemasQuery.isPending || policiesQuery.isPending;
   const hasError = policiesQuery.isError && !policiesQuery.data;
 
-  // Goal status for each investment policy linked to a goal
-  const linkedGoalsMap = useMemo<Record<string, LinkedGoalStatus>>(() => {
-    if (section.categoryId !== 'investments' || goals.length === 0 || policies.length === 0) {
-      return {};
-    }
-    const map: Record<string, LinkedGoalStatus> = {};
-    policies.forEach((policy) => {
-      // Find if policy is linked to any goal
-      const linkedGoal = goals.find((g) => g.linkedInvestmentIds?.includes(policy.id));
-
-      if (linkedGoal) {
-        const calc = calculateGoalStatus(linkedGoal, policies);
-        map[policy.id] = {
-          name: linkedGoal.name,
-          status: calc.status,
-          targetAmount: linkedGoal.targetAmount,
-          requiredMonthly: calc.requiredMonthlyContribution,
-          targetDate: linkedGoal.targetDate,
-        };
-      }
-    });
-    return map;
-  }, [goals, policies, section.categoryId]);
+  // The goal each investment policy funds, from the published goals analysis.
+  const linkedGoalsMap = useMemo<Record<string, LinkedGoalStatus>>(
+    () =>
+      section.categoryId === 'investments'
+        ? goalLinksByPolicyId(publishedFna as unknown as InvestmentINASession | null)
+        : {},
+    [publishedFna, section.categoryId],
+  );
 
   const formatFieldValue = (field: SchemaField, value: unknown): React.ReactNode => {
     if (!value && value !== 0) return '-';
@@ -529,7 +519,7 @@ function OverviewSection({
               {showFnaRow && fnaResults && currencyColumns.length > 0 && (
                 <TableRow className="bg-purple-50 font-bold border-t border-purple-100 text-purple-900">
                   <TableCell className="flex items-center gap-2 px-6 py-4">
-                    REQUIRED (FNA)
+                    {section.id === 'investments' ? 'REQUIRED (GOALS)' : 'REQUIRED (FNA)'}
                     <Info className="h-3 w-3 text-purple-400" />
                   </TableCell>
                   {structure.map((field) => {
@@ -699,7 +689,7 @@ function OverviewSection({
           </span>
           {hasFNASupport(section.id) && (
             <DsButton size="sm" onClick={onRunFNA}>
-              Open FNA
+              {section.id === 'investments' ? 'Open goals' : 'Open FNA'}
             </DsButton>
           )}
           <DsButton size="sm" variant="primary" onClick={onAddPolicy}>

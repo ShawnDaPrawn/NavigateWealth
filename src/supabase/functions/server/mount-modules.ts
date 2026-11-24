@@ -72,7 +72,6 @@ export function mountModuleRoutes(app: Hono) {
   lazy(app, '/tasks', () => import('./tasks-routes.ts'));
   lazy(app, '/task-checklists', () => import('./tasks-checklist-routes.ts'));
   lazy(app, '/task-comments', () => import('./task-comments-routes.ts'));
-  lazy(app, '/goals', () => import('./goal-routes.ts'));
   lazy(app, '/contact-form', () => import('./contact-form-routes.ts'));
   lazy(app, '/quote-request', () => import('./quote-request-routes.ts'));
   lazy(app, '/client-portal', () => import('./client-portal-routes.ts'));
