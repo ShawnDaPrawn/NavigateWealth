@@ -20,7 +20,7 @@ interface SigningCompletePageProps {
 }
 
 export function SigningCompletePage({ sessionData, onClose, token }: SigningCompletePageProps) {
-  const { isDownloading, handleDownload } = useSignedCopyDownload({ sessionData, token });
+  const { isDownloading, handleDownload, notice } = useSignedCopyDownload({ sessionData, token });
   const [_showConfetti, setShowConfetti] = useState(true);
 
   useEffect(() => {
@@ -207,10 +207,26 @@ export function SigningCompletePage({ sessionData, onClose, token }: SigningComp
                 </Button>
               </motion.div>
 
+              {notice ? (
+                <p
+                  role={notice.tone === 'error' ? 'alert' : 'status'}
+                  className={`text-sm ${notice.tone === 'error' ? 'text-red-700' : 'text-gray-600'}`}
+                >
+                  {notice.text}
+                </p>
+              ) : null}
+
               {/* Footer */}
-              <div className="pt-4 border-t">
+              <div className="pt-4 border-t space-y-1">
                 <p className="text-xs text-gray-400">
                   If you have any questions about this document, please contact the sender directly.
+                </p>
+                <p className="text-xs text-gray-500">
+                  Received a signed copy?{' '}
+                  <a href="/verify" className="text-indigo-600 underline">
+                    Verify that it is authentic
+                  </a>
+                  .
                 </p>
               </div>
             </div>

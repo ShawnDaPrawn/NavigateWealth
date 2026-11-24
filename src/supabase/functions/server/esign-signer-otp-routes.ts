@@ -19,6 +19,7 @@ import {
   clearOTP,
   generateAndStoreOTP,
   verifyAccessCode,
+  OTP_VALID_MINUTES,
 } from './esign-otp.ts';
 import { createOTPEmail } from './esign-email-templates.ts';
 import { sendEmail } from './email-service.ts';
@@ -175,7 +176,7 @@ app.post(
         signerName: signer.name,
         otp,
         envelopeTitle,
-        expiresInMinutes: 15,
+        expiresInMinutes: OTP_VALID_MINUTES,
       });
 
       const emailSent = await sendEmail({

@@ -33,6 +33,7 @@ import {
   fmtShort,
   fmtTime,
   makeSanitiser,
+  roundedRectPath,
   legalParagraphs,
   sast,
   signerIdentityRows,
@@ -40,7 +41,11 @@ import {
 } from './esign-certificate-format.ts';
 import type { Run } from './esign-certificate-format.ts';
 
-type Fonts = { regular: PDFFont; bold: PDFFont; mono: PDFFont };
+/**
+ * `serif` carries the restyle's display headings (Newsreader on the site):
+ * standard Times, so no font file is embedded and pagination is unchanged.
+ */
+type Fonts = { regular: PDFFont; bold: PDFFont; mono: PDFFont; serif: PDFFont };
 
 // ============================================================================
 // DATA THE RENDERER NEEDS
@@ -135,11 +140,14 @@ const PAGE_H = 841.89;
 const MX = 36; // side margin (48px)
 const CW = PAGE_W - MX * 2; // content width
 const TOP = 30; // top padding (40px)
-const BAND_H = 4.5; // violet band (6px)
+const BAND_H = 3; // ink band (4px), as on the restyled cards and emails
 const HEADER_BOTTOM = 70; // y of the header rule
 const FOOTER_TOP = PAGE_H - 24 - 26.5 - 9; // y of the footer rule
 const CONTENT_BOTTOM = FOOTER_TOP - 14; // lowest y content may reach
-const RADIUS = 9; // card radius (12px)
+const RADIUS = 3; // card radius (4px, --nw-r-sm)
+/** Eyebrow labels: 11.5px uppercase at 0.14em tracking, after a 24px rule. */
+const EYEBROW_SIZE = 8.6;
+const EYEBROW_TRACK = 0.14;
 
 // ============================================================================
 // RENDERER
@@ -156,6 +164,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     regular: await doc.embedFont(StandardFonts.Helvetica),
     bold: await doc.embedFont(StandardFonts.HelveticaBold),
     mono: await doc.embedFont(StandardFonts.Courier),
+    serif: await doc.embedFont(StandardFonts.TimesRoman),
   };
   const clean = makeSanitiser(fonts.regular);
 
@@ -199,6 +208,33 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     text(str, right - font.widthOfTextAtSize(str, size), top, size, font, color);
   };
 
+  /** Uppercase, letter-spaced text — pdf-lib has no character spacing. */
+  const tracked = (
+    s: string,
+    x: number,
+    top: number,
+    size: number,
+    font: PDFFont,
+    color: RGB,
+    track = EYEBROW_TRACK,
+  ) => {
+    let cx = x;
+    for (const ch of clean(s.toUpperCase())) {
+      page.drawText(ch, { x: cx, y: PAGE_H - top - size * 0.8, size, font, color });
+      cx += font.widthOfTextAtSize(ch, size) + size * track;
+    }
+  };
+
+  const trackedRight = (s: string, right: number, top: number, size: number, color: RGB) => {
+    const str = clean(s.toUpperCase());
+    const w = fonts.bold.widthOfTextAtSize(str, size) + (str.length - 1) * size * EYEBROW_TRACK;
+    tracked(str, right - w, top, size, fonts.bold, color);
+  };
+
+  /** Field and column labels: small tracked capitals in the muted ink. */
+  const label = (s: string, x: number, top: number, size = 9) =>
+    tracked(s, x, top + (size - 8.25) / 2, 8.25, fonts.bold, C.text3, 0.08);
+
   const rect = (x: number, top: number, w: number, h: number, color: RGB) =>
     page.drawRectangle({ x, y: PAGE_H - top - h, width: w, height: h, color });
 
@@ -226,23 +262,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     h: number,
     opts: { fill?: RGB; border?: RGB; r?: number; corners?: [boolean, boolean, boolean, boolean] },
   ) => {
-    const r = Math.min(opts.r ?? RADIUS, h / 2, w / 2);
-    const [tl, tr, br, bl] = opts.corners ?? [true, true, true, true];
-    const k = 0.5523 * r;
-    const p = [
-      `M ${tl ? r : 0} 0`,
-      `L ${tr ? w - r : w} 0`,
-      tr ? `C ${w - r + k} 0 ${w} ${r - k} ${w} ${r}` : '',
-      `L ${w} ${br ? h - r : h}`,
-      br ? `C ${w} ${h - r + k} ${w - r + k} ${h} ${w - r} ${h}` : '',
-      `L ${bl ? r : 0} ${h}`,
-      bl ? `C ${r - k} ${h} 0 ${h - r + k} 0 ${h - r}` : '',
-      `L 0 ${tl ? r : 0}`,
-      tl ? `C 0 ${r - k} ${r - k} 0 ${r} 0` : '',
-      'Z',
-    ]
-      .filter(Boolean)
-      .join(' ');
+    const p = roundedRectPath(w, h, Math.min(opts.r ?? RADIUS, h / 2, w / 2), opts.corners);
     page.drawSvgPath(p, {
       x,
       y: PAGE_H - top,
@@ -287,7 +307,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
   const newPage = () => {
     page = doc.addPage([PAGE_W, PAGE_H]);
     pages.push(page);
-    rect(0, 0, PAGE_W, BAND_H, C.violet);
+    rect(0, 0, PAGE_W, BAND_H, C.ink);
     if (logo) {
       const h = 16.5;
       const w = (CERTIFICATE_LOGO_SIZE.width / CERTIFICATE_LOGO_SIZE.height) * h;
@@ -303,12 +323,11 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
         C.violet,
       );
     }
-    textRight(
+    trackedRight(
       pages.length === 1 ? 'Certificate ID' : 'Certificate of completion · Certificate ID',
       PAGE_W - MX,
-      TOP,
-      9,
-      fonts.bold,
+      TOP + 1,
+      EYEBROW_SIZE,
       C.text3,
     );
     textRight(data.certificate_id, PAGE_W - MX, TOP + 13, 9, fonts.mono, C.ink3);
@@ -330,7 +349,13 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
         fonts.regular,
         C.text2,
       );
-      textRight(`Page ${i + 1} of ${total}`, PAGE_W - MX, FOOTER_TOP + 21.75, 9, fonts.bold, C.ink);
+      trackedRight(
+        `Page ${i + 1} of ${total}`,
+        PAGE_W - MX,
+        FOOTER_TOP + 22.25,
+        EYEBROW_SIZE,
+        C.ink,
+      );
     });
   };
 
@@ -338,8 +363,14 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     if (y + h > CONTENT_BOTTOM) newPage();
   };
 
+  /** The restyle's eyebrow: a short ink rule, then the title in tracked capitals. */
+  const eyebrow = (title: string, x: number, top: number, color: RGB = C.ink3) => {
+    hline(x, x + 18, top + EYEBROW_SIZE * 0.45, C.ink, 0.75);
+    tracked(title, x + 25.5, top, EYEBROW_SIZE, fonts.bold, color);
+  };
+
   const sectionHeading = (title: string, size = 11.25) => {
-    text(title, MX, y, size, fonts.bold, C.ink);
+    eyebrow(title, MX, y + (size - EYEBROW_SIZE) / 2);
     y += size + 9;
   };
 
@@ -364,7 +395,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     const size = 9.75;
     const pw = fonts.bold.widthOfTextAtSize(label, size) + 9 + 10 + 4.5;
     const px = PAGE_W - MX - pw;
-    rounded(px, y, pw, 19.5, { fill: C.green50, r: 9.75 });
+    rounded(px, y, pw, 19.5, { fill: C.green50, border: C.green, r: RADIUS });
     check(px + 13, y + 10, 3.4, C.green, 1.6);
     text(label, px + 19.5, y + (19.5 - size) / 2, size, fonts.bold, C.green);
     const n = signers.length;
@@ -381,7 +412,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
   // Title block
   {
     const maxW = CW - 120;
-    text('Certificate of completion', MX, y, 21, fonts.bold, C.ink);
+    text('Certificate of completion', MX, y - 1.5, 24, fonts.serif, C.ink);
     y += 27 + 4.5;
     const titleLines = wrap(data.title, fonts.regular, 11.25, maxW, C.ink2);
     drawLines(titleLines, MX, y, 11.25, 16.5);
@@ -473,7 +504,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
       r.cells.forEach((c, j) => {
         const cx = MX + j * colW;
         if (j === 1) vline(cx, ry, ry + r.h);
-        text(c.label, cx + PADX, ry + PADY, 9, fonts.bold, C.text3);
+        label(c.label, cx + PADX, ry + PADY);
         drawLines(r.lines[j], cx + PADX, ry + PADY + 12, c.mono ? 9.4 : 10, 14.25);
       });
       ry += r.h;
@@ -496,7 +527,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
       },
     );
     check(sx + 6.9, sy + 6.9, 2.6, C.green, 1.3);
-    text('Document integrity', MX + 19.5, y, 11.25, fonts.bold, C.ink);
+    eyebrow('Document integrity', MX + 19.5, y + (11.25 - EYEBROW_SIZE) / 2);
     y += 11.25 + 9;
 
     const PADX = 13.5;
@@ -543,7 +574,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     let ry = y;
     built.forEach((r, i) => {
       if (i > 0) hline(MX + 0.5, MX + CW - 0.5, ry, C.line2);
-      text(r.label, MX + PADX, ry + PADY, 9, fonts.bold, C.text3);
+      label(r.label, MX + PADX, ry + PADY);
       drawLines(r.lines, MX + PADX, ry + PADY + 12, r.size, 14.25);
       ry += r.h;
     });
@@ -569,7 +600,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
       rounded(MX, y, CW, HEAD_H, { fill: C.subtle, corners: [true, true, false, false] });
       let cx = MX;
       for (const c of cols) {
-        text(c.label, cx + PADX, y + (HEAD_H - 9) / 2, 9, fonts.bold, C.text3);
+        label(c.label, cx + PADX, y + (HEAD_H - 9) / 2);
         cx += c.w;
       }
       hline(MX, MX + CW, y + HEAD_H);
@@ -647,7 +678,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
   // ════════════════════════════════════════════════════════════════════════
 
   newPage();
-  text('Signer evidence', MX, y, 16.5, fonts.bold, C.ink);
+  text('Signer evidence', MX, y - 1, 19.5, fonts.serif, C.ink);
   y += 22.5;
   text(
     'Identity, authentication, consent and device details recorded for each signer, in signing order.',
@@ -768,7 +799,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
       const pw = fonts.bold.widthOfTextAtSize(clean(label), size) + 8.25 + 9 + 4.5;
       const px = MX + CW - PADX - pw;
       const py = top + (HEAD - 18) / 2;
-      rounded(px, py, pw, 18, { fill: C.green50, r: 9 });
+      rounded(px, py, pw, 18, { fill: C.green50, border: C.green, r: RADIUS });
       check(px + 11.5, py + 9, 3, C.green, 1.5);
       text(label, px + 17.25, py + (18 - size) / 2, size, fonts.bold, C.green);
     }
@@ -776,9 +807,9 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
 
     // Body: signature
     let by = top + HEAD + 10.5;
-    text('Signature', MX + PADX, by, 9, fonts.bold, C.text3);
+    label('Signature', MX + PADX, by);
     const boxTop = by + 16.5;
-    rounded(MX + PADX, boxTop, LEFT_W, SIG_BOX, { fill: C.subtle, border: C.line, r: 6 });
+    rounded(MX + PADX, boxTop, LEFT_W, SIG_BOX, { fill: C.subtle, border: C.line, r: RADIUS });
     let drewSignature = false;
     const sig = s.signature_data;
     if (sig && sig.startsWith('data:image/')) {
@@ -834,7 +865,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     // Body: identity rows
     by = top + HEAD + 10.5;
     for (const r of idBuilt) {
-      text(r.l, rightX, by + (LH - 9.4) / 2, 9.4, fonts.bold, C.text3);
+      label(r.l, rightX, by + (LH - 9.4) / 2, 9.4);
       drawLines(r.lines, rightX + LABEL_W, by, 9.4, LH);
       by += r.lines.length * LH + 1.5;
     }
@@ -869,13 +900,13 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     ];
     dev.forEach(([l, v, mono], i) => {
       const dx = MX + PADX + i * dcol;
-      text(l, dx, dTop + 7.5, 9, fonts.bold, C.text3);
+      label(l, dx, dTop + 7.5);
       const line = wrap(v, mono ? fonts.mono : fonts.regular, mono ? 9 : 9.4, dcol - 9)[0] ?? [];
       drawLines([line], dx, dTop + 7.5 + 12, mono ? 9 : 9.4, 13.5);
     });
     if (ua) {
       const uy = dTop + 7.5 + 12 + 13.5 + 6;
-      text('User agent', MX + PADX, uy, 9, fonts.bold, C.text3);
+      label('User agent', MX + PADX, uy);
       uaLines.forEach((ln, i) =>
         ln.forEach((r) =>
           text(r.text, MX + PADX, uy + 12 + i * 12 + 1.5, 8.6, r.font, r.color ?? C.ink3),
@@ -889,7 +920,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
 
   if (overflow.length) {
     ensure(11.25 + 9 + 30);
-    text('Signer evidence in full', MX, y, 11.25, fonts.bold, C.ink);
+    eyebrow('Signer evidence in full', MX, y + (11.25 - EYEBROW_SIZE) / 2);
     y += 11.25 + 9;
     for (const o of overflow) {
       const lines = wrap(o.text, o.mono ? fonts.mono : fonts.regular, 9.4, CW, C.ink2);
@@ -910,7 +941,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
   // ════════════════════════════════════════════════════════════════════════
 
   newPage();
-  text('Audit trail', MX, y, 16.5, fonts.bold, C.ink);
+  text('Audit trail', MX, y - 1, 19.5, fonts.serif, C.ink);
   y += 22.5;
   {
     const intro = wrap(
@@ -958,7 +989,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
       rounded(MX, y, CW, HEAD_H, { fill: C.subtle, corners: [true, true, false, false] });
       let cx = MX;
       for (const c of cols) {
-        text(c.label, cx + PADX, y + (HEAD_H - 9) / 2, 9, fonts.bold, C.text3);
+        label(c.label, cx + PADX, y + (HEAD_H - 9) / 2);
         cx += c.w;
       }
       hline(MX, MX + CW, y + HEAD_H);
@@ -1009,7 +1040,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
           close();
           textRight('Continued on the next page', PAGE_W - MX, y + 6, 9, fonts.regular, C.text2);
           newPage();
-          text('Audit trail (continued)', MX, y, 13.5, fonts.bold, C.ink);
+          text('Audit trail (continued)', MX, y - 0.5, 15, fonts.serif, C.ink);
           y += 13.5 + 10.5;
           head();
           dayRow(e.at);
@@ -1068,7 +1099,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     const lines = wrap(data.consent.text, fonts.regular, 9.75, CW - PAD * 2, C.ink2);
     const boxH = PAD * 2 - 3 + lines.length * 15;
     ensure(11.25 + 4.5 + 12 + 6 + boxH);
-    text('Consent to sign electronically', MX, y, 11.25, fonts.bold, C.ink);
+    eyebrow('Consent to sign electronically', MX, y + (11.25 - EYEBROW_SIZE) / 2);
     y += 11.25 + 4.5;
     text(
       `Version ${data.consent.id} · shown to each signer, word for word, before they could sign`,
@@ -1102,7 +1133,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
       ),
     );
     ensure(11.25 + 6 + built[0].length * 13.5);
-    text('Legal basis and record keeping', MX, y, 11.25, fonts.bold, C.ink);
+    eyebrow('Legal basis and record keeping', MX, y + (11.25 - EYEBROW_SIZE) / 2);
     y += 11.25 + 7.5;
     for (const lines of built) {
       ensure(lines.length * 13.5);
@@ -1120,7 +1151,7 @@ export async function renderCertificatePdf(data: CertificateData): Promise<Uint8
     const ih = 15 + issued.length * 12.75;
     ensure(ih + 6);
     y += 4.5;
-    rounded(MX, y, CW, ih, { fill: C.bg, r: 6 });
+    rounded(MX, y, CW, ih, { fill: C.bg, r: RADIUS });
     drawLines(issued, MX + 10.5, y + 7.5, 9, 12.75);
     y += ih;
   }

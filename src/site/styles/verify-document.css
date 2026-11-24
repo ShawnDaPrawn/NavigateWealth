@@ -632,3 +632,10 @@
 .nw-site .nwvd-privacy-icon {
   flex-shrink: 0;
 }
+
+.nw-site .nwvd-cell-note {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--nw-muted);
+}

@@ -11,6 +11,8 @@ import { VerifyDocumentIcon } from './VerifyDocumentIcons';
 export interface VerificationResult {
   verified: boolean;
   matchType?: 'original' | 'signed';
+  /** The sealed copy, carrying Navigate Wealth's tamper-evident digital seal. */
+  sealed?: boolean;
   envelope?: {
     id: string;
     title: string;
@@ -110,6 +112,15 @@ export function VerifyDocumentVerified({ result, hash, fileLabel, onReset }: Ver
             <div className="nwvd-cell">
               <p className="nwvd-cell-label">Completed</p>
               <p className="nwvd-cell-value">{formatVerifyDate(envelope.completedAt)}</p>
+            </div>
+            <div className="nwvd-cell nwvd-cell--wide">
+              <p className="nwvd-cell-label">Reference</p>
+              <p className="nwvd-cell-value nw-mono">{envelope.id}</p>
+              <p className="nwvd-cell-note">
+                {result.sealed
+                  ? 'Matches the envelope reference on the certificate of completion. This copy carries Navigate Wealth’s digital seal — Adobe Reader shows it in the Signature Panel.'
+                  : 'Matches the envelope reference on the certificate of completion.'}
+              </p>
             </div>
           </div>
         </div>

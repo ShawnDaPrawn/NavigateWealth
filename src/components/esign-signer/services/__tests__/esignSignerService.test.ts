@@ -107,8 +107,14 @@ describe('submitSignature', () => {
   ] as unknown as SignatureData[];
 
   it('posts the signature + field-value payloads on success', async () => {
-    fetchResolving({});
-    expect(await esignSignerService.submitSignature('tok', sigs)).toEqual({ success: true });
+    fetchResolving({ envelope_complete: true, download_token: 'dl_abc' });
+    // The download grant is passed through: the signing token is rotated on
+    // submit, so it is the completion screen's only key to the signed copy.
+    expect(await esignSignerService.submitSignature('tok', sigs)).toEqual({
+      success: true,
+      envelope_complete: true,
+      download_token: 'dl_abc',
+    });
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/signer/submit'),
       expect.objectContaining({ method: 'POST' }),

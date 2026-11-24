@@ -121,6 +121,7 @@ interface Server {
 }
 
 let calls: Call[] = [];
+const DOWNLOAD_GRANT = 'dl_test-grant';
 
 function startServer(server: Server) {
   calls = [];
@@ -152,6 +153,11 @@ function startServer(server: Server) {
     if (ep === 'kba') {
       const r = server.kba?.() ?? { status: 200, body: { success: true, status: 'passed' } };
       return reply(r.status, r.body);
+    }
+    if (ep === 'submit') {
+      // As the server answers the final signer: the envelope is complete and,
+      // because submit rotates the signing token, a download-only grant.
+      return reply(200, { success: true, envelope_complete: true, download_token: DOWNLOAD_GRANT });
     }
     return reply(200, { success: true });
   });
@@ -406,7 +412,9 @@ describe('the Navigator signing page sends exactly what the live page sends', ()
     });
     const download = nav.find((c) => c.url.includes('/signer/download/'))!;
     expect(download).toEqual({
-      url: `${API}/signer/download/${TOKEN}`,
+      // The grant from the submit response — the signing token is rotated on
+      // submit, so downloading with it answered 404 (incident 2026-11-23).
+      url: `${API}/signer/download/${DOWNLOAD_GRANT}`,
       method: 'GET',
       headers: { Authorization: 'Bearer anon' },
       body: null,

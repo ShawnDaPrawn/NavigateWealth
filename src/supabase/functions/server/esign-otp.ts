@@ -236,6 +236,29 @@ export async function generateAndStoreOTP(
   }
 }
 
+/** Minutes a code stays valid — what the emails must quote. */
+export const OTP_VALID_MINUTES = OTP_EXPIRY_MINUTES;
+
+/**
+ * True when a still-valid code was issued for this signer within `withinMs`.
+ *
+ * Opening the signing link sends a code automatically. A refresh, a second
+ * tab or React re-running the validation would otherwise mail a fresh code
+ * each time and invalidate the one the signer is already typing in.
+ */
+export async function hasRecentOTP(signerId: string, withinMs: number): Promise<boolean> {
+  try {
+    const otpData: OTPData | null = await kv.get(`esign:otp:${signerId}`);
+    if (!otpData) return false;
+    const now = Date.now();
+    const created = Date.parse(otpData.createdAt);
+    const expires = Date.parse(otpData.expiresAt);
+    return now < expires && now - created < withinMs;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Clean up expired OTPs (run periodically)
  * This can be called by a cron job or periodically

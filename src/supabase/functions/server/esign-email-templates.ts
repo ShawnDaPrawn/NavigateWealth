@@ -198,11 +198,11 @@ export function createEnvelopeCompleteEmail(params: EnvelopeCompleteParams): {
     '</tbody>' +
     '</table>' +
     '<p>A copy of the fully executed document with a completion certificate is attached to this email. You can also access it from your portal.</p>' +
-    '<div style="margin-top:20px;padding:12px 16px;background:#f3f4f6;border-radius:8px;border-left:3px solid #7c3aed;">' +
+    '<div style="margin-top:20px;padding:12px 16px;background:#f3f4f6;border-radius:8px;border-left:3px solid #6d28d9;">' +
     '<p style="margin:0;font-size:13px;color:#4b5563;">' +
-    '<strong style="color:#7c3aed;">Verify this document</strong><br>' +
+    '<strong style="color:#6d28d9;">Verify this document</strong><br>' +
     'You can independently verify the integrity of the attached PDF at any time by uploading it to our ' +
-    '<a href="https://www.navigatewealth.co/verify" style="color:#7c3aed;text-decoration:underline;">Document Verification</a> page.' +
+    '<a href="https://www.navigatewealth.co/verify" style="color:#6d28d9;text-decoration:underline;">Document Verification</a> page.' +
     '</p></div>';
 
   const html = createEmailTemplate(bodyHtml, {
@@ -275,11 +275,11 @@ export function createSigningCompleteEmail(params: SigningCompleteParams): {
     '</strong>.</p>' +
     certNote +
     '<p>A copy of the completed document is attached to this email for your records.</p>' +
-    '<div style="margin-top:20px;padding:12px 16px;background:#f3f4f6;border-radius:8px;border-left:3px solid #7c3aed;">' +
+    '<div style="margin-top:20px;padding:12px 16px;background:#f3f4f6;border-radius:8px;border-left:3px solid #6d28d9;">' +
     '<p style="margin:0;font-size:13px;color:#4b5563;">' +
-    '<strong style="color:#7c3aed;">Verify this document</strong><br>' +
+    '<strong style="color:#6d28d9;">Verify this document</strong><br>' +
     'You can independently verify the integrity of the attached PDF at any time by uploading it to our ' +
-    '<a href="https://www.navigatewealth.co/verify" style="color:#7c3aed;text-decoration:underline;">Document Verification</a> page.' +
+    '<a href="https://www.navigatewealth.co/verify" style="color:#6d28d9;text-decoration:underline;">Document Verification</a> page.' +
     '</p></div>';
 
   const html = createEmailTemplate(bodyHtml, {

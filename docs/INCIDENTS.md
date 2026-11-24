@@ -14,6 +14,41 @@ that changes behaviour next time. An entry without a lesson is just a story.
 
 events that future agents could repeat.
 
+### 2026-11-23 - E-Sign Completion Silently Lost: Signed Copy Never Built, Nobody Emailed
+
+- **Symptom:** a client signed envelope `e4202ae5`. The envelope was marked
+  `completed`, but no signed PDF was ever built and neither the client nor
+  the adviser was emailed. "Download Copy" on the completion screen did
+  nothing, and no PIN arrived until the signer pressed "resend".
+- **Cause 1, completion:** the completion queue was drained only by a
+  `setInterval` tick in `esign-scheduler.ts`. The tick fired about 10 s after
+  the submit response, in an isolate with no open request, and the runtime
+  dropped it (`shutdown`, reason `EarlyDrop`, CPU only 1.3 s) two seconds into
+  `completeEnvelope`. That was after the status flip and before the seal or
+  any email. The queue deleted each job _before_ working it, so nothing
+  retried, and an orphaned in-flight key blocked any re-enqueue.
+- **Cause 2, download:** submit rotates the signer's token (single-use
+  links), and the completion screen downloaded with the old one, so every
+  press got a 404, which the hook swallowed.
+- **Cause 3, PIN:** the OTP auto-send in `POST /signer/validate` sat after
+  the `missing_factors` early return. That return is taken by every signer who
+  needs a PIN, so the auto-send never ran for anyone.
+- **Why not caught:** tests mock `enqueueCompletion`, and no test exercises
+  the runtime dropping an idle isolate. No test opened a link for a
+  PIN-required signer and checked that an email went out.
+- **Fix:** the submit route now kicks the drain under `EdgeRuntime.waitUntil`
+  (`kickCompletionDrain`). Jobs are leased, not deleted, so a dropped isolate's
+  job is retried when its lease expires. `completeEnvelope` is idempotent
+  (`completion_notified_at`). Submit returns a download-only grant. The auto-send
+  moved ahead of the early return, with a 60 s reuse guard. Tests:
+  `esign-completion-queue.test.ts` and
+  `esign-signer-access-otp-download.test.ts`.
+- **Lesson:** on Supabase Edge, work after the response must be held open by
+  `EdgeRuntime.waitUntil`. A `setInterval` is a backstop at best, never the
+  primary path. Any queue on this runtime must survive its worker vanishing
+  mid-job: lease, don't delete. And code after an early `return` deserves a
+  test that proves it runs.
+
 ### 2026-11-17 - Merged E-Sign Fixes (#517) Sat Undeployed: Supabase Deploy API Answered 500 Twelve Times
 
 - **Symptom:** `Deploy Supabase Edge Function` run 309 (#517, `45ad0fb`)

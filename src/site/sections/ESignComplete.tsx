@@ -27,7 +27,7 @@ interface ESignCompleteProps {
 }
 
 export function ESignComplete({ sessionData, token, onClose }: ESignCompleteProps) {
-  const { isDownloading, handleDownload } = useSignedCopyDownload({ sessionData, token });
+  const { isDownloading, handleDownload, notice } = useSignedCopyDownload({ sessionData, token });
 
   return (
     <div className="nw-site nwes">
@@ -112,8 +112,20 @@ export function ESignComplete({ sessionData, token, onClose }: ESignCompleteProp
               </HomeLink>
             </div>
 
+            {notice ? (
+              <p
+                role={notice.tone === 'error' ? 'alert' : 'status'}
+                className={`nwes-done-notice${notice.tone === 'error' ? ' nwes-done-notice--error' : ''}`}
+              >
+                {notice.text}
+              </p>
+            ) : null}
+
             <p className="nwes-done-foot">
               If you have any questions about this document, please contact the sender directly.
+            </p>
+            <p className="nwes-done-verify">
+              Received a signed copy? <a href="/verify">Verify that it is authentic</a>.
             </p>
           </div>
         </div>

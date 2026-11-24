@@ -109,6 +109,8 @@ export function useSignerSession() {
           setSessionData({
             ...sessionData,
             signer_status: 'signed',
+            download_token: result.download_token ?? null,
+            envelope_complete: result.envelope_complete,
           });
         }
       } else {

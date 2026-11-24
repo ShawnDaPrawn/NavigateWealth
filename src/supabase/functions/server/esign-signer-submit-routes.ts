@@ -20,6 +20,7 @@ import {
   updateFieldValue,
   checkEnvelopeCompletion,
   rotateSignerToken,
+  issueSignerDownloadGrant,
   logAuditEvent,
 } from './esign-services.ts';
 import { createSigningInviteEmail } from './esign-email-templates.ts';
@@ -31,7 +32,7 @@ import {
 } from './esign-notification-prefs.ts';
 import { emitWebhookEvent } from './webhook-service.ts';
 import { enqueue as enqueueInAppNotification } from './esign-inapp-notifications.ts';
-import { enqueueCompletion } from './esign-completion-queue.ts';
+import { enqueueCompletion, kickCompletionDrain } from './esign-completion-queue.ts';
 import {
   assertActiveSigningState,
   assertSignerFieldOwnership,
@@ -149,6 +150,14 @@ app.post(
       } catch {
         /* best-effort */
       }
+      // The rotation above kills the token the completion screen holds, so
+      // hand it a download-only grant for the signed copy instead.
+      let downloadToken: string | null = null;
+      try {
+        downloadToken = await issueSignerDownloadGrant(signer.id, signer.envelope_id);
+      } catch {
+        /* best-effort — the signed copy is also emailed */
+      }
 
       // Log audit event
       await logAuditEvent({
@@ -171,6 +180,11 @@ app.post(
         // signer request returns immediately; the UI observes a
         // `completing` envelope until the drainer finishes.
         await enqueueCompletion(signer.envelope_id);
+        // Run the drain NOW, held open by EdgeRuntime.waitUntil. Leaving it
+        // to the scheduler's interval tick lost the job on 2026-11-23: the
+        // tick fired after this response, in an isolate the runtime then
+        // dropped as idle, so no signed copy was built and nobody was mailed.
+        kickCompletionDrain();
 
         await logAuditEvent({
           envelopeId: signer.envelope_id,
@@ -361,6 +375,7 @@ app.post(
         envelope_complete: isComplete,
         envelope_id: signer.envelope_id,
         envelope_title: envelope?.title,
+        download_token: downloadToken,
       });
     } catch (error: unknown) {
       log.error('❌ Submit signature error:', error);
