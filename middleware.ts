@@ -37,6 +37,21 @@ export const config = {
   ],
 };
 
+/**
+ * MCP servers and their OAuth discovery documents, which vercel.json rewrites
+ * to the edge function or a static JSON file. They are not pages, so the 404
+ * check below must never answer them. MCP clients send GETs here (the
+ * discovery documents, and the server's event stream), so a page-style 404
+ * breaks the connection.
+ *
+ * Matched by prefix, not by an exact list: on 2026-11-25 the exact list named
+ * only broker-operations, so every GET for the then-new password-vault server
+ * got the 404 page and Claude's connector failed straight after signing in.
+ */
+export function isMcpOrOAuthPath(pathname: string): boolean {
+  return pathname.startsWith('/mcp/') || pathname.startsWith('/.well-known/oauth-');
+}
+
 export default async function middleware(request: Request): Promise<Response | undefined> {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return undefined; // continue to normal routing
@@ -44,14 +59,7 @@ export default async function middleware(request: Request): Promise<Response | u
 
   const { pathname } = new URL(request.url);
 
-  if (
-    [
-      '/mcp/broker-operations',
-      '/.well-known/oauth-protected-resource/mcp/broker-operations',
-      '/.well-known/oauth-authorization-server',
-    ].includes(pathname)
-  )
-    return undefined;
+  if (isMcpOrOAuthPath(pathname)) return undefined;
 
   if (shouldReturnNotFound(pathname, manifest as SeoRouteManifest)) {
     // Serve the prerendered 404 shell with a real 404 status (not a soft 200).
