@@ -26,7 +26,8 @@ import {
   type VaultEntry,
 } from './repositories/password-vault.ts';
 import { approvals, type StoredConnection } from './repositories/vault-store.ts';
-import { authenticateVaultConnection } from './vault-connections.ts';
+import { authenticateVaultConnection, VAULT_TOKEN_PREFIX } from './vault-connections.ts';
+import { createModuleLogger } from './stderr-logger.ts';
 import { isHostedAssistantOrigin } from './broker-ops-origin.ts';
 import { canSee, passwordMode, reachesService } from './vault-policy.ts';
 import { consume, publicApproval, requestApproval } from './vault-approvals.ts';
@@ -34,6 +35,7 @@ import { recordEvent } from './vault-events.ts';
 import { allServices, allSkills, renderSkillsFor, skillsFor } from './vault-skills.ts';
 import { totp } from './vault-totp.ts';
 
+const log = createModuleLogger('vault-mcp');
 const app = new Hono<{ Variables: { conn: StoredConnection } }>();
 const versions = ['2025-11-25', '2025-06-18', '2025-03-26'];
 const rpc = z.object({
@@ -46,6 +48,25 @@ class ToolError extends Error {}
 
 async function requireVaultConnection(c: Context, next: Next) {
   c.header('Cache-Control', 'no-store');
+  const header = c.req.header('Authorization') ?? '';
+  const auth = await authenticateVaultConnection(header);
+  // Never the token itself: only whether one came and its scheme and kind.
+  log.info('Vault MCP request', {
+    method: c.req.method,
+    // Allowlisted: a bare token sent without a scheme must never reach the log.
+    scheme: /^Bearer /i.test(header)
+      ? 'Bearer'
+      : /^Basic /i.test(header)
+        ? 'Basic'
+        : header
+          ? 'other'
+          : 'none',
+    vaultToken: header.startsWith('Bearer ' + VAULT_TOKEN_PREFIX),
+    outcome: auth.ok ? 'ok' : auth.reason,
+    protocolVersion: c.req.header('MCP-Protocol-Version') ?? null,
+    accept: c.req.header('Accept') ?? null,
+    origin: c.req.header('Origin') ?? null,
+  });
   const origin = c.req.header('Origin');
   if (
     origin &&
@@ -63,7 +84,6 @@ async function requireVaultConnection(c: Context, next: Next) {
     );
     return c.json({ error: message }, status);
   };
-  const auth = await authenticateVaultConnection(c.req.header('Authorization') ?? '');
   if (!auth.ok)
     return auth.reason === 'paused'
       ? unauthorized('This agent is paused by a super admin.', 403)
