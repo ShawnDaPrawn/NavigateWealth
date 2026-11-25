@@ -35,16 +35,29 @@ export const clientInput = z.object({
     })
     .or(z.literal('')),
 });
+/**
+ * The authorize request as the AI tool sent it. Only what the code exchange
+ * depends on is strict. `scope` and `resource` are free-form here because
+ * clients differ in what they send: the first real Claude sign-in (2026-11-24)
+ * failed this schema when both were exact enums. A scope is a space-separated
+ * list (RFC 6749 §3.3) that a client may copy from either metadata document, and
+ * the issued token's scope is fixed by the client's kind anyway. `resource` is
+ * compared with the client's own server in `consentTarget`, where a mismatch can
+ * be explained.
+ */
 export const oauthInput = z.object({
-  client_id: z.uuid(),
+  client_id: z.string().trim().pipe(z.uuid()),
   redirect_uri: z.string().max(2048),
-  state: z.string().min(1).max(1024),
+  state: z.string().max(2048).optional(),
   code_challenge_method: z.literal('S256'),
   code_challenge: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
   response_type: z.literal('code'),
-  resource: z.enum([resourceUrl, vaultResourceUrl]).optional(),
-  scope: z.enum(['portal.jobs', 'vault']).optional(),
+  resource: z.string().max(2048).optional(),
+  scope: z.string().max(1024).optional(),
 });
+
+/** RFC 8707 resource indicators name the same server with or without a trailing slash. */
+const sameResource = (sent: string, server: string) => sent.replace(/\/+$/, '') === server;
 
 /**
  * One authorization server for both MCP resources: broker reporting clients
@@ -124,6 +137,14 @@ export async function consentTarget(input: z.infer<typeof oauthInput>) {
     input.redirect_uri !== row.redirectUri
   )
     throw new OperationError('Unknown or expired client or callback.');
+  if (input.resource && !sameResource(input.resource, target.resource))
+    throw new OperationError(
+      'This sign-in is for ' +
+        input.resource +
+        ', but this connection is for ' +
+        target.resource +
+        '.',
+    );
   return target;
 }
 export async function checkConsent(input: z.infer<typeof oauthInput>): Promise<Client> {
@@ -142,11 +163,11 @@ export async function approve(input: z.infer<typeof oauthInput>) {
   });
   const url = new URL(row.redirectUri);
   url.searchParams.set('code', code);
-  url.searchParams.set('state', input.state);
+  if (input.state) url.searchParams.set('state', input.state);
   return url.href;
 }
 export async function exchange(data: URLSearchParams) {
-  const id = data.get('client_id') ?? '',
+  const id = (data.get('client_id') ?? '').trim(),
     code = data.get('code') ?? '',
     verifier = data.get('code_verifier') ?? '';
   if (
@@ -161,7 +182,7 @@ export async function exchange(data: URLSearchParams) {
   if (
     !target ||
     !row ||
-    (data.has('resource') && data.get('resource') !== target.resource) ||
+    (data.has('resource') && !sameResource(data.get('resource') ?? '', target.resource)) ||
     Date.parse(row.expiresAt) <= Date.now() ||
     !constantTimeEqual(row.secretHash, await sha256Hex(data.get('client_secret') ?? ''))
   )

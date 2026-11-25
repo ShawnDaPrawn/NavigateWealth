@@ -196,6 +196,51 @@ describe('broker operations', () => {
     expect(auth.access_token).toMatch(/^nwop_/);
     expect((await redeem(verifier)).status).toBe(400);
   });
+  it('accepts the authorize request shapes real MCP clients send, and still binds the resource', async () => {
+    // The first real Claude sign-in (2026-11-24) was refused as "Validation
+    // failed" while scope and resource were exact enums.
+    const redirectUri = 'https://example.com/callback';
+    const { client, clientSecret } = await json(
+      manage('/connections', 'POST', { name: 'Claude', redirectUri }),
+    );
+    const verifier = 'z'.repeat(64),
+      params = {
+        client_id: ' ' + client.id + ' ',
+        redirect_uri: redirectUri,
+        code_challenge_method: 'S256',
+        code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+        response_type: 'code',
+        resource: resourceUrl + '/',
+        scope: 'portal.jobs vault',
+      };
+    const details = await manage('/consent/details', 'POST', params);
+    expect(details.status).toBe(200);
+    const other = await manage('/consent/details', 'POST', {
+      ...params,
+      resource: 'https://www.navigatewealth.co/mcp/password-vault',
+    });
+    expect(other.status).toBe(400);
+    expect((await other.json()).error).toMatch(/this connection is for/);
+    const approval = await json(manage('/consent/approve', 'POST', params));
+    const url = new URL(approval.redirect);
+    expect(url.searchParams.has('state')).toBe(false);
+    const auth = await json(
+      tokenEndpoint.request('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: client.id,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code',
+          code_verifier: verifier,
+          code: url.searchParams.get('code')!,
+          resource: resourceUrl + '/',
+        }),
+      }),
+    );
+    expect(auth.access_token).toMatch(/^nwop_/);
+  });
   it('starts one job per linked broker, isolates assistants, preserves partial results, and rejects stale worker updates', async () => {
     const [a, b] = await Promise.all(
       ['Broker A', 'Broker B'].map((name) => json(manage('/brokers', 'POST', { name }))),

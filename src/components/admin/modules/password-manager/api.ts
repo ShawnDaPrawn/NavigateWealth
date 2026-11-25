@@ -2,7 +2,7 @@
  * Password Manager REST calls, typed from the shared contract
  * (`src/shared/password-manager.ts`). Super admin only.
  */
-import { api } from '../../../../utils/api/client';
+import { APIError, api } from '../../../../utils/api/client';
 import type {
   ConnectionInput,
   ConnectionPatch,
@@ -111,6 +111,17 @@ export const consentApi = {
     api.post<{ redirect: string }>('/broker-operations/consent/approve', params, opts),
 };
 
+/**
+ * The message to show for a failed call. A 400 from body validation says only
+ * "Validation failed"; the fields it names are appended, so a person (or the
+ * agent helping them) can tell which part of the request was refused.
+ */
 export function errorText(error: unknown, fallback = 'Something went wrong. Try again.') {
-  return error instanceof Error && error.message ? error.message : fallback;
+  if (!(error instanceof Error) || !error.message) return fallback;
+  const errors =
+    error instanceof APIError
+      ? (error.details as { errors?: unknown } | undefined)?.errors
+      : undefined;
+  const fields = errors && typeof errors === 'object' ? Object.keys(errors).filter(Boolean) : [];
+  return fields.length ? error.message + ' (' + fields.join(', ') + ')' : error.message;
 }
