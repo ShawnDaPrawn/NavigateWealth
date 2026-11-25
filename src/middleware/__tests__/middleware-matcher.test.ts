@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { config } from '../../../middleware';
+import middleware, { config, isMcpOrOAuthPath } from '../../../middleware';
+import manifest from '../../../seo-route-manifest.json';
+import vercelConfig from '../../../vercel.json';
+import { shouldReturnNotFound, type SeoRouteManifest } from '../route-policy';
 
 /**
  * The matcher decides which requests the 404 middleware sees at all. Anything
@@ -32,5 +35,40 @@ describe('middleware matcher', () => {
   it('still runs on paths that only start with the library name', () => {
     expect(runsOn('/design-system-library-old')).toBe(true);
     expect(runsOn('/design-system-libraryish/nested')).toBe(true);
+  });
+});
+
+describe('MCP servers and OAuth discovery', () => {
+  // Every MCP or OAuth path vercel.json rewrites; a new server added there is
+  // covered here without editing this test.
+  const rewritten = (vercelConfig as { rewrites: { source: string }[] }).rewrites
+    .map((r) => r.source)
+    .filter((s) => s.startsWith('/mcp/') || s.startsWith('/.well-known/oauth-'));
+
+  it('finds the password-vault and broker-operations rewrites', () => {
+    expect(rewritten).toEqual(
+      expect.arrayContaining([
+        '/mcp/password-vault',
+        '/.well-known/oauth-protected-resource/mcp/password-vault',
+        '/mcp/broker-operations',
+        '/.well-known/oauth-authorization-server',
+      ]),
+    );
+  });
+
+  it.each(rewritten)('lets GET %s through to the rewrite instead of the 404 page', async (path) => {
+    // The page manifest does not know these paths, so without the guard the
+    // middleware answers them with the 404 page (the 2026-11-25 failure).
+    expect(shouldReturnNotFound(path, manifest as SeoRouteManifest)).toBe(true);
+    for (const method of ['GET', 'HEAD'])
+      expect(
+        await middleware(new Request('https://www.navigatewealth.co' + path, { method })),
+      ).toBeUndefined();
+  });
+
+  it('matches by prefix only', () => {
+    expect(isMcpOrOAuthPath('/mcp/some-future-server')).toBe(true);
+    expect(isMcpOrOAuthPath('/mcp')).toBe(false);
+    expect(isMcpOrOAuthPath('/mcp-guide')).toBe(false);
   });
 });
