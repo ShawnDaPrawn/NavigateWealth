@@ -53,7 +53,14 @@ async function requireVaultConnection(c: Context, next: Next) {
   // Never the token itself: only whether one came and its scheme and kind.
   log.info('Vault MCP request', {
     method: c.req.method,
-    scheme: header.split(' ')[0] || null,
+    // Allowlisted: a bare token sent without a scheme must never reach the log.
+    scheme: /^Bearer /i.test(header)
+      ? 'Bearer'
+      : /^Basic /i.test(header)
+        ? 'Basic'
+        : header
+          ? 'other'
+          : 'none',
     vaultToken: header.startsWith('Bearer ' + VAULT_TOKEN_PREFIX),
     outcome: auth.ok ? 'ok' : auth.reason,
     protocolVersion: c.req.header('MCP-Protocol-Version') ?? null,

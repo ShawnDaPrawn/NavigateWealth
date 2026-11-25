@@ -351,6 +351,36 @@ describe('password manager — MCP for outside AI agents', () => {
     expect(JSON.stringify([...kvStore.values()])).not.toContain(token);
   });
 
+  it('never writes a vault token to the log, even one sent without a scheme', async () => {
+    // Codex review on #568: logging the header's first word logged a bare token whole.
+    const { token } = await connect('never');
+    const written: string[] = [];
+    const prior = (globalThis as { Deno?: object }).Deno;
+    vi.stubGlobal('Deno', {
+      ...prior,
+      stderr: {
+        writeSync: (bytes: Uint8Array) => {
+          written.push(new TextDecoder().decode(bytes));
+          return bytes.length;
+        },
+      },
+    });
+    try {
+      for (const authorization of [token, 'Bearer ' + token, 'Token ' + token])
+        await mcp.request('/', {
+          method: 'POST',
+          headers: { Authorization: authorization, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+        });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    const log = written.join('');
+    expect(log).toContain('Vault MCP request');
+    expect(log).not.toContain(token);
+    expect(log).not.toContain(token.split('.')[1]);
+  });
+
   it('answers initialize with instructions and accepts notifications', async () => {
     const { token } = await connect('never');
     const init = await (await rpc(token, 'initialize', { protocolVersion: '2025-06-18' })).json();
