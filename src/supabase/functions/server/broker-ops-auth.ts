@@ -129,14 +129,25 @@ export async function authenticateConnection(value: string) {
 export async function consentTarget(input: z.infer<typeof oauthInput>) {
   const target = await findClient(input.client_id);
   const row = target?.row;
-  if (
-    !target ||
-    !row ||
-    Date.parse(row.expiresAt) <= Date.now() ||
-    !row.redirectUri ||
-    input.redirect_uri !== row.redirectUri
-  )
-    throw new OperationError('Unknown or expired client or callback.');
+  // Three different fixes, so three messages. The old single "Unknown or expired
+  // client or callback" left a person who had reconnected an agent several times
+  // (2026-11-25) unable to tell a stale Client ID from a callback mismatch.
+  if (!target || !row || !row.redirectUri)
+    throw new OperationError(
+      'This AI tool is using a Client ID that is not connected here. It may have been disconnected: connect the agent again and give the tool the new Client ID and secret.',
+    );
+  if (Date.parse(row.expiresAt) <= Date.now())
+    throw new OperationError('This connection has expired. Connect the agent again.');
+  if (input.redirect_uri !== row.redirectUri)
+    throw new OperationError(
+      'The AI tool asked to return to ' +
+        input.redirect_uri +
+        ', but this connection was set up with ' +
+        row.redirectUri +
+        '. Connect the agent again with ' +
+        input.redirect_uri +
+        ' as its callback address.',
+    );
   if (input.resource && !sameResource(input.resource, target.resource))
     throw new OperationError(
       'This sign-in is for ' +

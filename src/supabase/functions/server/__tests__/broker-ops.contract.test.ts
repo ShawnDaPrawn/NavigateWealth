@@ -221,6 +221,16 @@ describe('broker operations', () => {
     });
     expect(other.status).toBe(400);
     expect((await other.json()).error).toMatch(/this connection is for/);
+    // Each refusal names its own fix (2026-11-25: one shared message hid which).
+    const callback = await manage('/consent/details', 'POST', {
+      ...params,
+      redirect_uri: 'https://chatgpt.com/elsewhere',
+    });
+    expect(callback.status).toBe(400);
+    expect((await callback.json()).error).toMatch(
+      /asked to return to https:\/\/chatgpt\.com\/elsewhere, but this connection was set up with https:\/\/example\.com\/callback/,
+    );
+
     const approval = await json(manage('/consent/approve', 'POST', params));
     const url = new URL(approval.redirect);
     expect(url.searchParams.has('state')).toBe(false);
