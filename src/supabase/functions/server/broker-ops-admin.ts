@@ -20,6 +20,9 @@ import { clientInput, issueClient, approve, consentTarget, oauthInput } from './
 import { jobInput, workflowInput } from './broker-ops-model.ts';
 import { getDefaultPortalFlow } from './portal-default-flows.ts';
 import { providerOrigins } from './broker-ops-origins.ts';
+import { createModuleLogger } from './stderr-logger.ts';
+
+const log = createModuleLogger('mcp-oauth');
 const app = new Hono();
 app.use('*', requireSuperAdmin);
 app.use('*', async (c, next) => {
@@ -95,7 +98,17 @@ app.delete('/connections/:id', async (c) => {
   return c.json({ ok: true });
 });
 app.post('/consent/details', validateBody(oauthInput), async (c) => {
-  const target = await consentTarget(body(c, oauthInput));
+  const input = body(c, oauthInput);
+  // What the AI tool asked for, without the PKCE challenge or state values, so
+  // a client that signs in and then fails can be diagnosed from the logs.
+  log.info('Sign-in request', {
+    fields: Object.keys((await c.req.json().catch(() => ({}))) as object),
+    scope: input.scope ?? null,
+    resource: input.resource ?? null,
+    redirectUri: input.redirect_uri,
+    hasState: Boolean(input.state),
+  });
+  const target = await consentTarget(input);
   return c.json({ ...clientInfo(target.row), kind: target.kind });
 });
 app.post('/consent/approve', validateBody(oauthInput), async (c) =>

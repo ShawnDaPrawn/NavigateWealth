@@ -211,5 +211,10 @@ export async function exchange(data: URLSearchParams) {
     }))
   )
     return null;
-  return { access_token: token, token_type: 'Bearer', scope: target.scope, expires_in: ttl };
+  // `scope` is left out on purpose. RFC 6749 §5.1 lets it be omitted when the
+  // grant matches the request, and MCP clients compare a returned scope with the
+  // one they asked for: Claude obtained a token on 2026-11-25 and then never
+  // called the server. The scope a token reaches is fixed by its client's kind
+  // (`target.kind`), so nothing reads it from the response.
+  return { access_token: token, token_type: 'Bearer', expires_in: ttl };
 }

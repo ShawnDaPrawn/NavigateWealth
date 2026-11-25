@@ -240,6 +240,9 @@ describe('broker operations', () => {
       }),
     );
     expect(auth.access_token).toMatch(/^nwop_/);
+    // Omitted so clients that compare it with their requested scope accept the token.
+    expect(auth).not.toHaveProperty('scope');
+    expect(auth.token_type).toBe('Bearer');
   });
   it('starts one job per linked broker, isolates assistants, preserves partial results, and rejects stale worker updates', async () => {
     const [a, b] = await Promise.all(
