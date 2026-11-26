@@ -25,13 +25,8 @@ import {
 import { errorText, vaultApi } from './api';
 import { useServices, useVaultMutation } from './hooks';
 import { ChoiceList, CopyButton, Field } from './parts';
+import { CALLBACK_HINTS, KNOWN_CALLBACKS, callbackReady } from './agentCallbacks';
 
-/** Where each tool sends people back after they approve the sign-in. */
-const KNOWN_CALLBACKS: Record<ConnectionTool, string> = {
-  claude: 'https://claude.ai/api/mcp/auth_callback',
-  chatgpt: 'https://chatgpt.com/connector_platform_oauth_redirect',
-  other: '',
-};
 const PASSWORDS: PasswordAccess[] = ['never', 'ask', 'allowed'];
 
 export function AgentDialog({ agent, onClose }: { agent?: VaultConnection; onClose: () => void }) {
@@ -63,7 +58,10 @@ export function AgentDialog({ agent, onClose }: { agent?: VaultConnection; onClo
 
   if (issued) return <Issued issued={issued} onClose={onClose} />;
 
-  const ready = name.trim() && (reach === 'all' || chosen.length > 0);
+  const ready =
+    name.trim() &&
+    (reach === 'all' || chosen.length > 0) &&
+    (agent !== undefined || callbackReady(tool, callback));
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
@@ -172,22 +170,14 @@ export function AgentDialog({ agent, onClose }: { agent?: VaultConnection; onClo
 
           {!agent && (
             <>
-              <Field
-                label="Callback address"
-                hint={
-                  tool === 'other'
-                    ? 'If your tool signs in with OAuth, paste the callback address it shows. Leave it empty to get a token to paste instead.'
-                    : 'Filled in for ' +
-                      connectionTools[tool] +
-                      '. Change it only if your tool shows a different one.'
-                }
-                htmlFor="agent-callback"
-              >
+              <Field label="Callback address" hint={CALLBACK_HINTS[tool]} htmlFor="agent-callback">
                 <Input
                   id="agent-callback"
                   value={callback}
                   onChange={(e) => setCallback(e.target.value)}
-                  placeholder="https://"
+                  placeholder={
+                    tool === 'chatgpt' ? 'https://chatgpt.com/connector/oauth/…' : 'https://'
+                  }
                 />
               </Field>
               <Field label="Stays connected for">
