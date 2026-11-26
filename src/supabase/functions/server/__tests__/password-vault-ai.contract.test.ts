@@ -56,9 +56,25 @@ vi.mock('jsr:@supabase/supabase-js@2.49.8', () => ({
     }),
   }),
 }));
+// Single-use redemption is a conditional delete in Postgres; here the KV mock stands in.
+vi.mock('../repositories/broker-ops.ts', async (original) => {
+  const real = await original<typeof import('../repositories/broker-ops.ts')>();
+  return {
+    ...real,
+    takeGrant: async (id: string) => {
+      const row = await real.grants.get(id);
+      if (row) await real.grants.remove(id);
+      return row;
+    },
+  };
+});
 import type { Skill } from '../../../../shared/password-manager.ts';
 import vault from '../password-vault-routes.ts';
 import mcp from '../password-vault-mcp.ts';
+import consentRoutes from '../broker-ops-admin.ts';
+import tokenEndpoint from '../broker-ops-token.ts';
+import { createHash } from 'node:crypto';
+import { vaultResourceUrl, vaultWebsiteResourceUrl } from '../vault-connections.ts';
 
 const admin = async (path: string, method = 'GET', body?: unknown) => {
   const res = await request(vault, path, { method, body, as: 'super_admin' });
@@ -380,6 +396,83 @@ describe('password manager — MCP for outside AI agents', () => {
     expect(log).not.toContain(token);
     expect(log).not.toContain(token.split('.')[1]);
   });
+
+  it('describes the direct address for discovery and points each caller at its own metadata', async () => {
+    // Connectors use the direct address so their calls skip Vercel's edge firewall,
+    // which dropped Claude's first authenticated call on 2026-11-25.
+    const meta = await mcp.request('/.well-known/oauth-protected-resource');
+    expect(meta.status).toBe(200);
+    expect(await meta.json()).toMatchObject({
+      resource: vaultResourceUrl,
+      authorization_servers: ['https://www.navigatewealth.co'],
+    });
+    expect(vaultResourceUrl).toMatch(
+      /^https:\/\/[a-z]+\.supabase\.co\/functions\/v1\/make-server-91ed8379\/mcp\/password-vault$/,
+    );
+    const challenge = async (headers: Record<string, string>) =>
+      (await mcp.request('/', { method: 'POST', headers })).headers.get('WWW-Authenticate');
+    expect(await challenge({})).toContain(
+      vaultResourceUrl + '/.well-known/oauth-protected-resource',
+    );
+    expect(await challenge({ 'x-forwarded-host': 'www.navigatewealth.co' })).toContain(
+      'https://www.navigatewealth.co/.well-known/oauth-protected-resource/mcp/password-vault',
+    );
+  });
+
+  it.each([vaultResourceUrl, vaultWebsiteResourceUrl])(
+    'signs an agent in for %s and its token opens the vault',
+    async (resource) => {
+      const redirectUri = 'https://claude.ai/api/mcp/auth_callback';
+      const issued = await admin('/connections', 'POST', {
+        name: 'Claude — OAuth',
+        tool: 'claude',
+        serviceIds: null,
+        passwords: 'never',
+        redirectUri,
+        expiresInDays: 90,
+      });
+      expect(issued.status).toBe(201);
+      const verifier = 'v'.repeat(64);
+      const params = {
+        client_id: issued.json.connection.id,
+        redirect_uri: redirectUri,
+        state: 'fixture',
+        code_challenge_method: 'S256',
+        code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+        response_type: 'code',
+        resource,
+        scope: 'vault',
+      };
+      const approved = await request(consentRoutes, '/consent/approve', {
+        method: 'POST',
+        body: params,
+        as: 'super_admin',
+      });
+      expect(approved.status).toBe(200);
+      const code = new URL((await approved.json()).redirect).searchParams.get('code')!;
+      const exchange = (sentResource: string) =>
+        tokenEndpoint.request('/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            client_id: params.client_id,
+            client_secret: issued.json.clientSecret,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code',
+            code_verifier: verifier,
+            code,
+            resource: sentResource,
+          }),
+        });
+      // The code is bound to the address it was granted for.
+      const other = resource === vaultResourceUrl ? vaultWebsiteResourceUrl : vaultResourceUrl;
+      expect((await exchange(other)).status).toBe(400);
+      const token = await exchange(resource);
+      expect(token.status).toBe(200);
+      const { access_token } = await token.json();
+      expect((await rpc(access_token, 'tools/list')).status).toBe(200);
+    },
+  );
 
   it('answers initialize with instructions and accepts notifications', async () => {
     const { token } = await connect('never');

@@ -26,7 +26,11 @@ import {
   type VaultEntry,
 } from './repositories/password-vault.ts';
 import { approvals, type StoredConnection } from './repositories/vault-store.ts';
-import { authenticateVaultConnection, VAULT_TOKEN_PREFIX } from './vault-connections.ts';
+import {
+  authenticateVaultConnection,
+  VAULT_TOKEN_PREFIX,
+  vaultResourceUrl,
+} from './vault-connections.ts';
 import { createModuleLogger } from './stderr-logger.ts';
 import { isHostedAssistantOrigin } from './broker-ops-origin.ts';
 import { canSee, passwordMode, reachesService } from './vault-policy.ts';
@@ -45,6 +49,28 @@ const rpc = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
 });
 class ToolError extends Error {}
+
+/**
+ * Protected-resource metadata (RFC 9728) for the direct address. Served by this
+ * function so a connector added with that address never touches the website;
+ * the website address keeps its static copy (public/vault-resource.json).
+ */
+export const directResourceMetadataUrl = vaultResourceUrl + '/.well-known/oauth-protected-resource';
+const websiteResourceMetadataUrl =
+  'https://www.navigatewealth.co/.well-known/oauth-protected-resource/mcp/password-vault';
+
+/** True when the call came through the website's vercel.json rewrite, not directly. */
+const viaWebsite = (c: Context) => c.req.header('x-forwarded-host') === 'www.navigatewealth.co';
+
+// Registered before the auth middleware so discovery needs no token.
+app.get('/.well-known/oauth-protected-resource', (c) =>
+  c.json({
+    resource: vaultResourceUrl,
+    authorization_servers: ['https://www.navigatewealth.co'],
+    scopes_supported: ['vault'],
+    bearer_methods_supported: ['header'],
+  }),
+);
 
 async function requireVaultConnection(c: Context, next: Next) {
   c.header('Cache-Control', 'no-store');
@@ -78,9 +104,13 @@ async function requireVaultConnection(c: Context, next: Next) {
   )
     return c.json({ error: 'Origin not allowed' }, 403);
   const unauthorized = (message: string, status: 401 | 403 = 401) => {
+    // Point the client at the metadata for the address it actually used: the
+    // `resource` there must match it, or the client stops before signing in.
     c.header(
       'WWW-Authenticate',
-      'Bearer resource_metadata="https://www.navigatewealth.co/.well-known/oauth-protected-resource/mcp/password-vault"',
+      'Bearer resource_metadata="' +
+        (viaWebsite(c) ? websiteResourceMetadataUrl : directResourceMetadataUrl) +
+        '"',
     );
     return c.json({ error: message }, status);
   };

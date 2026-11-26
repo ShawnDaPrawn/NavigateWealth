@@ -34,7 +34,13 @@ import { CopyButton, Loading } from './parts';
 import { formatDate } from './format';
 import { AgentDialog } from './AgentDialog';
 
-export const MCP_SERVER_URL = 'https://www.navigatewealth.co/mcp/password-vault';
+/**
+ * Straight to the edge function, not www.navigatewealth.co: the website's edge
+ * firewall can drop an assistant's calls (see vaultResourceUrl in
+ * vault-connections.ts). Keep the two in step.
+ */
+export const MCP_SERVER_URL =
+  'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/mcp/password-vault';
 
 export function AgentsTab() {
   const agents = useAgents();

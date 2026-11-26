@@ -194,7 +194,9 @@ describe('PasswordManagerModule', () => {
     });
     renderModule('/admin?module=password-manager&tab=agents');
     expect(
-      await screen.findByText('https://www.navigatewealth.co/mcp/password-vault'),
+      await screen.findByText(
+        'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/mcp/password-vault',
+      ),
     ).toBeDefined();
     fireEvent.click(screen.getByRole('button', { name: 'Connect agent' }));
     fireEvent.change(await screen.findByLabelText('Name'), {
