@@ -20,7 +20,19 @@ import {
   type StoredConnection,
 } from './repositories/vault-store.ts';
 
-export const vaultResourceUrl = 'https://www.navigatewealth.co/mcp/password-vault';
+/**
+ * The MCP server's address, straight to this edge function. Connectors use this
+ * one: the website address below passes through Vercel's edge firewall, whose
+ * AI-bot rules can drop an assistant's calls (sent as `Claude-User` and the
+ * like) before they reach us. On 2026-11-25 Claude signed in through the website
+ * address four times and its first authenticated call never arrived.
+ */
+export const vaultResourceUrl =
+  'https://vpjmdsltwrnpefzcgdmz.supabase.co/functions/v1/make-server-91ed8379/mcp/password-vault';
+/** The same server through the website (vercel.json rewrite), kept for connectors added with it. */
+export const vaultWebsiteResourceUrl = 'https://www.navigatewealth.co/mcp/password-vault';
+/** Both addresses a vault token may be issued for; the first is the one to give out. */
+export const vaultResourceUrls = [vaultResourceUrl, vaultWebsiteResourceUrl];
 export const VAULT_TOKEN_PREFIX = 'nwvc_';
 const random = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
 

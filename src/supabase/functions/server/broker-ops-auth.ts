@@ -14,7 +14,7 @@ import { resourceUrl, OperationError } from './broker-ops-jobs.ts';
 import {
   oauthConnection,
   updateConnection as updateVaultConnection,
-  vaultResourceUrl,
+  vaultResourceUrls,
   VAULT_TOKEN_PREFIX,
 } from './vault-connections.ts';
 export const random = () =>
@@ -56,8 +56,12 @@ export const oauthInput = z.object({
   scope: z.string().max(1024).optional(),
 });
 
-/** RFC 8707 resource indicators name the same server with or without a trailing slash. */
-const sameResource = (sent: string, server: string) => sent.replace(/\/+$/, '') === server;
+/**
+ * The server a client's RFC 8707 resource indicator names, from the ones it may
+ * use, ignoring a trailing slash; undefined when it names none of them.
+ */
+const matchResource = (sent: string, servers: readonly string[]) =>
+  servers.find((server) => sent.replace(/\/+$/, '') === server);
 
 /**
  * One authorization server for both MCP resources: broker reporting clients
@@ -69,7 +73,7 @@ async function findClient(id: string) {
     return {
       kind: 'broker' as const,
       row: broker,
-      resource: resourceUrl,
+      resources: [resourceUrl],
       scope: 'portal.jobs',
       prefix: 'nwop_',
       update: (patch: { tokenHash: string; tokenExpires: number }) => updateClient(broker, patch),
@@ -79,7 +83,7 @@ async function findClient(id: string) {
     return {
       kind: 'vault' as const,
       row: vault,
-      resource: vaultResourceUrl,
+      resources: vaultResourceUrls,
       scope: 'vault',
       prefix: VAULT_TOKEN_PREFIX,
       update: async (patch: { tokenHash: string; tokenExpires: number }) =>
@@ -148,15 +152,18 @@ export async function consentTarget(input: z.infer<typeof oauthInput>) {
         input.redirect_uri +
         ' as its callback address.',
     );
-  if (input.resource && !sameResource(input.resource, target.resource))
+  const resource = input.resource
+    ? matchResource(input.resource, target.resources)
+    : target.resources[0];
+  if (!resource)
     throw new OperationError(
       'This sign-in is for ' +
         input.resource +
         ', but this connection is for ' +
-        target.resource +
+        target.resources[0] +
         '.',
     );
-  return target;
+  return { ...target, resource };
 }
 export async function checkConsent(input: z.infer<typeof oauthInput>): Promise<Client> {
   return (await consentTarget(input)).row;
@@ -193,7 +200,6 @@ export async function exchange(data: URLSearchParams) {
   if (
     !target ||
     !row ||
-    (data.has('resource') && !sameResource(data.get('resource') ?? '', target.resource)) ||
     Date.parse(row.expiresAt) <= Date.now() ||
     !constantTimeEqual(row.secretHash, await sha256Hex(data.get('client_secret') ?? ''))
   )
@@ -208,7 +214,10 @@ export async function exchange(data: URLSearchParams) {
     grant.expires <= Date.now() ||
     grant.clientId !== id ||
     grant.redirectUri !== data.get('redirect_uri') ||
-    grant.resource !== target.resource ||
+    !target.resources.includes(grant.resource) ||
+    // A resource sent here must name the server the code was granted for.
+    (data.has('resource') &&
+      matchResource(data.get('resource') ?? '', [grant.resource]) === undefined) ||
     !constantTimeEqual(grant.challenge, challenge) ||
     !(await takeGrant(hash))
   )
