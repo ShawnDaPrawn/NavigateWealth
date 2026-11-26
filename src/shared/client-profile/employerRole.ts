@@ -78,6 +78,22 @@ export function occupationalDutiesError(value: unknown): string | null {
   return `Occupational duties must add up to 100% (currently ${total}%)`;
 }
 
+/**
+ * The first employer whose duty split cannot be saved, as a message naming
+ * it, or null. The profile-level Save calls this so a partial split cannot
+ * bypass the employer card's own check (an edit closed with Cancel stays in
+ * the profile).
+ */
+export function employersOccupationalDutiesError(
+  employers: ReadonlyArray<{ employerName?: string; occupationalDuties?: unknown }> | undefined,
+): string | null {
+  for (const e of employers ?? []) {
+    const error = occupationalDutiesError(e.occupationalDuties);
+    if (error) return `${e.employerName?.trim() || 'An employer'}: ${error}`;
+  }
+  return null;
+}
+
 /** e.g. "Admin 70% · Travel 20% · Supervision 10%". Empty when nothing is recorded. */
 export function occupationalDutiesLine(value: unknown): string {
   const d = normalizeOccupationalDuties(value);

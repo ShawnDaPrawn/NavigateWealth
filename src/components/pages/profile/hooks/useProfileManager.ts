@@ -32,6 +32,7 @@ import type {
 } from '../types';
 import { getInitialProfileData } from '../profileDefaults';
 import {
+  employersOccupationalDutiesError,
   normalizeProfileExtensionFields,
   withPrimaryEmployer,
 } from '../../../../shared/client-profile';
@@ -454,6 +455,12 @@ export function useProfileManager({
       setIncomeValidationError(
         `Net income (${formatCurrency(profileData.netIncome)}) cannot exceed gross income (${formatCurrency(profileData.grossIncome)}). Please correct this before saving.`,
       );
+      return false;
+    }
+
+    const dutiesError = employersOccupationalDutiesError(profileData.employers);
+    if (dutiesError) {
+      toast.error(dutiesError);
       return false;
     }
 

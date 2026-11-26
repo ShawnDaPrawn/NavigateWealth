@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   employerRoleLabel,
   emptyOccupationalDuties,
+  employersOccupationalDutiesError,
   hasOccupationalDuties,
   normalizeOccupationalDuties,
   occupationalDutiesError,
@@ -85,5 +86,37 @@ describe('primary employer', () => {
   it('labels the role', () => {
     expect(employerRoleLabel(true)).toBe('Primary');
     expect(employerRoleLabel(false)).toBe('Secondary');
+  });
+});
+
+describe('employersOccupationalDutiesError', () => {
+  it('names the first employer whose split does not add up to 100%', () => {
+    expect(employersOccupationalDutiesError(undefined)).toBeNull();
+    expect(
+      employersOccupationalDutiesError([
+        {
+          employerName: 'Acme',
+          occupationalDuties: { admin: 100, travel: 0, supervision: 0, manual: 0 },
+        },
+        { employerName: 'Old record' },
+      ]),
+    ).toBeNull();
+    expect(
+      employersOccupationalDutiesError([
+        { employerName: 'Acme' },
+        {
+          employerName: ' Side Gig ',
+          occupationalDuties: { admin: 70, travel: 0, supervision: 0, manual: 0 },
+        },
+      ]),
+    ).toBe('Side Gig: Occupational duties must add up to 100% (currently 70%)');
+    expect(
+      employersOccupationalDutiesError([
+        {
+          employerName: '',
+          occupationalDuties: { admin: 10, travel: 0, supervision: 0, manual: 0 },
+        },
+      ]),
+    ).toMatch(/^An employer: /);
   });
 });

@@ -13,7 +13,10 @@ import { createBankAccountHandlers } from './clientProfile/bankAccountHandlers';
 import { createRiskAssessmentHandlers } from './clientProfile/riskAssessmentHandlers';
 import { createAssetHandlers } from './clientProfile/assetHandlers';
 import { createLiabilityHandlers } from './clientProfile/liabilityHandlers';
-import { normalizeProfileExtensionFields } from '../../../../../shared/client-profile';
+import {
+  employersOccupationalDutiesError,
+  normalizeProfileExtensionFields,
+} from '../../../../../shared/client-profile';
 import {
   COMPLIANCE_DECLARATIONS_PROFILE_KEY,
   COMPLIANCE_REVIEW_PROFILE_KEY,
@@ -363,6 +366,11 @@ export function useClientProfile(clientData: Client, onSave?: (data: ProfileData
   };
 
   const handleSave = async (): Promise<boolean> => {
+    const dutiesError = employersOccupationalDutiesError(profileData.employers);
+    if (dutiesError) {
+      toast.error(dutiesError);
+      return false;
+    }
     try {
       setSaving(true);
       const userId = clientData.id;

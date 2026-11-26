@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
+import { toast } from 'sonner';
 import { useClientProfile } from '../useClientProfile';
 import type { Client } from '../../types';
 import { defaultProfileExtensionFields } from '../../../../../../shared/client-profile';
@@ -583,5 +584,35 @@ describe('useClientProfile', () => {
     expect(result.current.state.profileData.firstName).toBe('Clara');
     expect(result.current.state.profileData.maritalStatus).toBe('married');
     expect(result.current.state.profileData.idNumber).toBe('9005100001082');
+  });
+
+  it('handleSave refuses an employer whose duties do not add up to 100%, even after Cancel', async () => {
+    const { result } = renderHook(() => useClientProfile(MINIMAL_CLIENT));
+    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    act(() => {
+      result.current.actions.addEmployer();
+    });
+    const id = result.current.state.profileData.employers[0].id;
+    act(() => {
+      result.current.actions.updateEmployer(id, {
+        employerName: 'Acme',
+        jobTitle: 'Engineer',
+        industry: 'Mining',
+        occupationalDuties: { admin: 70, travel: 0, supervision: 0, manual: 0 },
+      });
+    });
+    act(() => {
+      result.current.actions.cancelEditEmployer(id);
+    });
+    expect(result.current.state.profileData.employers).toHaveLength(1);
+    let saved = true;
+    await act(async () => {
+      saved = await result.current.actions.handleSave();
+    });
+    expect(saved).toBe(false);
+    expect(mockUpdateClientProfile).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith(
+      'Acme: Occupational duties must add up to 100% (currently 70%)',
+    );
   });
 });
