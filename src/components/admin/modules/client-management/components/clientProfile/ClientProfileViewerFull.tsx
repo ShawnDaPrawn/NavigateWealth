@@ -471,6 +471,7 @@ export function ClientProfileViewerFull({ clientData, onSave }: ClientProfileVie
               selfEmployedInEditMode={state.selfEmployedInEditMode}
               addEmployer={actions.addEmployer}
               updateEmployer={actions.updateEmployer}
+              setPrimaryEmployer={actions.setPrimaryEmployer}
               saveEmployer={actions.saveEmployer}
               editEmployer={actions.editEmployer}
               cancelEditEmployer={actions.cancelEditEmployer}

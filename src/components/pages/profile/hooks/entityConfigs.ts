@@ -16,6 +16,7 @@ import type {
   ChronicCondition,
   Employer,
 } from '../types';
+import { occupationalDutiesError } from '../../../../shared/client-profile';
 
 // ============================================================================
 // Bank Account
@@ -115,7 +116,7 @@ export const validateEmployer = (employer: Employer): string | null => {
   if (!employer.employerName || !employer.jobTitle || !employer.industry) {
     return 'Please fill in all required fields (Employer Name, Job Title, and Industry) before saving';
   }
-  return null;
+  return occupationalDutiesError(employer.occupationalDuties);
 };
 
 export const isEmployerEmpty = (employer: Employer): boolean =>

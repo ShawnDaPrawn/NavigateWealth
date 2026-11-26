@@ -16,9 +16,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../ui/alert-dialog';
-import { Briefcase, Plus, Edit2, Trash2, X, Check, Building2, Factory } from 'lucide-react';
-import { EmployerBenefitsFields } from '../../shared/client-profile';
-import { employerBenefitLines, type EmployerBenefits } from '../../../shared/client-profile';
+import { Briefcase, Plus, Edit2, Trash2, X, Check, Building2, Factory, Star } from 'lucide-react';
+import {
+  EmployerBenefitsFields,
+  OccupationalDutiesFields,
+  OccupationalDutiesSummary,
+} from '../../shared/client-profile';
+import {
+  employerBenefitLines,
+  employerRoleLabel,
+  occupationalDutiesError,
+  primaryEmployerId,
+  type EmployerBenefits,
+  type OccupationalDuties,
+} from '../../../shared/client-profile';
 import { formatCurrency } from '../../../utils/currencyFormatter';
 import { EmptyState } from '../../pages/profile/EmptyState';
 import { emptyStateConfigs } from '../../pages/profile/emptyStateConfigs';
@@ -29,6 +40,8 @@ interface Employer {
   employerName: string;
   industry: string;
   benefits?: EmployerBenefits;
+  isPrimary?: boolean;
+  occupationalDuties?: OccupationalDuties;
 }
 
 interface EmploymentSectionProps {
@@ -44,6 +57,7 @@ interface EmploymentSectionProps {
   confirmDeleteEmployer: (id: string) => void;
   removeEmployer: () => void;
   updateEmployer: (id: string, updates: Partial<Employer>) => void;
+  setPrimaryEmployer: (id: string) => void;
   editSelfEmployed: () => void;
   saveSelfEmployed: () => void;
   cancelEditSelfEmployed: () => void;
@@ -64,12 +78,15 @@ export function EmploymentSection({
   confirmDeleteEmployer,
   removeEmployer,
   updateEmployer,
+  setPrimaryEmployer,
   editSelfEmployed,
   saveSelfEmployed,
   cancelEditSelfEmployed,
   setEmployerToDelete,
 }: EmploymentSectionProps) {
   const employers = (profileData.employers || []) as Employer[];
+  const primaryId = primaryEmployerId(employers);
+  const secondaryCount = employers.length - (primaryId ? 1 : 0);
 
   return (
     <div className="contents">
@@ -116,7 +133,9 @@ export function EmploymentSection({
                     <p className="text-xs text-gray-500 mt-0.5">
                       {employers.length === 0
                         ? 'No employers added yet'
-                        : `${employers.length} employer${employers.length !== 1 ? 's' : ''} on record`}
+                        : secondaryCount === 0
+                          ? '1 employer on record'
+                          : `1 primary and ${secondaryCount} secondary employer${secondaryCount !== 1 ? 's' : ''} on record`}
                     </p>
                   </div>
                   <Button
@@ -151,215 +170,266 @@ export function EmploymentSection({
                   <div className="space-y-4">
                     {employers.map((employer: Employer, index: number) => {
                       const isInEditMode = employersInEditMode.has(employer.id);
+                      const isPrimary = employer.id === primaryId;
+                      const dutiesError = occupationalDutiesError(employer.occupationalDuties);
                       const isValid =
-                        employer.employerName && employer.jobTitle && employer.industry;
+                        !!employer.employerName &&
+                        !!employer.jobTitle &&
+                        !!employer.industry &&
+                        !dutiesError;
+                      const groupHeading =
+                        index === 0
+                          ? 'Primary employer'
+                          : index === 1
+                            ? `Secondary employer${secondaryCount !== 1 ? 's' : ''}`
+                            : null;
 
                       return (
-                        <div
-                          key={employer.id}
-                          className={`rounded-lg border-2 transition-all ${
-                            isInEditMode
-                              ? 'border-[#6d28d9] bg-white shadow-sm'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
-                        >
-                          {/* Employer Card Header */}
-                          <div className="flex items-center justify-between px-5 py-4 flex-wrap gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div
-                                className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                  isInEditMode ? 'bg-[#6d28d9]/10' : 'bg-gray-100'
-                                }`}
-                              >
-                                <Building2
-                                  className={`h-5 w-5 ${isInEditMode ? 'text-[#6d28d9]' : 'text-gray-500'}`}
-                                />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h5 className="text-sm font-medium text-gray-900 truncate">
-                                    {employer.employerName || 'New Employer'}
-                                  </h5>
-                                  {index === 0 && !isInEditMode && employer.employerName && (
-                                    <Badge
-                                      variant="outline"
-                                      className="text-[#6d28d9] border-[#6d28d9]/30 bg-[#6d28d9]/5 text-xs flex-shrink-0"
-                                    >
-                                      Current
-                                    </Badge>
-                                  )}
-                                </div>
-                                {!isInEditMode && employer.jobTitle && (
-                                  <p className="text-xs text-gray-500 mt-0.5 truncate">
-                                    {employer.jobTitle}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex gap-2 flex-shrink-0 ml-3 flex-wrap">
-                              {!isInEditMode ? (
-                                <div className="contents">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => editEmployer(employer.id)}
-                                    className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
-                                  >
-                                    <Edit2 className="h-3.5 w-3.5 mr-1" />
-                                    Edit
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => confirmDeleteEmployer(employer.id)}
-                                    className="border-red-300 text-red-600 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="contents">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => cancelEditEmployer(employer.id)}
-                                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                                  >
-                                    <X className="h-3.5 w-3.5 mr-1" />
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => saveEmployer(employer.id)}
-                                    disabled={!isValid}
-                                    className={`${
-                                      !isValid
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'
-                                    }`}
-                                  >
-                                    <Check className="h-3.5 w-3.5 mr-1" />
-                                    Save
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Edit Mode Form */}
-                          {isInEditMode && (
-                            <div className="px-5 pb-5">
-                              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
-                                <div>
-                                  <Label
-                                    htmlFor={`employer-name-${employer.id}`}
-                                    className="text-sm font-medium"
-                                  >
-                                    Employer Name <span className="text-red-500">*</span>
-                                  </Label>
-                                  <Input
-                                    id={`employer-name-${employer.id}`}
-                                    value={employer.employerName}
-                                    onChange={(e) =>
-                                      updateEmployer(employer.id, { employerName: e.target.value })
-                                    }
-                                    placeholder="e.g., Acme Corporation"
-                                    className="mt-1.5 bg-white"
+                        <div key={employer.id} className="space-y-2">
+                          {groupHeading && employers.length > 1 && (
+                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                              {groupHeading}
+                            </p>
+                          )}
+                          <div
+                            className={`rounded-lg border-2 transition-all ${
+                              isInEditMode
+                                ? 'border-[#6d28d9] bg-white shadow-sm'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            {/* Employer Card Header */}
+                            <div className="flex items-center justify-between px-5 py-4 flex-wrap gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div
+                                  className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                    isInEditMode ? 'bg-[#6d28d9]/10' : 'bg-gray-100'
+                                  }`}
+                                >
+                                  <Building2
+                                    className={`h-5 w-5 ${isInEditMode ? 'text-[#6d28d9]' : 'text-gray-500'}`}
                                   />
                                 </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                  <div>
-                                    <Label
-                                      htmlFor={`job-title-${employer.id}`}
-                                      className="text-sm font-medium"
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h5 className="text-sm font-medium text-gray-900 truncate">
+                                      {employer.employerName || 'New Employer'}
+                                    </h5>
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-xs flex-shrink-0 ${
+                                        isPrimary
+                                          ? 'text-[#6d28d9] border-[#6d28d9]/30 bg-[#6d28d9]/5'
+                                          : 'text-gray-600 border-gray-300 bg-gray-50'
+                                      }`}
                                     >
-                                      Job Title <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                      id={`job-title-${employer.id}`}
-                                      value={employer.jobTitle}
-                                      onChange={(e) =>
-                                        updateEmployer(employer.id, { jobTitle: e.target.value })
-                                      }
-                                      placeholder="e.g., Senior Developer"
-                                      className="mt-1.5 bg-white"
-                                    />
+                                      {employerRoleLabel(isPrimary)}
+                                    </Badge>
                                   </div>
-
-                                  <div>
-                                    <Label
-                                      htmlFor={`employer-industry-${employer.id}`}
-                                      className="text-sm font-medium"
-                                    >
-                                      Industry <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                      id={`employer-industry-${employer.id}`}
-                                      value={employer.industry}
-                                      onChange={(e) =>
-                                        updateEmployer(employer.id, { industry: e.target.value })
-                                      }
-                                      placeholder="e.g., Finance, Technology"
-                                      className="mt-1.5 bg-white"
-                                    />
-                                  </div>
-                                </div>
-
-                                <EmployerBenefitsFields
-                                  idPrefix={`employer-${employer.id}`}
-                                  value={employer.benefits}
-                                  onChange={(benefits) => updateEmployer(employer.id, { benefits })}
-                                />
-
-                                {!isValid && (
-                                  <p className="text-xs text-amber-600 flex items-center gap-1">
-                                    <span className="inline-block h-1 w-1 rounded-full bg-amber-500" />
-                                    All fields marked with * are required
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* View Mode Details */}
-                          {!isInEditMode && (employer.industry || employer.jobTitle) && (
-                            <div className="px-5 pb-4 pt-0">
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm border-t border-gray-100 pt-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
-                                {employer.jobTitle && (
-                                  <div>
-                                    <p className="text-xs text-gray-500 font-medium">Job Title</p>
-                                    <p className="text-sm text-gray-900 mt-0.5">
+                                  {!isInEditMode && employer.jobTitle && (
+                                    <p className="text-xs text-gray-500 mt-0.5 truncate">
                                       {employer.jobTitle}
                                     </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex gap-2 flex-shrink-0 ml-3 flex-wrap">
+                                {!isInEditMode ? (
+                                  <div className="contents">
+                                    {!isPrimary && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPrimaryEmployer(employer.id)}
+                                        disabled={employersInEditMode.size > 0}
+                                        className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                                        title="Make this the client's primary employer"
+                                      >
+                                        <Star className="h-3.5 w-3.5 mr-1" />
+                                        Make primary
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => editEmployer(employer.id)}
+                                      className="border-[#6d28d9] text-[#6d28d9] hover:bg-[#6d28d9]/10"
+                                    >
+                                      <Edit2 className="h-3.5 w-3.5 mr-1" />
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => confirmDeleteEmployer(employer.id)}
+                                      className="border-red-300 text-red-600 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
                                   </div>
-                                )}
-                                {employer.industry && (
-                                  <div>
-                                    <p className="text-xs text-gray-500 font-medium">Industry</p>
-                                    <p className="text-sm text-gray-900 mt-0.5">
-                                      {employer.industry}
-                                    </p>
+                                ) : (
+                                  <div className="contents">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => cancelEditEmployer(employer.id)}
+                                      className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                                    >
+                                      <X className="h-3.5 w-3.5 mr-1" />
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => saveEmployer(employer.id)}
+                                      disabled={!isValid}
+                                      className={`${
+                                        !isValid
+                                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                          : 'bg-[#6d28d9] text-white hover:bg-[#5b21b6]'
+                                      }`}
+                                    >
+                                      <Check className="h-3.5 w-3.5 mr-1" />
+                                      Save
+                                    </Button>
                                   </div>
                                 )}
                               </div>
-                              {employerBenefitLines(employer.benefits, formatCurrency).length >
-                                0 && (
-                                <div className="mt-3 border-t border-gray-100 pt-3 text-sm">
-                                  <p className="text-xs text-gray-500 font-medium">
-                                    Employer benefits
-                                  </p>
-                                  <ul className="mt-0.5 space-y-0.5 text-gray-900">
-                                    {employerBenefitLines(employer.benefits, formatCurrency).map(
-                                      (line) => (
-                                        <li key={line}>{line}</li>
-                                      ),
-                                    )}
-                                  </ul>
-                                </div>
-                              )}
                             </div>
-                          )}
+
+                            {/* Edit Mode Form */}
+                            {isInEditMode && (
+                              <div className="px-5 pb-5">
+                                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
+                                  <div>
+                                    <Label
+                                      htmlFor={`employer-name-${employer.id}`}
+                                      className="text-sm font-medium"
+                                    >
+                                      Employer Name <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                      id={`employer-name-${employer.id}`}
+                                      value={employer.employerName}
+                                      onChange={(e) =>
+                                        updateEmployer(employer.id, {
+                                          employerName: e.target.value,
+                                        })
+                                      }
+                                      placeholder="e.g., Acme Corporation"
+                                      className="mt-1.5 bg-white"
+                                    />
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                      <Label
+                                        htmlFor={`job-title-${employer.id}`}
+                                        className="text-sm font-medium"
+                                      >
+                                        Job Title <span className="text-red-500">*</span>
+                                      </Label>
+                                      <Input
+                                        id={`job-title-${employer.id}`}
+                                        value={employer.jobTitle}
+                                        onChange={(e) =>
+                                          updateEmployer(employer.id, { jobTitle: e.target.value })
+                                        }
+                                        placeholder="e.g., Senior Developer"
+                                        className="mt-1.5 bg-white"
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <Label
+                                        htmlFor={`employer-industry-${employer.id}`}
+                                        className="text-sm font-medium"
+                                      >
+                                        Industry <span className="text-red-500">*</span>
+                                      </Label>
+                                      <Input
+                                        id={`employer-industry-${employer.id}`}
+                                        value={employer.industry}
+                                        onChange={(e) =>
+                                          updateEmployer(employer.id, { industry: e.target.value })
+                                        }
+                                        placeholder="e.g., Finance, Technology"
+                                        className="mt-1.5 bg-white"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <OccupationalDutiesFields
+                                    idPrefix={`employer-${employer.id}`}
+                                    value={employer.occupationalDuties}
+                                    onChange={(occupationalDuties) =>
+                                      updateEmployer(employer.id, { occupationalDuties })
+                                    }
+                                  />
+
+                                  <EmployerBenefitsFields
+                                    idPrefix={`employer-${employer.id}`}
+                                    value={employer.benefits}
+                                    onChange={(benefits) =>
+                                      updateEmployer(employer.id, { benefits })
+                                    }
+                                  />
+
+                                  {!isValid && (
+                                    <p className="text-xs text-amber-600 flex items-center gap-1">
+                                      <span className="inline-block h-1 w-1 rounded-full bg-amber-500" />
+                                      {dutiesError ?? 'All fields marked with * are required'}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* View Mode Details */}
+                            {!isInEditMode && (employer.industry || employer.jobTitle) && (
+                              <div className="px-5 pb-4 pt-0">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm border-t border-gray-100 pt-3 [&>*:last-child:nth-child(odd)]:col-span-2 sm:[&>*:last-child:nth-child(odd)]:col-span-1">
+                                  {employer.jobTitle && (
+                                    <div>
+                                      <p className="text-xs text-gray-500 font-medium">Job Title</p>
+                                      <p className="text-sm text-gray-900 mt-0.5">
+                                        {employer.jobTitle}
+                                      </p>
+                                    </div>
+                                  )}
+                                  {employer.industry && (
+                                    <div>
+                                      <p className="text-xs text-gray-500 font-medium">Industry</p>
+                                      <p className="text-sm text-gray-900 mt-0.5">
+                                        {employer.industry}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                                {employer.occupationalDuties && (
+                                  <div className="mt-3 border-t border-gray-100 pt-3 text-sm empty:hidden">
+                                    <OccupationalDutiesSummary
+                                      value={employer.occupationalDuties}
+                                    />
+                                  </div>
+                                )}
+                                {employerBenefitLines(employer.benefits, formatCurrency).length >
+                                  0 && (
+                                  <div className="mt-3 border-t border-gray-100 pt-3 text-sm">
+                                    <p className="text-xs text-gray-500 font-medium">
+                                      Employer benefits
+                                    </p>
+                                    <ul className="mt-0.5 space-y-0.5 text-gray-900">
+                                      {employerBenefitLines(employer.benefits, formatCurrency).map(
+                                        (line) => (
+                                          <li key={line}>{line}</li>
+                                        ),
+                                      )}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })}

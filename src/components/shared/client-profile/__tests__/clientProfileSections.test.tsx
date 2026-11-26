@@ -5,6 +5,8 @@ import {
   ComplianceReviewCard,
   EmployerBenefitsFields,
   EmployerBenefitsSummary,
+  OccupationalDutiesFields,
+  OccupationalDutiesSummary,
   PlanningSection,
   PostalAddressFields,
   SmokingAlcoholFields,
@@ -243,5 +245,48 @@ describe('employer benefits', () => {
     ]) {
       expect(screen.getByLabelText(label)).toBeTruthy();
     }
+  });
+});
+
+describe('occupational duties', () => {
+  it('renders the four duty fields and the running total', () => {
+    render(
+      <OccupationalDutiesFields
+        idPrefix="e1"
+        value={{ admin: 60, travel: 20, supervision: 0, manual: 0 }}
+        onChange={vi.fn()}
+      />,
+    );
+    for (const label of ['Admin (%)', 'Travel (%)', 'Supervision (%)', 'Manual (%)']) {
+      expect(screen.getByLabelText(label)).toBeTruthy();
+    }
+    expect(screen.getByRole('alert').textContent).toBe('Total: 80% — must add up to 100%');
+  });
+
+  it('reports an edited share back with the others kept', () => {
+    const onChange = vi.fn();
+    render(
+      <OccupationalDutiesFields
+        idPrefix="e1"
+        value={{ admin: 60, travel: 20, supervision: 0, manual: 0 }}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('Manual (%)'), { target: { value: '20' } });
+    expect(onChange).toHaveBeenLastCalledWith({
+      admin: 60,
+      travel: 20,
+      supervision: 0,
+      manual: 20,
+    });
+  });
+
+  it('summarises the split and shows nothing when none is recorded', () => {
+    const { container, rerender } = render(<OccupationalDutiesSummary value={undefined} />);
+    expect(container.textContent).toBe('');
+    rerender(
+      <OccupationalDutiesSummary value={{ admin: 50, travel: 0, supervision: 25, manual: 25 }} />,
+    );
+    expect(screen.getByText('Admin 50% · Supervision 25% · Manual 25%')).toBeTruthy();
   });
 });

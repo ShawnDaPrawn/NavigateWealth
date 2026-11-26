@@ -11,4 +11,5 @@ export { PlanningSection } from './PlanningSection';
 export { PostalAddressFields } from './PostalAddressFields';
 export { SmokingAlcoholFields, type SmokingAlcoholValue } from './SmokingAlcoholFields';
 export { EmployerBenefitsFields, EmployerBenefitsSummary } from './EmployerBenefitsFields';
+export { OccupationalDutiesFields, OccupationalDutiesSummary } from './OccupationalDutiesFields';
 export type { Audience } from './fieldHelpers';

@@ -10,7 +10,11 @@ export type {
   RiskAssessment,
 } from '../../../../shared/types';
 import type { BaseClient, RiskAssessment } from '../../../../shared/types';
-import type { EmployerBenefits, ProfileExtensionFields } from '../../../../shared/client-profile';
+import type {
+  EmployerBenefits,
+  OccupationalDuties,
+  ProfileExtensionFields,
+} from '../../../../shared/client-profile';
 import type { ComplianceReview } from '../../../../shared/compliance';
 import type {
   ClientDirectoryEntry,
@@ -159,6 +163,14 @@ export interface Employer {
   industry: string;
   /** Group benefits through this employer. Absent on records saved before 2026-11. */
   benefits?: EmployerBenefits;
+  /**
+   * The client's main employer. Kept first in the list; see
+   * shared/client-profile/employerRole.ts. Absent on records saved before
+   * 2026-11, where the first employer is the primary one.
+   */
+  isPrimary?: boolean;
+  /** Share of working time on admin, travel, supervision and manual duties (percent, sums to 100). */
+  occupationalDuties?: OccupationalDuties;
 }
 
 export interface ChronicCondition {

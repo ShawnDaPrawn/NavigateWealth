@@ -298,6 +298,7 @@ export function ProfilePage() {
                 setEmployerToDelete={pm.setEmployerToDelete}
                 addEmployer={pm.addEmployer}
                 updateEmployer={pm.updateEmployer}
+                setPrimaryEmployer={pm.setPrimaryEmployer}
                 saveEmployer={pm.saveEmployer}
                 editEmployer={pm.editEmployer}
                 cancelEditEmployer={pm.cancelEditEmployer}

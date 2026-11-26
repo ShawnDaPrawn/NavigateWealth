@@ -384,4 +384,29 @@ describe('useProfileManager', () => {
     });
     expect(result.current.selfEmployedInEditMode).toBe(true);
   });
+
+  it('handleSave refuses an employer whose duties do not add up to 100%', async () => {
+    const { result } = renderHook(() => useProfileManager(DEFAULT_INPUT));
+    await waitFor(() => expect(result.current.initialLoading).toBe(false));
+    act(() => {
+      result.current.addEmployer();
+    });
+    const id = result.current.profileData.employers[0].id;
+    act(() => {
+      result.current.updateEmployer(id, {
+        employerName: 'Acme',
+        jobTitle: 'Engineer',
+        industry: 'Mining',
+        occupationalDuties: { admin: 0, travel: 50, supervision: 0, manual: 0 },
+      });
+    });
+    let saved = true;
+    await act(async () => {
+      saved = await result.current.handleSave();
+    });
+    expect(saved).toBe(false);
+    expect(mockGetSession).toHaveBeenCalledTimes(1); // the initial load only
+    expect(mockApiPost).not.toHaveBeenCalled();
+    expect(mockApiPut).not.toHaveBeenCalled();
+  });
 });

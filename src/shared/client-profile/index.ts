@@ -7,4 +7,5 @@
  */
 export * from './planning';
 export * from './employerBenefits';
+export * from './employerRole';
 export * from './profileExtras';
