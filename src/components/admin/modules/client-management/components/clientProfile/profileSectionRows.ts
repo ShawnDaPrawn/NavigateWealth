@@ -7,6 +7,9 @@ import {
   INVESTMENT_PRODUCT_OPTIONS,
   applicationHints,
   employerBenefitLines,
+  employerRoleLabel,
+  occupationalDutiesLine,
+  primaryEmployerId,
   normalizeProfileExtensionFields,
 } from '../../../../../../shared/client-profile';
 import {
@@ -217,11 +220,20 @@ export function employmentView(p: Profile): { groups: RowGroup[]; tables: TableS
     tables: [
       {
         title: "Client's employers",
-        columns: ['Employer name', 'Job title', 'Industry', 'Benefits'],
+        columns: [
+          'Role',
+          'Employer name',
+          'Job title',
+          'Industry',
+          'Occupational duties',
+          'Benefits',
+        ],
         rows: (p.employers ?? []).map((e) => [
+          employerRoleLabel(e.id === primaryEmployerId(p.employers)),
           text(e.employerName),
           text(e.jobTitle),
           text(e.industry),
+          occupationalDutiesLine(e.occupationalDuties),
           employerBenefitLines(e.benefits, (n) => `R ${formatCurrencyDisplay(n)}`).join('; '),
         ]),
         emptyText: 'No employers recorded.',

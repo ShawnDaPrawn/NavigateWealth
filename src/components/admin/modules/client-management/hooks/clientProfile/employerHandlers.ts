@@ -11,6 +11,10 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { toast } from 'sonner';
 import { ProfileData, Employer } from '../../types';
+import {
+  occupationalDutiesError,
+  withPrimaryEmployer,
+} from '../../../../../../shared/client-profile';
 
 interface Deps {
   employerToDelete: string | null;
@@ -40,7 +44,7 @@ export function createEmployerHandlers({
     };
     setProfileData((prev) => ({
       ...prev,
-      employers: [...prev.employers, newEmployer],
+      employers: withPrimaryEmployer([...prev.employers, newEmployer]),
     }));
     setEmployersInEditMode((prev) => new Set([...prev, newEmployer.id]));
     setHasChanges(true);
@@ -54,7 +58,10 @@ export function createEmployerHandlers({
     if (!employerToDelete) return;
     setProfileData((prev) => ({
       ...prev,
-      employers: prev.employers.filter((employer) => employer.id !== employerToDelete),
+      // Deleting the primary employer promotes the next one.
+      employers: withPrimaryEmployer(
+        prev.employers.filter((employer) => employer.id !== employerToDelete),
+      ),
     }));
     setEmployersInEditMode((prev) => {
       const newSet = new Set(prev);
@@ -75,6 +82,15 @@ export function createEmployerHandlers({
     setHasChanges(true);
   };
 
+  /** Make `id` the client's primary employer; every other becomes secondary. */
+  const setPrimaryEmployer = (id: string) => {
+    setProfileData((prev) => ({
+      ...prev,
+      employers: withPrimaryEmployer(prev.employers, id),
+    }));
+    setHasChanges(true);
+  };
+
   const saveEmployer = (id: string) => {
     const employer = profileData.employers.find((e) => e.id === id);
 
@@ -82,6 +98,12 @@ export function createEmployerHandlers({
       toast.error(
         'Please fill in all required fields (Employer Name, Job Title, and Industry) before saving',
       );
+      return;
+    }
+
+    const dutiesError = occupationalDutiesError(employer.occupationalDuties);
+    if (dutiesError) {
+      toast.error(dutiesError);
       return;
     }
 
@@ -102,7 +124,7 @@ export function createEmployerHandlers({
     if (employer && !employer.employerName && !employer.jobTitle && !employer.industry) {
       setProfileData((prev) => ({
         ...prev,
-        employers: prev.employers.filter((e) => e.id !== id),
+        employers: withPrimaryEmployer(prev.employers.filter((e) => e.id !== id)),
       }));
       setEmployersInEditMode((prev) => {
         const newSet = new Set(prev);
@@ -142,6 +164,7 @@ export function createEmployerHandlers({
     confirmDeleteEmployer,
     removeEmployer,
     updateEmployer,
+    setPrimaryEmployer,
     saveEmployer,
     editEmployer,
     cancelEditEmployer,

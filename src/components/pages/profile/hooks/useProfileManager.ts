@@ -31,7 +31,10 @@ import type {
   HandleInputChange,
 } from '../types';
 import { getInitialProfileData } from '../profileDefaults';
-import { normalizeProfileExtensionFields } from '../../../../shared/client-profile';
+import {
+  normalizeProfileExtensionFields,
+  withPrimaryEmployer,
+} from '../../../../shared/client-profile';
 import {
   createBankAccount,
   createFamilyMember,
@@ -177,6 +180,8 @@ export interface ProfileManagerState {
   selfEmployedInEditMode: boolean;
   addEmployer: () => void;
   updateEmployer: (id: string, updates: Partial<Employer>) => void;
+  /** Make `id` the primary employer; every other becomes secondary. */
+  setPrimaryEmployer: (id: string) => void;
   saveEmployer: (id: string) => void;
   editEmployer: (id: string) => void;
   cancelEditEmployer: (id: string) => void;
@@ -311,6 +316,10 @@ export function useProfileManager({
     validateItem: validateEmployer,
     isItemEmpty: isEmployerEmpty,
   });
+
+  const setPrimaryEmployer = useCallback((id: string) => {
+    setProfileData((prev) => ({ ...prev, employers: withPrimaryEmployer(prev.employers, id) }));
+  }, []);
 
   // ══════════════════════════════════════════════════════════════════
   // Data Loading
@@ -719,6 +728,7 @@ export function useProfileManager({
     selfEmployedInEditMode,
     addEmployer: employerCrud.add,
     updateEmployer: employerCrud.update,
+    setPrimaryEmployer,
     saveEmployer: employerCrud.save,
     editEmployer: employerCrud.edit,
     cancelEditEmployer: employerCrud.cancelEdit,

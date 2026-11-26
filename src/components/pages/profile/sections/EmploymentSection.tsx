@@ -19,8 +19,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../../ui/alert-dialog';
-import { Briefcase, Plus, Edit2, Trash2, X, Check } from 'lucide-react';
-import { EmployerBenefitsFields, EmployerBenefitsSummary } from '../../../shared/client-profile';
+import { Briefcase, Plus, Edit2, Trash2, X, Check, Star } from 'lucide-react';
+import { Badge } from '../../../ui/badge';
+import {
+  EmployerBenefitsFields,
+  EmployerBenefitsSummary,
+  OccupationalDutiesFields,
+  OccupationalDutiesSummary,
+} from '../../../shared/client-profile';
+import {
+  employerRoleLabel,
+  occupationalDutiesError,
+  primaryEmployerId,
+} from '../../../../shared/client-profile';
 
 interface EmploymentSectionProps {
   profileData: ProfileData;
@@ -30,6 +41,7 @@ interface EmploymentSectionProps {
   setEmployerToDelete: React.Dispatch<React.SetStateAction<string | null>>;
   addEmployer: () => void;
   updateEmployer: (id: string, updates: Partial<Employer>) => void;
+  setPrimaryEmployer: (id: string) => void;
   saveEmployer: (id: string) => void;
   editEmployer: (id: string) => void;
   cancelEditEmployer: (id: string) => void;
@@ -49,6 +61,7 @@ export function EmploymentSection({
   setEmployerToDelete,
   addEmployer,
   updateEmployer,
+  setPrimaryEmployer,
   saveEmployer,
   editEmployer,
   cancelEditEmployer,
@@ -59,6 +72,7 @@ export function EmploymentSection({
   saveSelfEmployed,
   cancelEditSelfEmployed,
 }: EmploymentSectionProps) {
+  const primaryId = primaryEmployerId(profileData.employers);
   return (
     <div className="contents">
       <Card>
@@ -102,7 +116,9 @@ export function EmploymentSection({
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm text-gray-900">Your Employers</h4>
-                    <p className="text-xs text-gray-500">Add all your current employers</p>
+                    <p className="text-xs text-gray-500">
+                      Add all your current employers and mark your main one as primary
+                    </p>
                   </div>
                   <Button
                     onClick={addEmployer}
@@ -135,8 +151,13 @@ export function EmploymentSection({
                   <div className="space-y-4">
                     {profileData.employers.map((employer) => {
                       const isInEditMode = employersInEditMode.has(employer.id);
+                      const isPrimary = employer.id === primaryId;
+                      const dutiesError = occupationalDutiesError(employer.occupationalDuties);
                       const isValid =
-                        employer.employerName && employer.jobTitle && employer.industry;
+                        !!employer.employerName &&
+                        !!employer.jobTitle &&
+                        !!employer.industry &&
+                        !dutiesError;
                       return (
                         <div
                           key={employer.id}
@@ -148,9 +169,21 @@ export function EmploymentSection({
                                 <Briefcase className="h-5 w-5 text-[#6d28d9]" />
                               </div>
                               <div>
-                                <h5 className="text-gray-900">
-                                  {employer.employerName || 'New Employer'}
-                                </h5>
+                                <div className="flex items-center gap-2">
+                                  <h5 className="text-gray-900">
+                                    {employer.employerName || 'New Employer'}
+                                  </h5>
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-xs ${
+                                      isPrimary
+                                        ? 'text-[#6d28d9] border-[#6d28d9]/30 bg-[#6d28d9]/5'
+                                        : 'text-gray-600 border-gray-300 bg-gray-50'
+                                    }`}
+                                  >
+                                    {employerRoleLabel(isPrimary)}
+                                  </Badge>
+                                </div>
                                 {employer.jobTitle && !isInEditMode && (
                                   <p className="text-xs text-gray-600">{employer.jobTitle}</p>
                                 )}
@@ -159,6 +192,19 @@ export function EmploymentSection({
                             <div className="flex gap-2">
                               {!isInEditMode ? (
                                 <div className="contents">
+                                  {!isPrimary && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setPrimaryEmployer(employer.id)}
+                                      disabled={employersInEditMode.size > 0}
+                                      className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                                      title="Make this your primary employer"
+                                    >
+                                      <Star className="h-4 w-4 mr-1" />
+                                      Make primary
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -244,6 +290,13 @@ export function EmploymentSection({
                                   className="mt-1.5"
                                 />
                               </div>
+                              <OccupationalDutiesFields
+                                idPrefix={`employer-${employer.id}`}
+                                value={employer.occupationalDuties}
+                                onChange={(occupationalDuties) =>
+                                  updateEmployer(employer.id, { occupationalDuties })
+                                }
+                              />
                               <EmployerBenefitsFields
                                 idPrefix={`employer-${employer.id}`}
                                 value={employer.benefits}
@@ -256,6 +309,7 @@ export function EmploymentSection({
                                 <p className="text-gray-600 text-[14px]">Industry</p>
                                 <p className="text-gray-900">{employer.industry || '-'}</p>
                               </div>
+                              <OccupationalDutiesSummary value={employer.occupationalDuties} />
                               <EmployerBenefitsSummary value={employer.benefits} />
                             </div>
                           )}
