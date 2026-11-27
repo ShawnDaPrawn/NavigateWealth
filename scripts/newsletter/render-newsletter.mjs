@@ -47,10 +47,20 @@ try {
 
   const overflowing = await page.$$eval('section.page', (sheets) =>
     sheets.flatMap((sheet, i) => {
-      const bottom = sheet.getBoundingClientRect().bottom;
+      // Text that does not fit a column layout spills into new columns to the
+      // right, not below, so check both edges, fragment by fragment.
+      const box = sheet.getBoundingClientRect();
       const over = [...sheet.querySelectorAll('*')].some((el) => {
-        const r = el.getBoundingClientRect();
-        return r.height > 0 && r.bottom > bottom + 0.5 && !el.closest('svg.rings');
+        if (el.closest('svg.rings')) return false; // the cover art bleeds on purpose
+        if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).columnCount !== 'auto') {
+          return true;
+        }
+        return [...el.getClientRects()].some(
+          (r) =>
+            r.width > 0 &&
+            r.height > 0 &&
+            (r.bottom > box.bottom + 0.5 || r.right > box.right + 0.5),
+        );
       });
       return over ? [i + 1] : [];
     }),
