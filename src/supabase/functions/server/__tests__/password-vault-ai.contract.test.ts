@@ -75,6 +75,7 @@ import consentRoutes from '../broker-ops-admin.ts';
 import tokenEndpoint from '../broker-ops-token.ts';
 import { createHash } from 'node:crypto';
 import { vaultResourceUrl, vaultWebsiteResourceUrl } from '../vault-connections.ts';
+import { createSkillOnce, loginSkillId } from '../vault-skills.ts';
 
 const admin = async (path: string, method = 'GET', body?: unknown) => {
   const res = await request(vault, path, { method, body, as: 'super_admin' });
@@ -367,7 +368,9 @@ describe('password manager — MCP for outside AI agents', () => {
 
   it('refuses a skill for a login out of reach, or one containing the password', async () => {
     const s = await seed();
-    const { token } = await connect('never', [s.goaml], true);
+    // 'allowed' on an 'allowed' login: this agent may receive the password, so
+    // checking its text against the password tells it nothing new.
+    const { token } = await connect('allowed', [s.goaml], true);
     const write = (login_id: string, instructions: string) =>
       tool(token, 'save_skill', { login_id, title: 'Steps', when_to_use: '', instructions });
     expect((await write(s.b1, 'Allan Gray is out of reach')).isError).toBe(true);
@@ -381,6 +384,70 @@ describe('password manager — MCP for outside AI agents', () => {
         (k) => k.credentialId === s.reporting,
       ),
     ).toHaveLength(0);
+  });
+
+  it('gives an agent that may not receive the password no secret-dependent answer', async () => {
+    // Codex review on #573 (P1): refusing text that contains the password would let
+    // an agent test guesses, bypassing its password access. Without the password,
+    // a save with the right guess and one without must look the same.
+    const s = await seed();
+    const { token } = await connect('never', [s.goaml], true);
+    const guess = await tool(token, 'save_skill', {
+      login_id: s.reporting,
+      title: 'Guess',
+      when_to_use: '',
+      instructions: 'Reporting Secret-Password-1',
+    });
+    const plain = await tool(token, 'save_skill', {
+      login_id: s.reporting,
+      title: 'Plain',
+      when_to_use: '',
+      instructions: 'Nothing secret here',
+    });
+    expect(guess.isError).toBe(false);
+    expect(plain.isError).toBe(false);
+    expect((guess.value as { status: string }).status).toBe(
+      (plain.value as { status: string }).status,
+    );
+  });
+
+  it('keeps one skill when two agents save the same new title at once', async () => {
+    // Codex review on #573 (P2): both could miss the title lookup and create one each.
+    const s = await seed();
+    const { token } = await connect('never', null, true);
+    const save = (instructions: string) =>
+      tool(token, 'save_skill', {
+        login_id: s.b2,
+        title: 'Same title',
+        when_to_use: '',
+        instructions,
+      });
+    const results = await Promise.all([save('First version'), save('Second version')]);
+    expect(results.every((r) => r.status === 200 && !r.isError)).toBe(true);
+    const mine = ((await admin('/skills')).json.items as { credentialId: string | null }[]).filter(
+      (k) => k.credentialId === s.b2,
+    );
+    expect(mine).toHaveLength(1);
+  });
+
+  it('gives a login and title one skill id, and creates under it only once', async () => {
+    // What makes simultaneous same-title saves land on one record: the in-memory
+    // store above runs them one after the other, so this checks the guarantee itself.
+    const login = crypto.randomUUID();
+    const id = await loginSkillId(login, 'Find the statement');
+    expect(await loginSkillId(login, '  find the STATEMENT ')).toBe(id);
+    expect(await loginSkillId(login, 'Another title')).not.toBe(id);
+    expect(await loginSkillId(crypto.randomUUID(), 'Find the statement')).not.toBe(id);
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-8[0-9a-f]{3}-[0-9a-f]{12}$/);
+    const input = {
+      name: 'Find the statement',
+      whenToUse: '',
+      instructions: 'Steps',
+      serviceId: 'navigate-wealth',
+      credentialId: login,
+    };
+    expect(await createSkillOnce(input, 'AI agent · A', id)).not.toBeNull();
+    expect(await createSkillOnce(input, 'AI agent · B', id)).toBeNull();
   });
 
   it('leaves out the password tools for an agent that may never receive passwords', async () => {

@@ -15,7 +15,7 @@
  */
 import { Hono, type Context, type Next } from 'npm:hono';
 import { z } from 'npm:zod@4.6.5';
-import type { Service, VaultSummary } from '../../../shared/password-manager.ts';
+import type { Service, Skill, VaultSummary } from '../../../shared/password-manager.ts';
 import { renderPlatformGuide } from '../../../shared/platform-guide.ts';
 import {
   allSummaries,
@@ -25,7 +25,11 @@ import {
   summary,
   type VaultEntry,
 } from './repositories/password-vault.ts';
-import { approvals, type StoredConnection } from './repositories/vault-store.ts';
+import {
+  approvals,
+  skills as skillStore,
+  type StoredConnection,
+} from './repositories/vault-store.ts';
 import {
   authenticateVaultConnection,
   VAULT_TOKEN_PREFIX,
@@ -39,7 +43,8 @@ import { recordEvent } from './vault-events.ts';
 import {
   allServices,
   allSkills,
-  createSkill,
+  createSkillOnce,
+  loginSkillId,
   renderSkillsFor,
   skillInput,
   skillsFor,
@@ -347,11 +352,20 @@ async function saveSkill(
       parsed.error.issues[0]?.message ?? 'Give the skill a title and instructions.',
     );
   const input = parsed.data;
-  // A skill is read by every agent; a password in one would be handed to all of them.
-  const { password } = await revealSecret(entry);
-  const text = input.name + '\n' + input.whenToUse + '\n' + input.instructions;
-  if (password.length >= 4 && text.includes(password))
-    throw new ToolError('Remove the password from the skill. Skills must never contain one.');
+  // A skill is read by every agent; a password in one would be handed to all of
+  // them. But the check answers "is this text the password?", so it runs only
+  // for an agent that already holds the current password (may receive it freely,
+  // or has received it since it last changed). For any other agent it would be a
+  // guessing oracle that bypasses passwordMode (Codex review on #573, P1).
+  const holdsPassword =
+    passwordMode(conn, item) === 'go' ||
+    (entry.exposure ?? []).some((e) => e.connectionId === conn.id);
+  if (holdsPassword) {
+    const { password } = await revealSecret(entry);
+    const text = input.name + '\n' + input.whenToUse + '\n' + input.instructions;
+    if (password.length >= 4 && text.includes(password))
+      throw new ToolError('Remove the password from the skill. Skills must never contain one.');
+  }
   const own = (await allSkills()).filter((k) => k.credentialId === item.id);
   const same = own.find((k) => k.name.trim().toLowerCase() === input.name.toLowerCase());
   const by = 'AI agent · ' + conn.name;
@@ -362,22 +376,30 @@ async function saveSkill(
     credentialId: item.id,
     credentialName: item.name,
   };
-  if (same) {
-    const next = await updateSkill(same, input, same.revision, by);
+  const update = async (current: Skill) => {
+    const next = await updateSkill(current, input, current.revision, by);
     if (!next)
       throw new ToolError(
         'Someone changed this skill just now. Read get_skills again, then retry.',
       );
     await recordEvent({ ...actor, action: 'Updated skill', detail: next.name, outcome: 'ok' });
     return { status: 'updated', skill: next.name, login: item.name };
-  }
+  };
+  if (same) return update(same);
   if (own.length >= MAX_LOGIN_SKILLS)
     throw new ToolError(
       'This login already has ' +
         MAX_LOGIN_SKILLS +
         ' skills of its own. Update one of them (use its exact title) instead of adding another.',
     );
-  const row = await createSkill(input, by);
+  const id = await loginSkillId(item.id, input.name);
+  const row = await createSkillOnce(input, by, id);
+  if (!row) {
+    // Another agent saved this title a moment ago: update theirs instead.
+    const theirs = await skillStore.get(id);
+    if (!theirs) throw new ToolError('Could not save the skill. Try again.');
+    return update(theirs);
+  }
   await recordEvent({ ...actor, action: 'Wrote skill', detail: row.name, outcome: 'ok' });
   return { status: 'added', skill: row.name, login: item.name };
 }
