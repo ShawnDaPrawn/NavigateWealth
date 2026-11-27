@@ -1,0 +1,2619 @@
+<!doctype html>
+<!--
+  Bearings — the Navigate Wealth monthly newsletter.
+
+  An eight-page A4 template in the Navigator design (src/site/styles/navigator.css):
+  navy ink and warm paper, Newsreader for headlines and long-form text, Inter for
+  labels and data, violet only as an accent. It renders to the PDF the admin
+  Newsletters module sends: see README.md beside this file.
+
+  Editing a month: every piece of copy that changes per issue carries a
+  data-field attribute. Change the text, keep the markup. Sections are
+  self-contained <section class="page"> blocks, each exactly one A4 sheet; copy
+  that overflows a page is clipped, so cut rather than squeeze.
+
+  Remove the "is-template" class from <html> before rendering a real issue: it
+  shows the yellow "illustrative" flags on sample figures.
+-->
+<html lang="en-ZA" class="is-template">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bearings — Navigate Wealth monthly · December 2026</title>
+    <style>
+      /* ── Faces: the site's self-hosted Navigator fonts ── */
+      @font-face {
+        font-family: 'Inter Variable';
+        font-weight: 100 900;
+        font-style: normal;
+        src: url('../../src/site/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+      }
+      @font-face {
+        font-family: 'Newsreader Variable';
+        font-weight: 200 800;
+        font-style: normal;
+        src: url('../../src/site/fonts/newsreader-latin-standard-normal.woff2')
+          format('woff2-variations');
+      }
+      @font-face {
+        font-family: 'Newsreader Variable';
+        font-weight: 200 800;
+        font-style: italic;
+        src: url('../../src/site/fonts/newsreader-latin-standard-italic.woff2')
+          format('woff2-variations');
+      }
+
+      /* ── Tokens: copied from navigator.css so the print matches the site ── */
+      :root {
+        --ink: #0d1626;
+        --ink-2: #12203a;
+        --ink-3: #1c2638;
+        --paper: #f6f4ef;
+        --paper-2: #efebe3;
+        --paper-3: #fbfaf7;
+        --white: #ffffff;
+        --line: #e2ddd3;
+        --line-soft: #ece7de;
+        --line-strong: #d3ccbf;
+        --text-strong: #2f3747;
+        --text: #3d4556;
+        --muted: #5e6676;
+        --on-dark: #c5cad3;
+        --on-dark-muted: #9aa3b2;
+        --cream: #e3d9c3;
+        --violet: #6d28d9;
+        --violet-soft: #a78bfa;
+        --violet-tint: #f4f1fb;
+        --up: #15803d;
+        --down: #b91c1c;
+
+        --serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+        --sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+        --px: 16mm; /* page side margin */
+      }
+
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #8f8a80;
+        font-family: var(--sans);
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        font-feature-settings:
+          'kern' 1,
+          'liga' 1;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      p,
+      ol,
+      ul,
+      figure,
+      blockquote {
+        margin: 0;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: var(--serif);
+        font-weight: 500;
+        letter-spacing: -0.012em;
+        color: var(--ink);
+        text-wrap: balance;
+      }
+      p {
+        text-wrap: pretty;
+      }
+      em.acc {
+        font-style: italic;
+        font-weight: 400;
+      }
+      .num {
+        font-variant-numeric: tabular-nums lining-nums;
+      }
+
+      /* ── The sheet ── */
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        margin: 0 auto 10mm;
+        background: var(--paper);
+        padding: 13mm var(--px) 0;
+        display: flex;
+        flex-direction: column;
+        page-break-after: always;
+        break-after: page;
+      }
+      .page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+      @media screen {
+        body {
+          padding: 10mm 0;
+        }
+        .page {
+          box-shadow: 0 24px 44px -32px rgba(13, 22, 38, 0.55);
+        }
+      }
+      @media print {
+        body {
+          background: none;
+        }
+        .page {
+          margin: 0;
+        }
+      }
+      .page.dark {
+        background: linear-gradient(180deg, var(--ink) 0%, var(--ink-2) 58%, var(--ink) 100%);
+        color: var(--on-dark);
+      }
+      .page.dark h1,
+      .page.dark h2,
+      .page.dark h3 {
+        color: var(--white);
+      }
+
+      /* Chart paper: the 80 / 16 grid the site's hero and loader sit on. */
+      .grid-bg {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+          linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+        background-size:
+          20mm 20mm,
+          20mm 20mm,
+          4mm 4mm,
+          4mm 4mm;
+        -webkit-mask-image: radial-gradient(ellipse 80% 70% at 75% 38%, #000 0%, transparent 75%);
+        mask-image: radial-gradient(ellipse 80% 70% at 75% 38%, #000 0%, transparent 75%);
+      }
+
+      /* ── Shared pieces ── */
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 3mm;
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 6.9pt;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .eyebrow::before {
+        content: '';
+        flex-shrink: 0;
+        width: 6mm;
+        height: 1px;
+        background: currentColor;
+        opacity: 0.7;
+      }
+      .eyebrow.v {
+        color: var(--violet);
+      }
+      .dark .eyebrow {
+        color: var(--on-dark-muted);
+      }
+      .label {
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 6.4pt;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      /* Running head: the issue page's 2px ink rule, then a hairline. */
+      .rh {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 2.6mm;
+        border-top: 2px solid var(--ink);
+        font-size: 6.6pt;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+      .rh .mast {
+        display: flex;
+        align-items: center;
+        gap: 2.4mm;
+      }
+      .rh .mast b {
+        font-family: var(--serif);
+        font-size: 11pt;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        text-transform: none;
+      }
+      .rh .sec {
+        color: var(--muted);
+      }
+
+      /* Folio */
+      .folio {
+        margin-top: auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 3.2mm 0 8mm;
+        border-top: 1px solid var(--line-strong);
+        font-size: 6.4pt;
+        color: var(--muted);
+        letter-spacing: 0.02em;
+      }
+      .folio .pg {
+        font-family: var(--serif);
+        font-size: 10pt;
+        color: var(--ink);
+      }
+      .folio .pg i {
+        color: var(--violet);
+        font-style: normal;
+      }
+      .dark .folio {
+        border-top-color: rgba(255, 255, 255, 0.16);
+        color: var(--on-dark-muted);
+      }
+      .dark .folio .pg {
+        color: var(--white);
+      }
+
+      .card {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 2mm;
+      }
+      .up {
+        color: var(--up);
+      }
+      .down {
+        color: var(--down);
+      }
+
+      /* Template-only flags: hidden once <html> loses .is-template. */
+      .tpl {
+        display: none;
+      }
+      .is-template .tpl {
+        display: inline-flex;
+        align-items: center;
+        gap: 1mm;
+        padding: 0.6mm 1.6mm;
+        border-radius: 1mm;
+        background: #fef3c7;
+        color: #78350f;
+        font: 600 5.6pt/1.2 var(--sans);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        vertical-align: middle;
+      }
+
+      /* ════════════════ 1. Cover ════════════════ */
+      .cover {
+        padding-top: 12mm;
+      }
+      .cover .top {
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .cover .logo {
+        height: 12mm;
+        width: auto;
+      }
+      .cover .issue {
+        text-align: right;
+        font-size: 6.6pt;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--on-dark);
+        line-height: 1.7;
+      }
+      .cover .issue span {
+        display: inline-block;
+        padding: 0.8mm 2mm;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 1mm;
+        color: var(--white);
+      }
+      .cover .masthead {
+        position: relative;
+        margin-top: 22mm;
+        padding-bottom: 6mm;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+      }
+      .cover .masthead h1 {
+        font-size: 96pt;
+        line-height: 0.86;
+        letter-spacing: -0.035em;
+        font-weight: 450;
+      }
+      .cover .masthead h1 em {
+        font-style: italic;
+        font-weight: 300;
+        color: var(--violet-soft);
+      }
+      .cover .masthead .tag {
+        margin-top: 5mm;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 12pt;
+        color: var(--on-dark);
+      }
+      .cover .masthead .tag .label {
+        color: var(--on-dark-muted);
+        font-style: normal;
+      }
+
+      .cover .story {
+        position: relative;
+        margin-top: 16mm;
+        width: 118mm;
+      }
+      .cover .story h2 {
+        margin-top: 5mm;
+        font-size: 33pt;
+        line-height: 1.04;
+      }
+      .cover .story h2 em {
+        font-style: italic;
+        font-weight: 400;
+        color: var(--cream);
+      }
+      .cover .story p {
+        margin-top: 5mm;
+        font-family: var(--serif);
+        font-size: 12pt;
+        line-height: 1.45;
+        color: var(--on-dark);
+        max-width: 108mm;
+      }
+      .cover .story .go {
+        margin-top: 6mm;
+        display: inline-flex;
+        align-items: center;
+        gap: 2mm;
+        font-size: 7.6pt;
+        font-weight: 600;
+        color: var(--white);
+        letter-spacing: 0.02em;
+      }
+      .cover .story .go::after {
+        content: '→';
+        color: var(--violet-soft);
+      }
+
+      /* The range-rings and heading-tape mark, from the site's loader. */
+      .cover .rings {
+        position: absolute;
+        right: -46mm;
+        top: 92mm;
+        width: 168mm;
+        height: 168mm;
+        pointer-events: none;
+      }
+
+      .cover .inside {
+        position: relative;
+        margin-top: auto;
+        margin-bottom: 0;
+      }
+      .cover .inside .label {
+        color: var(--on-dark-muted);
+        margin-bottom: 3mm;
+      }
+      .cover .inside ol {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+      }
+      .cover .inside li {
+        padding: 3.4mm 4mm 0 0;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        margin-right: 4mm;
+      }
+      .cover .inside li:last-child {
+        border-right: 0;
+        margin-right: 0;
+      }
+      .cover .inside li b {
+        display: block;
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 15pt;
+        color: var(--violet-soft);
+      }
+      .cover .inside li span {
+        display: block;
+        margin-top: 1.4mm;
+        font-size: 7.6pt;
+        line-height: 1.4;
+        color: var(--on-dark);
+      }
+      .cover .folio {
+        margin-top: 9mm;
+      }
+
+      /* ════════════════ 2. Letter + contents ════════════════ */
+      .letter-grid {
+        margin-top: 9mm;
+        display: grid;
+        grid-template-columns: 1fr 66mm;
+        gap: 10mm;
+      }
+      .letter h2 {
+        margin-top: 4mm;
+        font-size: 27pt;
+        line-height: 1.06;
+      }
+      .letter .dek {
+        margin-top: 4mm;
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 11.5pt;
+        line-height: 1.45;
+        color: var(--text-strong);
+        padding-bottom: 5mm;
+        border-bottom: 1px solid var(--line-strong);
+      }
+      .prose {
+        font-family: var(--serif);
+        font-size: 9.7pt;
+        line-height: 1.55;
+        color: var(--text-strong);
+        hyphens: auto;
+      }
+      .prose p + p {
+        margin-top: 2.6mm;
+      }
+      .letter .prose {
+        margin-top: 5mm;
+      }
+      .sig {
+        margin-top: 6mm;
+        display: flex;
+        align-items: center;
+        gap: 4mm;
+      }
+      .sig .mark {
+        width: 10mm;
+        height: 10mm;
+        border-radius: 50%;
+        background: var(--ink);
+        display: grid;
+        place-items: center;
+      }
+      .sig .mark img {
+        height: 6mm;
+      }
+      .sig .name {
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 15pt;
+        color: var(--ink);
+        line-height: 1;
+      }
+      .sig .role {
+        margin-top: 1.2mm;
+        font-size: 7pt;
+        color: var(--muted);
+      }
+
+      .contents {
+        padding: 5mm 5mm 4mm;
+      }
+      .contents ol {
+        list-style: none;
+        padding: 0;
+        margin-top: 3mm;
+      }
+      .contents li {
+        display: grid;
+        grid-template-columns: 8mm 1fr;
+        gap: 2mm;
+        padding: 2.6mm 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .contents li b {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 13pt;
+        line-height: 1;
+        color: var(--violet);
+      }
+      .contents li strong {
+        display: block;
+        font-family: var(--serif);
+        font-weight: 500;
+        font-size: 10pt;
+        color: var(--ink);
+        line-height: 1.2;
+      }
+      .contents li span {
+        display: block;
+        margin-top: 0.8mm;
+        font-size: 7pt;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+
+      .numbers {
+        margin-top: 5mm;
+        background: var(--ink);
+        border-radius: 2mm;
+        padding: 5mm;
+        color: var(--on-dark);
+      }
+      .numbers .label {
+        color: var(--on-dark-muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .numbers dl {
+        margin: 3mm 0 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .numbers dl > div {
+        padding: 2.6mm 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .numbers dl > div:nth-child(odd) {
+        padding-right: 3mm;
+        border-right: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .numbers dl > div:nth-child(even) {
+        padding-left: 3mm;
+      }
+      .numbers dt {
+        font-size: 6.4pt;
+        color: var(--on-dark-muted);
+        letter-spacing: 0.02em;
+      }
+      .numbers dd {
+        margin: 0.8mm 0 0;
+        font-family: var(--serif);
+        font-size: 14pt;
+        color: var(--white);
+        line-height: 1.1;
+      }
+      .numbers dd small {
+        display: block;
+        margin-top: 0.6mm;
+        font-family: var(--sans);
+        font-size: 6.6pt;
+        font-weight: 600;
+      }
+      .numbers .up {
+        color: var(--success-bright, #4ade80);
+      }
+      .numbers .down {
+        color: #fca5a5;
+      }
+      .numbers .src {
+        margin-top: 2.4mm;
+        font-size: 5.8pt;
+        color: var(--on-dark-muted);
+      }
+
+      /* ════════════════ 3. Markets ════════════════ */
+      .sec-head {
+        margin-top: 8mm;
+        display: grid;
+        grid-template-columns: 1fr 62mm;
+        gap: 10mm;
+        align-items: end;
+        padding-bottom: 5mm;
+        border-bottom: 1px solid var(--line-strong);
+      }
+      .sec-head h2 {
+        margin-top: 3.4mm;
+        font-size: 28pt;
+        line-height: 1.04;
+      }
+      .sec-head p {
+        font-family: var(--serif);
+        font-size: 10pt;
+        line-height: 1.5;
+        color: var(--text-strong);
+      }
+
+      .chart {
+        margin-top: 6mm;
+        padding: 4.5mm 5mm 3mm;
+      }
+      .chart .ch-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .chart h3 {
+        font-size: 12pt;
+        line-height: 1.2;
+      }
+      .chart .sub {
+        margin-top: 0.8mm;
+        font-size: 6.8pt;
+        color: var(--muted);
+      }
+      .legend {
+        display: flex;
+        gap: 4mm;
+        font-size: 6.8pt;
+        color: var(--text);
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 1.4mm;
+      }
+      .legend i {
+        display: inline-block;
+        width: 5mm;
+        height: 2px;
+        border-radius: 1px;
+      }
+      .chart svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        margin-top: 2mm;
+      }
+      .chart svg text {
+        font-family: var(--sans);
+        font-size: 9px;
+        fill: var(--muted);
+      }
+
+      .mk-grid {
+        margin-top: 5mm;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7mm;
+      }
+      table.returns {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 7.4pt;
+      }
+      .returns caption {
+        text-align: left;
+        padding-bottom: 2mm;
+      }
+      .returns th {
+        text-align: right;
+        font-size: 6pt;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 1.6mm 0 1.6mm 2mm;
+        border-bottom: 1.5px solid var(--ink);
+      }
+      .returns th:first-child {
+        text-align: left;
+        padding-left: 0;
+      }
+      .returns td {
+        padding: 2mm 0 2mm 2mm;
+        border-bottom: 1px solid var(--line);
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-strong);
+      }
+      .returns td:first-child {
+        text-align: left;
+        padding-left: 0;
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .returns td:first-child small {
+        display: block;
+        font-weight: 400;
+        font-size: 6pt;
+        color: var(--muted);
+      }
+      .tnote {
+        margin-top: 2mm;
+        font-size: 5.8pt;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+      .commentary h3 {
+        font-size: 12pt;
+        margin-top: 1.6mm;
+      }
+      .commentary .prose {
+        margin-top: 2mm;
+        font-size: 9.2pt;
+      }
+      .commentary .block + .block {
+        margin-top: 4mm;
+        padding-top: 4mm;
+        border-top: 1px solid var(--line);
+      }
+      .means {
+        margin-top: 5mm;
+        display: grid;
+        grid-template-columns: 34mm 1fr;
+        gap: 6mm;
+        align-items: center;
+        background: var(--violet-tint);
+        border-left: 2px solid var(--violet);
+        border-radius: 0 2mm 2mm 0;
+        padding: 4.5mm 5mm;
+      }
+      .means h3 {
+        font-size: 12.5pt;
+        line-height: 1.15;
+      }
+      .means p {
+        font-size: 8.2pt;
+        line-height: 1.55;
+        color: var(--text-strong);
+      }
+
+      /* ════════════════ 4–5. Feature ════════════════ */
+      .feature-head {
+        margin-top: 8mm;
+      }
+      .feature-head h1 {
+        margin-top: 4mm;
+        font-size: 40pt;
+        line-height: 1;
+        letter-spacing: -0.022em;
+        max-width: 160mm;
+      }
+      .feature-head .dek {
+        margin-top: 4.5mm;
+        max-width: 150mm;
+        font-family: var(--serif);
+        font-size: 12.5pt;
+        line-height: 1.45;
+        color: var(--text-strong);
+      }
+      .byline {
+        margin-top: 4.5mm;
+        display: flex;
+        gap: 4mm;
+        align-items: center;
+        font-size: 7pt;
+        color: var(--muted);
+      }
+      .byline b {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .byline .dot {
+        width: 1mm;
+        height: 1mm;
+        border-radius: 50%;
+        background: var(--line-strong);
+      }
+
+      /* The twelve-week timeline figure */
+      .timeline {
+        margin-top: 6mm;
+        background: var(--ink);
+        border-radius: 2mm;
+        padding: 5mm 6mm 5.5mm;
+        color: var(--on-dark);
+        position: relative;
+        overflow: hidden;
+      }
+      .timeline .label {
+        color: var(--on-dark-muted);
+        position: relative;
+      }
+      .timeline .weeks {
+        position: relative;
+        margin-top: 5mm;
+        display: grid;
+        grid-template-columns: repeat(13, 1fr);
+        border-top: 1px solid rgba(255, 255, 255, 0.25);
+      }
+      .timeline .wk {
+        position: relative;
+        padding-top: 2mm;
+        font-size: 5.8pt;
+        color: var(--on-dark-muted);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        padding-left: 1mm;
+        height: 6mm;
+      }
+      .timeline .wk::before {
+        content: '';
+        position: absolute;
+        top: -1.2mm;
+        left: -0.5px;
+        width: 1px;
+        height: 2.4mm;
+        background: rgba(255, 255, 255, 0.45);
+      }
+      .timeline .marks {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(13, 1fr);
+        margin-top: 1mm;
+      }
+      .timeline .m {
+        font-size: 6.6pt;
+        line-height: 1.35;
+        color: var(--on-dark);
+        padding: 2mm 2mm 0 0;
+        border-top: 2px solid var(--violet-soft);
+        margin-right: 2mm;
+      }
+      .timeline .m b {
+        display: block;
+        font-family: var(--serif);
+        font-weight: 500;
+        font-size: 9.5pt;
+        color: var(--white);
+        margin-bottom: 0.6mm;
+      }
+      .timeline .m.end {
+        border-top-color: var(--cream);
+      }
+
+      .cols {
+        column-count: 2;
+        column-gap: 8mm;
+        column-fill: balance;
+      }
+      .feature-body {
+        margin-top: 6mm;
+        flex: 1;
+        min-height: 0;
+      }
+      .feature-body .prose p {
+        break-inside: avoid-column;
+      }
+      .dropcap::first-letter {
+        float: left;
+        font-family: var(--serif);
+        font-weight: 500;
+        font-size: 44pt;
+        line-height: 0.82;
+        padding: 1.4mm 2mm 0 0;
+        color: var(--ink);
+      }
+      .prose h3 {
+        font-size: 11.5pt;
+        margin: 4mm 0 1.4mm;
+        line-height: 1.2;
+        break-after: avoid-column;
+      }
+      .prose h3:first-child {
+        margin-top: 0;
+      }
+
+      .feat2 {
+        margin-top: 8mm;
+        display: grid;
+        grid-template-columns: 1fr 64mm;
+        gap: 9mm;
+      }
+      .pull {
+        margin: 5mm 0;
+        padding: 5mm 0 4mm;
+        border-top: 2px solid var(--ink);
+        border-bottom: 1px solid var(--line-strong);
+        font-family: var(--serif);
+        font-style: italic;
+        font-weight: 400;
+        font-size: 18pt;
+        line-height: 1.22;
+        color: var(--ink);
+        letter-spacing: -0.01em;
+      }
+      .pull cite {
+        display: block;
+        margin-top: 3mm;
+        font-family: var(--sans);
+        font-style: normal;
+        font-size: 6.6pt;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .checklist {
+        padding: 5mm;
+      }
+      .checklist h3 {
+        margin-top: 2.6mm;
+        font-size: 15pt;
+        line-height: 1.1;
+      }
+      .checklist ol {
+        list-style: none;
+        padding: 0;
+        margin-top: 3mm;
+        counter-reset: c;
+      }
+      .checklist li {
+        counter-increment: c;
+        display: grid;
+        grid-template-columns: 4.4mm 1fr;
+        gap: 3mm;
+        padding: 2.6mm 0;
+        border-top: 1px solid var(--line-soft);
+        font-size: 7.6pt;
+        line-height: 1.45;
+        color: var(--text);
+      }
+      .checklist li::before {
+        content: '';
+        width: 3.4mm;
+        height: 3.4mm;
+        margin-top: 0.4mm;
+        border: 1.2px solid var(--ink);
+        border-radius: 0.8mm;
+      }
+      .checklist li strong {
+        display: block;
+        color: var(--ink);
+        font-weight: 600;
+        font-size: 7.8pt;
+      }
+      .aside-cta {
+        margin-top: 5mm;
+        background: var(--ink);
+        color: var(--on-dark);
+        border-radius: 2mm;
+        padding: 5mm;
+      }
+      .aside-cta h3 {
+        color: var(--white);
+        font-size: 13pt;
+        line-height: 1.15;
+      }
+      .aside-cta p {
+        margin-top: 2mm;
+        font-size: 7.4pt;
+        line-height: 1.5;
+      }
+      .btn {
+        margin-top: 3.4mm;
+        display: inline-flex;
+        align-items: center;
+        gap: 2mm;
+        height: 8mm;
+        padding: 0 4mm;
+        border-radius: 1.2mm;
+        background: var(--violet);
+        color: var(--white);
+        font-size: 7.4pt;
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      /* ════════════════ 6. Planning desk ════════════════ */
+      .desk {
+        margin-top: 6mm;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0;
+        border-top: 1.5px solid var(--ink);
+      }
+      .desk article {
+        padding: 4.5mm 5mm 0 0;
+      }
+      .desk article + article {
+        padding-left: 5mm;
+        border-left: 1px solid var(--line-strong);
+      }
+      .desk .n {
+        font-family: var(--serif);
+        font-size: 24pt;
+        line-height: 1;
+        color: var(--violet);
+        font-weight: 300;
+      }
+      .desk h3 {
+        margin-top: 3mm;
+        font-size: 13pt;
+        line-height: 1.15;
+      }
+      .desk .prose {
+        margin-top: 2.6mm;
+        font-size: 8.9pt;
+        line-height: 1.52;
+      }
+      .desk .more {
+        margin-top: 3mm;
+        font-size: 7pt;
+        font-weight: 600;
+        color: var(--violet);
+      }
+
+      .stats {
+        margin-top: 7mm;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 2mm;
+      }
+      .stats > div {
+        padding: 5mm;
+      }
+      .stats > div + div {
+        border-left: 1px solid var(--line);
+      }
+      .stats b {
+        display: block;
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 30pt;
+        line-height: 1;
+        color: var(--ink);
+        letter-spacing: -0.02em;
+      }
+      .stats span {
+        display: block;
+        margin-top: 2.4mm;
+        font-size: 7.4pt;
+        line-height: 1.45;
+        color: var(--text);
+      }
+
+      .diary {
+        margin-top: 7mm;
+      }
+      .diary ol {
+        list-style: none;
+        padding: 0;
+        margin-top: 3mm;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 3mm;
+      }
+      .diary li {
+        background: var(--paper-3);
+        border: 1px solid var(--line);
+        border-radius: 2mm;
+        padding: 4mm;
+      }
+      .diary .d {
+        font-family: var(--serif);
+        font-size: 22pt;
+        line-height: 1;
+        color: var(--ink);
+      }
+      .diary .mo {
+        margin-top: 1mm;
+        font-size: 6.2pt;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--violet);
+      }
+      .diary p {
+        margin-top: 2.6mm;
+        font-size: 7.2pt;
+        line-height: 1.45;
+        color: var(--text);
+      }
+      .diary p strong {
+        display: block;
+        font-size: 7.6pt;
+        color: var(--ink);
+      }
+
+      /* ════════════════ 7. You asked / learn ════════════════ */
+      .qa-grid {
+        margin-top: 6mm;
+        display: grid;
+        grid-template-columns: 1fr 64mm;
+        gap: 9mm;
+      }
+      .qa {
+        border-top: 1.5px solid var(--ink);
+      }
+      .qa .item {
+        padding: 4.5mm 0;
+        border-bottom: 1px solid var(--line-strong);
+        display: grid;
+        grid-template-columns: 9mm 1fr;
+        gap: 3mm;
+      }
+      .qa .q-mark {
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 22pt;
+        line-height: 0.9;
+        color: var(--violet);
+      }
+      .qa h3 {
+        font-size: 12.5pt;
+        line-height: 1.22;
+      }
+      .qa .who {
+        margin-top: 1mm;
+        font-size: 6.6pt;
+        color: var(--muted);
+      }
+      .qa .prose {
+        margin-top: 2.2mm;
+        font-size: 9pt;
+      }
+      .word {
+        background: var(--ink);
+        color: var(--on-dark);
+        border-radius: 2mm;
+        padding: 5.5mm 5mm;
+        position: relative;
+        overflow: hidden;
+      }
+      .word .label {
+        color: var(--on-dark-muted);
+      }
+      .word h3 {
+        margin-top: 4mm;
+        font-size: 24pt;
+        line-height: 1;
+        color: var(--white);
+      }
+      .word .pron {
+        margin-top: 1.6mm;
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 9pt;
+        color: var(--violet-soft);
+      }
+      .word p {
+        margin-top: 3mm;
+        font-size: 7.6pt;
+        line-height: 1.55;
+      }
+      .word svg {
+        display: block;
+        width: 100%;
+        margin-top: 2mm;
+      }
+      .word svg text {
+        font-family: var(--sans);
+        font-size: 7px;
+        fill: var(--on-dark-muted);
+      }
+      .reading {
+        margin-top: 5mm;
+      }
+      .reading a {
+        display: block;
+        padding: 3mm 0;
+        border-top: 1px solid var(--line);
+        text-decoration: none;
+      }
+      .reading a strong {
+        display: block;
+        font-family: var(--serif);
+        font-weight: 500;
+        font-size: 10pt;
+        line-height: 1.25;
+        color: var(--ink);
+      }
+      .reading a span {
+        display: block;
+        margin-top: 0.8mm;
+        font-size: 6.4pt;
+        color: var(--muted);
+      }
+
+      /* ════════════════ 8. Back page ════════════════ */
+      .back .grid-bg {
+        -webkit-mask-image: radial-gradient(ellipse 80% 60% at 30% 30%, #000 0%, transparent 75%);
+        mask-image: radial-gradient(ellipse 80% 60% at 30% 30%, #000 0%, transparent 75%);
+      }
+      .back .cta {
+        position: relative;
+        margin-top: 18mm;
+      }
+      .back .cta h2 {
+        margin-top: 5mm;
+        font-size: 52pt;
+        line-height: 1;
+        letter-spacing: -0.024em;
+        max-width: 150mm;
+      }
+      .back .cta h2 em {
+        font-style: italic;
+        font-weight: 400;
+        color: var(--violet-soft);
+      }
+      .back .cta p {
+        margin-top: 5mm;
+        max-width: 130mm;
+        font-family: var(--serif);
+        font-size: 12pt;
+        line-height: 1.45;
+        color: var(--on-dark);
+      }
+      .back .cta .btn {
+        margin-top: 7mm;
+        height: 11mm;
+        padding: 0 6mm;
+        font-size: 8.6pt;
+      }
+      .contact {
+        position: relative;
+        margin-top: 13mm;
+        display: grid;
+        grid-template-columns: 1fr 1.1fr 1.5fr 1fr;
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+      }
+      .contact > div {
+        padding: 4mm 4mm 0 0;
+      }
+      .contact .label {
+        color: var(--on-dark-muted);
+      }
+      .contact p {
+        margin-top: 2mm;
+        font-size: 8pt;
+        line-height: 1.5;
+        color: var(--white);
+      }
+      .services {
+        position: relative;
+        margin-top: 11mm;
+      }
+      .services .label {
+        color: var(--on-dark-muted);
+      }
+      .services ul {
+        list-style: none;
+        padding: 0;
+        margin-top: 3mm;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2mm;
+      }
+      .services li {
+        padding: 1.6mm 3mm;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: 1mm;
+        font-size: 7.2pt;
+        color: var(--on-dark);
+      }
+      .disclosure {
+        position: relative;
+        margin-top: auto;
+        padding-top: 5mm;
+        border-top: 1px solid rgba(255, 255, 255, 0.16);
+        display: grid;
+        grid-template-columns: 30mm 1fr;
+        gap: 6mm;
+      }
+      .disclosure img {
+        height: 10mm;
+      }
+      .disclosure p {
+        font-size: 5.9pt;
+        line-height: 1.55;
+        color: var(--on-dark-muted);
+      }
+      .disclosure p + p {
+        margin-top: 1.6mm;
+      }
+      .disclosure strong {
+        color: var(--on-dark);
+      }
+      .back .folio {
+        margin-top: 5mm;
+      }
+      .share {
+        position: relative;
+        margin-top: 7mm;
+        display: flex;
+        align-items: center;
+        gap: 3.4mm;
+        padding: 4mm 5mm;
+        border: 1px dashed rgba(255, 255, 255, 0.24);
+        border-radius: 2mm;
+        max-width: 140mm;
+      }
+      .share svg {
+        flex-shrink: 0;
+        width: 6mm;
+        height: 6mm;
+        color: var(--violet-soft);
+      }
+      .share p {
+        font-size: 7.8pt;
+        line-height: 1.5;
+        color: var(--on-dark);
+      }
+      .share strong {
+        color: var(--white);
+      }
+
+      /* Page 2: from the practice */
+      .practice {
+        margin-top: auto;
+        padding-top: 7mm;
+      }
+      .practice-grid {
+        margin-top: 3mm;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        border-top: 1.5px solid var(--ink);
+      }
+      .practice-grid > div {
+        padding: 4mm 5mm 0 0;
+      }
+      .practice-grid > div + div {
+        padding-left: 5mm;
+        border-left: 1px solid var(--line-strong);
+      }
+      .practice h3 {
+        margin-top: 2mm;
+        font-size: 11.5pt;
+        line-height: 1.2;
+      }
+      .practice p {
+        margin-top: 1.6mm;
+        font-size: 7.4pt;
+        line-height: 1.5;
+        color: var(--text);
+      }
+      .practice + .folio {
+        margin-top: 7mm;
+      }
+
+      /* Page 5: the two-pot explainer */
+      .pots {
+        margin-top: 7mm;
+        padding: 5mm;
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 2mm;
+      }
+      .pots-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .pots-cap {
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 9.5pt;
+        color: var(--text-strong);
+      }
+      .pots-bar {
+        margin-top: 3.6mm;
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1.4mm;
+      }
+      .pot {
+        display: flex;
+        align-items: center;
+        gap: 4mm;
+        padding: 4mm 5mm;
+        border-radius: 1.4mm;
+        font-size: 7.4pt;
+        line-height: 1.45;
+      }
+      .pot b {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 26pt;
+        line-height: 1;
+      }
+      .pot strong {
+        display: block;
+        font-size: 8pt;
+        margin-bottom: 0.6mm;
+      }
+      .pot.sav {
+        background: var(--violet-tint);
+        color: var(--text-strong);
+        border: 1px solid #ddd3f5;
+      }
+      .pot.sav b,
+      .pot.sav strong {
+        color: var(--violet);
+      }
+      .pot.ret {
+        background: var(--ink);
+        color: var(--on-dark);
+      }
+      .pot.ret b,
+      .pot.ret strong {
+        color: var(--white);
+      }
+      .pots-foot {
+        margin-top: 2.6mm;
+        font-size: 6.6pt;
+        color: var(--muted);
+      }
+
+      /* Page 6: adviser's note */
+      .note-band {
+        margin-top: 8mm;
+        display: grid;
+        grid-template-columns: 12mm 1fr;
+        gap: 5mm;
+        align-items: center;
+        padding: 6mm 7mm;
+        background: var(--ink);
+        border-radius: 2mm;
+      }
+      .note-band img {
+        height: 12mm;
+      }
+      .note-band p {
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 14pt;
+        line-height: 1.3;
+        color: var(--white);
+      }
+      .note-band cite {
+        display: block;
+        margin-top: 2.4mm;
+        font-family: var(--sans);
+        font-style: normal;
+        font-size: 6.4pt;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--on-dark-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ═══════════════════════════ 1 · COVER ═══════════════════════════ -->
+    <section class="page dark cover" aria-label="Cover">
+      <div class="grid-bg"></div>
+
+      <svg class="rings" viewBox="0 0 400 400" aria-hidden="true">
+        <g fill="none" stroke="#ffffff">
+          <circle cx="200" cy="200" r="196" stroke-opacity="0.07" />
+          <circle cx="200" cy="200" r="150" stroke-opacity="0.09" />
+          <circle cx="200" cy="200" r="104" stroke-opacity="0.11" />
+          <circle cx="200" cy="200" r="58" stroke-opacity="0.13" />
+          <line x1="200" y1="0" x2="200" y2="400" stroke-opacity="0.06" />
+          <line x1="0" y1="200" x2="400" y2="200" stroke-opacity="0.06" />
+        </g>
+        <!-- heading tape: ticks every 10°, longer at the cardinals -->
+        <g stroke="#ffffff" stroke-opacity="0.22" transform="translate(200 200)">
+          <line y1="-196" y2="-184" transform="rotate(0)" stroke-opacity="0.5" />
+          <line y1="-196" y2="-188" transform="rotate(10)" />
+          <line y1="-196" y2="-188" transform="rotate(20)" />
+          <line y1="-196" y2="-188" transform="rotate(30)" />
+          <line y1="-196" y2="-188" transform="rotate(40)" />
+          <line y1="-196" y2="-188" transform="rotate(50)" />
+          <line y1="-196" y2="-188" transform="rotate(60)" />
+          <line y1="-196" y2="-188" transform="rotate(70)" />
+          <line y1="-196" y2="-188" transform="rotate(80)" />
+          <line y1="-196" y2="-184" transform="rotate(90)" stroke-opacity="0.5" />
+          <line y1="-196" y2="-188" transform="rotate(100)" />
+          <line y1="-196" y2="-188" transform="rotate(110)" />
+          <line y1="-196" y2="-188" transform="rotate(120)" />
+          <line y1="-196" y2="-188" transform="rotate(130)" />
+          <line y1="-196" y2="-188" transform="rotate(140)" />
+          <line y1="-196" y2="-188" transform="rotate(150)" />
+          <line y1="-196" y2="-188" transform="rotate(160)" />
+          <line y1="-196" y2="-188" transform="rotate(170)" />
+          <line y1="-196" y2="-184" transform="rotate(180)" stroke-opacity="0.5" />
+          <line y1="-196" y2="-188" transform="rotate(190)" />
+          <line y1="-196" y2="-188" transform="rotate(200)" />
+          <line y1="-196" y2="-188" transform="rotate(210)" />
+          <line y1="-196" y2="-188" transform="rotate(220)" />
+          <line y1="-196" y2="-188" transform="rotate(230)" />
+          <line y1="-196" y2="-188" transform="rotate(240)" />
+          <line y1="-196" y2="-188" transform="rotate(250)" />
+          <line y1="-196" y2="-188" transform="rotate(260)" />
+          <line y1="-196" y2="-184" transform="rotate(270)" stroke-opacity="0.5" />
+          <line y1="-196" y2="-188" transform="rotate(280)" />
+          <line y1="-196" y2="-188" transform="rotate(290)" />
+          <line y1="-196" y2="-188" transform="rotate(300)" />
+          <line y1="-196" y2="-188" transform="rotate(310)" />
+          <line y1="-196" y2="-188" transform="rotate(320)" />
+          <line y1="-196" y2="-188" transform="rotate(330)" />
+          <line y1="-196" y2="-188" transform="rotate(340)" />
+          <line y1="-196" y2="-188" transform="rotate(350)" />
+        </g>
+        <!-- the bearing: a violet heading line and its ping -->
+        <line
+          x1="200"
+          y1="200"
+          x2="110"
+          y2="320"
+          stroke="#a78bfa"
+          stroke-width="1.4"
+          stroke-linecap="round"
+        />
+        <circle cx="110" cy="320" r="12" fill="#6d28d9" fill-opacity="0.22" />
+        <circle cx="110" cy="320" r="4" fill="#a78bfa" />
+        <circle cx="200" cy="200" r="3" fill="#ffffff" fill-opacity="0.6" />
+      </svg>
+
+      <div class="top">
+        <img
+          class="logo"
+          src="../../public/brand-assets/navigate-wealth-reversed.svg"
+          alt="Navigate Wealth"
+        />
+        <div class="issue">
+          <span data-field="issue.number">Issue 12</span><br />
+          <span style="border: 0; padding: 0" data-field="issue.month">December 2026</span>
+        </div>
+      </div>
+
+      <div class="masthead">
+        <h1>Bear<em>ings</em></h1>
+        <div class="tag">
+          <span>Your monthly bearings on markets, money and planning.</span>
+          <span class="label">The Navigate Wealth monthly</span>
+        </div>
+      </div>
+
+      <div class="story">
+        <div class="eyebrow" style="color: var(--violet-soft)" data-field="cover.kicker">
+          Cover story · Year-end planning
+        </div>
+        <h2 data-field="cover.headline">
+          Before the year turns: <em>a twelve-week</em> planning window
+        </h2>
+        <p data-field="cover.dek">
+          Between now and the end of February, a handful of quiet decisions can do more for your
+          plan than any market call. Here is what to look at, and when.
+        </p>
+        <div class="go" data-field="cover.page">Read the story on page 4</div>
+      </div>
+
+      <div class="inside">
+        <div class="label">In this issue</div>
+        <ol>
+          <li>
+            <b>02</b
+            ><span data-field="toc.1">A note from the founder, and the month in numbers</span>
+          </li>
+          <li><b>03</b><span data-field="toc.2">Markets in review: what moved, and why</span></li>
+          <li>
+            <b>04</b><span data-field="toc.3">Cover story: the year-end planning window</span>
+          </li>
+          <li>
+            <b>06</b
+            ><span data-field="toc.4">The planning desk, diary dates and your questions</span>
+          </li>
+        </ol>
+      </div>
+
+      <div class="folio">
+        <span>navigatewealth.co</span>
+        <span>Navigate Wealth is an authorised Financial Services Provider · FSP 54606</span>
+      </div>
+    </section>
+
+    <!-- ═════════════════════ 2 · LETTER + CONTENTS ═════════════════════ -->
+    <section class="page" aria-label="From the founder">
+      <header class="rh">
+        <span class="mast"
+          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+        >
+        <span class="sec">From the founder</span>
+      </header>
+
+      <div class="letter-grid">
+        <div class="letter">
+          <div class="eyebrow v">A note from the founder</div>
+          <h2 data-field="letter.headline">Steady hands in a <em class="acc">noisy</em> year</h2>
+          <p class="dek" data-field="letter.dek">
+            Most of what moved your wealth this year happened slowly, and out of the headlines. That
+            is worth remembering as we close the books on 2026.
+          </p>
+          <div class="prose" data-field="letter.body">
+            <p>
+              Every December I read back through the year's notes from client meetings. What stands
+              out is rarely the market. It is the conversations: a retirement date brought forward,
+              a first home, a business sold, a parent who needed more care than anyone planned for.
+              Those are the moments a financial plan is built to carry.
+            </p>
+            <p>
+              Markets gave us plenty to talk about, and you will find our review on the next page.
+              But the honest summary is that patient, diversified portfolios did what they were
+              designed to do. The investors who fared best were not the ones who predicted the year;
+              they were the ones who did not need to.
+            </p>
+            <p>
+              This issue's cover story looks ahead instead of back. The twelve weeks to the end of
+              February are the most useful in the planning calendar: allowances reset, tax-year
+              contributions close, and there is time to act without rushing. We have set out what to
+              check and when, so nothing is left to the last week.
+            </p>
+            <p>
+              Thank you for the trust you have placed in us this year. Our office closes over the
+              festive season and reopens in the new year; if anything changes for you in the
+              meantime, please tell us. A plan is only as good as what it knows about you.
+            </p>
+          </div>
+          <div class="sig">
+            <div class="mark">
+              <img src="../../public/brand-assets/navigate-wealth-icon-only-dark.svg" alt="" />
+            </div>
+            <div>
+              <div class="name" data-field="letter.signoff">Shawn Francisco</div>
+              <div class="role">Founder, Navigate Wealth</div>
+            </div>
+          </div>
+        </div>
+
+        <aside>
+          <div class="card contents">
+            <div class="label">Contents</div>
+            <ol>
+              <li>
+                <b>03</b>
+                <div>
+                  <strong>Markets in review</strong
+                  ><span
+                    >Twelve months rebased, asset-class returns and what it means for you.</span
+                  >
+                </div>
+              </li>
+              <li>
+                <b>04</b>
+                <div>
+                  <strong>The year-end planning window</strong
+                  ><span>A week-by-week guide to the close of the tax year.</span>
+                </div>
+              </li>
+              <li>
+                <b>06</b>
+                <div>
+                  <strong>The planning desk</strong
+                  ><span>Retirement, cover and estate briefs, plus the dates to diarise.</span>
+                </div>
+              </li>
+              <li>
+                <b>07</b>
+                <div>
+                  <strong>You asked</strong
+                  ><span>Your questions answered, and the word of the month.</span>
+                </div>
+              </li>
+              <li>
+                <b>08</b>
+                <div>
+                  <strong>Talk to us</strong><span>Book your year-end review with an adviser.</span>
+                </div>
+              </li>
+            </ol>
+          </div>
+
+          <div class="numbers">
+            <div class="label">The month in numbers <span class="tpl">Illustrative</span></div>
+            <dl class="num">
+              <div>
+                <dt>JSE All Share</dt>
+                <dd data-field="num.jse">108 412<small class="up">▲ 2.1%</small></dd>
+              </div>
+              <div>
+                <dt>S&amp;P 500</dt>
+                <dd data-field="num.spx">6 912<small class="up">▲ 1.7%</small></dd>
+              </div>
+              <div>
+                <dt>Rand / US dollar</dt>
+                <dd data-field="num.zar">R17.24<small class="up">▲ 0.9% rand firmer</small></dd>
+              </div>
+              <div>
+                <dt>Brent crude (USD/bbl)</dt>
+                <dd data-field="num.brent">$71.30<small class="down">▼ 3.4%</small></dd>
+              </div>
+              <div>
+                <dt>Gold (USD/oz)</dt>
+                <dd data-field="num.gold">$3 480<small class="up">▲ 1.2%</small></dd>
+              </div>
+              <div>
+                <dt>SARB repo rate</dt>
+                <dd data-field="num.repo">
+                  6.75%<small style="color: var(--on-dark-muted)">Unchanged</small>
+                </dd>
+              </div>
+            </dl>
+            <p class="src" data-field="num.source">
+              Month-end closing levels, 30 November 2026. Change is month on month.
+            </p>
+          </div>
+        </aside>
+      </div>
+
+      <div class="practice">
+        <div class="eyebrow">From the practice</div>
+        <div class="practice-grid" data-field="practice">
+          <div>
+            <div class="label">Festive hours <span class="tpl">Confirm dates</span></div>
+            <h3>Closed 24 December to 4 January</h3>
+            <p>
+              Urgent claims and policy matters still reach us through the client portal and
+              info@navigatewealth.co.
+            </p>
+          </div>
+          <div>
+            <div class="label">Client portal</div>
+            <h3>Your plan, now on your phone</h3>
+            <p>
+              Install the portal from navigatewealth.co to see policies, documents and requests in
+              one place.
+            </p>
+          </div>
+          <div>
+            <div class="label">Ask Vasco</div>
+            <h3>Questions after hours?</h3>
+            <p>
+              Vasco, our website assistant, answers general questions any time and books you in with
+              an adviser.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <footer class="folio">
+        <span>Bearings · The Navigate Wealth monthly</span>
+        <span class="pg num"><i>/</i> 02</span>
+      </footer>
+    </section>
+
+    <!-- ═══════════════════════════ 3 · MARKETS ═══════════════════════════ -->
+    <section class="page" aria-label="Markets in review">
+      <header class="rh">
+        <span class="mast"
+          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+        >
+        <span class="sec">Markets in review</span>
+      </header>
+
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow v" data-field="markets.kicker">Markets in review · November 2026</div>
+          <h2 data-field="markets.headline">
+            A month of <em class="acc">quiet</em> gains, and one loud week
+          </h2>
+        </div>
+        <p data-field="markets.dek">
+          Local shares led, the rand firmed and bonds kept grinding higher. A sell-off mid-month was
+          undone within days.
+        </p>
+      </div>
+
+      <div class="card chart">
+        <div class="ch-top">
+          <div>
+            <h3>Twelve months, rebased to 100</h3>
+            <div class="sub">
+              Total return in rand, month-end values <span class="tpl">Illustrative data</span>
+            </div>
+          </div>
+          <div class="legend">
+            <span><i style="background: #0d1626"></i>SA equity</span>
+            <span><i style="background: #6d28d9"></i>Global equity</span>
+            <span><i style="background: #b9b2a4"></i>SA bonds</span>
+          </div>
+        </div>
+        <svg
+          viewBox="0 0 600 230"
+          role="img"
+          aria-label="Line chart of three indices over twelve months"
+        >
+          <g stroke="#ece7de" stroke-width="1">
+            <line x1="34" y1="36" x2="586" y2="36" />
+            <line x1="34" y1="76" x2="586" y2="76" />
+            <line x1="34" y1="116" x2="586" y2="116" />
+            <line x1="34" y1="196" x2="586" y2="196" />
+          </g>
+          <line x1="34" y1="156" x2="586" y2="156" stroke="#b9b2a4" stroke-dasharray="2 3" />
+          <g text-anchor="end">
+            <text x="28" y="39">115</text>
+            <text x="28" y="79">110</text>
+            <text x="28" y="119">105</text>
+            <text x="28" y="159">100</text>
+            <text x="28" y="199">95</text>
+          </g>
+          <g text-anchor="middle">
+            <text x="34" y="222">Nov</text>
+            <text x="80" y="222">Dec</text>
+            <text x="126" y="222">Jan</text>
+            <text x="172" y="222">Feb</text>
+            <text x="218" y="222">Mar</text>
+            <text x="264" y="222">Apr</text>
+            <text x="310" y="222">May</text>
+            <text x="356" y="222">Jun</text>
+            <text x="402" y="222">Jul</text>
+            <text x="448" y="222">Aug</text>
+            <text x="494" y="222">Sep</text>
+            <text x="540" y="222">Oct</text>
+            <text x="586" y="222">Nov</text>
+          </g>
+          <path
+            d="M34,156 L80,139.2 L126,124 L172,130.4 L218,157.6 L264,144 L310,116.8 L356,106.4 L402,85.6 L448,96.8 L494,71.2 L540,52.8 L586,33.6 L586,196 L34,196 Z"
+            fill="#0d1626"
+            fill-opacity="0.04"
+          />
+          <polyline
+            fill="none"
+            stroke="#b9b2a4"
+            stroke-width="1.6"
+            stroke-linejoin="round"
+            points="34,156 80,148.8 126,142.4 172,136.8 218,139.2 264,132 310,122.4 356,115.2 402,108.8 448,101.6 494,92.8 540,85.6 586,79.2"
+          />
+          <polyline
+            fill="none"
+            stroke="#6d28d9"
+            stroke-width="1.8"
+            stroke-linejoin="round"
+            points="34,156 80,148 126,135.2 172,123.2 218,148.8 264,175.2 310,149.6 356,132 402,118.4 448,100.8 494,91.2 540,84 586,66.4"
+          />
+          <polyline
+            fill="none"
+            stroke="#0d1626"
+            stroke-width="2.2"
+            stroke-linejoin="round"
+            points="34,156 80,139.2 126,124 172,130.4 218,157.6 264,144 310,116.8 356,106.4 402,85.6 448,96.8 494,71.2 540,52.8 586,33.6"
+          />
+          <g font-weight="600">
+            <circle cx="586" cy="33.6" r="3" fill="#0d1626" />
+            <circle cx="586" cy="66.4" r="3" fill="#6d28d9" />
+            <circle cx="586" cy="79.2" r="3" fill="#b9b2a4" />
+          </g>
+          <!-- annotation -->
+          <line x1="264" y1="175.2" x2="264" y2="188" stroke="#6d28d9" stroke-width="1" />
+          <text x="270" y="186" style="fill: #6d28d9; font-weight: 600">April: tariff scare</text>
+        </svg>
+      </div>
+
+      <div class="mk-grid">
+        <div>
+          <table class="returns num">
+            <caption>
+              <span class="label">Returns in rand, to 30 November</span>
+              <span class="tpl">Illustrative</span>
+            </caption>
+            <thead>
+              <tr>
+                <th>Asset class</th>
+                <th>1 m</th>
+                <th>3 m</th>
+                <th>YTD</th>
+                <th>12 m</th>
+              </tr>
+            </thead>
+            <tbody data-field="markets.table">
+              <tr>
+                <td>SA equity<small>FTSE/JSE All Share</small></td>
+                <td class="up">2.1%</td>
+                <td class="up">7.4%</td>
+                <td class="up">12.8%</td>
+                <td class="up">15.3%</td>
+              </tr>
+              <tr>
+                <td>SA listed property<small>FTSE/JSE SAPY</small></td>
+                <td class="down">−0.6%</td>
+                <td class="up">3.2%</td>
+                <td class="up">9.1%</td>
+                <td class="up">11.4%</td>
+              </tr>
+              <tr>
+                <td>SA bonds<small>FTSE/JSE ALBI</small></td>
+                <td class="up">0.7%</td>
+                <td class="up">2.6%</td>
+                <td class="up">8.7%</td>
+                <td class="up">9.6%</td>
+              </tr>
+              <tr>
+                <td>SA cash<small>STeFI Composite</small></td>
+                <td class="up">0.6%</td>
+                <td class="up">1.8%</td>
+                <td class="up">6.6%</td>
+                <td class="up">7.2%</td>
+              </tr>
+              <tr>
+                <td>Global equity<small>MSCI ACWI, in rand</small></td>
+                <td class="up">2.0%</td>
+                <td class="up">4.2%</td>
+                <td class="up">8.9%</td>
+                <td class="up">11.2%</td>
+              </tr>
+              <tr>
+                <td>Global bonds<small>Bloomberg Global Agg., in rand</small></td>
+                <td class="down">−1.1%</td>
+                <td class="down">−0.4%</td>
+                <td class="up">1.9%</td>
+                <td class="up">2.7%</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="tnote">
+            Index total returns, not fund returns. Past performance is not a reliable indicator of
+            future results.
+          </p>
+        </div>
+
+        <div class="commentary">
+          <div class="block">
+            <div class="label">At home</div>
+            <h3 data-field="markets.local.h">Resources and banks carried the JSE</h3>
+            <div class="prose" data-field="markets.local.body">
+              <p>
+                Firmer metal prices lifted miners, while banks rallied on steady credit growth and
+                lower bad-debt charges. With inflation inside the target range, the Reserve Bank
+                held rates and signalled patience.
+              </p>
+            </div>
+          </div>
+          <div class="block">
+            <div class="label">Abroad</div>
+            <h3 data-field="markets.global.h">A wobble, then back to earnings</h3>
+            <div class="prose" data-field="markets.global.body">
+              <p>
+                A week of rate worries knocked global shares mid-month. Strong company results
+                pulled them back. A firmer rand trimmed offshore returns for South African
+                investors.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="means">
+        <h3>What it means <em class="acc">for you</em></h3>
+        <p data-field="markets.means">
+          Nothing in November called for a change of course. If your plan holds the mix it was built
+          with, the sell-off and recovery were noise. Where a strong year has pushed one asset class
+          well past its target weight, a year-end rebalance is worth discussing with your adviser.
+        </p>
+      </div>
+
+      <footer class="folio">
+        <span>Bearings · The Navigate Wealth monthly</span>
+        <span class="pg num"><i>/</i> 03</span>
+      </footer>
+    </section>
+
+    <!-- ═════════════════════════ 4 · FEATURE (1) ═════════════════════════ -->
+    <section class="page" aria-label="Cover story">
+      <header class="rh">
+        <span class="mast"
+          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+        >
+        <span class="sec">Cover story</span>
+      </header>
+
+      <div class="feature-head">
+        <div class="eyebrow v" data-field="feature.kicker">Cover story · Year-end planning</div>
+        <h1 data-field="feature.headline">
+          Before the year turns: <em class="acc">a twelve-week</em> planning window
+        </h1>
+        <p class="dek" data-field="feature.dek">
+          The tax year closes at the end of February. Between now and then, a few unhurried
+          decisions can lower this year's tax, use allowances that will not roll over and leave your
+          plan in better shape for the next one.
+        </p>
+        <div class="byline">
+          <span>By <b data-field="feature.author">the Navigate Wealth planning team</b></span>
+          <span class="dot"></span>
+          <span data-field="feature.readtime">7 minute read</span>
+        </div>
+      </div>
+
+      <figure class="timeline">
+        <div class="label">The window, week by week · 1 December to 28 February</div>
+        <div class="weeks">
+          <div class="wk">1 Dec</div>
+          <div class="wk">8</div>
+          <div class="wk">15</div>
+          <div class="wk">22</div>
+          <div class="wk">29</div>
+          <div class="wk">5 Jan</div>
+          <div class="wk">12</div>
+          <div class="wk">19</div>
+          <div class="wk">26</div>
+          <div class="wk">2 Feb</div>
+          <div class="wk">9</div>
+          <div class="wk">16</div>
+          <div class="wk">23</div>
+        </div>
+        <div class="marks">
+          <div class="m" style="grid-column: 1 / span 3">
+            <b>Take stock</b>Gather this year's income, contributions and statements.
+          </div>
+          <div class="m" style="grid-column: 4 / span 3">
+            <b>Pause</b>Festive season. Note any life changes to discuss.
+          </div>
+          <div class="m" style="grid-column: 7 / span 3">
+            <b>Review</b>Meet your adviser; agree contributions and rebalancing.
+          </div>
+          <div class="m" style="grid-column: 10 / span 3">
+            <b>Act</b>Make contributions early; payments take days to clear.
+          </div>
+          <div class="m end" style="grid-column: 13 / span 1; margin-right: 0">
+            <b>Close</b>Tax year ends.
+          </div>
+        </div>
+      </figure>
+
+      <div class="feature-body cols prose" data-field="feature.body.1">
+        <p class="dropcap">
+          Year-end planning has a reputation for being complicated. Mostly, it is not. It comes down
+          to a short list of allowances that reset on 1 March, a few contributions that only count
+          if they land before the tax year closes, and a review of whether the plan you made still
+          fits the life you are living.
+        </p>
+        <p>
+          What makes it hard is timing. December disappears into the holidays, January is busy, and
+          by late February everyone is trying to do the same thing at once. Product providers need
+          time to process contributions, and a payment made on the last day may not be allocated in
+          time to count for this tax year.
+        </p>
+        <h3>1. Use the allowances that do not roll over</h3>
+        <p>
+          Your annual tax-free savings allowance is use-it-or-lose-it: whatever you do not
+          contribute by the end of February is gone for good, and over-contributing is penalised. If
+          you have room left this year, a single lump sum in January is often simpler than a
+          scramble in the final week.
+        </p>
+        <p>
+          The same is true of annual exclusions on capital gains. If you hold investments with
+          sizeable unrealised gains, realising some of them before the year closes, and reinvesting,
+          can reset your base cost and use an exclusion that would otherwise lapse.
+        </p>
+        <h3>2. Top up your retirement contributions</h3>
+        <p>
+          Contributions to a retirement annuity, pension or provident fund are deductible up to
+          27.5% of the greater of your remuneration or taxable income, within an annual rand cap.
+          Many people sit below that limit simply because no one checked. Topping up is one of the
+          few ways to reduce this year's tax while building next decade's income.
+        </p>
+        <p>
+          It also matters more under the two-pot system. Since September 2024, part of every new
+          contribution goes to a savings pot you can access before retirement. A slightly higher
+          contribution keeps your retirement pot on track if you ever do need to draw on savings.
+        </p>
+      </div>
+
+      <footer class="folio">
+        <span>Continued overleaf</span>
+        <span class="pg num"><i>/</i> 04</span>
+      </footer>
+    </section>
+
+    <!-- ═════════════════════════ 5 · FEATURE (2) ═════════════════════════ -->
+    <section class="page" aria-label="Cover story, continued">
+      <header class="rh">
+        <span class="mast"
+          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+        >
+        <span class="sec">Cover story, continued</span>
+      </header>
+
+      <div class="feat2">
+        <div class="prose" data-field="feature.body.2">
+          <h3>3. Check your cover still matches your life</h3>
+          <p>
+            Life, disability and income-protection cover are usually set up for the life you had at
+            the time. A new child, a bigger bond, a change of job or a divorce can each leave a gap,
+            or leave you paying for cover you no longer need. Year-end is a natural point to look at
+            the sums assured against what your family would actually need.
+          </p>
+          <p>
+            Check your beneficiary nominations at the same time. Retirement-fund trustees decide how
+            death benefits are paid, but your nomination guides them, and an out-of-date nomination
+            is one of the most common causes of delays and disputes.
+          </p>
+
+          <blockquote class="pull" data-field="feature.pull">
+            “The best year-end plan is the one you finish in January, not the one you start on 27
+            February.”
+            <cite>The Navigate Wealth planning team</cite>
+          </blockquote>
+
+          <h3>4. Rebalance, if the year has pulled you off course</h3>
+          <p>
+            A strong year in one asset class quietly changes the risk you are taking. If shares have
+            outrun bonds and cash, your portfolio may now carry more equity than the plan intended.
+            Rebalancing brings it back, and doing it inside a retirement fund or tax-free account
+            avoids triggering capital gains.
+          </p>
+          <h3>5. Look ahead to the new tax year</h3>
+          <p>
+            On 1 March your allowances reset. Setting up monthly debit orders for your tax-free
+            savings and retirement contributions from the start of the year spreads the cost and
+            removes the year-end rush altogether. It is the single habit we most often recommend.
+          </p>
+          <p>
+            None of this needs to be done alone, and not all of it will apply to you. The point of a
+            review is to work out which two or three items matter most for your circumstances, and
+            then to do them early.
+          </p>
+        </div>
+
+        <aside>
+          <div class="card checklist">
+            <div class="label">Tear-out checklist</div>
+            <h3>Your year-end <em class="acc">to-do</em> list</h3>
+            <ol data-field="feature.checklist">
+              <li>
+                <div>
+                  <strong>Tax-free savings</strong>Contribute any unused allowance by mid-February.
+                </div>
+              </li>
+              <li>
+                <div>
+                  <strong>Retirement top-up</strong>Check how far you are from the 27.5% deduction
+                  limit.
+                </div>
+              </li>
+              <li>
+                <div>
+                  <strong>Capital gains</strong>Consider using this year's annual exclusion.
+                </div>
+              </li>
+              <li>
+                <div><strong>Cover review</strong>Compare sums assured with today's needs.</div>
+              </li>
+              <li>
+                <div>
+                  <strong>Beneficiaries</strong>Confirm nominations on every fund and policy.
+                </div>
+              </li>
+              <li>
+                <div><strong>Rebalance</strong>Bring your mix back to the plan's targets.</div>
+              </li>
+              <li>
+                <div><strong>Debit orders</strong>Set up monthly contributions from 1 March.</div>
+              </li>
+            </ol>
+          </div>
+
+          <div class="aside-cta">
+            <div class="label" style="color: var(--on-dark-muted)">Next step</div>
+            <h3 style="margin-top: 2.4mm">Book a year-end review</h3>
+            <p>
+              Forty-five minutes with your adviser to work through the list above, in person or
+              online.
+            </p>
+            <a class="btn" href="https://navigatewealth.co/contact">Book a review →</a>
+          </div>
+        </aside>
+      </div>
+
+      <figure class="pots" data-field="feature.figure">
+        <div class="pots-head">
+          <div class="label">Explainer · The two-pot retirement system</div>
+          <div class="pots-cap">How each rand contributed since 1 September 2024 is split</div>
+        </div>
+        <div class="pots-bar">
+          <div class="pot sav">
+            <b>1/3</b>
+            <div>
+              <strong>Savings pot</strong>One withdrawal per tax year, taxed at your marginal rate.
+            </div>
+          </div>
+          <div class="pot ret">
+            <b>2/3</b>
+            <div>
+              <strong>Retirement pot</strong>Preserved until retirement, then taken as an income.
+            </div>
+          </div>
+        </div>
+        <p class="pots-foot">
+          Savings built up before 1 September 2024 sit in a separate vested pot under the old rules.
+        </p>
+      </figure>
+
+      <footer class="folio">
+        <span>Bearings · The Navigate Wealth monthly</span>
+        <span class="pg num"><i>/</i> 05</span>
+      </footer>
+    </section>
+
+    <!-- ═════════════════════════ 6 · PLANNING DESK ═════════════════════════ -->
+    <section class="page" aria-label="The planning desk">
+      <header class="rh">
+        <span class="mast"
+          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+        >
+        <span class="sec">The planning desk</span>
+      </header>
+
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow v">The planning desk</div>
+          <h2 data-field="desk.headline">
+            Three things <em class="acc">worth a look</em> this month
+          </h2>
+        </div>
+        <p data-field="desk.dek">
+          Short briefs from our advisers on the questions clients are asking right now.
+        </p>
+      </div>
+
+      <div class="desk">
+        <article>
+          <div class="n">i.</div>
+          <div class="label" style="margin-top: 3mm">Retirement</div>
+          <h3 data-field="desk.1.h">Think twice before tapping the savings pot</h3>
+          <div class="prose" data-field="desk.1.body">
+            <p>
+              A savings-pot withdrawal is taxed at your marginal rate and permanently lowers what
+              compounds for retirement. It is there for genuine emergencies. If December spending is
+              the reason, talk to us first; there is often a cheaper option.
+            </p>
+          </div>
+          <div class="more">Retirement planning →</div>
+        </article>
+        <article>
+          <div class="n">ii.</div>
+          <div class="label" style="margin-top: 3mm">Risk management</div>
+          <h3 data-field="desk.2.h">Cover that grows with your family</h3>
+          <div class="prose" data-field="desk.2.body">
+            <p>
+              A rule of thumb is not a plan. We size life and disability cover from your actual
+              debts, your children's education and the income your family would need, then review it
+              whenever one of those changes.
+            </p>
+          </div>
+          <div class="more">Risk management →</div>
+        </article>
+        <article>
+          <div class="n">iii.</div>
+          <div class="label" style="margin-top: 3mm">Estate planning</div>
+          <h3 data-field="desk.3.h">When did you last read your will?</h3>
+          <div class="prose" data-field="desk.3.body">
+            <p>
+              Marriage, divorce, children and property purchases can all overtake a will. A current
+              will, a named executor and liquidity to pay estate costs spare your family months of
+              delay at the hardest possible time.
+            </p>
+          </div>
+          <div class="more">Estate planning →</div>
+        </article>
+      </div>
+
+      <div class="stats">
+        <div>
+          <b class="num">27.5%</b>
+          <span data-field="stat.1"
+            >of remuneration or taxable income, the most you can deduct for retirement-fund
+            contributions each year, within an annual cap.</span
+          >
+        </div>
+        <div>
+          <b class="num">3.5%</b>
+          <span data-field="stat.2"
+            >The most an executor may charge on the gross value of an estate, plus VAT. One reason
+            your estate needs cash, not only assets.</span
+          >
+        </div>
+        <div>
+          <b class="num">1 March</b>
+          <span data-field="stat.3"
+            >Tax-free savings, retirement and capital-gains allowances reset with the new tax year.
+            Unused allowances do not carry over.</span
+          >
+        </div>
+      </div>
+
+      <div class="diary">
+        <div class="eyebrow">
+          Dates to diarise <span class="tpl">Confirm dates each issue</span>
+        </div>
+        <ol data-field="diary">
+          <li>
+            <div class="d num">15</div>
+            <div class="mo">December</div>
+            <p>
+              <strong>Last contributions for 2026</strong>Some providers close for the holidays.
+            </p>
+          </li>
+          <li>
+            <div class="d num">12</div>
+            <div class="mo">January</div>
+            <p><strong>Year-end reviews open</strong>Book early; February diaries fill quickly.</p>
+          </li>
+          <li>
+            <div class="d num">26</div>
+            <div class="mo">February</div>
+            <p><strong>Second provisional tax</strong>Payment due for provisional taxpayers.</p>
+          </li>
+          <li>
+            <div class="d num">28</div>
+            <div class="mo">February</div>
+            <p><strong>Tax year ends</strong>Last day for contributions to count this year.</p>
+          </li>
+        </ol>
+      </div>
+
+      <blockquote class="note-band" data-field="desk.note">
+        <img src="../../public/brand-assets/navigate-wealth-icon-only-dark.svg" alt="" />
+        <p>
+          “A financial plan is not a document you sign once. It is a conversation we keep having, so
+          that it still describes your life.”
+          <cite>The Navigate Wealth advice team</cite>
+        </p>
+      </blockquote>
+
+      <footer class="folio">
+        <span>Bearings · The Navigate Wealth monthly</span>
+        <span class="pg num"><i>/</i> 06</span>
+      </footer>
+    </section>
+
+    <!-- ═════════════════════════ 7 · YOU ASKED ═════════════════════════ -->
+    <section class="page" aria-label="You asked">
+      <header class="rh">
+        <span class="mast"
+          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+        >
+        <span class="sec">You asked</span>
+      </header>
+
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow v">You asked</div>
+          <h2 data-field="qa.headline">Your questions, <em class="acc">answered plainly</em></h2>
+        </div>
+        <p>Send yours to info@navigatewealth.co. We answer a few each month, without names.</p>
+      </div>
+
+      <div class="qa-grid">
+        <div class="qa" data-field="qa.items">
+          <div class="item">
+            <div class="q-mark">Q</div>
+            <div>
+              <h3>Should I pay off my bond faster or invest the extra?</h3>
+              <div class="who">A client in Pretoria, aged 41</div>
+              <div class="prose">
+                <p>
+                  Paying down your bond earns you a guaranteed, tax-free return equal to your
+                  interest rate. Investing may earn more over time, but with risk. For many people
+                  the answer is both: first use your retirement and tax-free allowances, which carry
+                  tax benefits a bond does not, then put the rest into the bond. Keep an emergency
+                  fund either way, and use an access bond so the money is not locked away.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="q-mark">Q</div>
+            <div>
+              <h3>My medical aid premium is going up. Should I downgrade?</h3>
+              <div class="who">A client in Centurion, aged 58</div>
+              <div class="prose">
+                <p>
+                  Possibly, but compare like with like. Look at the hospital cover, chronic benefits
+                  and network restrictions you would give up, not only the premium. A gap cover
+                  policy alongside a lower option can close much of the difference. Moving later in
+                  life can also bring waiting periods, so check before you switch.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="q-mark">Q</div>
+            <div>
+              <h3>Is now a bad time to invest, with markets near their highs?</h3>
+              <div class="who">A reader, by email</div>
+              <div class="prose">
+                <p>
+                  Markets spend a lot of their time near all-time highs, because over the long run
+                  they rise. Waiting for a dip often costs more than it saves. If a lump sum makes
+                  you nervous, phasing it in over a few months is a sensible middle path.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="q-mark">Q</div>
+            <div>
+              <h3>How often should my plan really be reviewed?</h3>
+              <div class="who">A client in Midrand, aged 33</div>
+              <div class="prose">
+                <p>
+                  At least once a year, and whenever your life changes: a new job, a marriage or
+                  divorce, a child, a property, an inheritance. The annual review keeps the plan
+                  honest; the life events are when it matters most.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside>
+          <div class="word">
+            <div class="label">Word of the month</div>
+            <h3 data-field="word.term">Sequence risk</h3>
+            <div class="pron">noun · retirement planning</div>
+            <p data-field="word.def">
+              The risk that poor returns arrive early in retirement, just as you start drawing an
+              income. Two retirees with the same average return can end up in very different places
+              depending on the order the returns come in.
+            </p>
+            <div class="label" style="margin-top: 4mm">Same average return, different order</div>
+            <svg viewBox="0 0 200 92" aria-hidden="true">
+              <line x1="0" y1="88" x2="200" y2="88" stroke="#ffffff" stroke-opacity="0.2" />
+              <polyline
+                points="4,28 40,24 76,30 112,36 148,44 184,52"
+                fill="none"
+                stroke="#a78bfa"
+                stroke-width="1.6"
+              />
+              <polyline
+                points="4,28 40,46 76,58 112,66 148,74 184,82"
+                fill="none"
+                stroke="#e3d9c3"
+                stroke-width="1.6"
+                stroke-dasharray="3 2"
+              />
+              <text x="52" y="16" style="fill: #a78bfa">Good years first: income lasts</text>
+              <text x="8" y="80" style="fill: #e3d9c3">Bad years first: capital runs down</text>
+            </svg>
+          </div>
+
+          <div class="reading">
+            <div class="label" style="margin-bottom: 1mm">From the journal</div>
+            <a href="https://navigatewealth.co/resources">
+              <strong data-field="read.1">A plain guide to the two-pot retirement system</strong>
+              <span>navigatewealth.co/resources</span>
+            </a>
+            <a href="https://navigatewealth.co/resources">
+              <strong data-field="read.2">How much life cover do you actually need?</strong>
+              <span>navigatewealth.co/resources</span>
+            </a>
+            <a href="https://navigatewealth.co/resources">
+              <strong data-field="read.3">Offshore investing without the guesswork</strong>
+              <span>navigatewealth.co/resources</span>
+            </a>
+          </div>
+        </aside>
+      </div>
+
+      <footer class="folio">
+        <span>Bearings · The Navigate Wealth monthly</span>
+        <span class="pg num"><i>/</i> 07</span>
+      </footer>
+    </section>
+
+    <!-- ═════════════════════════ 8 · BACK PAGE ═════════════════════════ -->
+    <section class="page dark back" aria-label="Contact and disclosures">
+      <div class="grid-bg"></div>
+      <header class="rh" style="border-top-color: rgba(255, 255, 255, 0.85); color: var(--white)">
+        <span class="mast"
+          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+        >
+        <span class="sec" style="color: var(--on-dark-muted)">Talk to us</span>
+      </header>
+
+      <div class="cta">
+        <div class="eyebrow" style="color: var(--violet-soft)">Your year-end review</div>
+        <h2 data-field="back.headline">Let's set your <em>bearings</em> for the year ahead.</h2>
+        <p data-field="back.body">
+          Every client is entitled to a review at least once a year. If yours is due, or anything in
+          this issue applies to you, book a conversation with an adviser. There is no charge for the
+          review itself.
+        </p>
+        <a class="btn" href="https://navigatewealth.co/contact">Book your review →</a>
+      </div>
+
+      <div class="contact">
+        <div>
+          <div class="label">Call</div>
+          <p>+27 12 667 2505<br />Mon – Fri, 08:30 – 16:30</p>
+        </div>
+        <div>
+          <div class="label">Email</div>
+          <p>info@navigatewealth.co</p>
+        </div>
+        <div>
+          <div class="label">Visit</div>
+          <p>
+            First Floor, Milestone Place Block A<br />25 Sovereign Drive, Route 21 Business Park<br />Pretoria,
+            0157
+          </p>
+        </div>
+        <div>
+          <div class="label">Online</div>
+          <p>navigatewealth.co<br />Ask Vasco, our assistant, any time</p>
+        </div>
+      </div>
+
+      <div class="services">
+        <div class="label">How we help</div>
+        <ul>
+          <li>Risk Management</li>
+          <li>Medical Aid</li>
+          <li>Retirement Planning</li>
+          <li>Investment Management</li>
+          <li>Employee Benefits</li>
+          <li>Tax Planning</li>
+          <li>Estate Planning</li>
+        </ul>
+      </div>
+
+      <div class="share">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <p>
+          <strong>Know someone who would find this useful?</strong> Forward this issue. They can
+          subscribe to Bearings at navigatewealth.co/resources.
+        </p>
+      </div>
+
+      <div class="disclosure">
+        <img src="../../public/brand-assets/navigate-wealth-reversed.svg" alt="Navigate Wealth" />
+        <div>
+          <p>
+            <strong>Important disclosure.</strong> Wealthfront (Pty) Ltd (Reg No. 2024/071953/07),
+            trading as “Navigate Wealth”, is an authorised Financial Services Provider (FSP No.
+            54606), regulated by the Financial Sector Conduct Authority. This newsletter is for
+            general information only and does not constitute financial, investment, tax, legal or
+            other professional advice. It does not take your objectives, financial situation or
+            needs into account. Before acting on anything in it, consider your own circumstances and
+            speak to an adviser.
+          </p>
+          <p>
+            Market figures are sourced from third parties believed to be reliable, but their
+            accuracy is not guaranteed. Past performance is not necessarily indicative of future
+            results; the value of investments can go down as well as up. Tax rules and allowances
+            mentioned are those in force at the time of writing and may change.
+          </p>
+          <p>
+            You are receiving Bearings because you subscribed to Navigate Wealth updates. To stop
+            receiving it, use the unsubscribe link in the email this newsletter came with.
+          </p>
+        </div>
+      </div>
+
+      <footer class="folio">
+        <span>© 2026 Navigate Wealth · navigatewealth.co</span>
+        <span class="pg num"><i>/</i> 08</span>
+      </footer>
+    </section>
+  </body>
+</html>

@@ -12,6 +12,11 @@ a **draft awaiting admin approval** and one **"Newsletter draft ready for
 review" email** to the admin inbox with a link straight to the draft. Nothing
 is sent to subscribers until an admin approves it in the admin.
 
+The PDF itself is built from **Bearings**, the monthly newsletter template in
+the website's design: see
+[`templates/newsletter/README.md`](../../templates/newsletter/README.md) for
+how to fill it in and render it (`npm run newsletter:render`).
+
 ## Two ways in
 
 ```text

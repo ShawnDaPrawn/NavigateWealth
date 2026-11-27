@@ -12,6 +12,7 @@ this level, mixing build steps with one-off admin fixups.
 | `ops/`                                 | Acting on a live environment                     | By hand or from a workflow, deliberately                |
 | `uat/`                                 | Launch-time API smoke and acceptance harnesses   | By hand, around a launch                                |
 | `dev/`                                 | Local developer conveniences                     | By hand, rarely                                         |
+| `newsletter/`                          | Rendering the monthly newsletter template to PDF | By hand, monthly: `npm run newsletter:render`           |
 | `portal-worker/`, `provider-adapters/` | The provider automation engine                   | From the worker entry point below                       |
 
 ## Why the provider worker is still flat
