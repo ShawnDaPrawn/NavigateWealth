@@ -176,7 +176,7 @@ export async function runStuckAlertSweep(): Promise<StuckSweepResult> {
       const days = Math.floor(age / (24 * 60 * 60 * 1000));
       const senderId = envelope.created_by_user_id;
       const sender = await resolveSender(senderId);
-      const dashboardLink = `https://www.navigatewealth.co/admin/esign?envelope=${envelope.id}`;
+      const dashboardLink = `https://www.navigatewealth.co/admin?module=esign&envelope=${envelope.id}`;
 
       // Email (respecting notification preferences).
       if (sender && senderId) {

@@ -5,6 +5,7 @@ import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { BrandPageLoader } from '../components/ui/brand-loader';
 import { isStandaloneDisplay } from '../utils/pwa/displayMode';
 import { SITE_DESIGN } from '../site/design';
+import { LegacyAdminModuleRedirect } from './router/LegacyAdminModuleRedirect';
 
 // Shared loading fallback for lazy-loaded routes
 function RouteFallback() {
@@ -882,6 +883,15 @@ export function AppRoutes() {
           element={
             <AdminRoute>
               <LegalPdfQaPage />
+            </AdminRoute>
+          }
+        />
+        {/* Old email links: /admin/calendar, /admin/tasks, … → /admin?module=… */}
+        <Route
+          path="/admin/:module"
+          element={
+            <AdminRoute>
+              <LegacyAdminModuleRedirect />
             </AdminRoute>
           }
         />

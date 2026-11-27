@@ -151,7 +151,7 @@ app.post(
           title: 'Daily Calendar',
           subtitle: todayFormatted,
           greeting: 'Good morning,',
-          buttonUrl: 'https://www.navigatewealth.co/admin/calendar',
+          buttonUrl: 'https://www.navigatewealth.co/admin?module=calendar',
           buttonLabel: 'Open Calendar',
           footerNote: 'This is an automated daily digest from Navigate Wealth.',
           footerSettings,
@@ -163,7 +163,7 @@ app.post(
         to: ADMIN_EMAIL,
         subject: `Daily Calendar — ${todayFormatted} (No events)`,
         html,
-        text: `Daily Calendar — ${todayFormatted}\n\nNo events scheduled for today.\n\nOpen calendar: https://www.navigatewealth.co/admin/calendar`,
+        text: `Daily Calendar — ${todayFormatted}\n\nNo events scheduled for today.\n\nOpen calendar: https://www.navigatewealth.co/admin?module=calendar`,
       });
 
       return c.json({ success: true, sent, event_count: 0 });
@@ -283,7 +283,7 @@ app.post(
       title: 'Daily Calendar',
       subtitle: todayFormatted,
       greeting: 'Good morning,',
-      buttonUrl: 'https://www.navigatewealth.co/admin/calendar',
+      buttonUrl: 'https://www.navigatewealth.co/admin?module=calendar',
       buttonLabel: 'Open Calendar',
       footerNote: 'This is an automated daily digest from Navigate Wealth.',
       footerSettings,
@@ -307,7 +307,7 @@ You have ${events.length} event(s) scheduled for today:
 
 ${eventLines}
 
-Open calendar: https://www.navigatewealth.co/admin/calendar
+Open calendar: https://www.navigatewealth.co/admin?module=calendar
 
 —
 This is an automated daily digest from Navigate Wealth.
@@ -517,7 +517,7 @@ app.post(
         title: 'Client Birthdays',
         subtitle: todayFormatted,
         greeting: 'Good morning,',
-        buttonUrl: 'https://www.navigatewealth.co/admin/clients',
+        buttonUrl: 'https://www.navigatewealth.co/admin?module=clients',
         buttonLabel: 'Open Clients',
         footerNote: 'This is an automated birthday digest from Navigate Wealth.',
         footerSettings,
@@ -536,7 +536,7 @@ app.post(
       to: ADMIN_EMAIL,
       subject: `Client Birthdays — ${todayFormatted} (${birthdays.length})`,
       html,
-      text: `Client Birthdays — ${todayFormatted}\n\n${plain}\n\nOpen clients: https://www.navigatewealth.co/admin/clients`,
+      text: `Client Birthdays — ${todayFormatted}\n\n${plain}\n\nOpen clients: https://www.navigatewealth.co/admin?module=clients`,
     });
 
     log.info(`Birthday digest sent=${sent} for ${birthdays.length} client(s)`);
