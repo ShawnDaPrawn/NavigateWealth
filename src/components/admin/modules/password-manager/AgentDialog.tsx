@@ -36,6 +36,7 @@ export function AgentDialog({ agent, onClose }: { agent?: VaultConnection; onClo
   const [reach, setReach] = useState<'all' | 'some'>(agent?.serviceIds ? 'some' : 'all');
   const [chosen, setChosen] = useState<string[]>(agent?.serviceIds ?? []);
   const [passwords, setPasswords] = useState<PasswordAccess>(agent?.passwords ?? 'ask');
+  const [writesSkills, setWritesSkills] = useState(agent?.writesSkills === true);
   const [callback, setCallback] = useState(agent?.redirectUri ?? KNOWN_CALLBACKS.claude);
   const [days, setDays] = useState('90');
   const [error, setError] = useState('');
@@ -43,7 +44,7 @@ export function AgentDialog({ agent, onClose }: { agent?: VaultConnection; onClo
   const save = useVaultMutation(async () => {
     const serviceIds = reach === 'all' ? null : chosen;
     if (agent) {
-      await vaultApi.editAgent(agent.id, { name, serviceIds, passwords });
+      await vaultApi.editAgent(agent.id, { name, serviceIds, passwords, writesSkills });
       return null;
     }
     return vaultApi.addAgent({
@@ -51,6 +52,7 @@ export function AgentDialog({ agent, onClose }: { agent?: VaultConnection; onClo
       tool,
       serviceIds,
       passwords,
+      writesSkills,
       redirectUri: callback.trim(),
       expiresInDays: Number(days),
     });
@@ -166,6 +168,20 @@ export function AgentDialog({ agent, onClose }: { agent?: VaultConnection; onClo
                 help: passwordAccessHelp[v],
               }))}
             />
+          </Field>
+
+          <Field
+            label="Can it write skills?"
+            hint="Lets it add and update skills for one login at a time, so it can record what it learns. Every agent reads skills, so allow this only for agents you trust. Each skill it saves shows the agent as its author and appears in Activity."
+          >
+            <label className="flex items-center gap-2 text-sm text-nw-ink">
+              <Checkbox
+                checked={writesSkills}
+                onCheckedChange={(v) => setWritesSkills(v === true)}
+                aria-label="May write skills for logins"
+              />
+              May write skills for logins it can see
+            </label>
           </Field>
 
           {!agent && (

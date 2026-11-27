@@ -165,7 +165,10 @@ export function SkillsTab({
                           ? 'Only ' + (loginName.get(s.credentialId) ?? 'one login')
                           : 'Every ' + service.name + ' login'}
                       </DsPill>
-                      <DsMeta>Updated {formatDate(s.updatedAt)}</DsMeta>
+                      <DsMeta>
+                        Updated {formatDate(s.updatedAt)}
+                        {s.updatedBy.startsWith('AI agent') ? ' by ' + s.updatedBy : ''}
+                      </DsMeta>
                     </span>
                   </button>
                 </li>

@@ -164,12 +164,17 @@ async function seed() {
     platform: id('Platform'),
   };
 }
-async function connect(passwords: string, serviceIds: string[] | null = null) {
+async function connect(
+  passwords: string,
+  serviceIds: string[] | null = null,
+  writesSkills = false,
+) {
   const issued = await admin('/connections', 'POST', {
     name: 'Claude — test',
     tool: 'claude',
     serviceIds,
     passwords,
+    writesSkills,
     redirectUri: '',
     expiresInDays: 90,
   });
@@ -279,6 +284,103 @@ describe('password manager — MCP for outside AI agents', () => {
     expect(platform).toContain('Navigate Wealth platform map');
     expect(platform).toContain('https://www.navigatewealth.co/admin?module=clients');
     expect((await tool(token, 'get_skills', { login_id: s.hidden })).isError).toBe(true);
+  });
+
+  it('offers save_skill only to an agent a person allowed to write skills', async () => {
+    await seed();
+    const reader = await connect('ask');
+    expect(await toolNames(reader.token)).not.toContain('save_skill');
+    const init = await (
+      await rpc(reader.token, 'initialize', { protocolVersion: '2025-06-18' })
+    ).json();
+    expect(init.result.instructions).not.toContain('save_skill');
+    const refused = await tool(reader.token, 'save_skill', {
+      login_id: crypto.randomUUID(),
+      title: 'x',
+      when_to_use: '',
+      instructions: 'y',
+    });
+    expect(refused.error?.code).toBe(-32602);
+    // Switching it on later takes effect on the next call.
+    expect((await admin('/connections/' + reader.id, 'PUT', { writesSkills: true })).status).toBe(
+      200,
+    );
+    const listed = (await (await rpc(reader.token, 'tools/list')).json()).result.tools as {
+      name: string;
+      annotations: { readOnlyHint: boolean };
+    }[];
+    expect(listed.find((t) => t.name === 'save_skill')?.annotations.readOnlyHint).toBe(false);
+    expect(listed.find((t) => t.name === 'get_skills')?.annotations.readOnlyHint).toBe(true);
+    const writerInit = await (
+      await rpc(reader.token, 'initialize', { protocolVersion: '2025-06-18' })
+    ).json();
+    expect(writerInit.result.instructions).toContain('save_skill');
+  });
+
+  it('lets a writing agent add and update a skill for one login, recorded as its own', async () => {
+    const s = await seed();
+    const { token } = await connect('never', null, true);
+    const added = await tool(token, 'save_skill', {
+      login_id: s.b2,
+      title: 'Find the October statement',
+      when_to_use: 'When asked for a monthly statement',
+      instructions: 'Open Statements, pick the month, download the PDF.',
+    });
+    expect(added.value).toEqual({
+      status: 'added',
+      skill: 'Find the October statement',
+      login: 'Broker 2',
+    });
+    const updated = await tool(token, 'save_skill', {
+      login_id: s.b2,
+      title: 'find the october statement ',
+      when_to_use: 'When asked for a monthly statement',
+      instructions: 'Statements > Monthly > choose the month > Download.',
+    });
+    expect((updated.value as { status: string }).status).toBe('updated');
+    const mine = (
+      (await admin('/skills')).json.items as {
+        name: string;
+        credentialId: string | null;
+        serviceId: string;
+        instructions: string;
+        updatedBy: string;
+      }[]
+    ).filter((k) => k.credentialId === s.b2);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({
+      serviceId: s.ag,
+      instructions: 'Statements > Monthly > choose the month > Download.',
+      updatedBy: 'AI agent · Claude — test',
+    });
+    // Its own login only: the other Allan Gray login does not get it.
+    expect((await tool(token, 'get_skills', { login_id: s.b2 })).text).toContain(
+      'Statements > Monthly',
+    );
+    expect((await tool(token, 'get_skills', { login_id: s.b1 })).text).not.toContain(
+      'Statements > Monthly',
+    );
+    const events = JSON.stringify((await admin('/events')).json);
+    expect(events).toContain('Wrote skill');
+    expect(events).toContain('Updated skill');
+  });
+
+  it('refuses a skill for a login out of reach, or one containing the password', async () => {
+    const s = await seed();
+    const { token } = await connect('never', [s.goaml], true);
+    const write = (login_id: string, instructions: string) =>
+      tool(token, 'save_skill', { login_id, title: 'Steps', when_to_use: '', instructions });
+    expect((await write(s.b1, 'Allan Gray is out of reach')).isError).toBe(true);
+    expect((await write(s.hidden, 'Hidden from agents')).isError).toBe(true);
+    const leak = await write(s.reporting, 'Sign in with Reporting Secret-Password-1 then file');
+    expect(leak.isError).toBe(true);
+    expect(leak.text).toContain('password');
+    expect((await write(s.reporting, '   ')).isError).toBe(true);
+    expect(
+      ((await admin('/skills')).json.items as { credentialId: string | null }[]).filter(
+        (k) => k.credentialId === s.reporting,
+      ),
+    ).toHaveLength(0);
   });
 
   it('leaves out the password tools for an agent that may never receive passwords', async () => {

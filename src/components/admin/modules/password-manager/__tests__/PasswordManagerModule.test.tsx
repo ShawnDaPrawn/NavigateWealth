@@ -206,6 +206,10 @@ describe('PasswordManagerModule', () => {
       'value',
       'https://claude.ai/api/mcp/auth_callback',
     );
+    // Off unless a person switches it on: a skill steers every agent that reads it.
+    const writes = screen.getByRole('checkbox', { name: 'May write skills for logins' });
+    expect(writes.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(writes);
     fireEvent.click(
       within(screen.getByRole('dialog')).getByRole('button', { name: 'Connect agent' }),
     );
@@ -217,6 +221,7 @@ describe('PasswordManagerModule', () => {
           tool: 'claude',
           serviceIds: null,
           passwords: 'ask',
+          writesSkills: true,
           redirectUri: 'https://claude.ai/api/mcp/auth_callback',
           expiresInDays: 90,
         },
