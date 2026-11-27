@@ -233,7 +233,7 @@ export const DEFAULT_TEMPLATES: Record<string, EmailTemplate> = {
     bodyHtml:
       '<p>Please find attached the calendar for today, <strong>{{ .Date }}</strong>.</p><p>You have <strong>{{ .EventCount }}</strong> event(s) scheduled.</p>',
     buttonLabel: 'View Calendar',
-    buttonUrl: 'https://www.navigatewealth.co/admin/calendar',
+    buttonUrl: 'https://www.navigatewealth.co/admin?module=calendar',
     footerNote: '',
   },
   request_info_required: {
