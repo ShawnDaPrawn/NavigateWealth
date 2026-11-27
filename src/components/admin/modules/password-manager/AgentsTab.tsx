@@ -167,6 +167,7 @@ export function AgentsTab() {
                           .join(', ')
                       : 'Every service'}{' '}
                     · Passwords: {passwordAccessLabels[a.passwords].toLowerCase()}
+                    {a.writesSkills ? ' · Writes skills' : ''}
                   </span>
                   <DsMeta>
                     {a.lastUsed ? 'Last used ' + formatDate(a.lastUsed) : 'Not used yet'} ·

@@ -15,7 +15,7 @@
  */
 import { Hono, type Context, type Next } from 'npm:hono';
 import { z } from 'npm:zod@4.6.5';
-import type { Service, VaultSummary } from '../../../shared/password-manager.ts';
+import type { Service, Skill, VaultSummary } from '../../../shared/password-manager.ts';
 import { renderPlatformGuide } from '../../../shared/platform-guide.ts';
 import {
   allSummaries,
@@ -25,7 +25,11 @@ import {
   summary,
   type VaultEntry,
 } from './repositories/password-vault.ts';
-import { approvals, type StoredConnection } from './repositories/vault-store.ts';
+import {
+  approvals,
+  skills as skillStore,
+  type StoredConnection,
+} from './repositories/vault-store.ts';
 import {
   authenticateVaultConnection,
   VAULT_TOKEN_PREFIX,
@@ -36,7 +40,16 @@ import { isHostedAssistantOrigin } from './broker-ops-origin.ts';
 import { canSee, passwordMode, reachesService } from './vault-policy.ts';
 import { consume, publicApproval, requestApproval } from './vault-approvals.ts';
 import { recordEvent } from './vault-events.ts';
-import { allServices, allSkills, renderSkillsFor, skillsFor } from './vault-skills.ts';
+import {
+  allServices,
+  allSkills,
+  createSkillOnce,
+  loginSkillId,
+  renderSkillsFor,
+  skillInput,
+  skillsFor,
+  updateSkill,
+} from './vault-skills.ts';
 import { totp } from './vault-totp.ts';
 
 const log = createModuleLogger('vault-mcp');
@@ -131,7 +144,11 @@ type Tool = {
   description: string;
   schema: z.ZodType;
   secret: boolean;
+  /** Changes stored data; listed only for an agent a person allowed to write skills. */
+  writes?: boolean;
 };
+/** Enough for any login's own skills; past this an agent should improve one, not add more. */
+const MAX_LOGIN_SKILLS = 30;
 const tools: Tool[] = [
   {
     name: 'list_services',
@@ -186,9 +203,26 @@ const tools: Tool[] = [
     schema: z.object({ login_id: loginId, reason, approval_id: z.uuid().optional() }).strict(),
     secret: true,
   },
+  {
+    name: 'save_skill',
+    description:
+      'Write down how to do something with one login, so the next agent can repeat it: add a skill for this login only, or update the one with the same title. Read get_skills first and update rather than duplicate. Write it as a brief for a new colleague: when it applies, the steps, what to check. Never put a password, one-time code or a client’s personal details in a skill. Skills shared by every login of a service are written by people, not here.',
+    schema: z
+      .object({
+        login_id: loginId,
+        title: z.string().max(120),
+        when_to_use: z.string().max(500),
+        instructions: z.string().max(20000),
+      })
+      .strict(),
+    secret: false,
+    writes: true,
+  },
 ];
 const toolsFor = (conn: StoredConnection) =>
-  tools.filter((t) => !t.secret || conn.passwords !== 'never');
+  tools.filter(
+    (t) => (!t.secret || conn.passwords !== 'never') && (!t.writes || conn.writesSkills === true),
+  );
 
 async function visible(conn: StoredConnection, id: string) {
   const entry = await entries.get(id);
@@ -294,6 +328,82 @@ async function secretFlow(
   };
 }
 
+/**
+ * A skill for one login, written by an agent a person allowed to (writesSkills).
+ * Same title updates that login's skill; anything else adds one. The author is
+ * recorded as the agent, and Activity shows it, because a skill steers every
+ * agent that reads it.
+ */
+async function saveSkill(
+  conn: StoredConnection,
+  args: { login_id: string; title: string; when_to_use: string; instructions: string },
+) {
+  if (conn.writesSkills !== true) throw new ToolError('You may not write skills.');
+  const { entry, item } = await visible(conn, args.login_id);
+  const parsed = skillInput.safeParse({
+    name: args.title,
+    whenToUse: args.when_to_use,
+    instructions: args.instructions,
+    serviceId: item.serviceId,
+    credentialId: item.id,
+  });
+  if (!parsed.success)
+    throw new ToolError(
+      parsed.error.issues[0]?.message ?? 'Give the skill a title and instructions.',
+    );
+  const input = parsed.data;
+  // A skill is read by every agent; a password in one would be handed to all of
+  // them. But the check answers "is this text the password?", so it runs only
+  // for an agent that already holds the current password (may receive it freely,
+  // or has received it since it last changed). For any other agent it would be a
+  // guessing oracle that bypasses passwordMode (Codex review on #573, P1).
+  const holdsPassword =
+    passwordMode(conn, item) === 'go' ||
+    (entry.exposure ?? []).some((e) => e.connectionId === conn.id);
+  if (holdsPassword) {
+    const { password } = await revealSecret(entry);
+    const text = input.name + '\n' + input.whenToUse + '\n' + input.instructions;
+    if (password.length >= 4 && text.includes(password))
+      throw new ToolError('Remove the password from the skill. Skills must never contain one.');
+  }
+  const own = (await allSkills()).filter((k) => k.credentialId === item.id);
+  const same = own.find((k) => k.name.trim().toLowerCase() === input.name.toLowerCase());
+  const by = 'AI agent · ' + conn.name;
+  const actor = {
+    actorKind: 'connection' as const,
+    actorId: conn.id,
+    actorName: conn.name,
+    credentialId: item.id,
+    credentialName: item.name,
+  };
+  const update = async (current: Skill) => {
+    const next = await updateSkill(current, input, current.revision, by);
+    if (!next)
+      throw new ToolError(
+        'Someone changed this skill just now. Read get_skills again, then retry.',
+      );
+    await recordEvent({ ...actor, action: 'Updated skill', detail: next.name, outcome: 'ok' });
+    return { status: 'updated', skill: next.name, login: item.name };
+  };
+  if (same) return update(same);
+  if (own.length >= MAX_LOGIN_SKILLS)
+    throw new ToolError(
+      'This login already has ' +
+        MAX_LOGIN_SKILLS +
+        ' skills of its own. Update one of them (use its exact title) instead of adding another.',
+    );
+  const id = await loginSkillId(item.id, input.name);
+  const row = await createSkillOnce(input, by, id);
+  if (!row) {
+    // Another agent saved this title a moment ago: update theirs instead.
+    const theirs = await skillStore.get(id);
+    if (!theirs) throw new ToolError('Could not save the skill. Try again.');
+    return update(theirs);
+  }
+  await recordEvent({ ...actor, action: 'Wrote skill', detail: row.name, outcome: 'ok' });
+  return { status: 'added', skill: row.name, login: item.name };
+}
+
 async function call(conn: StoredConnection, name: string, args: Record<string, unknown>) {
   switch (name) {
     case 'list_services': {
@@ -368,6 +478,11 @@ async function call(conn: StoredConnection, name: string, args: Record<string, u
     }
     case 'get_platform_guide':
       return renderPlatformGuide();
+    case 'save_skill':
+      return saveSkill(
+        conn,
+        args as { login_id: string; title: string; when_to_use: string; instructions: string },
+      );
     case 'get_approval_status': {
       const a = await approvals.get(String(args.approval_id));
       if (!a || a.connectionId !== conn.id) throw new ToolError('Unknown approval.');
@@ -428,7 +543,11 @@ app.post('/', async (c) => {
         : versions[0],
       capabilities: { tools: {} },
       serverInfo: { name: 'navigate-wealth-password-manager', version: '3.0.0' },
-      instructions: INSTRUCTIONS,
+      instructions:
+        INSTRUCTIONS +
+        (conn.writesSkills === true
+          ? ' When you work out how to do something with a login that its skills do not cover, record it with save_skill so the next agent can repeat it.'
+          : ''),
     });
   if (method === 'ping') return ok({});
   if (method === 'tools/list')
@@ -437,7 +556,7 @@ app.post('/', async (c) => {
         name: t.name,
         description: t.description,
         inputSchema: z.toJSONSchema(t.schema, { target: 'draft-7', unrepresentable: 'any' }),
-        annotations: { readOnlyHint: true },
+        annotations: { readOnlyHint: !t.writes },
       })),
     });
   if (method !== 'tools/call') return fail(id, -32601, 'Method not found');

@@ -199,6 +199,12 @@ export interface ConnectionInput {
   /** Services the agent may reach; null = every service, including ones added later. */
   serviceIds: string[] | null;
   passwords: PasswordAccess;
+  /**
+   * May add and update skills for one login at a time (the MCP save_skill tool).
+   * Off unless a person switches it on: a skill steers every agent that reads it.
+   * Connections stored before this existed have no value, which means off.
+   */
+  writesSkills?: boolean;
   /** HTTPS OAuth callback; empty string issues a bearer token instead. */
   redirectUri: string;
   expiresInDays: number;
@@ -221,7 +227,7 @@ export interface IssuedConnection {
 }
 
 export type ConnectionPatch = Partial<
-  Pick<VaultConnection, 'name' | 'serviceIds' | 'passwords' | 'status'>
+  Pick<VaultConnection, 'name' | 'serviceIds' | 'passwords' | 'status' | 'writesSkills'>
 >;
 
 // ── Approvals and activity ───────────────────────────────────────────────────

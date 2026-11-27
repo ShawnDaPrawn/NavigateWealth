@@ -50,6 +50,7 @@ const connectionInput = z.object({
   tool: z.enum(['claude', 'chatgpt', 'other']),
   serviceIds,
   passwords,
+  writesSkills: z.boolean().default(false),
   redirectUri: callback,
   expiresInDays: z.number().int().min(1).max(365),
 });
@@ -59,6 +60,7 @@ const connectionPatch = z
     serviceIds,
     passwords,
     status: z.enum(['active', 'paused']),
+    writesSkills: z.boolean(),
   })
   .partial();
 const skillEdit = z.object({ revision: z.uuid(), skill: skillInput });

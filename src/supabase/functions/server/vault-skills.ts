@@ -14,6 +14,7 @@ import {
 } from '../../../shared/password-manager.ts';
 export { renderSkillsFor, skillsFor } from '../../../shared/vault-skills.ts';
 import { insertIfAbsent } from './repositories/password-vault.ts';
+import { sha256Hex } from './sha256.ts';
 import { compareAndSet, services, skills } from './repositories/vault-store.ts';
 
 // ── Validation ───────────────────────────────────────────────────────────────
@@ -109,6 +110,38 @@ export async function createSkill(input: SkillInput, by: string): Promise<Skill>
   };
   await skills.put(row.id, row);
   return row;
+}
+
+/**
+ * The one id an agent's skill for this login and title can have, so two agents
+ * saving the same title at once write one record instead of two (Codex review
+ * on #573). Shaped as a version-5 UUID so id checks accept it.
+ */
+export async function loginSkillId(credentialId: string, title: string) {
+  const h = await sha256Hex(credentialId + '\n' + title.trim().toLowerCase());
+  return (
+    h.slice(0, 8) +
+    '-' +
+    h.slice(8, 12) +
+    '-5' +
+    h.slice(13, 16) +
+    '-8' +
+    h.slice(17, 20) +
+    '-' +
+    h.slice(20, 32)
+  );
+}
+
+/** Creates the skill under `id` unless one is already there; null when it was. */
+export async function createSkillOnce(input: SkillInput, by: string, id: string) {
+  const row: Skill = {
+    ...input,
+    id,
+    revision: crypto.randomUUID(),
+    updatedAt: new Date().toISOString(),
+    updatedBy: by,
+  };
+  return (await insertIfAbsent(skills.key(id), row)) ? row : null;
 }
 
 export async function updateSkill(row: Skill, input: SkillInput, revision: string, by: string) {
