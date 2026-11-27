@@ -411,7 +411,7 @@ app.post(
       title: 'Overdue Tasks Report',
       subtitle: todayFormatted,
       greeting: 'Good morning,',
-      buttonUrl: 'https://www.navigatewealth.co/admin/tasks',
+      buttonUrl: 'https://www.navigatewealth.co/admin?module=tasks',
       buttonLabel: 'Open Task Board',
       footerNote: 'This is an automated daily digest from Navigate Wealth.',
       footerSettings,
@@ -435,7 +435,7 @@ You have ${overdueTasks.length} overdue task(s):
 
 ${taskLines}
 
-Please review: https://www.navigatewealth.co/admin/tasks
+Please review: https://www.navigatewealth.co/admin?module=tasks
 
 —
 This is an automated daily digest from Navigate Wealth.
