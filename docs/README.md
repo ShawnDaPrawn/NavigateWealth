@@ -98,6 +98,7 @@ Short READMEs live next to the thing they describe, which is where they belong.
 | [`../e2e/README.md`](../e2e/README.md)                                                         | Running the opt-in Playwright suite                                                    |
 | [`../brand-source/README.md`](../brand-source/README.md)                                       | Why brand source material is not under `public/`                                       |
 | [`../public/brand-assets/README.md`](../public/brand-assets/README.md)                         | The web-ready brand assets the app actually uses                                       |
+| [`../templates/newsletter/README.md`](../templates/newsletter/README.md)                       | Bearings, the monthly newsletter template, and how to render an issue to PDF           |
 
 ## Conventions
 
