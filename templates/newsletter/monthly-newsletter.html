@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  Bearings — the Navigate Wealth monthly newsletter.
+  The Wealth Compass — the Navigate Wealth monthly newsletter.
 
   An eight-page A4 template in the Navigator design (src/site/styles/navigator.css):
   navy ink and warm paper, Newsreader for headlines and long-form text, Inter for
@@ -19,7 +19,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Bearings — Navigate Wealth monthly · December 2026</title>
+    <title>The Wealth Compass — Navigate Wealth · December 2026</title>
     <style>
       /* ── Faces: the site's self-hosted Navigator fonts ── */
       @font-face {
@@ -350,10 +350,20 @@
         border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       }
       .cover .masthead h1 {
-        font-size: 96pt;
-        line-height: 0.86;
-        letter-spacing: -0.035em;
+        font-size: 70pt;
+        line-height: 0.9;
+        letter-spacing: -0.03em;
         font-weight: 450;
+        white-space: nowrap;
+      }
+      .cover .masthead h1 .the {
+        display: block;
+        margin-bottom: 1mm;
+        font-size: 22pt;
+        font-style: italic;
+        font-weight: 400;
+        letter-spacing: 0;
+        color: var(--on-dark);
       }
       .cover .masthead h1 em {
         font-style: italic;
@@ -1579,7 +1589,7 @@
       </div>
 
       <div class="masthead">
-        <h1>Bear<em>ings</em></h1>
+        <h1><span class="the">The</span>Wealth <em>Compass</em></h1>
         <div class="tag">
           <span>Your monthly bearings on markets, money and planning.</span>
           <span class="label">The Navigate Wealth monthly</span>
@@ -1628,7 +1638,7 @@
     <section class="page" aria-label="From the founder">
       <header class="rh">
         <span class="mast"
-          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+          ><b>The Wealth Compass</b> · <span data-field="issue.month">December 2026</span></span
         >
         <span class="sec">From the founder</span>
       </header>
@@ -1680,7 +1690,7 @@
         <aside>
           <div class="card contents">
             <div class="label">Contents</div>
-            <ol>
+            <ol data-field="contents">
               <li>
                 <b>03</b>
                 <div>
@@ -1722,32 +1732,30 @@
 
           <div class="numbers">
             <div class="label">The month in numbers <span class="tpl">Illustrative</span></div>
-            <dl class="num">
+            <dl class="num" data-field="numbers">
               <div>
                 <dt>JSE All Share</dt>
-                <dd data-field="num.jse">108 412<small class="up">▲ 2.1%</small></dd>
+                <dd>108 412<small class="up">▲ 2.1%</small></dd>
               </div>
               <div>
                 <dt>S&amp;P 500</dt>
-                <dd data-field="num.spx">6 912<small class="up">▲ 1.7%</small></dd>
+                <dd>6 912<small class="up">▲ 1.7%</small></dd>
               </div>
               <div>
                 <dt>Rand / US dollar</dt>
-                <dd data-field="num.zar">R17.24<small class="up">▲ 0.9% rand firmer</small></dd>
+                <dd>R17.24<small class="up">▲ 0.9% rand firmer</small></dd>
               </div>
               <div>
                 <dt>Brent crude (USD/bbl)</dt>
-                <dd data-field="num.brent">$71.30<small class="down">▼ 3.4%</small></dd>
+                <dd>$71.30<small class="down">▼ 3.4%</small></dd>
               </div>
               <div>
                 <dt>Gold (USD/oz)</dt>
-                <dd data-field="num.gold">$3 480<small class="up">▲ 1.2%</small></dd>
+                <dd>$3 480<small class="up">▲ 1.2%</small></dd>
               </div>
               <div>
                 <dt>SARB repo rate</dt>
-                <dd data-field="num.repo">
-                  6.75%<small style="color: var(--on-dark-muted)">Unchanged</small>
-                </dd>
+                <dd>6.75%<small style="color: var(--on-dark-muted)">Unchanged</small></dd>
               </div>
             </dl>
             <p class="src" data-field="num.source">
@@ -1788,7 +1796,7 @@
       </div>
 
       <footer class="folio">
-        <span>Bearings · The Navigate Wealth monthly</span>
+        <span>The Wealth Compass · The Navigate Wealth monthly</span>
         <span class="pg num"><i>/</i> 02</span>
       </footer>
     </section>
@@ -1797,7 +1805,7 @@
     <section class="page" aria-label="Markets in review">
       <header class="rh">
         <span class="mast"
-          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+          ><b>The Wealth Compass</b> · <span data-field="issue.month">December 2026</span></span
         >
         <span class="sec">Markets in review</span>
       </header>
@@ -1818,93 +1826,97 @@
       <div class="card chart">
         <div class="ch-top">
           <div>
-            <h3>Twelve months, rebased to 100</h3>
-            <div class="sub">
+            <h3 data-field="chart.title">Twelve months, rebased to 100</h3>
+            <div class="sub" data-field="chart.sub">
               Total return in rand, month-end values <span class="tpl">Illustrative data</span>
             </div>
           </div>
-          <div class="legend">
+          <div class="legend" data-field="chart.legend">
             <span><i style="background: #0d1626"></i>SA equity</span>
             <span><i style="background: #6d28d9"></i>Global equity</span>
             <span><i style="background: #b9b2a4"></i>SA bonds</span>
           </div>
         </div>
-        <svg
-          viewBox="0 0 600 230"
-          role="img"
-          aria-label="Line chart of three indices over twelve months"
-        >
-          <g stroke="#ece7de" stroke-width="1">
-            <line x1="34" y1="36" x2="586" y2="36" />
-            <line x1="34" y1="76" x2="586" y2="76" />
-            <line x1="34" y1="116" x2="586" y2="116" />
-            <line x1="34" y1="196" x2="586" y2="196" />
-          </g>
-          <line x1="34" y1="156" x2="586" y2="156" stroke="#b9b2a4" stroke-dasharray="2 3" />
-          <g text-anchor="end">
-            <text x="28" y="39">115</text>
-            <text x="28" y="79">110</text>
-            <text x="28" y="119">105</text>
-            <text x="28" y="159">100</text>
-            <text x="28" y="199">95</text>
-          </g>
-          <g text-anchor="middle">
-            <text x="34" y="222">Nov</text>
-            <text x="80" y="222">Dec</text>
-            <text x="126" y="222">Jan</text>
-            <text x="172" y="222">Feb</text>
-            <text x="218" y="222">Mar</text>
-            <text x="264" y="222">Apr</text>
-            <text x="310" y="222">May</text>
-            <text x="356" y="222">Jun</text>
-            <text x="402" y="222">Jul</text>
-            <text x="448" y="222">Aug</text>
-            <text x="494" y="222">Sep</text>
-            <text x="540" y="222">Oct</text>
-            <text x="586" y="222">Nov</text>
-          </g>
-          <path
-            d="M34,156 L80,139.2 L126,124 L172,130.4 L218,157.6 L264,144 L310,116.8 L356,106.4 L402,85.6 L448,96.8 L494,71.2 L540,52.8 L586,33.6 L586,196 L34,196 Z"
-            fill="#0d1626"
-            fill-opacity="0.04"
-          />
-          <polyline
-            fill="none"
-            stroke="#b9b2a4"
-            stroke-width="1.6"
-            stroke-linejoin="round"
-            points="34,156 80,148.8 126,142.4 172,136.8 218,139.2 264,132 310,122.4 356,115.2 402,108.8 448,101.6 494,92.8 540,85.6 586,79.2"
-          />
-          <polyline
-            fill="none"
-            stroke="#6d28d9"
-            stroke-width="1.8"
-            stroke-linejoin="round"
-            points="34,156 80,148 126,135.2 172,123.2 218,148.8 264,175.2 310,149.6 356,132 402,118.4 448,100.8 494,91.2 540,84 586,66.4"
-          />
-          <polyline
-            fill="none"
-            stroke="#0d1626"
-            stroke-width="2.2"
-            stroke-linejoin="round"
-            points="34,156 80,139.2 126,124 172,130.4 218,157.6 264,144 310,116.8 356,106.4 402,85.6 448,96.8 494,71.2 540,52.8 586,33.6"
-          />
-          <g font-weight="600">
-            <circle cx="586" cy="33.6" r="3" fill="#0d1626" />
-            <circle cx="586" cy="66.4" r="3" fill="#6d28d9" />
-            <circle cx="586" cy="79.2" r="3" fill="#b9b2a4" />
-          </g>
-          <!-- annotation -->
-          <line x1="264" y1="175.2" x2="264" y2="188" stroke="#6d28d9" stroke-width="1" />
-          <text x="270" y="186" style="fill: #6d28d9; font-weight: 600">April: tariff scare</text>
-        </svg>
+        <div data-field="chart.svg">
+          <svg
+            viewBox="0 0 600 230"
+            role="img"
+            aria-label="Line chart of three indices over twelve months"
+          >
+            <g stroke="#ece7de" stroke-width="1">
+              <line x1="34" y1="36" x2="586" y2="36" />
+              <line x1="34" y1="76" x2="586" y2="76" />
+              <line x1="34" y1="116" x2="586" y2="116" />
+              <line x1="34" y1="196" x2="586" y2="196" />
+            </g>
+            <line x1="34" y1="156" x2="586" y2="156" stroke="#b9b2a4" stroke-dasharray="2 3" />
+            <g text-anchor="end">
+              <text x="28" y="39">115</text>
+              <text x="28" y="79">110</text>
+              <text x="28" y="119">105</text>
+              <text x="28" y="159">100</text>
+              <text x="28" y="199">95</text>
+            </g>
+            <g text-anchor="middle">
+              <text x="34" y="222">Nov</text>
+              <text x="80" y="222">Dec</text>
+              <text x="126" y="222">Jan</text>
+              <text x="172" y="222">Feb</text>
+              <text x="218" y="222">Mar</text>
+              <text x="264" y="222">Apr</text>
+              <text x="310" y="222">May</text>
+              <text x="356" y="222">Jun</text>
+              <text x="402" y="222">Jul</text>
+              <text x="448" y="222">Aug</text>
+              <text x="494" y="222">Sep</text>
+              <text x="540" y="222">Oct</text>
+              <text x="586" y="222">Nov</text>
+            </g>
+            <path
+              d="M34,156 L80,139.2 L126,124 L172,130.4 L218,157.6 L264,144 L310,116.8 L356,106.4 L402,85.6 L448,96.8 L494,71.2 L540,52.8 L586,33.6 L586,196 L34,196 Z"
+              fill="#0d1626"
+              fill-opacity="0.04"
+            />
+            <polyline
+              fill="none"
+              stroke="#b9b2a4"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+              points="34,156 80,148.8 126,142.4 172,136.8 218,139.2 264,132 310,122.4 356,115.2 402,108.8 448,101.6 494,92.8 540,85.6 586,79.2"
+            />
+            <polyline
+              fill="none"
+              stroke="#6d28d9"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+              points="34,156 80,148 126,135.2 172,123.2 218,148.8 264,175.2 310,149.6 356,132 402,118.4 448,100.8 494,91.2 540,84 586,66.4"
+            />
+            <polyline
+              fill="none"
+              stroke="#0d1626"
+              stroke-width="2.2"
+              stroke-linejoin="round"
+              points="34,156 80,139.2 126,124 172,130.4 218,157.6 264,144 310,116.8 356,106.4 402,85.6 448,96.8 494,71.2 540,52.8 586,33.6"
+            />
+            <g font-weight="600">
+              <circle cx="586" cy="33.6" r="3" fill="#0d1626" />
+              <circle cx="586" cy="66.4" r="3" fill="#6d28d9" />
+              <circle cx="586" cy="79.2" r="3" fill="#b9b2a4" />
+            </g>
+            <!-- annotation -->
+            <line x1="264" y1="175.2" x2="264" y2="188" stroke="#6d28d9" stroke-width="1" />
+            <text x="270" y="186" style="fill: #6d28d9; font-weight: 600">April: tariff scare</text>
+          </svg>
+        </div>
       </div>
 
       <div class="mk-grid">
         <div>
           <table class="returns num">
             <caption>
-              <span class="label">Returns in rand, to 30 November</span>
+              <span class="label" data-field="markets.table.caption"
+                >Returns in rand, to 30 November</span
+              >
               <span class="tpl">Illustrative</span>
             </caption>
             <thead>
@@ -2003,7 +2015,7 @@
       </div>
 
       <footer class="folio">
-        <span>Bearings · The Navigate Wealth monthly</span>
+        <span>The Wealth Compass · The Navigate Wealth monthly</span>
         <span class="pg num"><i>/</i> 03</span>
       </footer>
     </section>
@@ -2012,7 +2024,7 @@
     <section class="page" aria-label="Cover story">
       <header class="rh">
         <span class="mast"
-          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+          ><b>The Wealth Compass</b> · <span data-field="issue.month">December 2026</span></span
         >
         <span class="sec">Cover story</span>
       </header>
@@ -2119,7 +2131,7 @@
     <section class="page" aria-label="Cover story, continued">
       <header class="rh">
         <span class="mast"
-          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+          ><b>The Wealth Compass</b> · <span data-field="issue.month">December 2026</span></span
         >
         <span class="sec">Cover story, continued</span>
       </header>
@@ -2240,7 +2252,7 @@
       </figure>
 
       <footer class="folio">
-        <span>Bearings · The Navigate Wealth monthly</span>
+        <span>The Wealth Compass · The Navigate Wealth monthly</span>
         <span class="pg num"><i>/</i> 05</span>
       </footer>
     </section>
@@ -2249,7 +2261,7 @@
     <section class="page" aria-label="The planning desk">
       <header class="rh">
         <span class="mast"
-          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+          ><b>The Wealth Compass</b> · <span data-field="issue.month">December 2026</span></span
         >
         <span class="sec">The planning desk</span>
       </header>
@@ -2267,11 +2279,11 @@
       </div>
 
       <div class="desk">
-        <article>
+        <article data-field="desk.1">
           <div class="n">i.</div>
           <div class="label" style="margin-top: 3mm">Retirement</div>
-          <h3 data-field="desk.1.h">Think twice before tapping the savings pot</h3>
-          <div class="prose" data-field="desk.1.body">
+          <h3>Think twice before tapping the savings pot</h3>
+          <div class="prose">
             <p>
               A savings-pot withdrawal is taxed at your marginal rate and permanently lowers what
               compounds for retirement. It is there for genuine emergencies. If December spending is
@@ -2280,11 +2292,11 @@
           </div>
           <div class="more">Retirement planning →</div>
         </article>
-        <article>
+        <article data-field="desk.2">
           <div class="n">ii.</div>
           <div class="label" style="margin-top: 3mm">Risk management</div>
-          <h3 data-field="desk.2.h">Cover that grows with your family</h3>
-          <div class="prose" data-field="desk.2.body">
+          <h3>Cover that grows with your family</h3>
+          <div class="prose">
             <p>
               A rule of thumb is not a plan. We size life and disability cover from your actual
               debts, your children's education and the income your family would need, then review it
@@ -2293,11 +2305,11 @@
           </div>
           <div class="more">Risk management →</div>
         </article>
-        <article>
+        <article data-field="desk.3">
           <div class="n">iii.</div>
           <div class="label" style="margin-top: 3mm">Estate planning</div>
-          <h3 data-field="desk.3.h">When did you last read your will?</h3>
-          <div class="prose" data-field="desk.3.body">
+          <h3>When did you last read your will?</h3>
+          <div class="prose">
             <p>
               Marriage, divorce, children and property purchases can all overtake a will. A current
               will, a named executor and liquidity to pay estate costs spare your family months of
@@ -2308,24 +2320,24 @@
         </article>
       </div>
 
-      <div class="stats">
+      <div class="stats" data-field="stats">
         <div>
           <b class="num">27.5%</b>
-          <span data-field="stat.1"
+          <span
             >of remuneration or taxable income, the most you can deduct for retirement-fund
             contributions each year, within an annual cap.</span
           >
         </div>
         <div>
           <b class="num">3.5%</b>
-          <span data-field="stat.2"
+          <span
             >The most an executor may charge on the gross value of an estate, plus VAT. One reason
             your estate needs cash, not only assets.</span
           >
         </div>
         <div>
           <b class="num">1 March</b>
-          <span data-field="stat.3"
+          <span
             >Tax-free savings, retirement and capital-gains allowances reset with the new tax year.
             Unused allowances do not carry over.</span
           >
@@ -2372,7 +2384,7 @@
       </blockquote>
 
       <footer class="folio">
-        <span>Bearings · The Navigate Wealth monthly</span>
+        <span>The Wealth Compass · The Navigate Wealth monthly</span>
         <span class="pg num"><i>/</i> 06</span>
       </footer>
     </section>
@@ -2381,7 +2393,7 @@
     <section class="page" aria-label="You asked">
       <header class="rh">
         <span class="mast"
-          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+          ><b>The Wealth Compass</b> · <span data-field="issue.month">December 2026</span></span
         >
         <span class="sec">You asked</span>
       </header>
@@ -2400,7 +2412,7 @@
             <div class="q-mark">Q</div>
             <div>
               <h3>Should I pay off my bond faster or invest the extra?</h3>
-              <div class="who">A client in Pretoria, aged 41</div>
+              <div class="who">A question we hear often</div>
               <div class="prose">
                 <p>
                   Paying down your bond earns you a guaranteed, tax-free return equal to your
@@ -2416,7 +2428,7 @@
             <div class="q-mark">Q</div>
             <div>
               <h3>My medical aid premium is going up. Should I downgrade?</h3>
-              <div class="who">A client in Centurion, aged 58</div>
+              <div class="who">Common among clients nearing retirement</div>
               <div class="prose">
                 <p>
                   Possibly, but compare like with like. Look at the hospital cover, chronic benefits
@@ -2431,7 +2443,7 @@
             <div class="q-mark">Q</div>
             <div>
               <h3>Is now a bad time to invest, with markets near their highs?</h3>
-              <div class="who">A reader, by email</div>
+              <div class="who">Asked whenever markets reach new highs</div>
               <div class="prose">
                 <p>
                   Markets spend a lot of their time near all-time highs, because over the long run
@@ -2445,7 +2457,7 @@
             <div class="q-mark">Q</div>
             <div>
               <h3>How often should my plan really be reviewed?</h3>
-              <div class="who">A client in Midrand, aged 33</div>
+              <div class="who">Asked at almost every first meeting</div>
               <div class="prose">
                 <p>
                   At least once a year, and whenever your life changes: a new job, a marriage or
@@ -2458,11 +2470,11 @@
         </div>
 
         <aside>
-          <div class="word">
+          <div class="word" data-field="word">
             <div class="label">Word of the month</div>
-            <h3 data-field="word.term">Sequence risk</h3>
+            <h3>Sequence risk</h3>
             <div class="pron">noun · retirement planning</div>
-            <p data-field="word.def">
+            <p>
               The risk that poor returns arrive early in retirement, just as you start drawing an
               income. Two retirees with the same average return can end up in very different places
               depending on the order the returns come in.
@@ -2488,18 +2500,18 @@
             </svg>
           </div>
 
-          <div class="reading">
+          <div class="reading" data-field="reading">
             <div class="label" style="margin-bottom: 1mm">From the journal</div>
             <a href="https://navigatewealth.co/resources">
-              <strong data-field="read.1">A plain guide to the two-pot retirement system</strong>
+              <strong>A plain guide to the two-pot retirement system</strong>
               <span>navigatewealth.co/resources</span>
             </a>
             <a href="https://navigatewealth.co/resources">
-              <strong data-field="read.2">How much life cover do you actually need?</strong>
+              <strong>How much life cover do you actually need?</strong>
               <span>navigatewealth.co/resources</span>
             </a>
             <a href="https://navigatewealth.co/resources">
-              <strong data-field="read.3">Offshore investing without the guesswork</strong>
+              <strong>Offshore investing without the guesswork</strong>
               <span>navigatewealth.co/resources</span>
             </a>
           </div>
@@ -2507,7 +2519,7 @@
       </div>
 
       <footer class="folio">
-        <span>Bearings · The Navigate Wealth monthly</span>
+        <span>The Wealth Compass · The Navigate Wealth monthly</span>
         <span class="pg num"><i>/</i> 07</span>
       </footer>
     </section>
@@ -2517,14 +2529,14 @@
       <div class="grid-bg"></div>
       <header class="rh" style="border-top-color: rgba(255, 255, 255, 0.85); color: var(--white)">
         <span class="mast"
-          ><b>Bearings</b> · <span data-field="issue.month">December 2026</span></span
+          ><b>The Wealth Compass</b> · <span data-field="issue.month">December 2026</span></span
         >
         <span class="sec" style="color: var(--on-dark-muted)">Talk to us</span>
       </header>
 
       <div class="cta">
         <div class="eyebrow" style="color: var(--violet-soft)">Your year-end review</div>
-        <h2 data-field="back.headline">Let's set your <em>bearings</em> for the year ahead.</h2>
+        <h2 data-field="back.headline">Let's set your <em>course</em> for the year ahead.</h2>
         <p data-field="back.body">
           Every client is entitled to a review at least once a year. If yours is due, or anything in
           this issue applies to you, book a conversation with an adviser. There is no charge for the
@@ -2581,7 +2593,7 @@
         </svg>
         <p>
           <strong>Know someone who would find this useful?</strong> Forward this issue. They can
-          subscribe to Bearings at navigatewealth.co/resources.
+          subscribe to The Wealth Compass at navigatewealth.co/resources.
         </p>
       </div>
 
@@ -2604,8 +2616,8 @@
             mentioned are those in force at the time of writing and may change.
           </p>
           <p>
-            You are receiving Bearings because you subscribed to Navigate Wealth updates. To stop
-            receiving it, use the unsubscribe link in the email this newsletter came with.
+            You are receiving The Wealth Compass because you subscribed to Navigate Wealth updates.
+            To stop receiving it, use the unsubscribe link in the email this newsletter came with.
           </p>
         </div>
       </div>

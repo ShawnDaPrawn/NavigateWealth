@@ -1,0 +1,109 @@
+{
+  "meta": {
+    "sample": true,
+    "issue_month": "2026-12",
+    "title": "Navigate Wealth | December 2026 | The Wealth Compass: Before the year turns",
+    "description": "Twelve weeks to the tax year-end: what to check and when. Plus November in markets, three planning briefs and your questions answered.",
+    "notes": "The December 2026 sample. Every figure in it is illustrative. Copy this file, rewrite every slot, and set sample to false."
+  },
+  "chart": {
+    "labels": [
+      "Nov",
+      "Dec",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov"
+    ],
+    "series": [
+      {
+        "name": "SA equity",
+        "values": [
+          100, 102.1, 104, 103.2, 99.8, 101.5, 104.9, 106.2, 108.8, 107.4, 110.6, 112.9, 115.3
+        ]
+      },
+      {
+        "name": "Global equity",
+        "values": [100, 101, 102.6, 104.1, 100.9, 97.6, 100.8, 103, 104.7, 106.9, 108.1, 109, 111.2]
+      },
+      {
+        "name": "SA bonds",
+        "values": [
+          100, 100.9, 101.7, 102.4, 102.1, 103, 104.2, 105.1, 105.9, 106.8, 107.9, 108.8, 109.6
+        ]
+      }
+    ],
+    "yMin": 95,
+    "yMax": 120,
+    "yStep": 5,
+    "baseline": 100,
+    "annotation": {
+      "index": 5,
+      "series": 1,
+      "text": "April: tariff scare"
+    }
+  },
+  "fields": {
+    "issue.number": "Issue 12",
+    "issue.month": "December 2026",
+    "cover.kicker": "Cover story · Year-end planning",
+    "cover.headline": "Before the year turns: <em>a twelve-week</em> planning window",
+    "cover.dek": "Between now and the end of February, a handful of quiet decisions can do more for your plan than any market call. Here is what to look at, and when.",
+    "cover.page": "Read the story on page 4",
+    "toc.1": "A note from the founder, and the month in numbers",
+    "toc.2": "Markets in review: what moved, and why",
+    "toc.3": "Cover story: the year-end planning window",
+    "toc.4": "The planning desk, diary dates and your questions",
+    "letter.headline": "Steady hands in a <em class=\"acc\">noisy</em> year",
+    "letter.dek": "Most of what moved your wealth this year happened slowly, and out of the headlines. That is worth remembering as we close the books on 2026.",
+    "letter.body": "<p> Every December I read back through the year's notes from client meetings. What stands out is rarely the market. It is the conversations: a retirement date brought forward, a first home, a business sold, a parent who needed more care than anyone planned for. Those are the moments a financial plan is built to carry. </p><p> Markets gave us plenty to talk about, and you will find our review on the next page. But the honest summary is that patient, diversified portfolios did what they were designed to do. The investors who fared best were not the ones who predicted the year; they were the ones who did not need to. </p><p> This issue's cover story looks ahead instead of back. The twelve weeks to the end of February are the most useful in the planning calendar: allowances reset, tax-year contributions close, and there is time to act without rushing. We have set out what to check and when, so nothing is left to the last week. </p><p> Thank you for the trust you have placed in us this year. Our office closes over the festive season and reopens in the new year; if anything changes for you in the meantime, please tell us. A plan is only as good as what it knows about you. </p>",
+    "letter.signoff": "Shawn Francisco",
+    "contents": "<li><b>03</b><div><strong>Markets in review</strong><span>Twelve months rebased, asset-class returns and what it means for you.</span></div></li><li><b>04</b><div><strong>The year-end planning window</strong><span>A week-by-week guide to the close of the tax year.</span></div></li><li><b>06</b><div><strong>The planning desk</strong><span>Retirement, cover and estate briefs, plus the dates to diarise.</span></div></li><li><b>07</b><div><strong>You asked</strong><span>Your questions answered, and the word of the month.</span></div></li><li><b>08</b><div><strong>Talk to us</strong><span>Book your year-end review with an adviser.</span></div></li>",
+    "numbers": "<div><dt>JSE All Share</dt><dd>108 412<small class=\"up\">▲ 2.1%</small></dd></div><div><dt>S&amp;P 500</dt><dd>6 912<small class=\"up\">▲ 1.7%</small></dd></div><div><dt>Rand / US dollar</dt><dd>R17.24<small class=\"up\">▲ 0.9% rand firmer</small></dd></div><div><dt>Brent crude (USD/bbl)</dt><dd>$71.30<small class=\"down\">▼ 3.4%</small></dd></div><div><dt>Gold (USD/oz)</dt><dd>$3 480<small class=\"up\">▲ 1.2%</small></dd></div><div><dt>SARB repo rate</dt><dd>6.75%<small style=\"color: var(--on-dark-muted)\">Unchanged</small></dd></div>",
+    "num.source": "Month-end closing levels, 30 November 2026. Change is month on month.",
+    "practice": "<div><div class=\"label\">Festive hours <span class=\"tpl\">Confirm dates</span></div><h3>Closed 24 December to 4 January</h3><p> Urgent claims and policy matters still reach us through the client portal and info@navigatewealth.co. </p></div><div><div class=\"label\">Client portal</div><h3>Your plan, now on your phone</h3><p> Install the portal from navigatewealth.co to see policies, documents and requests in one place. </p></div><div><div class=\"label\">Ask Vasco</div><h3>Questions after hours?</h3><p> Vasco, our website assistant, answers general questions any time and books you in with an adviser. </p></div>",
+    "markets.kicker": "Markets in review · November 2026",
+    "markets.headline": "A month of <em class=\"acc\">quiet</em> gains, and one loud week",
+    "markets.dek": "Local shares led, the rand firmed and bonds kept grinding higher. A sell-off mid-month was undone within days.",
+    "chart.title": "Twelve months, rebased to 100",
+    "chart.sub": "Total return in rand, month-end values <span class=\"tpl\">Illustrative data</span>",
+    "markets.table.caption": "Returns in rand, to 30 November",
+    "markets.table": "<tr><td>SA equity<small>FTSE/JSE All Share</small></td><td class=\"up\">2.1%</td><td class=\"up\">7.4%</td><td class=\"up\">12.8%</td><td class=\"up\">15.3%</td></tr><tr><td>SA listed property<small>FTSE/JSE SAPY</small></td><td class=\"down\">−0.6%</td><td class=\"up\">3.2%</td><td class=\"up\">9.1%</td><td class=\"up\">11.4%</td></tr><tr><td>SA bonds<small>FTSE/JSE ALBI</small></td><td class=\"up\">0.7%</td><td class=\"up\">2.6%</td><td class=\"up\">8.7%</td><td class=\"up\">9.6%</td></tr><tr><td>SA cash<small>STeFI Composite</small></td><td class=\"up\">0.6%</td><td class=\"up\">1.8%</td><td class=\"up\">6.6%</td><td class=\"up\">7.2%</td></tr><tr><td>Global equity<small>MSCI ACWI, in rand</small></td><td class=\"up\">2.0%</td><td class=\"up\">4.2%</td><td class=\"up\">8.9%</td><td class=\"up\">11.2%</td></tr><tr><td>Global bonds<small>Bloomberg Global Agg., in rand</small></td><td class=\"down\">−1.1%</td><td class=\"down\">−0.4%</td><td class=\"up\">1.9%</td><td class=\"up\">2.7%</td></tr>",
+    "markets.local.h": "Resources and banks carried the JSE",
+    "markets.local.body": "<p> Firmer metal prices lifted miners, while banks rallied on steady credit growth and lower bad-debt charges. With inflation inside the target range, the Reserve Bank held rates and signalled patience. </p>",
+    "markets.global.h": "A wobble, then back to earnings",
+    "markets.global.body": "<p> A week of rate worries knocked global shares mid-month. Strong company results pulled them back. A firmer rand trimmed offshore returns for South African investors. </p>",
+    "markets.means": "Nothing in November called for a change of course. If your plan holds the mix it was built with, the sell-off and recovery were noise. Where a strong year has pushed one asset class well past its target weight, a year-end rebalance is worth discussing with your adviser.",
+    "feature.kicker": "Cover story · Year-end planning",
+    "feature.headline": "Before the year turns: <em class=\"acc\">a twelve-week</em> planning window",
+    "feature.dek": "The tax year closes at the end of February. Between now and then, a few unhurried decisions can lower this year's tax, use allowances that will not roll over and leave your plan in better shape for the next one.",
+    "feature.author": "the Navigate Wealth planning team",
+    "feature.readtime": "7 minute read",
+    "feature.body.1": "<p class=\"dropcap\"> Year-end planning has a reputation for being complicated. Mostly, it is not. It comes down to a short list of allowances that reset on 1 March, a few contributions that only count if they land before the tax year closes, and a review of whether the plan you made still fits the life you are living. </p><p> What makes it hard is timing. December disappears into the holidays, January is busy, and by late February everyone is trying to do the same thing at once. Product providers need time to process contributions, and a payment made on the last day may not be allocated in time to count for this tax year. </p><h3>1. Use the allowances that do not roll over</h3><p> Your annual tax-free savings allowance is use-it-or-lose-it: whatever you do not contribute by the end of February is gone for good, and over-contributing is penalised. If you have room left this year, a single lump sum in January is often simpler than a scramble in the final week. </p><p> The same is true of annual exclusions on capital gains. If you hold investments with sizeable unrealised gains, realising some of them before the year closes, and reinvesting, can reset your base cost and use an exclusion that would otherwise lapse. </p><h3>2. Top up your retirement contributions</h3><p> Contributions to a retirement annuity, pension or provident fund are deductible up to 27.5% of the greater of your remuneration or taxable income, within an annual rand cap. Many people sit below that limit simply because no one checked. Topping up is one of the few ways to reduce this year's tax while building next decade's income. </p><p> It also matters more under the two-pot system. Since September 2024, part of every new contribution goes to a savings pot you can access before retirement. A slightly higher contribution keeps your retirement pot on track if you ever do need to draw on savings. </p>",
+    "feature.body.2": "<h3>3. Check your cover still matches your life</h3><p> Life, disability and income-protection cover are usually set up for the life you had at the time. A new child, a bigger bond, a change of job or a divorce can each leave a gap, or leave you paying for cover you no longer need. Year-end is a natural point to look at the sums assured against what your family would actually need. </p><p> Check your beneficiary nominations at the same time. Retirement-fund trustees decide how death benefits are paid, but your nomination guides them, and an out-of-date nomination is one of the most common causes of delays and disputes. </p><blockquote class=\"pull\" data-field=\"feature.pull\"> “The best year-end plan is the one you finish in January, not the one you start on 27 February.” <cite>The Navigate Wealth planning team</cite></blockquote><h3>4. Rebalance, if the year has pulled you off course</h3><p> A strong year in one asset class quietly changes the risk you are taking. If shares have outrun bonds and cash, your portfolio may now carry more equity than the plan intended. Rebalancing brings it back, and doing it inside a retirement fund or tax-free account avoids triggering capital gains. </p><h3>5. Look ahead to the new tax year</h3><p> On 1 March your allowances reset. Setting up monthly debit orders for your tax-free savings and retirement contributions from the start of the year spreads the cost and removes the year-end rush altogether. It is the single habit we most often recommend. </p><p> None of this needs to be done alone, and not all of it will apply to you. The point of a review is to work out which two or three items matter most for your circumstances, and then to do them early. </p>",
+    "feature.pull": "“The best year-end plan is the one you finish in January, not the one you start on 27 February.” <cite>The Navigate Wealth planning team</cite>",
+    "feature.checklist": "<li><div><strong>Tax-free savings</strong>Contribute any unused allowance by mid-February. </div></li><li><div><strong>Retirement top-up</strong>Check how far you are from the 27.5% deduction limit. </div></li><li><div><strong>Capital gains</strong>Consider using this year's annual exclusion. </div></li><li><div><strong>Cover review</strong>Compare sums assured with today's needs.</div></li><li><div><strong>Beneficiaries</strong>Confirm nominations on every fund and policy. </div></li><li><div><strong>Rebalance</strong>Bring your mix back to the plan's targets.</div></li><li><div><strong>Debit orders</strong>Set up monthly contributions from 1 March.</div></li>",
+    "feature.figure": "<div class=\"pots-head\"><div class=\"label\">Explainer · The two-pot retirement system</div><div class=\"pots-cap\">How each rand contributed since 1 September 2024 is split</div></div><div class=\"pots-bar\"><div class=\"pot sav\"><b>1/3</b><div><strong>Savings pot</strong>One withdrawal per tax year, taxed at your marginal rate. </div></div><div class=\"pot ret\"><b>2/3</b><div><strong>Retirement pot</strong>Preserved until retirement, then taken as an income. </div></div></div><p class=\"pots-foot\"> Savings built up before 1 September 2024 sit in a separate vested pot under the old rules. </p>",
+    "desk.headline": "Three things <em class=\"acc\">worth a look</em> this month",
+    "desk.dek": "Short briefs from our advisers on the questions clients are asking right now.",
+    "desk.1": "<div class=\"n\">i.</div><div class=\"label\" style=\"margin-top: 3mm\">Retirement</div><h3>Think twice before tapping the savings pot</h3><div class=\"prose\"><p> A savings-pot withdrawal is taxed at your marginal rate and permanently lowers what compounds for retirement. It is there for genuine emergencies. If December spending is the reason, talk to us first; there is often a cheaper option. </p></div><div class=\"more\">Retirement planning →</div>",
+    "desk.2": "<div class=\"n\">ii.</div><div class=\"label\" style=\"margin-top: 3mm\">Risk management</div><h3>Cover that grows with your family</h3><div class=\"prose\"><p> A rule of thumb is not a plan. We size life and disability cover from your actual debts, your children's education and the income your family would need, then review it whenever one of those changes. </p></div><div class=\"more\">Risk management →</div>",
+    "desk.3": "<div class=\"n\">iii.</div><div class=\"label\" style=\"margin-top: 3mm\">Estate planning</div><h3>When did you last read your will?</h3><div class=\"prose\"><p> Marriage, divorce, children and property purchases can all overtake a will. A current will, a named executor and liquidity to pay estate costs spare your family months of delay at the hardest possible time. </p></div><div class=\"more\">Estate planning →</div>",
+    "stats": "<div><b class=\"num\">27.5%</b><span>of remuneration or taxable income, the most you can deduct for retirement-fund contributions each year, within an annual cap.</span></div><div><b class=\"num\">3.5%</b><span>The most an executor may charge on the gross value of an estate, plus VAT. One reason your estate needs cash, not only assets.</span></div><div><b class=\"num\">1 March</b><span>Tax-free savings, retirement and capital-gains allowances reset with the new tax year. Unused allowances do not carry over.</span></div>",
+    "diary": "<li><div class=\"d num\">15</div><div class=\"mo\">December</div><p><strong>Last contributions for 2026</strong>Some providers close for the holidays. </p></li><li><div class=\"d num\">12</div><div class=\"mo\">January</div><p><strong>Year-end reviews open</strong>Book early; February diaries fill quickly.</p></li><li><div class=\"d num\">26</div><div class=\"mo\">February</div><p><strong>Second provisional tax</strong>Payment due for provisional taxpayers.</p></li><li><div class=\"d num\">28</div><div class=\"mo\">February</div><p><strong>Tax year ends</strong>Last day for contributions to count this year.</p></li>",
+    "desk.note": "<img src=\"../../public/brand-assets/navigate-wealth-icon-only-dark.svg\" alt=\"\"><p> “A financial plan is not a document you sign once. It is a conversation we keep having, so that it still describes your life.” <cite>The Navigate Wealth advice team</cite></p>",
+    "qa.headline": "Your questions, <em class=\"acc\">answered plainly</em>",
+    "qa.items": "<div class=\"item\"><div class=\"q-mark\">Q</div><div><h3>Should I pay off my bond faster or invest the extra?</h3><div class=\"who\">A question we hear often</div><div class=\"prose\"><p> Paying down your bond earns you a guaranteed, tax-free return equal to your interest rate. Investing may earn more over time, but with risk. For many people the answer is both: first use your retirement and tax-free allowances, which carry tax benefits a bond does not, then put the rest into the bond. Keep an emergency fund either way, and use an access bond so the money is not locked away. </p></div></div></div><div class=\"item\"><div class=\"q-mark\">Q</div><div><h3>My medical aid premium is going up. Should I downgrade?</h3><div class=\"who\">Common among clients nearing retirement</div><div class=\"prose\"><p> Possibly, but compare like with like. Look at the hospital cover, chronic benefits and network restrictions you would give up, not only the premium. A gap cover policy alongside a lower option can close much of the difference. Moving later in life can also bring waiting periods, so check before you switch. </p></div></div></div><div class=\"item\"><div class=\"q-mark\">Q</div><div><h3>Is now a bad time to invest, with markets near their highs?</h3><div class=\"who\">Asked whenever markets reach new highs</div><div class=\"prose\"><p> Markets spend a lot of their time near all-time highs, because over the long run they rise. Waiting for a dip often costs more than it saves. If a lump sum makes you nervous, phasing it in over a few months is a sensible middle path. </p></div></div></div><div class=\"item\"><div class=\"q-mark\">Q</div><div><h3>How often should my plan really be reviewed?</h3><div class=\"who\">Asked at almost every first meeting</div><div class=\"prose\"><p> At least once a year, and whenever your life changes: a new job, a marriage or divorce, a child, a property, an inheritance. The annual review keeps the plan honest; the life events are when it matters most. </p></div></div></div>",
+    "word": "<div class=\"label\">Word of the month</div><h3>Sequence risk</h3><div class=\"pron\">noun · retirement planning</div><p> The risk that poor returns arrive early in retirement, just as you start drawing an income. Two retirees with the same average return can end up in very different places depending on the order the returns come in. </p><div class=\"label\" style=\"margin-top: 4mm\">Same average return, different order</div><svg viewBox=\"0 0 200 92\" aria-hidden=\"true\"><line x1=\"0\" y1=\"88\" x2=\"200\" y2=\"88\" stroke=\"#ffffff\" stroke-opacity=\"0.2\"></line><polyline points=\"4,28 40,24 76,30 112,36 148,44 184,52\" fill=\"none\" stroke=\"#a78bfa\" stroke-width=\"1.6\"></polyline><polyline points=\"4,28 40,46 76,58 112,66 148,74 184,82\" fill=\"none\" stroke=\"#e3d9c3\" stroke-width=\"1.6\" stroke-dasharray=\"3 2\"></polyline><text x=\"52\" y=\"16\" style=\"fill: #a78bfa\">Good years first: income lasts</text><text x=\"8\" y=\"80\" style=\"fill: #e3d9c3\">Bad years first: capital runs down</text></svg>",
+    "reading": "<div class=\"label\" style=\"margin-bottom: 1mm\">From the journal</div><a href=\"https://navigatewealth.co/resources\"><strong>A plain guide to the two-pot retirement system</strong><span>navigatewealth.co/resources</span></a><a href=\"https://navigatewealth.co/resources\"><strong>How much life cover do you actually need?</strong><span>navigatewealth.co/resources</span></a><a href=\"https://navigatewealth.co/resources\"><strong>Offshore investing without the guesswork</strong><span>navigatewealth.co/resources</span></a>",
+    "back.headline": "Let's set your <em>course</em> for the year ahead.",
+    "back.body": "Every client is entitled to a review at least once a year. If yours is due, or anything in this issue applies to you, book a conversation with an adviser. There is no charge for the review itself."
+  }
+}

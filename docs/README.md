@@ -52,6 +52,7 @@ Written for someone acting under time pressure.
 - [`policy-document-intake.md`](runbooks/policy-document-intake.md) — how an agent with no login (the update bot, through the Supabase connector) attaches a policy PDF: the SQL hand-over, parts for large files, status, retries, the worker and failure modes
 - [`newsletter-intake.md`](runbooks/newsletter-intake.md) — how the monthly routine hands over the newsletter PDF (HTTPS endpoint or the Supabase-connector SQL function), what the admin then sees, limits and failure modes
   - Claude skill for the monthly hand-over, for a session with the repository checked out: [`newsletter-monthly-intake`](../.claude/skills/newsletter-monthly-intake/SKILL.md)
+  - Claude skill the monthly routine follows to research, write, render and hand over The Wealth Compass: [`newsletter-monthly-generate`](../.claude/skills/newsletter-monthly-generate/SKILL.md)
   - Claude skills for the two halves of that pipeline, for a session with the repository checked out: [`social-weekly-generate`](../.claude/skills/social-weekly-generate/SKILL.md) and [`social-weekly-schedule`](../.claude/skills/social-weekly-schedule/SKILL.md)
 
 **`decisions/`** — one file per decision that closed an open question, named
@@ -80,25 +81,25 @@ documents cite their finding IDs and section numbers.
 
 Short READMEs live next to the thing they describe, which is where they belong.
 
-| Location                                                                                       | Covers                                                                                 |
-| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [`../AGENTS.md`](../AGENTS.md)                                                                 | Working agreement for coding agents: the finalization protocol and deployment rules    |
-| [`../README.md`](../README.md)                                                                 | Project front page: what the app is, quick start, commands                             |
-| [`../SECURITY.md`](../SECURITY.md)                                                             | Vulnerability reporting, scope, and the design choices that look like findings         |
-| [`../.github/pull_request_template.md`](../.github/pull_request_template.md)                   | The finalization checklist a PR loads                                                  |
-| `../src/components/admin/modules/*/README.md`                                                  | Per-module architecture and constraints for seven admin modules                        |
-| [`../src/components/features/README.md`](../src/components/features/README.md)                 | What a client-facing feature module is, and why the directory is not called `modules/` |
-| [`../design-system/README.md`](../design-system/README.md)                                     | The central design system: the Untitled UI kit, its theme, and the /design-system page |
-| [`../design-system/untitled-ui-react/README.md`](../design-system/untitled-ui-react/README.md) | Untitled UI's own README for the Vite starter kit                                      |
-| [`../design-system/untitled-ui-react/CLAUDE.md`](../design-system/untitled-ui-react/CLAUDE.md) | Untitled UI's guide to its components, for Claude Code                                 |
-| [`../scripts/README.md`](../scripts/README.md)                                                 | What each scripts folder is for, which scripts are entry points, and the path rule     |
-| [`../quality/baselines/README.md`](../quality/baselines/README.md)                             | What each ratchet baseline counts and which gate enforces it                           |
-| [`../supabase/migrations/README.md`](../supabase/migrations/README.md)                         | Migration conventions                                                                  |
-| [`../supabase/cron/README.md`](../supabase/cron/README.md)                                     | Cron job SQL and the publications smoke test                                           |
-| [`../e2e/README.md`](../e2e/README.md)                                                         | Running the opt-in Playwright suite                                                    |
-| [`../brand-source/README.md`](../brand-source/README.md)                                       | Why brand source material is not under `public/`                                       |
-| [`../public/brand-assets/README.md`](../public/brand-assets/README.md)                         | The web-ready brand assets the app actually uses                                       |
-| [`../templates/newsletter/README.md`](../templates/newsletter/README.md)                       | Bearings, the monthly newsletter template, and how to render an issue to PDF           |
+| Location                                                                                       | Covers                                                                                     |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [`../AGENTS.md`](../AGENTS.md)                                                                 | Working agreement for coding agents: the finalization protocol and deployment rules        |
+| [`../README.md`](../README.md)                                                                 | Project front page: what the app is, quick start, commands                                 |
+| [`../SECURITY.md`](../SECURITY.md)                                                             | Vulnerability reporting, scope, and the design choices that look like findings             |
+| [`../.github/pull_request_template.md`](../.github/pull_request_template.md)                   | The finalization checklist a PR loads                                                      |
+| `../src/components/admin/modules/*/README.md`                                                  | Per-module architecture and constraints for seven admin modules                            |
+| [`../src/components/features/README.md`](../src/components/features/README.md)                 | What a client-facing feature module is, and why the directory is not called `modules/`     |
+| [`../design-system/README.md`](../design-system/README.md)                                     | The central design system: the Untitled UI kit, its theme, and the /design-system page     |
+| [`../design-system/untitled-ui-react/README.md`](../design-system/untitled-ui-react/README.md) | Untitled UI's own README for the Vite starter kit                                          |
+| [`../design-system/untitled-ui-react/CLAUDE.md`](../design-system/untitled-ui-react/CLAUDE.md) | Untitled UI's guide to its components, for Claude Code                                     |
+| [`../scripts/README.md`](../scripts/README.md)                                                 | What each scripts folder is for, which scripts are entry points, and the path rule         |
+| [`../quality/baselines/README.md`](../quality/baselines/README.md)                             | What each ratchet baseline counts and which gate enforces it                               |
+| [`../supabase/migrations/README.md`](../supabase/migrations/README.md)                         | Migration conventions                                                                      |
+| [`../supabase/cron/README.md`](../supabase/cron/README.md)                                     | Cron job SQL and the publications smoke test                                               |
+| [`../e2e/README.md`](../e2e/README.md)                                                         | Running the opt-in Playwright suite                                                        |
+| [`../brand-source/README.md`](../brand-source/README.md)                                       | Why brand source material is not under `public/`                                           |
+| [`../public/brand-assets/README.md`](../public/brand-assets/README.md)                         | The web-ready brand assets the app actually uses                                           |
+| [`../templates/newsletter/README.md`](../templates/newsletter/README.md)                       | The Wealth Compass: the monthly newsletter template, its routine and how to steer an issue |
 
 ## Conventions
 
