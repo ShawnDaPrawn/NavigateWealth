@@ -257,9 +257,23 @@ sample's lengths, so treat them as limits:
   CPI against the repo rate over 13 months; the rand against the dollar at
   month-ends; equity and bond indices rebased to 100, only when you have every
   month-end close. Change `chart.title` and `chart.sub` to match, and give the
-  source in `chart.sub`. Use the returns table only for figures you have; otherwise
-  turn it into a "key rates" table (rate, latest, previous, change) in the
-  same markup.
+  source in `chart.sub`. `markets.table` is the whole table: caption, header
+  row and body. Its headings must describe the figures under them. Use the
+  sample's returns table only for returns you have for every period shown.
+  Otherwise replace the whole slot with a key-rates table, with its own
+  caption and header row:
+
+  ```html
+  <caption><span class="label">Key rates, as at 26 November</span></caption>
+  <thead><tr><th>Rate</th><th>Latest</th><th>Previous</th><th>Change</th></tr></thead>
+  <tbody><tr><td>SARB repo rate<small>SARB, MPC 20 November</small></td>
+    <td>7.00%</td><td>7.25%</td><td class="down">−0.25</td></tr>…</tbody>
+  ```
+
+  (Those figures only show the format.) Keep to six rows, and drop or rename
+  any column you cannot fill. `markets.table.note` sits under the table: say
+  what the figures are and give their source. Keep "Past performance is not a
+  reliable indicator of future results" whenever the table shows returns.
 - **Cover story** (`feature.*`): the heart of the issue, about 800 words over
   two pages. Open with the development and why it matters now. Explain it
   plainly, then show its effect on a household with a hypothetical worked

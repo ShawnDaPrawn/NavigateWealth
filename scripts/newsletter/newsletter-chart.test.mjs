@@ -42,6 +42,14 @@ test('refuses non-numeric values and more than three series', () => {
   assert.throws(() => buildChart({ labels, series: [s, s, s, s] }), /1 to 3 series/);
 });
 
+test('refuses a zero, negative, non-finite or tiny tick step instead of looping', () => {
+  const base = { labels: ['a', 'b'], series: [{ name: 'X', values: [3, 4] }], yMin: 0, yMax: 5 };
+  for (const yStep of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, '1']) {
+    assert.throws(() => buildChart({ ...base, yStep }), /positive number/);
+  }
+  assert.throws(() => buildChart({ ...base, yStep: 0.001 }), /more than 40 gridlines/);
+});
+
 test('escapes text so names cannot inject markup', () => {
   const { svg, legend } = buildChart({
     labels: ['<b>', 'b'],

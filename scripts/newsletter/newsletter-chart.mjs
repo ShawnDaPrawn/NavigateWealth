@@ -19,6 +19,8 @@ const LEFT = 34;
 const RIGHT = 14;
 const TOP = 12;
 const BOTTOM = 26;
+/** More gridlines than this would be unreadable, and a tiny step would never finish. */
+const MAX_TICKS = 40;
 
 function escapeXml(text) {
   return String(text)
@@ -79,9 +81,22 @@ export function buildChart(chart) {
   const dataMin = Math.min(...all);
   const dataMax = Math.max(...all);
   const step = chart.yStep ?? niceStep(dataMax - dataMin || Math.abs(dataMax) || 1);
+  if (typeof step !== 'number' || !Number.isFinite(step) || step <= 0) {
+    throw new Error('chart.yStep must be a positive number');
+  }
+  for (const bound of ['yMin', 'yMax']) {
+    if (chart[bound] !== undefined && !Number.isFinite(chart[bound])) {
+      throw new Error(`chart.${bound} must be a number`);
+    }
+  }
   const yMin = chart.yMin ?? Math.floor(dataMin / step) * step;
   let yMax = chart.yMax ?? Math.ceil(dataMax / step) * step;
   if (yMax <= yMin) yMax = yMin + step;
+  if ((yMax - yMin) / step > MAX_TICKS) {
+    throw new Error(
+      `chart.yStep ${step} gives more than ${MAX_TICKS} gridlines; use a larger step`,
+    );
+  }
   if (dataMin < yMin || dataMax > yMax) {
     throw new Error(`chart values run outside yMin ${yMin} to yMax ${yMax}`);
   }
