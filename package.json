@@ -139,6 +139,8 @@
     "optimize:images": "node ./scripts/brand/optimize-images.mjs",
     "ui:inspect": "node ./scripts/dev/ui-inspect.mjs",
     "newsletter:render": "node ./scripts/newsletter/render-newsletter.mjs",
+    "newsletter:submit": "node ./scripts/newsletter/submit-newsletter.mjs",
+    "newsletter:test": "node --test scripts/newsletter/newsletter-chart.test.mjs",
     "provider:sync": "node ./scripts/provider-portal-worker.mjs",
     "provider:watch": "set NW_PLAYWRIGHT_HEADED=1&& set NW_PLAYWRIGHT_RECORD_VIDEO=1&& set NW_PLAYWRIGHT_RECORD_TRACE=1&& set NW_PORTAL_DEBUG_DIR=tmp/provider-portal-worker&& node ./scripts/provider-portal-worker.mjs",
     "provider:worker": "node ./scripts/provider-portal-worker.mjs --poll",

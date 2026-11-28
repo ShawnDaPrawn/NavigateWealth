@@ -4,16 +4,16 @@ Grouped by what a script is _for_, because "when would I run this?" is the
 question someone actually arrives with. Thirty-six files used to sit loose at
 this level, mixing build steps with one-off admin fixups.
 
-| Folder                                 | What lives here                                  | When it runs                                            |
-| -------------------------------------- | ------------------------------------------------ | ------------------------------------------------------- |
-| `build/`                               | Asset and payload preparation                    | During `npm run build`, and in the deploy workflow      |
-| `seo/`                                 | The prerender pipeline                           | During `npm run build`; `npm run seo:verify` on its own |
-| `brand/`                               | Generating and optimising brand and image assets | By hand, when brand source material changes             |
-| `ops/`                                 | Acting on a live environment                     | By hand or from a workflow, deliberately                |
-| `uat/`                                 | Launch-time API smoke and acceptance harnesses   | By hand, around a launch                                |
-| `dev/`                                 | Local developer conveniences                     | By hand, rarely                                         |
-| `newsletter/`                          | Rendering the monthly newsletter template to PDF | By hand, monthly: `npm run newsletter:render`           |
-| `portal-worker/`, `provider-adapters/` | The provider automation engine                   | From the worker entry point below                       |
+| Folder                                 | What lives here                                   | When it runs                                                                  |
+| -------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `build/`                               | Asset and payload preparation                     | During `npm run build`, and in the deploy workflow                            |
+| `seo/`                                 | The prerender pipeline                            | During `npm run build`; `npm run seo:verify` on its own                       |
+| `brand/`                               | Generating and optimising brand and image assets  | By hand, when brand source material changes                                   |
+| `ops/`                                 | Acting on a live environment                      | By hand or from a workflow, deliberately                                      |
+| `uat/`                                 | Launch-time API smoke and acceptance harnesses    | By hand, around a launch                                                      |
+| `dev/`                                 | Local developer conveniences                      | By hand, rarely                                                               |
+| `newsletter/`                          | Rendering and handing over the monthly newsletter | Monthly, by the newsletter routine (`newsletter:render`, `newsletter:submit`) |
+| `portal-worker/`, `provider-adapters/` | The provider automation engine                    | From the worker entry point below                                             |
 
 ## Why the provider worker is still flat
 

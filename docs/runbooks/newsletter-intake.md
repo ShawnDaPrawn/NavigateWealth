@@ -12,10 +12,13 @@ a **draft awaiting admin approval** and one **"Newsletter draft ready for
 review" email** to the admin inbox with a link straight to the draft. Nothing
 is sent to subscribers until an admin approves it in the admin.
 
-The PDF itself is built from **Bearings**, the monthly newsletter template in
-the website's design: see
+The PDF itself is **The Wealth Compass**, built from the monthly newsletter
+template in the website's design. Since 2026-11-28 a Claude routine produces it
+on the 27th of each month with the `newsletter-monthly-generate` skill: it
+researches and writes the issue, renders it, and hands it over on the HTTPS path
+with `npm run newsletter:submit`. See
 [`templates/newsletter/README.md`](../../templates/newsletter/README.md) for
-how to fill it in and render it (`npm run newsletter:render`).
+the template, the content file, the editorial brief and how to steer an issue.
 
 ## Two ways in
 
@@ -35,10 +38,13 @@ how to fill it in and render it (`npm run newsletter:render`).
 
 **Which one to use.** A routine that can reach the Edge Function over HTTPS
 (a ChatGPT scheduled task or Action, a GitHub Action, n8n, Make, a Cursor
-Automation) uses the endpoint. A Claude Routine cannot: its environment blocks
-egress to the Edge Function (see `social-automation.md`) but does have the
-**Supabase connector**, so it uses the SQL function. This sandbox confirmed the
-block (proxy 403). A ChatGPT routine with a Supabase connector may use either.
+Automation) uses the endpoint. So does the monthly Claude routine: its cloud
+environment ("NavigateWealth") allows `vpjmdsltwrnpefzcgdmz.supabase.co`, and
+on 2026-11-28 a dry run from that environment validated end to end. A Claude
+routine in an environment without that host cannot reach the endpoint and has
+only the SQL function. In practice the SQL path does not suit a generated
+PDF: the model would have to emit megabytes of base64 inside the statement. A
+ChatGPT routine with a Supabase connector may use either path.
 
 ## Limits, both paths
 
